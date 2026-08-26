@@ -3,11 +3,11 @@
   "id": "MPI-620",
   "title": "Scribble Flow - draw on a blank canvas, SDXL + ControlNet renders it",
   "description": "Dev-gated Flow. No input media: pick an aspect ratio, draw on a blank white canvas and prompt beneath it, generate. Keeps the SDXL + ControlNet render half that the Draw It In Klein rebuild deletes - both preprocessor arms, the five-model slot with LoRAs, and Input_Control_strength with its 0-1 -> 0-0.5 remap intact. One piece of new work: MpiStepPaint sizes its canvas from props.media?.url and needs a blank-canvas fallback. Design: brief.md.",
-  "column": "todo",
-  "maturity": "planned",
+  "column": "doing",
+  "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-25T04:11:00Z",
-  "updated_at": "2026-08-25T04:35:00Z",
+  "updated_at": "2026-08-26T01:02:45Z",
   "labels": [
     "feature",
     "flow",
@@ -16,6 +16,7 @@
   ],
   "links": {
     "brief": "brief.md",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "files": "files.json"
   }
 }

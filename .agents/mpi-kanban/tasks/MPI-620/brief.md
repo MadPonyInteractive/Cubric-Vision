@@ -130,3 +130,171 @@ Still to confirm: whether a gizmo step can read a flow-level field at mount time
 collects `{ [role]: value }` per step and a kind *"never learns which flow hosts it"*
 (`stepKinds.js` header), so a cross-step read may not be expressible today. **Check that
 before designing** — it is the difference between a FlowDef change and a frame change.
+
+---
+
+## SETTLED DESIGN — 2026-08-26
+
+Everything above this line was written before the graph was traced. Two of its premises turned
+out to be wrong; this section supersedes them. Read this first.
+
+### The brief above is STALE in two places
+
+1. **"Lift `flow_draw_it_in.json` nodes 17–27"** — MPI-621 (`249bd357`) already landed the Klein
+   rebuild. That file at HEAD is 35 Klein nodes with no preprocessor, no `SetUnionControlNetType`,
+   no `ControlNetApplyAdvanced`, no `MpiNormalizeValue` and no SDXL loader. Node 17 at HEAD is
+   `Input_Positive`, node 26 is `Input_Seed` — the numbers no longer address the nodes the brief
+   means. Fabio's *"let's just make sure that we don't lose the SDXL information"* had therefore
+   already half-happened. The 68-node original is recovered from **`fe525d8e`** and preserved on
+   this card as `recovered_sdxl_graph.json`.
+2. **"`MpiNormalizeValue(0-1 → 0-0.5)`"** — the shipped value was **0.6**, and 0.5 is the value
+   Fabio measured live as *not following the drawing at all*. See § The ceiling below.
+
+### Source graph — the SDXL t2i template, not Draw It In
+
+Fabio's call, 2026-08-26, and it is the better source: `t2i_sdxl_realistic.json` (86 nodes)
+already carries the whole ControlNet apparatus, the LoRA rack, and `Input_Width`/`Input_Height`.
+
+> **TRAP — do NOT prune `comfy_workflows/raw/sdxl_t2i_template.json` in place.** Its `_template`
+> suffix routes it to a **generator**, and it is the single source that produces BOTH shipped
+> runtime workflows `t2i_sdxl_realistic.json` AND `t2i_sdxl_nsfw.json`. Pruning it would gut the
+> SDXL model cards, not build a flow. **Copy it to a bare-name raw file first** —
+> `comfy_workflows/raw/flow_blank_canvas.json` — because a bare name routes to a direct runtime
+> file, which is the flow case.
+
+What the template already has, by node id:
+
+| What | Nodes |
+|---|---|
+| Control select (1=openpose, 2=depth, 3=scribble, 4=canny) | `1624` `Input_Control_Net`, switches `1629` (preprocessor) + `1623` (bank) |
+| Preprocessor arms | `1620` openpose, `1602` depth, `1617` scribble, `1615` canny |
+| Union banks | `1576` openpose, `1625` depth, `1626` hed/pidi/scribble/ted, `1627` canny/lineart/anime_lineart/mlsd |
+| Strength chain | `1622` `Input_Control_strength` → `1621` `MpiNormalizeValue` (0.5) → `1578` `ControlNetApplyAdvanced` (`end_percent` 0.569) |
+| LoRA rack | `1535`–`1540` `Input_Lora_1..6` |
+| Sizing | `1633` `Input_Width` / `1634` `Input_Height` → `1455` `EmptyLatentImage` |
+| Drawing input | `1640` `Input_Image` — `MpiLoadImageFromPath`, `block_if_empty: true`, already path-reading and self-gating |
+
+### The title contract — what the app WILL and WON'T inject
+
+`_buildParams` (`commandExecutor.js:609`) emits **`Input_Positive`, `Input_Negative`,
+`Input_Negative_Audio`, `Input_Seed` on every run, unconditionally**, whatever the flow declares.
+Injection silently skips a title with no node. That asymmetry is the whole of the table below.
+
+| Title | Action | Why |
+|---|---|---|
+| `Input_Positive` (1472) | **keep** | flow declares a `positive` field |
+| `Input_Negative` (1473) | **RETITLE away** | see § The negative — keeping the title wipes the bake on every run |
+| `Input_Seed` (1599) | **keep** | always emitted |
+| `Input_Control_Net` (1624) | **keep** | the drawing-type radio |
+| `Input_Control_strength` (1622) | **keep** | the follow-the-drawing slider |
+| `Input_Width` (1633) / `Input_Height` (1634) | **keep** | this is where the ratio lands — no `GetImageSize` needed |
+| `Input_Image` (1640) | **keep** | the paint layer arrives here |
+| `Checkpoint` (1462) | **RETITLE → `Input_Base_Model`** | `modelParams` selects the per-arm checkpoint through this title; `ckpt_name` is on the injector spray list (`comfyController.js:1376`), so a plain `Input_Base_Model` key writes it. Draw It In titled node 12 exactly this way |
+| `Input_Lora_1..6` (1535–1540) | **RETITLE → `Input_Lora_Phase1_1..6`** | see § LoRAs |
+
+### LoRAs (Fabio: *"this is gonna have loras"*)
+
+`_buildParams` emits `Lora_Phase<N>_<i>` per declared phase, plus — **phase 1 only** — the flat
+compatibility key `Lora_<i>`. So the template's existing `Input_Lora_1..6` *would* fill correctly
+for a single-phase flow. **Retitle anyway.** The code comment states no flow with a declared rack
+is on the flat form any more (`flow_character_sheet` was the last, phase-titled by MPI-610), marks
+the line *"Drop this line once no flow graph has flat nodes"*, and warns that **a graph carrying
+BOTH forms takes the same rack twice**. Shipping flat would resurrect a compat path the codebase
+is retiring.
+
+Declare `loras: true` on the **slot**, never as a flow-level `settingsModel` — the rack is the
+model's own settings, so it follows whichever card the user picked. All five candidates
+(`sdxl-realistic`, `sdxl-nsfw`, `ill-anime-beauty`, `ill-anime`, `pony-mix`) are verified
+flat-slot with no `loraStages`, so none trips the *"staged-LoRA model; skipped"* bail.
+
+### The negative — BAKED, not exposed (Fabio, 2026-08-26)
+
+```
+blurry, (lowres:1.2), (worst quality:1.4), (low quality:1.4), (bad anatomy:1.4), bad hands, multiple views, jpeg artifacts
+```
+
+Set as the value of node `1473`, **retitled away from `Input_Negative`** (Draw It In used
+`MpiText | Edit Guardrails` for the same dodge). `CLIPTextEncode` parses the `(term:weight)`
+syntax natively. The FlowDef declares **no** `negative` field.
+
+> **This is a live bug we found, not a hypothetical.** Draw It In's node 19 was titled
+> `Input_Negative` and held a baked `"blurry, low quality, watermark, text, multiple objects,
+> cropped"`, wired through to the sampler. Because the FlowDef declared no `negative` field,
+> `payload.negative` was always `undefined`, so `Input_Negative: ''` was injected over it on
+> **every single run**. Every Draw It In render ever made ran with an empty negative. Nothing
+> failed and nothing logged.
+>
+> The add-flow README documents this trap for `Input_Positive` only. It generalises to all three
+> unconditional titles — `Input_Positive`, `Input_Negative`, `Input_Negative_Audio`. **Fix that
+> playbook line when this card closes.**
+
+### The flat-white composite MUST be carried over — the template has no equivalent
+
+In the template the preprocessors read `Input_Image` (1640) **directly**, because that input is an
+opaque photo. Scribble's input is the paint gizmo's **RGBA layer**, whose RGB is undefined wherever
+alpha is 0. Fed straight to `ScribblePreprocessor` it reads the transparent region as black, so a
+dark drawing on nothing yields a near-empty or inverted hint.
+
+Carry the three nodes from the recovered Draw It In graph and wire the composite's output into the
+preprocessors in place of 1640's direct image link:
+
+- `EmptyImage` (5) — `color: 16777215` (white), sized from the paint layer
+- `InvertMask` (3) — off the loader's alpha
+- `ImageCompositeMasked` (6) — paint over white
+
+### The ceiling — 0.6, and pruning the arms is what earns it
+
+`tests/flow-model-choice.test.cjs` sweeps every workflow and asserts
+`output_max === CEILING[file] ?? 0.5`. At HEAD `CEILING` is `{}` — MPI-621 emptied it because the
+only exception's graph was deleted, explicitly *"NOT because the rule was relaxed."*
+
+- **0.5 is the house number** because it is the minimum safe ceiling across every control type an
+  SDXL card offers, and **openpose and depth are what set that floor**.
+- **Keeping all four arms forces 0.5** — no test change, but 0.5 is the exact value Fabio measured
+  on Draw It In as *"did not follow the drawing at all"* (runs `1c5dd5b6` / `bbe85266`). The flow
+  would ship weak by construction.
+- **Pruning to scribble + canny only** makes the graph provably unable to drive openpose or depth,
+  which is the stated bar for an exception, and earns the **0.6** he actually shipped. 0.65
+  overshot (the doodle came through as edges).
+
+So dropping the openpose and depth arms is **not tidiness — it is what lets the flow use the
+strength that works.** Add `flow_blank_canvas.json: 0.6` to `CEILING` with that reasoning; never
+widen the assertion. `end_percent` stays 0.569 and the slider stays 0-1.
+
+### Open question 1 — ANSWERED: the ratio lives on the paint step itself
+
+The cross-step dependency the brief worried about does not need to exist.
+
+A **gizmo step's own declared `fields`** seed into `_stepValues[role].fields` at SETUP
+(`MpiBaseFlow.js:381-393`) and that object is handed to the gizmo as `props.value` at mount — so
+the ratio is readable **before the first `_report()`** with zero frame plumbing. The frame already
+calls `el.onField(id, val)` on a step-field change (`MpiBaseFlow.js:1326`), with a comment naming
+*"a ratio lock"* as the use case.
+
+A **flow-level** field would NOT work: mount props are `{media, step, value, onChange}` and
+`_fieldValues` is not among them.
+
+No new field type needed — `declaredFields.js` supports `select` and `radio`. The ratio must emit
+**SDXL-native buckets** (1024x1024, 1152x896, 896x1152, 1216x832, 832x1216) straight into
+`Input_Width`/`Input_Height`.
+
+### App-side work — three touch points, and the brief only caught one
+
+Zero-media flows already work end to end (`character-sheet` has no `inputSchema`; step 0 renders
+*"This flow needs no input media."*).
+
+1. `MpiBaseFlow.js:1284` — `_buildStepSlide` refuses to mount a gizmo when `_mediaForRole(role)`
+   is null, printing *"Add the image for this step on the first step."*
+2. `MpiBaseFlow.js:2211` — `_deriveRunMedia` does `if (!media) continue`, so with nothing uploaded
+   the painted layer never becomes media at all. **Second half of the same blocker, easy to miss.**
+3. `MpiStepPaint.js:588` — ALL init (`_natural`, `paint.init`, `undo.clear`, `_syncCanvasSize`,
+   `_refit`, restore, `_draw`, `_report`) sits inside the `imgEl` `load` handler, which never fires
+   with no url. Extract `_initSurface(w, h)` and call it from the ratio. **That extraction is
+   exactly what kills the brief's silent 1x1 PNG trap.**
+
+### Naming — DECIDED
+
+Title stays Fabio's **"Scribble"**. Internal id **`blank-canvas`**, op **`flowBlankCanvas`**,
+gallery prefix `FLOWBLANKCANVAS_`. Rejected `scribble` / `flowScribble`: it shares the `flowScrib`
+prefix with Draw It In's `flowScribObj` and reads the same at a glance, which is the exact
+confusion the brief asked to avoid.

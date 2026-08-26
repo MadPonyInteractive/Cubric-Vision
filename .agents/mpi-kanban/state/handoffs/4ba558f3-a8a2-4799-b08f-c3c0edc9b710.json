@@ -1,0 +1,78 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "4ba558f3-a8a2-4799-b08f-c3c0edc9b710",
+  "generated_at": "2026-08-26T03:13:26Z",
+  "status": "open",
+  "session": {
+    "name": "MPI-620 Scribble - built the flow end to end on SDXL+ControlNet, then live runs turned it toward edit models only",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Continue MPI-620: ship the Scribble flow - draw on a blank canvas, a model renders it.",
+    "status": "in_progress",
+    "summary": "The whole app half is built, tested and live-verified against an SDXL + ControlNet graph, and it works. But Fabio's side-by-side live runs showed edit models (Klein 9B/4B, Krea 2) beating the SDXL path decisively on the same drawing, so he has DECIDED the flow pivots to EDIT MODELS ONLY. The graph must be re-authored and the ControlNet controls stripped from the FlowDef. Nothing has been ripped out yet - the SDXL build is intact and green on disk."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Recovered the SDXL+ControlNet graph from fe525d8e - the brief's premise was stale, MPI-621 had already deleted it from flow_draw_it_in.json. Copy preserved on the card as recovered_sdxl_graph.json.",
+      "Answered the brief's open question 1 in code: the canvas-size field lives on the PAINT STEP, because a step's own fields reach the gizmo as props.value AT MOUNT and a flow-level field never would.",
+      "Op flowScribble registered in all 4 files; FlowDef 'scribble' added with a five-card choosable slot, loras:true, modelParams, one optional image slot.",
+      "Frame made media-optional: _buildStepSlide and _deriveRunMedia both gated on the new step flag `composite`; stepKinds STEP_MEDIA now takes the step and branches paint between composePaintLayer and the new composePaintComposite.",
+      "MpiStepPaint: _initSurface extracted from the load handler (closing the silent 1x1 PNG trap), white ground when there is no source, el.onField, and a lossless re-canvas on size change backed by a _master layer.",
+      "Fixed 3 real bugs found along the way - onField reading a stale props.value, _urlDirty not set on reshape (would have stretched every reshaped drawing), and MpiDropdown pinning its portalled list to the trigger width so options ellipsised.",
+      "UI rework from Fabio's live look: fields moved beside the canvas via the new opt-in `fieldsSide` step flag, stage 46vh->68vh, prompt 180px.",
+      "Playbook gap closed: add-flow README now names all three unconditionally-emitted titles, not just Input_Positive.",
+      "npm test 738/738 and npm run test:desktop 26/26, both green at handoff."
+    ],
+    "pending": [
+      "Fabio re-authors the graph as an EDIT-MODEL graph (no ControlNet, no preprocessors) and exports to comfy_workflows/raw/flow_scribble.json.",
+      "Fabio runs the Krea 2 qualification test - it keeps rendering the drawn pink strokes as real objects, and it only stays in the model list if that can be stopped.",
+      "Strip Input_Control_Net and Input_Control_strength from the FlowDef, delete the drawing-type radio and follow-the-drawing slider, rewrite the step hint copy.",
+      "Bake the instruction prefix in an MpiText node the way Draw It In does, so the user types only the subject. Fabio's working prefix: 'Change the drawing to a realistic view with <subject>'; he noted it needs improving and that naming the camera angle mattered.",
+      "Rewrite the flow_scribble case in tests/inject-params-titles.test.cjs - it currently pins two AIO_Preprocessor arms, the two-switch wiring and input_control_*, all of which die with the ControlNet.",
+      "Decide the final model list for the slot, then wire modelParams per family.",
+      "Live run on the rebuilt flow, then /mpi-flow-graphics for the tile + hero."
+    ]
+  },
+  "task_card": {
+    "id": "MPI-620",
+    "title": "Scribble Flow - draw on a blank canvas, SDXL + ControlNet renders it",
+    "column": "doing",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-620/",
+    "links": {
+      "plan": ".agents/mpi-kanban/tasks/MPI-620/brief.md",
+      "checklist": null,
+      "validation": null
+    }
+  },
+  "next_action": {
+    "description": "Wait for Fabio's re-authored EDIT-MODEL graph and his Krea 2 verdict, then do the app-side pivot: strip the two ControlNet fields from the FlowDef, rewrite the flow_scribble case in tests/inject-params-titles.test.cjs, and set the model slot. Do NOT start by re-reading the code - the brief's SETTLED DESIGN section and the card's event log carry every decision.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "EDIT MODELS ONLY (Fabio, 2026-08-26). Same drawing + same prompt through Klein 9B/4B and Krea 2 all placed the sea correctly; the three SDXL runs rendered the drawn strokes as physical white road barriers. He accepted that this retires SDXL scribble-to-image from the product, which was MPI-620's original stated purpose - a deliberate call, not drift.",
+      "Model list: Klein 9B/4B plus Boogu (boogu-edit-high / boogu-edit-balanced), and Krea 2 ONLY IF its leftover-line failure can be stopped. Fabio rates Krea the most realistic but it keeps rendering his pink dashes as real pink road paint.",
+      "Krea 2's leftover lines are very likely a PARAMETER, not the prompt: krea2_t2i_nsfw.json node 408 Krea2EditModelPatch ships ref_boost 2, which per docs/models/krea2/editing.md biases the WHOLE reference against the instruction and is tuned for identity preservation. Try 408 -> 1.0 first, then raise cfg (boost is weaker at cfg>1), and only then reword. Klein has no such patch, which is why it drops the strokes.",
+      "The ControlNet ceiling stays at output_max 0.5 and CEILING in flow-model-choice.test.cjs stays EMPTY. I argued for 0.6 mid-session and was WRONG - the live runs show over-following, not under-following. Moot once the ControlNet goes, but do not resurrect the argument.",
+      "Naming: flow id 'scribble', op 'flowScribble', workflow flow_scribble.json, gallery prefix FLOWSCRIBBLE_. Deliberately not reusing Draw It In's scribble-object / flowScribObj, which can never be freed because shipped gallery cards carry that prefix."
+    ],
+    "constraints": [
+      "The FlowDef carries NO preview/video keys and must not until the art files exist - a name written ahead of the file 404s the tile, and three assertions in tests/desktop/flows-tab-ring.spec.js require consoleErrors to be empty. That is what held master's CI red for a day and eight pushes on Draw It In (7c883d67).",
+      "sync-raw-workflows.mjs REFUSES to run while a generated workflow is uncommitted, including the one the previous sync staged. The file is fully derived from raw, so the clean move is `git rm --cached` plus deleting it and letting the sync regenerate. NOT a throwaway commit, and NOT git stash (guard-git blocks it).",
+      "Killing an isolated app instance by its PORT OWNER leaves an Electron orphan holding the STABLE agent profile (os.tmpdir()/cubric-agent-profile), and the next launch then dies with splash ERR_FAILED (-2) plus 'Unable to move the cache'. Identify instances by the renderer's --user-data-dir, NEVER by name or age: both trees are the byte-identical 'electron.exe .' and Fabio's live app is usually one of them.",
+      "MpiBaseFlow cannot be measured by mounting into a detached div, and the shell's flow:open path gives a 0x0 overlay in the browser when no project is open. Mount into a throwaway div, then append inst.el into a position:fixed;inset:0 host sized 100%/100% - a display:flex host makes the whole flow shrink to content and every measurement reads far too small.",
+      "Synthetic PointerEvents never reach the paint brush (pointer capture rejects untrusted events). Test the layer through the REUSE path instead - mount with value.paint seeded and drive el.onField directly.",
+      "MPI-607's files.json still claims flowsRegistry.js, operationRegistry.js, operation_registry.json, universal_workflows.js and commandRegistry.js, but both its owner sessions are CLOSED with 2026-08-23 heartbeats against a 120-minute timeout, and its Voice Changer work already shipped. Treated as stale, not live."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-620/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-620/events.jsonl",
+      "js/data/flowsRegistry.js",
+      "js/components/Organisms/MpiStepPaint/MpiStepPaint.js",
+      "docs/playbooks/add-flow/README.md"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/4ba558f3-a8a2-4799-b08f-c3c0edc9b710.json and use mpi-continue to pick up MPI-620 (Scribble flow) in the Cubric-Vision repo. The flow's app half is fully built, tested and live-verified on an SDXL + ControlNet graph, but Fabio's side-by-side runs proved edit models beat it decisively, so he decided the flow pivots to EDIT MODELS ONLY - Klein 9B/4B and Boogu, with Krea 2 included only if its leftover drawn lines can be eliminated (try ref_boost 2 -> 1 on node 408 before touching the prompt). Nothing has been ripped out yet: the SDXL build is intact and both suites are green. Start from the brief's SETTLED DESIGN section and the card's event log rather than re-reading the code - every decision and every trap is written down there."
+}

@@ -127,8 +127,19 @@ export const MpiDropdown = ComponentFactory.create({
             const rect      = trigger.getBoundingClientRect();
             const direction = props.direction || 'down';
 
-            list.style.width = `${rect.width}px`;
-            list.style.left  = `${rect.left + window.scrollX}px`;
+            // The trigger's width is a FLOOR, not the list's width. Pinning
+            // `width` here made the menu exactly as wide as the closed control, so a
+            // narrow trigger ellipsised its own options and the user picked between
+            // "Squa…", "Port…" and "Land…" (Fabio, MPI-620). A menu exists to be read;
+            // the trigger showing one truncated value is a different, acceptable
+            // trade. `max-width` in the stylesheet stops a long option running away.
+            list.style.minWidth = `${rect.width}px`;
+            list.style.width    = 'max-content';
+            // Keep the list on screen once it is allowed to be wider than the trigger:
+            // a right-hand control would otherwise open past the viewport edge.
+            const overhang = rect.left + list.offsetWidth - window.innerWidth + 8;
+            const left = overhang > 0 ? Math.max(8, rect.left - overhang) : rect.left;
+            list.style.left  = `${left + window.scrollX}px`;
 
             if (direction === 'up') {
                 list.style.top    = '';

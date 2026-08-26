@@ -1,7 +1,7 @@
 import { MpiStepBox } from '../MpiStepBox/MpiStepBox.js';
 import { MpiStepPreview } from '../MpiStepPreview/MpiStepPreview.js';
 import { MpiStepCrop, composePaddedImage } from '../MpiStepCrop/MpiStepCrop.js';
-import { MpiStepPaint, composePaintLayer } from '../MpiStepPaint/MpiStepPaint.js';
+import { MpiStepPaint, composePaintLayer, composePaintComposite } from '../MpiStepPaint/MpiStepPaint.js';
 
 /**
  * STEP_KINDS — the step-kind registry (MPI-306 Phase 1).
@@ -147,19 +147,36 @@ export function stepValueToParam(kind, value) {
  */
 const STEP_MEDIA = {
     crop: (value, media) => composePaddedImage(media, value),
-    // The value already carries the layer and the source's natural size, so this
-    // needs no media — the argument is kept for the shared signature.
-    paint: value => composePaintLayer(value),
+    // `paint` derives one of TWO pictures, and the STEP says which (MPI-620).
+    //
+    // Default — the LAYER ALONE. The value already carries it and the source's natural
+    // size, so this needs no media; the argument is kept for the shared signature.
+    // Draw It In wants this: its graph takes the photo and the drawing as separate
+    // inputs and decides for itself where the drawing applies.
+    //
+    // `composite: true` — the FLATTENED picture, strokes over the source or over flat
+    // white when the step has no source at all. A graph with ONE image input wants this,
+    // because a bare RGBA layer arrives with undefined colour wherever alpha is 0.
+    // Declared rather than inferred: `mediaRole` correlates with it today (a step that
+    // sends its file elsewhere wants the layer; one that replaces its own role wants the
+    // composite) but that is a coincidence of two flows, not a rule, and inferring it
+    // would silently change the picture a future flow gets.
+    paint: (value, media, step) => (step?.composite
+        ? composePaintComposite(value, media)
+        : composePaintLayer(value)),
 };
 
 /**
  * @param {string} kind
  * @param {Object|null} value - the step's reported value, `_stepValues[role]`.
- * @param {Object|null} media - the media item the step is bound to.
+ * @param {Object|null} media - the media item the step is bound to, or null when the
+ *   step CREATES its picture rather than deriving one (a blank-canvas paint step).
+ * @param {Object|null} [step] - the step declaration, for kinds whose output shape the
+ *   flow chooses (`paint`'s `composite`).
  * @returns {Promise<File|null>} a replacement file for that role, or null when
  *   the kind derives no media (every kind but `crop` and `paint`) or there is
  *   nothing to change (a rect identical to the source, an unpainted layer).
  */
-export function stepValueToMedia(kind, value, media) {
-    return STEP_MEDIA[kind]?.(value, media) ?? Promise.resolve(null);
+export function stepValueToMedia(kind, value, media, step) {
+    return STEP_MEDIA[kind]?.(value, media, step) ?? Promise.resolve(null);
 }

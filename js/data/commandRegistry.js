@@ -1105,6 +1105,34 @@ export const commands = {
         // The name is historical; the mapping is generic.
         injector: 'headSwap',
     },
+    // MPI-620 — "Scribble". The SDXL + ControlNet render half that MPI-621 deleted from
+    // Draw It In, rehoused as a flow in its own right: a drawing goes in, an image comes
+    // back. It was always a general-purpose scribble-to-image engine wearing a
+    // photo-insertion costume.
+    //
+    // ONE image slot, and it is OPTIONAL on purpose (Fabio, 2026-08-26): the user either
+    // draws on a blank canvas in the paint step or uploads a drawing made elsewhere. The
+    // paint gizmo COMPOSITES its strokes over whichever of those it got — over flat white
+    // when there was no upload — and the composite REPLACES `image1` rather than landing
+    // in a second slot. That is why there is no `Input_Paint` twin here the way Draw It In
+    // has one: that flow needed the photo AND the drawing as separate inputs so the graph
+    // could flatten them itself, and this one hands the graph a single opaque image.
+    flowScribble: {
+        label: 'Flow: Scribble',
+        progressLabel: 'Rendering the drawing',
+        mediaType: MEDIA_TYPE.IMAGE,        // OUTPUT type
+        requiresImages: 0,                  // media is never a hard requirement at the op layer
+        mediaInputs: [
+            { key: 'image1', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: false },
+        ],
+        // Same reasoning as Draw It In: strokes say where, how big and what pose, never
+        // WHAT. Without it the model invents a subject from the hint alone. It also covers
+        // the no-drawing case — with an empty `Input_Image` the graph's loader emits a 1x1
+        // that `ImageScaleToTotalPixels` normalises to 1024x1024, so a promptless run would
+        // return an arbitrary portrait rather than an error (proven on the bench 2026-08-26).
+        promptRequired: true,
+        universal: true,
+    },
 
     // MPI-607. The FIRST audio-only op: two clips in, one clip out, nothing visual
     // anywhere in the run. `mediaType: AUDIO` is what promotes the graph's

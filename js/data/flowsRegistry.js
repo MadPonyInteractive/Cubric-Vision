@@ -804,6 +804,192 @@ export const FLOWS = [
         // above. Do not reintroduce a strength slider here; there is nothing to steer.
     },
     {
+        // MPI-620 — "Scribble". Draw on a blank canvas (or bring a drawing made
+        // elsewhere) and SDXL renders it. This is the SDXL + ControlNet render half that
+        // MPI-621 deleted from Draw It In when that flow was rebuilt Klein-only, rehoused
+        // as a flow in its own right — it was always a general-purpose scribble-to-image
+        // engine wearing a photo-insertion costume.
+        //
+        // The id is `scribble` and the op is `flowScribble`, deliberately NOT reusing
+        // `scribble-object` / `flowScribObj`. Those still belong to Draw It In: the op key
+        // was kept when that flow was renamed because its gallery cards carry the
+        // `FLOWSCRIBOBJ_` prefix and their sidecars' `flowId`, so it can never be freed.
+        id: 'scribble',
+        title: 'Scribble',
+        // NO `preview` / `video` KEYS UNTIL THE ART EXISTS. Both are optional and every
+        // consumer guards them, so ABSENT is the correct state while the assets are
+        // missing — a name written ahead of the file is what `7c883d67` did on Draw It In:
+        // the tile fetched it, 404'd, and because three places in
+        // `tests/desktop/flows-tab-ring.spec.js` assert `consoleErrors` is empty, master's
+        // CI stayed RED for a day and eight pushes. Run `/mpi-flow-graphics` and add both
+        // keys in the same commit as the files.
+        description: 'Draw something and let the model render it. Start from a blank canvas at the shape you want, or bring in a drawing you made elsewhere, then say what it is — the drawing gives the shapes and the composition, the words give the subject and the style. It does not have to be a good drawing: rough placement and a readable silhouette are enough for the model to build a finished image around.',
+        // ONE choosable slot across five cards (MPI-590 shape). All five are SDXL-family
+        // checkpoints that this one graph drives identically, so the user runs whichever
+        // they already have rather than being asked for a second download. The anime arms
+        // matter specifically: Draw It In's Klein rebuild abandoned them, and this flow is
+        // where those users land.
+        //
+        // `loras: true` — the graph carries a user LoRA rack, and it rides on the SLOT
+        // rather than a flow-level `settingsModel` so the rack follows whichever card the
+        // user picked. All five are flat-slot models; a `loraStages` model reaching
+        // `commandExecutor` would be skipped with a warning rather than injected wrong.
+        requiredModels: [
+            {
+                label: 'Render model',
+                models: ['sdxl-realistic', 'sdxl-nsfw', 'ill-anime-beauty', 'ill-anime', 'pony-mix'],
+                loras: true,
+            },
+        ],
+        // What differs between the arms, and it is the ONLY thing that does — one graph,
+        // five checkpoints. The realistic arm restates the value the graph already bakes
+        // so a re-export that quietly moves the default is caught here, not in a live run.
+        //
+        // `Input_Base_Model` is the PLAIN form, not the dotted `Title.widget` form: the
+        // widget is `ckpt_name`, which IS on `comfyController._inject`'s spray list, so a
+        // plain key writes it. (Contrast `Input_Edit_Clip.clip_name` on the flows above —
+        // `clip_name` is NOT on that list and needs the dotted form.)
+        modelParams: {
+            'sdxl-realistic':   { 'Input_Base_Model': 'SDXL_Realistic.safetensors' },
+            'sdxl-nsfw':        { 'Input_Base_Model': 'SDXL_NSFW.safetensors' },
+            'ill-anime-beauty': { 'Input_Base_Model': 'ILL_Anime_Beauty.safetensors' },
+            'ill-anime':        { 'Input_Base_Model': 'ILL_Anime.safetensors' },
+            'pony-mix':         { 'Input_Base_Model': 'PONY_Mix.safetensors' },
+        },
+        operation: 'flowScribble',
+        workflow: 'flow_scribble.json',
+        mediaType: 'image',
+        inputSchema: {
+            // ONE slot, and `mode: 'upto'` makes it genuinely optional (Fabio,
+            // 2026-08-26): the user either draws on a blank canvas in the next step or
+            // brings a drawing made in Photoshop. Whichever happens, the paint gizmo
+            // hands the run a single composited image, so there is no second slot.
+            media: [
+                {
+                    type: 'image', mode: 'upto', max: 1,
+                    roles: ['image1'],
+                    labels: ['Drawing (optional)'],
+                },
+            ],
+        },
+        // NO `result.compare`. The reveal bar wants a steady BEFORE the output can be
+        // read against, and this flow has none: with no upload there is literally no
+        // before, and with one the before is a line drawing and the after a finished
+        // render, which share no pixels for the bar to travel across.
+        steps: [
+            {
+                // `role: 'image1'` with NO `mediaRole` — the composite REPLACES the
+                // drawing it was composited from, which is `crop`'s semantics rather than
+                // the `paint` semantics Draw It In uses. That flow needs the photo AND the
+                // drawing as two separate graph inputs so it can flatten them itself; this
+                // graph has one image input and wants it already opaque.
+                // `composite: true` — the run gets the FLATTENED picture (strokes over
+                // the upload, or over flat white when there is none), not the bare RGBA
+                // layer. This graph has ONE image input and reads its RGB as the
+                // ControlNet hint, so a layer would arrive with undefined colour
+                // wherever alpha is 0 (stepKinds.js § STEP_MEDIA).
+                // `fieldsSide` — the prompt and the canvas-size picker sit in a column
+                // BESIDE the drawing rather than under it. Someone drawing a whole figure
+                // needs the canvas, and stacked those two controls cost ~150px of exactly
+                // the vertical the drawing wants (Fabio, 2026-08-26).
+                kind: 'paint', role: 'image1', composite: true, fieldsSide: true,
+                tickerLabel: 'Draw it',
+                title: 'Draw what you want',
+                fields: [
+                    {
+                        // DECLARED HERE AND NOWHERE ELSE. Restating it in the flow's own
+                        // `fields` so it is also editable on the run slide silently drops
+                        // edits from the second run onward — a gizmo step's fields are
+                        // role-keyed in `_stepValues[role].fields` while flow fields live
+                        // in `_fieldValues`, and `_collectInputs` applies the flow store
+                        // LAST. See the long note on Draw It In's prompt above.
+                        id: 'positive', type: 'text', rows: 2, label: 'What is it?',
+                        placeholder: 'A knight on a cliff at sunset, a red sports car, a treehouse…',
+                    },
+                    {
+                        // THE CANVAS SIZE, and it is read by the GIZMO rather than sent to
+                        // the graph — hence a bare id, not an `Input_` one. The graph
+                        // derives its own dimensions (`GetImageSize` off the scaled input
+                        // drives `EmptyLatentImage`), so this never becomes an injection
+                        // param; it exists to seed the blank canvas the user draws on.
+                        //
+                        // Declared on THIS step on purpose. A step's own fields are seeded
+                        // into `_stepValues[role].fields` at SETUP and handed to the gizmo
+                        // as `props.value` AT MOUNT, which is the only place a value is
+                        // readable before the gizmo's first report. A flow-level field
+                        // would NOT be — mount props are `{ media, step, value, onChange }`
+                        // and `_fieldValues` is not among them.
+                        //
+                        // The values are SDXL-native buckets. Off-bucket dimensions are
+                        // what make an SDXL render go soft or grow a second head, and since
+                        // the drawing's size becomes the output's size, picking here is
+                        // picking the output resolution.
+                        //
+                        // It renders even when the user HAS uploaded a drawing, because
+                        // the frame has no conditional-field support. That is answered with
+                        // copy rather than a `showWhen` in the field vocabulary — a real
+                        // feature with real blast radius for one control.
+                        id: 'canvasSize', type: 'select', label: 'Canvas size',
+                        default: '1024x1024',
+                        note: 'Only used for a blank canvas — a drawing you add keeps its own size.',
+                        options: [
+                            { v: '1024x1024', label: 'Square', info: '1024 x 1024' },
+                            { v: '896x1152', label: 'Portrait', info: '896 x 1152' },
+                            { v: '1152x896', label: 'Landscape', info: '1152 x 896' },
+                            { v: '768x1344', label: 'Tall', info: '768 x 1344' },
+                            { v: '1344x768', label: 'Wide', info: '1344 x 768' },
+                        ],
+                    },
+                ],
+                hint: 'Rough is fine — the drawing carries placement, scale and silhouette, and the words carry everything else. Pick the drawing type below to match what you made: flat outlines and a shaded sketch are read very differently.',
+            },
+        ],
+        fields: [
+            {
+                // 1 = scribble, 2 = canny, matching the graph's MpiAnySwitch banks
+                // (`1629` selects the preprocessor, `1623` the SetUnionControlNetType
+                // bank, both off `Input_Control_Net`). This graph carries ONLY those two
+                // arms — the openpose and depth arms the SDXL t2i template has were pruned.
+                //
+                // The copy says TONAL, never "structured": a user with clean line art who
+                // reads "structured" as "neat" picks canny and gets their own ink back as
+                // an outline, because canny sees a drawn stroke's TWO edges.
+                id: 'Input_Control_Net', type: 'radio', label: 'Drawing type',
+                columns: 2, default: 1,
+                options: [
+                    { v: 1, label: 'Line drawing', note: 'flat lines',
+                      info: 'For flat line art. Thins each stroke to a centreline, so the model renders a form rather than tracing your ink.' },
+                    { v: 2, label: 'Shaded sketch', note: 'tonal',
+                      info: 'For a shaded pencil drawing with hatching. Carries interior structure — folds, a motif on a shirt — that the line arm flattens.' },
+                ],
+            },
+            {
+                // ON THE HOUSE MAPPING, and staying there. The chain is
+                // `MpiFloat(1)` -> `MpiNormalizeValue(0-1 -> 0-0.5)` ->
+                // `ControlNetApplyAdvanced(end_percent 0.569)`, which is what every other
+                // ControlNet workflow in the repo does, and `tests/flow-model-choice.test.cjs`
+                // sweeps for exactly that. `default: 1` is
+                // `PROMPT_CONTROL_DEFAULTS.controlStrength`, so the knob reads the same at
+                // the same number everywhere in the app.
+                //
+                // DRAW IT IN SHIPPED 0.6 AND THAT DOES NOT TRANSFER. Its ceiling was
+                // re-swept live on 2026-08-23 because 0.5 "did not follow the drawing" —
+                // but there ControlNet was steering a small inserted region while
+                // competing with an existing photograph's content. Here the drawing is the
+                // ONLY structural signal on an otherwise empty latent, so the strength
+                // that reads as weak in a composite may read as correct here. Do not
+                // copy 0.6 across on the strength of that measurement; if a live sweep
+                // shows this flow genuinely under-follows, the graph's `output_max` and a
+                // NAMED entry in that test's `CEILING` map move together, with the
+                // reasoning written down (the bar is proving the graph cannot drive
+                // openpose or depth, which this one cannot).
+                id: 'Input_Control_strength', type: 'slider', label: 'Follow the drawing',
+                min: 0, max: 1, step: 0.05, default: 1,
+                note: 'Turn it down if your strokes come through as real edges — a drawn line rendering as a seam means the drawing is being followed too literally.',
+            },
+        ],
+    },
+    {
         id: 'character-sheet',
         title: 'Character Sheet',
         preview: 'flow-character-sheet.webp',

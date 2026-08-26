@@ -1284,17 +1284,19 @@ export const MpiBaseFlow = ComponentFactory.create({
             const media = _mediaForRole(step.role);
             const canvas = ce('div', { className: 'mpi-base-flow__canvas' });
 
-            if (!media) {
+            // A step that CREATES its picture needs no source (MPI-620): a blank-canvas
+            // paint step is the whole of the flow's input, so demanding an upload first
+            // would make the flow unusable rather than guide the user. Every other kind
+            // DERIVES from the media and genuinely cannot mount without it.
+            if (!media && !step.composite) {
                 // No media for this role yet — say so plainly and send them back.
                 const empty = ce('p', { className: 'mpi-base-flow__canvas-empty' });
                 empty.textContent = 'Add the image for this step on the first step.';
                 canvas.appendChild(empty);
-                work.appendChild(canvas);
             } else {
                 const Kind = getStepKind(step.kind);
                 const host = ce('div');
                 canvas.appendChild(host);
-                work.appendChild(canvas);
 
                 const inst = Kind.mount(host, {
                     media,
@@ -1327,7 +1329,32 @@ export const MpiBaseFlow = ComponentFactory.create({
                 },
                 unsubs,
             );
-            if (fieldsRow) work.appendChild(fieldsRow);
+
+            // WHERE THE FIELDS GO, and it decides how big the canvas can be (MPI-620).
+            //
+            // Default: under the canvas, which is right when the fields are a couple of
+            // short controls MODIFYING what is on screen. But a step whose fields are
+            // part of the WORK — a prompt box and a canvas-size picker, which together
+            // eat ~150px of the same vertical the drawing needs — leaves a canvas too
+            // small to draw a figure in (Fabio, 2026-08-26).
+            //
+            // `fieldsSide` moves them into a stacked column beside the canvas instead.
+            // OPT-IN rather than the new default: this is the frame every gizmo step in
+            // every flow renders through, and three shipped steps are laid out for the
+            // stacked form. A step that wants the room asks for it.
+            if (step.fieldsSide && fieldsRow) {
+                fieldsRow.classList.add(
+                    'mpi-base-flow__fields--stacked', 'mpi-base-flow__fields--side',
+                );
+                work.classList.add('mpi-base-flow__work--split');
+                const split = ce('div', { className: 'mpi-base-flow__work-split' });
+                split.appendChild(fieldsRow);
+                split.appendChild(canvas);
+                work.appendChild(split);
+            } else {
+                work.appendChild(canvas);
+                if (fieldsRow) work.appendChild(fieldsRow);
+            }
 
             if (step.hint) {
                 const hint = ce('p', { className: 'mpi-base-flow__work-hint' });
@@ -2208,9 +2235,13 @@ export const MpiBaseFlow = ComponentFactory.create({
 
             let out = mediaItems;
             for (const step of steps) {
-                const media = out.find(m => m?.role === step.role);
-                if (!media) continue;
-                const file = await stepValueToMedia(step.kind, _stepValues[step.role], media);
+                const media = out.find(m => m?.role === step.role) || null;
+                // The other half of the same rule as `_buildStepSlide` above, and the
+                // half that is easy to miss: a step that CREATES its picture must still
+                // reach the deriver with no source, or the drawing never becomes media
+                // and the run goes out with nothing in the slot (MPI-620).
+                if (!media && !step.composite) continue;
+                const file = await stepValueToMedia(step.kind, _stepValues[step.role], media, step);
                 if (!file) continue;   // this kind derives nothing, or nothing changed
                 const project = state.currentProject;
                 const url = project ? await _placePreviewAsset(file, 'image', project) : null;
@@ -2221,7 +2252,7 @@ export const MpiBaseFlow = ComponentFactory.create({
                     ? out.map(m => (m === target ? { ...m, url, source: 'flow-derived' } : m))
                     : [...out, {
                         url,
-                        mediaType: media.mediaType || 'image',
+                        mediaType: media?.mediaType || 'image',
                         source: 'flow-derived',
                         role: dest,
                     }];

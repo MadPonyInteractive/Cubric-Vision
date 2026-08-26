@@ -171,6 +171,72 @@ export async function composePaintLayer(value) {
     return blob ? new File([blob], 'paint.png', { type: 'image/png' }) : null;
 }
 
+/**
+ * The FLATTENED picture: the source image (or flat white when there is none) with
+ * the paint layer drawn over it, as an opaque PNG at the value's own size.
+ *
+ * The counterpart to `composePaintLayer`, and the two exist because a flow either
+ * wants the drawing SEPARATE from the picture or wants them as one. Draw It In wants
+ * them separate — its graph takes the photo and the drawing as two inputs so it can
+ * decide where the drawing applies. Scribble (MPI-620) wants them as one: its graph
+ * has a single image input and reads that image's RGB as the ControlNet hint, so a
+ * bare RGBA layer would arrive with undefined colour everywhere alpha is 0 and the
+ * preprocessor would read the transparent region as black — a near-empty hint from a
+ * drawing that looked fine on screen.
+ *
+ * WHITE, not transparent, is the floor. Both control arms this feeds (scribble and
+ * canny) encode strokes as light-on-dark after preprocessing, so the neutral ground
+ * for a drawing is a blank white page — the same thing the user was drawing on.
+ *
+ * Returns null when there is neither a source nor a stroke: nothing was supplied and
+ * nothing was drawn, so there is no picture to send and the frame treats the null as
+ * "this kind changed nothing".
+ *
+ * @param {{paint?: string, size?: {w:number,h:number}}|null} value
+ * @param {{url?: string}|null} media - the step's source image, or null for a blank canvas
+ * @returns {Promise<File|null>}
+ */
+export async function composePaintComposite(value, media) {
+    const w = Math.round(value?.size?.w || 0);
+    const h = Math.round(value?.size?.h || 0);
+    if (!(w > 0) || !(h > 0)) return null;
+
+    const srcUrl = media?.url ? resolveMediaUrl(media.url) : '';
+    const layerBytes = value?.paint ? _dataUrlBytes(value.paint) : null;
+    if (!srcUrl && !layerBytes) return null;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const c2d = canvas.getContext('2d');
+    // The ground IS the product here, not a theme colour: this page is what the graph
+    // receives, and a scribble/canny preprocessor reads strokes as light-on-dark, so the
+    // neutral ground has to be literal white whatever the app is themed.
+    // eslint-disable-next-line mpi/no-hardcoded-hex-color -- see above
+    c2d.fillStyle = '#ffffff';
+    c2d.fillRect(0, 0, w, h);
+
+    if (srcUrl) {
+        // A failed decode must not take the drawing down with it — fall through to the
+        // white ground and still send the strokes, which is a usable picture.
+        const img = await new Promise((resolve) => {
+            const i = new Image();
+            i.onload = () => resolve(i);
+            i.onerror = () => resolve(null);
+            i.src = srcUrl;
+        });
+        if (img) c2d.drawImage(img, 0, 0, w, h);
+    }
+    if (layerBytes) {
+        const bmp = await createImageBitmap(new Blob([layerBytes], { type: 'image/png' }));
+        c2d.drawImage(bmp, 0, 0, w, h);
+        bmp.close();
+    }
+
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    return blob ? new File([blob], 'scribble.png', { type: 'image/png' }) : null;
+}
+
 export const MpiStepPaint = ComponentFactory.create({
     name: 'MpiStepPaint',
     css: ['js/components/Organisms/MpiStepPaint/MpiStepPaint.css'],
@@ -221,6 +287,12 @@ export const MpiStepPaint = ComponentFactory.create({
         const view = new ViewManager();
 
         const imgEl = new Image();
+        /**
+         * Whether this step has a SOURCE image at all. A flow may mount the gizmo with
+         * no media (MPI-620): the user draws on a blank canvas whose size comes from a
+         * declared field instead of from a photo's natural dimensions.
+         */
+        const _hasMedia = !!props.media?.url;
         let _loaded = false;
         let _natural = { w: 1, h: 1 };
         let _drawing = false;
@@ -299,7 +371,19 @@ export const MpiStepPaint = ComponentFactory.create({
 
             const w = _natural.w * view.scale;
             const h = _natural.h * view.scale;
-            ctx.drawImage(imgEl, view.offsetX, view.offsetY, w, h);
+            // With no source image there is nothing to draw UNDER the strokes, and
+            // `drawImage` on a never-loaded Image is a no-op that would leave the stage
+            // showing the page behind it. Paint the white page the user thinks they are
+            // drawing on — the same ground `composePaintComposite` flattens onto, so the
+            // step still shows exactly what the graph will receive.
+            if (_hasMedia) ctx.drawImage(imgEl, view.offsetX, view.offsetY, w, h);
+            else {
+                // Matches the ground `composePaintComposite` flattens onto, so the step
+                // shows exactly what the graph will receive.
+                // eslint-disable-next-line mpi/no-hardcoded-hex-color -- see above
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(view.offsetX, view.offsetY, w, h);
+            }
             ctx.drawImage(paint.paintCanvas, view.offsetX, view.offsetY, w, h);
 
             // No ring while Space is held: the pointer means PAN then, and the History
@@ -584,8 +668,16 @@ export const MpiStepPaint = ComponentFactory.create({
             _draw();
         }
 
-        _unsubs.push(on(imgEl, 'load', () => {
-            _natural = { w: imgEl.naturalWidth || 1, h: imgEl.naturalHeight || 1 };
+        /**
+         * Arm the drawing surface at w x h. EVERY path that establishes a size runs
+         * through here, and that is the point: this whole body used to live inside the
+         * `load` handler, so a gizmo mounted with no media never ran ANY of it —
+         * `_natural` kept its `{1, 1}` fallback, `size` reported 1x1, and because that
+         * passes `composePaintLayer`'s `w > 0 && h > 0` guard the flow would have sent
+         * a 1x1 PNG and generated from it. No error, no warning (MPI-620).
+         */
+        function _initSurface(w, h, restoreUrl = seeded.paint) {
+            _natural = { w: Math.max(1, Math.round(w)), h: Math.max(1, Math.round(h)) };
             _loaded = true;
             // init() sizes the layer to the source and clears it WITHOUT recording —
             // a load is not an edit anyone could have undone (docs/masking-undo.md).
@@ -593,21 +685,143 @@ export const MpiStepPaint = ComponentFactory.create({
             undo.clear();
             _syncCanvasSize();
             _refit();
-            const restore = seeded.paint
-                ? paint.setFromDataURL(seeded.paint)
+            const restore = restoreUrl
+                ? paint.setFromDataURL(restoreUrl)
                 : Promise.resolve();
+            // The memoised URL describes the layer at its OLD size, and re-arming the
+            // surface has just changed that size. Without this the next report would
+            // hand the run a stale data URL alongside the NEW `size`, and
+            // `composePaintComposite` would stretch one into the other — a silently
+            // distorted drawing, which is exactly the class of bug the memo exists
+            // inside of. One extra encode at mount is the whole cost.
+            _urlDirty = true;
             restore.then(() => {
                 _draw();
                 _report();
             });
+        }
+
+        /**
+         * The layer re-canvassed to a new page size, as a PNG data URL: drawn at 1:1,
+         * centred, growing edges filled with transparency and shrinking edges cropped.
+         *
+         * `PaintManager.setFromDataURL` draws its image across the whole canvas
+         * (`drawImage(img, 0, 0, canvas.width, canvas.height)`), so handing it a square
+         * layer for a wide canvas would STRETCH the drawing rather than place it. This
+         * pre-renders into the destination size so that call becomes 1:1.
+         *
+         * THIS USED TO SCALE (contain-fit) AND THAT WAS WRONG TWICE OVER. It COMPOUNDED
+         * — each reshape fitted the already-fitted result, so square → portrait → square
+         * came back smaller with white margin on all four sides, and Fabio hit it on his
+         * second reshape. And it was the wrong idea to begin with: the control is called
+         * CANVAS SIZE, so it changes the page the drawing sits on, exactly as an image
+         * editor's canvas-size command does. It does not resize the artwork.
+         *
+         * Paired with `_master` below, this is fully reversible: going to another shape
+         * and back returns the drawing to precisely where it was.
+         */
+        async function _recanvasLayer(url, from, to) {
+            const img = await new Promise((resolve) => {
+                const i = new Image();
+                i.onload = () => resolve(i);
+                i.onerror = () => resolve(null);
+                i.src = url;
+            });
+            if (!img) return null;
+            const canvas = document.createElement('canvas');
+            canvas.width = to.w;
+            canvas.height = to.h;
+            canvas.getContext('2d').drawImage(
+                img, Math.round((to.w - from.w) / 2), Math.round((to.h - from.h) / 2),
+            );
+            return canvas.toDataURL('image/png');
+        }
+
+        /**
+         * The layer as last DRAWN, never as last reshaped — `{ url, w, h }`.
+         *
+         * Re-canvassing always works from THIS rather than from whatever is currently on
+         * the canvas, which is what makes a round trip lossless: reshaping crops the
+         * axis that shrank, and fitting the next reshape from the cropped result would
+         * lose those pixels permanently. Refreshed only when the user has actually drawn
+         * since it was taken, detected via `_urlDirty` — `_report()` clears that flag at
+         * the end of every reshape, so a true reading means real strokes, not the
+         * reshape's own re-encode.
+         * @type {{url: string, w: number, h: number}|null}
+         */
+        let _master = null;
+
+        /**
+         * The blank canvas's size, from the step's own declared `canvasSize` field
+         * ("<w>x<h>"). Read from `props.value` because a step's fields are seeded into
+         * `_stepValues[role].fields` at SETUP and handed here AT MOUNT — which is the
+         * only place a value is readable before the first `_report()`.
+         */
+        function _parseSize(raw) {
+            const [w, h] = String(raw || '').split('x').map(n => parseInt(n, 10));
+            return (w > 0 && h > 0) ? { w, h } : { w: 1024, h: 1024 };
+        }
+
+        function _blankSize() {
+            return _parseSize(props.value?.fields?.canvasSize);
+        }
+
+        _unsubs.push(on(imgEl, 'load', () => {
+            _initSurface(imgEl.naturalWidth || 1, imgEl.naturalHeight || 1);
         }));
 
         const _ro = new ResizeObserver(() => _syncCanvasSize());
         _ro.observe(stageEl);
 
         // Source last: with the handler wired, a cached image still fires load.
-        const url = props.media?.url ? resolveMediaUrl(props.media.url) : '';
+        const url = _hasMedia ? resolveMediaUrl(props.media.url) : '';
         if (url) imgEl.src = url;
+        // No source, so no `load` will ever fire — arm the surface directly, NOW, before
+        // anything can report. This is the line that makes the gizmo media-optional.
+        else _initSurface(_blankSize().w, _blankSize().h);
+
+        /**
+         * The frame calls this when one of THIS step's declared fields changes
+         * (`MpiBaseFlow._buildStepSlide`). Only the canvas size matters here, and only
+         * on a blank canvas — an uploaded drawing's own dimensions are the size.
+         *
+         * ponytail: a resize is refused once anything has been drawn, rather than
+         * re-sizing the existing strokes or silently discarding them. Re-arming the
+         * surface calls `undo.clear()`, so an unconditional resize would destroy a
+         * drawing with no way back. Lift this to a real resize (rescale the layer into
+         * the new dimensions) if anyone actually asks to change shape mid-drawing.
+         */
+        el.onField = async (fieldId, val) => {
+            if (fieldId !== 'canvasSize' || _hasMedia) return;
+            // THE NEW VALUE COMES FROM THE ARGUMENT, never from `props.value`. The frame
+            // writes a field by REPLACING the step's value object
+            // (`_writeDeclaredField`: `_stepValues[role] = { ...prev, fields: {...} }`),
+            // so the object captured in this closure at mount is the OLD one and keeps
+            // the OLD size forever. Reading it here left the canvas square whatever the
+            // user picked — the control moved, nothing else did.
+            const to = _parseSize(val);
+            if (to.w === _natural.w && to.h === _natural.h) return;
+
+            // THE DRAWING SURVIVES THE RESHAPE. This used to bail when the layer was
+            // non-empty, because re-arming the surface calls `undo.clear()` and an
+            // unconditional resize would have destroyed the drawing with no way back.
+            // Refusing was worse than either option: the control moved and nothing
+            // happened, so Fabio would not touch it at all rather than risk a picture
+            // he had just spent real time on (2026-08-26).
+            //
+            // Work from `_master`, not from the canvas: re-canvassing crops whichever
+            // axis shrank, so feeding the next reshape the cropped result would lose
+            // those pixels for good and the drawing would erode with every change.
+            // `_urlDirty` is the "drew since the master was taken" signal — `_report()`
+            // clears it at the end of every reshape, so it is only true for real strokes.
+            if (!_master || _urlDirty) {
+                _master = { url: _layerUrl(), w: _natural.w, h: _natural.h };
+            }
+            const carried = _master.url
+                ? await _recanvasLayer(_master.url, _master, to)
+                : null;
+            _initSurface(to.w, to.h, carried);
+        };
 
         // One literal, two callers — the reported value and the pulled value cannot
         // disagree about a key, which is how `brush` would have gone missing from one.

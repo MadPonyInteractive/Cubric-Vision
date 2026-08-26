@@ -428,6 +428,45 @@
     margin: 0;
 }
 .mpi-base-flow__canvas { line-height: 0; }
+
+/* ── Side layout: the step's fields sit BESIDE the canvas (MPI-620) ─────── */
+/* Opt-in per step (`fieldsSide`). The default stacked form keeps its 900px cap;
+   this one needs the extra width or the two columns fight over it. */
+.mpi-base-flow__work--split { max-width: 1320px; }
+.mpi-base-flow__work-split {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s-7);
+    width: 100%;
+}
+/* A fixed column so the CANVAS takes every pixel the fields do not. `flex: 0 0`
+   rather than a percentage: the controls need one readable width, and letting them
+   scale with the window would make the prompt box grow while the drawing shrank. */
+.mpi-base-flow__fields--side {
+    flex: 0 0 300px;
+    width: 300px;
+}
+.mpi-base-flow__work-split .mpi-base-flow__canvas {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+/* SIZING a gizmo the frame hosts, which is what a consumer block is allowed to do
+   to another block — no fill, border or state is restated here. The paint stage
+   caps itself at `min(46vh, 500px)` for the stacked form, where the fields and hint
+   below it need the rest of the column. In the side layout that vertical is free,
+   and a drawing surface is the one thing on the slide that should take it. */
+.mpi-base-flow__work-split .mpi-step-paint__stage {
+    height: min(68vh, 760px);
+}
+/* A prompt in the SIDE column is describing a whole picture, not labelling one
+   drawn object, so it gets real height — the stacked form otherwise sizes a
+   textarea from its `rows` and leaves three lines under a canvas the user has
+   filled edge to edge (Fabio, 2026-08-26). The column has the vertical to spare:
+   it is two controls beside a 760px canvas. */
+.mpi-base-flow__fields--side .mpi-base-flow__field-text {
+    height: 180px;
+}
 .mpi-base-flow__canvas-empty {
     padding: var(--s-6);
     border: 1px dashed var(--ink-4);

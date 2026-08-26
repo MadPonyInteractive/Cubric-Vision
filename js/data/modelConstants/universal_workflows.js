@@ -68,6 +68,13 @@ export const UNIVERSAL_WORKFLOWS = {
     flowScribObj: {
         workflow: 'flow_draw_it_in.json',
     },
+    // MPI-620 — Scribble. Pruned from the SDXL t2i template rather than the Draw It In
+    // graph: two control arms only (scribble + canny), so it carries no openpose or depth
+    // preprocessor. Sizing is derived, not injected — `GetImageSize` reads the scaled
+    // input and drives `EmptyLatentImage`, so the drawing's own dimensions are the output's.
+    flowScribble: {
+        workflow: 'flow_scribble.json',
+    },
     // MPI-607 — Chatterbox voice conversion. Five nodes, no model loader: two
     // MpiLoadAudio paths into FL_ChatterboxVC, out through a native SaveAudio.
     flowVoiceChanger: {

@@ -78,6 +78,10 @@
 
 .mpi-dropdown__list {
     position: fixed;
+    /* Sized by `max-content` off a `min-width` floor in positionList(), so an option
+       is never truncated by a trigger narrower than itself. This cap is what stops a
+       long option from opening a menu the width of the window. */
+    max-width: min(420px, calc(100vw - 16px));
     z-index: 11000;
     background: var(--surface-1);
     border: 1px solid var(--ink-3);

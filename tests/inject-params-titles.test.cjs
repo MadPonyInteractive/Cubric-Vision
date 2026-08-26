@@ -387,6 +387,102 @@ test('the Draw It In Flow carries its I/O, its model arm and its box (MPI-567)',
         `${file} takes a user prompt, so its prompt node MUST stay titled Input_Positive`);
 });
 
+test('the Scribble Flow carries its I/O, its model slot and its two control arms (MPI-620)', () => {
+    // flowScribble runs flow_scribble.json on model:{id:null}. Same silent-failure class
+    // as every other flow here: the injector skips a title with no node, so a missing one
+    // is a control that moves in the UI, a run that succeeds, and a graph still sitting on
+    // its baked value.
+    const file = 'flow_scribble.json';
+    const have = titlesOf(file);
+    for (const title of [
+        // The ONE image input. The paint step composites onto it (or onto flat white when
+        // the user uploaded nothing) and REPLACES it — there is no `input_paint` twin the
+        // way Draw It In has one, because that flow needs the photo and the drawing as
+        // two separate inputs and this graph reads a single opaque picture.
+        'input_image',
+        'input_seed',
+        // The user's words ARE the subject. The drawing carries shape and placement only,
+        // so without this the model invents what the silhouette is.
+        'input_positive',
+        // The two-arm control switch. ONE MpiInt drives BOTH MpiAnySwitch nodes — the
+        // preprocessor and the SetUnionControlNetType bank — so losing this title pins
+        // every run to `any_1` (scribble) with the radio still visibly moving.
+        'input_control_net',
+        'input_control_strength',
+        // The choosable model slot. Five SDXL-family cards run this one graph and
+        // `modelParams` swaps the checkpoint through this title; without it every arm
+        // silently renders on whichever checkpoint the graph bakes.
+        'input_base_model',
+    ]) {
+        assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
+    }
+    assert.ok(have.has('output_image'), `${file} must carry a capture node titled "output_image"`);
+
+    // THE NEGATIVE IS BAKED, SO IT MUST NOT BE TITLED. `_buildParams` emits
+    // `Input_Negative: negative || ''` on EVERY universal run whatever the flow declares,
+    // and this flow declares no negative field — so a node titled `Input_Negative` would
+    // have its baked string overwritten with '' on every single run. That is not
+    // hypothetical: Draw It In shipped exactly this bug, and every render it ever made ran
+    // with an empty negative because nothing failed and nothing logged.
+    assert.ok(!have.has('input_negative'),
+        `${file}'s negative is baked — titling it Input_Negative lets the run inject '' over it`);
+
+    const graph = JSON.parse(fs.readFileSync(path.join(WORKFLOWS, file), 'utf8'));
+
+    // EXACTLY TWO CONTROL ARMS, and that is a correctness constraint rather than tidiness.
+    // `tests/flow-model-choice.test.cjs` holds the house ControlNet ceiling at 0-0.5
+    // because openpose and depth are what set that floor; a flow may only claim a higher
+    // ceiling by proving its graph cannot drive them. Re-adding either preprocessor here
+    // silently invalidates that argument, so it is pinned.
+    const preprocessors = Object.values(graph)
+        .filter(n => n?.class_type === 'AIO_Preprocessor')
+        .map(n => n.inputs?.preprocessor)
+        .sort();
+    assert.deepEqual(preprocessors, ['CannyEdgePreprocessor', 'ScribblePreprocessor'],
+        `${file} must carry exactly the scribble and canny arms — openpose or depth here `
+        + 'would break the ControlNet-ceiling argument in flow-model-choice.test.cjs');
+
+    // BOTH SWITCHES MUST READ THE SAME SELECTOR, or the radio picks a preprocessor from
+    // one arm and a ControlNet bank from the other — a run that succeeds and steers on a
+    // hint the bank was not built for.
+    const [selectorId] = Object.entries(graph)
+        .find(([, n]) => n?._meta?.title === 'Input_Control_Net') || [];
+    const switches = Object.values(graph).filter(n => n?.class_type === 'MpiAnySwitch');
+    assert.equal(switches.length, 2, `${file} must carry exactly two MpiAnySwitch nodes`);
+    for (const sw of switches) {
+        assert.deepEqual(sw.inputs.select, [selectorId, 0],
+            'both switches must be driven by Input_Control_Net, or the arms desynchronise');
+    }
+
+    // ARM ORDER IS THE COPY'S CONTRACT. The radio ships "1 = Line drawing" and
+    // "2 = Shaded sketch", so `any_1` must be the scribble side on BOTH switches. Swap
+    // them and a user picking "Line drawing" gets canny, which returns their own ink as
+    // an outline because canny sees a drawn stroke's TWO edges.
+    const [prepSwitch, bankSwitch] = switches[0].inputs.any_1?.[0]
+        && graph[switches[0].inputs.any_1[0]]?.class_type === 'AIO_Preprocessor'
+        ? [switches[0], switches[1]]
+        : [switches[1], switches[0]];
+    assert.equal(graph[prepSwitch.inputs.any_1[0]].inputs.preprocessor, 'ScribblePreprocessor',
+        'any_1 of the preprocessor switch must be Scribble — the radio says 1 = Line drawing');
+    assert.ok(String(graph[bankSwitch.inputs.any_1[0]].inputs.type).includes('scribble'),
+        'any_1 of the bank switch must be the scribble union type, matching the preprocessor arm');
+
+    // SIZING IS DERIVED, NOT INJECTED. There is no Input_Width/Input_Height here on
+    // purpose: the drawing's own dimensions become the output's, so the latent reads
+    // GetImageSize off the scaled input. A re-export that hardcodes the latent instead
+    // would quietly pin every render to one shape while the canvas-size field kept working.
+    for (const gone of ['input_width', 'input_height']) {
+        assert.ok(!have.has(gone),
+            `${file} derives its size from the drawing — "${gone}" would fight GetImageSize`);
+    }
+    const [sizeId] = Object.entries(graph)
+        .find(([, n]) => n?.class_type === 'GetImageSize') || [];
+    assert.ok(sizeId, `${file} must carry a GetImageSize to derive the render size`);
+    const latent = Object.values(graph).find(n => n?.class_type === 'EmptyLatentImage');
+    assert.deepEqual([latent.inputs.width[0], latent.inputs.height[0]], [sizeId, sizeId],
+        'the empty latent must be sized from GetImageSize, not baked');
+});
+
 test('the Voice Changer Flow carries its two audio inputs and the audio capture (MPI-607)', () => {
     // The first audio-only graph in the fleet: two MpiLoadAudio paths into
     // FL_ChatterboxVC, out through a native SaveAudio. Both inputs fail the same
