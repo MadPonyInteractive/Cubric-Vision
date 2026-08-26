@@ -80,7 +80,12 @@ REGISTERS = [
 # bind the CODE, not the audio. Two voices are Fabio's own recording, and two more are that
 # recording through Chatterbox (node MIT; the weights' own licence is not present on this
 # machine and was NOT verified). Nothing found claims the outputs.
-VOICEDESIGN_LICENCE = "proprietary"
+#
+# So the terms split, and `voices/LICENCE.md` is where they are written down: the CLIPS are
+# proprietary and may not be extracted or redistributed as a voice pack, while ANY AUDIO A
+# USER GENERATES with them is theirs, commercial use included, no royalty and no territory
+# limit. A bare SPDX id cannot express that split, so the field names our own licence.
+VOICEDESIGN_LICENCE = "Cubric-Vision-Voice-Licence-1.0"
 
 # Gender and age are DECLARED by the taxonomy, not inferred from the audio — the category name
 # is the statement. Categories that deliberately mix (villain ships 2 male + 2 female variants;
