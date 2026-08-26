@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-625",
+  "title": "A unit test can no longer read the real model library",
+  "description": "orphan-sweep.test.cjs went red on the dev machine only: pinning CUBRIC_MODELS_ROOT alone leaves getCustomRoot() reading the real G:/CubricModels. Pin both roots via a shared helper, and add a hygiene test that fails the half-sandbox.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-08-26T07:26:22Z",
+  "updated_at": "2026-08-26T07:26:45Z",
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl"
+  }
+}

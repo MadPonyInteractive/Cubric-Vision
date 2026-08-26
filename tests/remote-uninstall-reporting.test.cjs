@@ -16,6 +16,7 @@ const path = require('path');
 const express = require('express');
 
 process.env.CUBRIC_MODELS_ROOT = path.join(os.tmpdir(), 'mpi469-' + process.pid);
+require('./helpers/sandbox-roots.cjs'); // pins CUBRIC_ENGINE_ROOT too, so no disk answer can reach the real library
 
 const remoteModels = require('../routes/remoteModels.js');
 const dm = require('../routes/downloadManager.js');

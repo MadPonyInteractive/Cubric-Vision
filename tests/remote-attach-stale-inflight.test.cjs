@@ -25,6 +25,7 @@ const os = require('os');
 const path = require('path');
 
 process.env.CUBRIC_MODELS_ROOT = path.join(os.tmpdir(), 'mpi481-' + process.pid);
+require('./helpers/sandbox-roots.cjs'); // pins CUBRIC_ENGINE_ROOT too, so no disk answer can reach the real library
 
 // The remote disk-full pre-flight lazily requires this; unknown free space skips
 // the gate, so answer null instead of reaching for a Pod's volume. Patch the real

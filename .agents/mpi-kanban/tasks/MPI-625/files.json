@@ -1,0 +1,12 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "tests/helpers/sandbox-roots.cjs",
+    "tests/sandbox-roots-hygiene.test.cjs",
+    "tests/orphan-sweep.test.cjs",
+    "tests/orphan-sweep-remote.test.cjs",
+    "tests/remote-uninstall-reporting.test.cjs",
+    "tests/download-mode-pod-guards.test.cjs",
+    "tests/remote-attach-stale-inflight.test.cjs"
+  ]
+}

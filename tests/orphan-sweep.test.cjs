@@ -12,8 +12,12 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const ROOT = path.join(os.tmpdir(), 'mpi462-sweep-' + process.pid);
-process.env.CUBRIC_MODELS_ROOT = ROOT;
+// MUST precede every app require: it pins BOTH roots at temp dirs before
+// routes/shared.js captures ENGINE_ROOT at module load.
+// Setting only CUBRIC_MODELS_ROOT is not hermetic — the disk
+// answers here go through getCustomRoot() and landed on the real G:\CubricModels,
+// which is what made this file red on the dev machine and green on CI. See the helper.
+const { ROOT } = require('./helpers/sandbox-roots.cjs');
 
 const dm = require('../routes/downloadManager.js');
 const { DEPS } = require('../js/data/modelConstants/dependencies.js');

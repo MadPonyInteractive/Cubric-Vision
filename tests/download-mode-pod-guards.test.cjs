@@ -24,6 +24,7 @@ const os = require('os');
 const path = require('path');
 
 process.env.CUBRIC_MODELS_ROOT = path.join(os.tmpdir(), 'mpi539-' + process.pid);
+require('./helpers/sandbox-roots.cjs'); // pins CUBRIC_ENGINE_ROOT too, so no disk answer can reach the real library
 
 test('getEngine routes a download-mode Pod to the LOCAL engine', async () => {
     const { getEngine, localEngine, remoteEngine } =

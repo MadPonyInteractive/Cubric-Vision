@@ -1,0 +1,5 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-625", "type": "task.created", "at": "2026-08-26T07:26:22Z", "actor": "claude", "summary": "Test sandbox leaked to the real model library."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-625", "type": "task.moved", "at": "2026-08-26T07:26:22Z", "actor": "claude", "from": "todo", "to": "doing", "summary": "Skipped-Doing auto-correct: the fix was already implemented this session."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-625", "type": "validation.updated", "at": "2026-08-26T07:26:22Z", "actor": "claude", "summary": "npm test 739/739; guard mutation-tested."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-625", "type": "task.moved", "at": "2026-08-26T07:26:22Z", "actor": "claude", "from": "doing", "to": "done", "summary": "Suite green 739/739; hygiene guard mutation-tested."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-625", "type": "task.updated", "at": "2026-08-26T07:26:45Z", "actor": "claude", "summary": "status active -> done to satisfy board validation."}
