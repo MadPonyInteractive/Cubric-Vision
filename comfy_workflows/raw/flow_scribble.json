@@ -108,7 +108,7 @@
           "links": null
         }
       ],
-      "title": "Input_Lora_1",
+      "title": "Input_Lora_Phase1_1",
       "properties": {
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
@@ -188,7 +188,7 @@
           "links": null
         }
       ],
-      "title": "Input_Lora_4",
+      "title": "Input_Lora_Phase1_4",
       "properties": {
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
@@ -268,7 +268,7 @@
           "links": null
         }
       ],
-      "title": "Input_Lora_2",
+      "title": "Input_Lora_Phase1_2",
       "properties": {
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
@@ -348,7 +348,7 @@
           "links": null
         }
       ],
-      "title": "Input_Lora_5",
+      "title": "Input_Lora_Phase1_5",
       "properties": {
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
@@ -428,7 +428,7 @@
           "links": null
         }
       ],
-      "title": "Input_Lora_3",
+      "title": "Input_Lora_Phase1_3",
       "properties": {
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
@@ -768,7 +768,7 @@
           "links": null
         }
       ],
-      "title": "Input_Lora_6",
+      "title": "Input_Lora_Phase1_6",
       "properties": {
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
@@ -1916,7 +1916,7 @@
           ]
         }
       ],
-      "title": "Checkpoint",
+      "title": "Input_Base_Model",
       "properties": {
         "cnr_id": "comfy-core",
         "ver": "0.17.1",
