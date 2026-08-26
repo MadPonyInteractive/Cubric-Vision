@@ -998,6 +998,11 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             injectionParams: _clonePlain(injectionParams || {}),
             mediaItems: generationMediaItems,
             previewOnly: config.previewOnly === true,
+            // Flow runs only (MPI-620): one resolved model id per `requiredModels` slot,
+            // set by flowService. `modelId` above is null for every flow — a flow is an
+            // operation, not a model — so this is the only record of which member of an
+            // any-of slot actually ran. null for every non-flow gen.
+            flowModelIds: Array.isArray(config.flowModelIds) ? [...config.flowModelIds] : null,
         };
         // Control snapshot was FROZEN AT DISPATCH (enqueueGeneration → _snapshotControlState)
         // so Reuse Prompt replays exactly what this run rendered — reading it live here

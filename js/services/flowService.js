@@ -14,7 +14,8 @@
 'use strict';
 
 import { enqueueGeneration } from './generationService.js';
-import { getFlowById, flowAvailability, flowModelParams, flowLoraPhases } from '../data/flowsRegistry.js';
+import { getFlowById, flowAvailability, flowModelParams, flowLoraPhases, flowModelIds } from '../data/flowsRegistry.js';
+import { getModelById } from '../data/modelRegistry.js';
 import { state } from '../state.js';
 import { Events } from '../events.js';
 
@@ -27,6 +28,18 @@ import { Events } from '../events.js';
  * @param {Object} [callbacks] - onComplete/onError/onCancel, forwarded to enqueueGeneration.
  * @returns {{queueJobId: string}|null} enqueue result, or null if the guard aborted.
  */
+/**
+ * What is actually absent, for a toast that names it. MPI-304: a flow can require deps
+ * no model owns (a baked LoRA, a node pack), so always saying "models" read as
+ * "needs models installed" while the Library showed every model Ready.
+ * @param {{missing: string[], missingDeps: string[]}} availability
+ * @returns {string}
+ */
+function _missingLabel({ missing, missingDeps }) {
+    if (!missing.length) return 'extra files';
+    return missing.length === 1 && !missingDeps.length ? 'a model' : 'models';
+}
+
 export function submitFlowGeneration(flowOrId, inputs = {}, callbacks = {}) {
     const flow = typeof flowOrId === 'string' ? getFlowById(flowOrId) : flowOrId;
     if (!flow) {
@@ -39,13 +52,10 @@ export function submitFlowGeneration(flowOrId, inputs = {}, callbacks = {}) {
     // block exactly like a missing model, so name whichever is actually absent rather
     // than always saying "models" (with models present and only a dep missing, the old
     // copy read "needs models installed" while the library showed every model Ready).
-    const { available, missing, missingDeps } = flowAvailability(flow);
-    if (!available) {
-        const what = !missing.length ? 'extra files'
-            : missing.length === 1 && !missingDeps.length ? 'a model'
-                : 'models';
+    const availability = flowAvailability(flow);
+    if (!availability.available) {
         Events.emit('ui:warning', {
-            message: `${flow.title} needs ${what} installed first — open it in Flows to install.`,
+            message: `${flow.title} needs ${_missingLabel(availability)} installed first — open it in Flows to install.`,
         });
         return null;
     }
@@ -101,6 +111,15 @@ export function submitFlowGeneration(flowOrId, inputs = {}, callbacks = {}) {
         // reopen this Flow with its inputs restored.
         flowId: flow.id,
         flowInputs: snapshot,
+        // WHICH model ran in each slot, one id per `requiredModels` slot in declaration
+        // order (MPI-620). A flow card carries `modelId: null` by design, so without this
+        // nothing on disk says whether Scribble rendered on klein-9b or klein-4b. The tier
+        // WAS recoverable from `injectionParams.Input_Edit_Model`, but only by mapping
+        // weight FILENAMES back to model ids — which breaks the day a weight is re-exported.
+        // Rides in `generationSettings` (generationService), not as a new item field: that
+        // blob is already the sidecar's free-form run snapshot, so this needs no route,
+        // projectModel or migration change.
+        flowModelIds: flowModelIds(flow),
     };
 
     // No gallery placeholder (MPI-306): a flow run is not pending in the gallery
@@ -136,8 +155,16 @@ export function submitFlowGeneration(flowOrId, inputs = {}, callbacks = {}) {
  * this at the TOP of their reuse path and `return` when it handles the item.
  *
  * Seeds `state.s_flowInputs[flowId]` (top-level replace) BEFORE emitting `flow:open`,
- * so the freshly-mounted MpiBaseFlow reads the restored inputs on mount. If a required
- * model is missing, routes to the Flow Library overlay (to install) instead of a broken flow.
+ * so the freshly-mounted MpiBaseFlow reads the restored inputs on mount.
+ *
+ * REUSE ALWAYS OPENS THE FLOW, whatever is installed (MPI-620, Fabio's call). It used to
+ * refuse on `!flowAvailability().available` and bounce the user to the Flow Library — so
+ * the flow never mounted and the saved `flowInputs` were never restored. For Scribble
+ * those inputs ARE the user's drawing, and a missing weight cost them the picture. A model
+ * that is gone is a SUBSTITUTION, not a failure: `flowModelIds` already resolves a card
+ * made on klein-9b to klein-4b when only 4B is installed. So the outcome is a toast over
+ * the open flow (see `_reuseModelToast`) and the user installs and presses Generate
+ * instead of redrawing.
  *
  * @param {Object} item - The reused history item (payload.item).
  * @returns {boolean} true if the item was a flow card and was handled.
@@ -152,17 +179,6 @@ export function openFlowFromReuse(item) {
     const flow = getFlowById(flowId);
     if (!flow) return false; // unknown flow id → let normal reuse handle it
 
-    const { available } = flowAvailability(flow);
-    if (!available) {
-        // Missing a required model — send the user to the Library to install it,
-        // rather than opening a flow that can't run.
-        Events.emit('ui:warning', {
-            message: `${flow.title} needs its model installed — opening Flows.`,
-        });
-        Events.emit('flows:open');
-        return true;
-    }
-
     // Restore the saved inputs, then open the flow. Seed first — MpiBaseFlow reads
     // s_flowInputs[flowId] on mount.
     const savedInputs = item.flowInputs ?? item.appInputs;
@@ -173,6 +189,52 @@ export function openFlowFromReuse(item) {
     // dialog whose teardown fires a bare `ui:close-all-popups` AFTER this returns —
     // which the Flow overlay (MpiOverlay) obeys and would immediately hide. Emitting
     // on the next tick lets that close settle first, so the flow actually opens.
-    setTimeout(() => Events.emit('flow:open', { flowId }), 0);
+    // The toast goes in the SAME tick, after the open, so it lands over the flow.
+    setTimeout(() => {
+        Events.emit('flow:open', { flowId });
+        _reuseModelToast(flow, item);
+    }, 0);
     return true;
+}
+
+/**
+ * Tell the user what will actually run, once the reused flow is open (MPI-620).
+ *
+ * Two cases, and only two — silence otherwise, because the common reuse runs exactly
+ * what the card ran:
+ *  - nothing installed for a slot → DANGER toast. The flow stays open with the inputs
+ *    intact, so this is "install it and press Generate", not a dead end.
+ *  - a different candidate resolves than the one recorded → WARNING toast naming both
+ *    tiers. Needs `generationSettings.flowModelIds`, which flow gens have carried since
+ *    MPI-620; a card saved before that says nothing, so it gets no toast rather than a
+ *    guess made from weight filenames.
+ *
+ * @param {import('../data/flowsRegistry.js').FlowDef} flow
+ * @param {Object} item
+ */
+function _reuseModelToast(flow, item) {
+    const availability = flowAvailability(flow);
+    if (!availability.available) {
+        Events.emit('ui:danger', {
+            message: `${flow.title} needs ${_missingLabel(availability)} installed — install from Flows, then press Generate. Your inputs are kept.`,
+        });
+        return;
+    }
+    const ran = item.generationSettings?.flowModelIds;
+    if (!Array.isArray(ran)) return;
+    const swapped = flowModelIds(flow)
+        .map((id, i) => ({ id, was: ran[i] }))
+        .filter(slot => slot.was && slot.was !== slot.id);
+    if (!swapped.length) return;
+    const names = swapped
+        .map(slot => `${_modelName(slot.id)} instead of ${_modelName(slot.was)}`)
+        .join(', ');
+    Events.emit('ui:warning', {
+        message: `${flow.title} will run on ${names} — the model this was made with isn't installed.`,
+    });
+}
+
+/** Display name for a model id, falling back to the id itself for an unknown one. */
+function _modelName(id) {
+    return getModelById(id)?.name || id;
 }

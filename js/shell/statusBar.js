@@ -578,6 +578,11 @@ export const StatusBar = {
         _listenUnsubs.push(Events.on('ui:success', ({ message, sound }) => StatusBar.notify(message, 'success', 6000, { sound })));
         _listenUnsubs.push(Events.on('ui:warning', ({ message, sound }) => StatusBar.notify(message, 'warning', 6000, { sound })));
         _listenUnsubs.push(Events.on('ui:info',    ({ message, sound }) => StatusBar.notify(message, 'info', 6000, { sound })));
+        // `ui:danger` is the ERROR-LEVEL TOAST. `ui:error` is a different surface — it
+        // opens the blocking MpiErrorDialog (shell.js) — so a failure the user can act on
+        // without leaving what they are doing belongs here (MPI-620: a reused flow whose
+        // model is gone stays open with the drawing intact, and says so in a toast).
+        _listenUnsubs.push(Events.on('ui:danger',  ({ message, sound }) => StatusBar.notify(message, 'danger', 6000, { sound })));
         // MPI-64 4.4: idle label scope tracks the remote engine connection.
         // MPI-73: `phase` ('connecting'|'disconnecting') overrides the steady
         // Local/Remote scope while a transition is in progress.

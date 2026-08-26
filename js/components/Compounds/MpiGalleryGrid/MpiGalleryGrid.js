@@ -8,6 +8,7 @@ import { renderIcon } from '/js/utils/icons.js';
 import { removeHistoryEntry } from '../../../data/projectModel.js';
 import { getModelById, tierLetterFor } from '../../../data/modelRegistry.js';
 import { getCommand, commandAllowsBranchingContinue } from '../../../data/commandRegistry.js';
+import { flowModelChoices } from '../../../data/flowsRegistry.js';
 import { state } from '../../../state.js';
 import { Storage } from '../../../core/storage.js';
 import { Events } from '../../../events.js';
@@ -18,6 +19,29 @@ import { extractAbsPath, extractFilenameFromPath } from '../../../utils/mediaAct
 import { clientLogger } from '../../../services/clientLogger.js';
 import { buildGalleryPromptReusePayloads, itemHasReusablePrompt, findOriginalReusableItem } from '../../../utils/promptReuse.js';
 import { createPreviewClipPlayer } from '../../../services/previewClipPlayer.js';
+
+// Row 1 of a FLOW card's badge: the model that actually ran (MPI-620). A flow gen has
+// `modelId: null` — it is an operation, not a model — so the tier lives in
+// `generationSettings.flowModelIds`, one id per `requiredModels` slot in declaration order.
+//
+// Shown ONLY when the flow has exactly ONE choosable slot, which is the comparison case
+// the badge exists for (Scribble on 9B vs 4B). A four-stage flow has four models and they
+// do not fit a two-row corner label; a flow with no choosable slot always runs the same
+// models, so naming one says nothing. Both of those read the sidecar, as the prompt already
+// does — a real per-run detail panel is its own job.
+function _flowModelLabel(item) {
+    if (!item?.flowId) return '';
+    const ids = item.generationSettings?.flowModelIds;
+    if (!Array.isArray(ids)) return ''; // pre-MPI-620 card — nothing recorded, so say nothing
+    const choices = flowModelChoices(item.flowId);
+    if (choices.length !== 1) return '';
+    // `choices[0].index` is the slot's position in `requiredModels`, NOT its position among
+    // the choosable ones — filtering loses that, and `flowModelIds` is indexed by the former.
+    const model = getModelById(ids[choices[0].index]);
+    if (!model) return '';
+    const tier = tierLetterFor(model);
+    return `${model.name}${tier ? ` ${tier}` : ''}`;
+}
 
 // One-card-at-a-time: stop every OTHER playing media element in the gallery —
 // audio cards (<audio data-src>) AND unmuted hover videos — so a hover/click
@@ -1064,7 +1088,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 const modelName = originalModel
                     ? `${originalModel.name}${tierLetter ? ` ${tierLetter}` : ''}`
                     : (original?.modelId || '');
-                const modelLabel = original?.uploaded ? 'IMPORTED' : modelName;
+                // A flow gen has `modelId: null` by design, so row 1 is empty and only the
+                // operation ("FLOW: SCRIBBLE") shows. Fill it with the tier that actually
+                // ran — but ONLY for a flow with exactly one choosable slot (MPI-620).
+                const modelLabel = original?.uploaded ? 'IMPORTED' : (modelName || _flowModelLabel(original));
                 const operationLabel = selected?.uploaded
                     ? ''
                     : (command?.label || selected?.operation || '');
