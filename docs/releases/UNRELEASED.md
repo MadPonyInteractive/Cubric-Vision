@@ -209,6 +209,16 @@
   generated before this are unaffected and still read as 8:5 on their History card; only
   new generations at that setting change size, by 32 pixels of height.
 
+- Cut-out images look right in the gallery. After Remove Background, the gallery card showed
+  the ORIGINAL picture — its backdrop, and the shadow under it — while opening the item showed
+  the correct cut-out, so it read as the gallery picking the wrong version. The card reads the
+  small thumbnail the gallery builds for speed, and that thumbnail was a JPEG, which cannot
+  hold transparency: saving it threw the cut-out away and left the untouched picture
+  underneath. Image thumbnails are WebP now, so a transparent PNG sits on the gallery
+  background as it should — whether it came from Remove Background or was imported from
+  elsewhere. Existing projects rebuild their thumbnails the first time you open them after
+  updating.
+
 - Scrolling a gallery full of videos is smooth again. Dragging the scroll bar through a project
   with many video cards stuttered, and the more videos were on screen the worse it got. Every
   scroll movement was rewinding every video in the gallery back to its first frame — including
