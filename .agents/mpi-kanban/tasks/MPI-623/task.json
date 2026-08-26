@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-623",
+  "title": "3D scene generation",
+  "description": "Bake a navigable Gaussian-splat scene from any 360 equirect image, then re-enter it anytime to capture stills from new angles. Two Flows (3D Scene, optional 360 Panorama) plus a PAGE_SCENE workspace. Environment consistency across a series.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-26T00:58:36Z",
+  "updated_at": "2026-08-26T02:20:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
