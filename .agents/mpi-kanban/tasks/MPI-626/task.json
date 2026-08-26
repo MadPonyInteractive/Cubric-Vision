@@ -1,0 +1,20 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-626",
+  "title": "Re-cut the Head Swap and Draw It In tiles so the seam bisects the face",
+  "description": "Both 4/5 flow tiles put their before/after seam beside the subject rather than through it, so neither reads as one character in two states. Re-cut both from the original plates: Head Swap's seam onto the sheriff's nose (plate x 857, t2i_008 -> flowHeadSwap_002), Draw It In's through the drawn woman's face (plate x 180, t2i_005 + the run-015 drawing -> flowScribObj_015). Stills only - no hero rebuild, no registry change.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "created_at": "2026-08-26T07:55:00Z",
+  "updated_at": "2026-08-26T07:55:00Z",
+  "labels": [
+    "art",
+    "flow"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl",
+    "files": "files.json"
+  }
+}
