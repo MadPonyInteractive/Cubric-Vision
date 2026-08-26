@@ -2,17 +2,17 @@
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-596",
   "title": "Object Stamp Flow - extract an object from one image, place it into another",
-  "description": "Dev-gated Flow: stamp an object taken from one image onto another. Step 0 takes both images, a text field names the object (SAM3 text segment), a kind:'box' step marks where it goes on the target, and a denoise slider drives the Krea2 detail pass that blends it. ONE dispatch - no new step kind, no new component, no mid-flow generation. Design: brief.md. Split out of the MPI-562 brainstorm 2026-08-21.",
-  "column": "todo",
-  "maturity": "planned",
+  "description": "Dev-gated Flow: put a SPECIFIC object from one photo into another - an exact gun, an exact headphone model, a logo on a cup, an image replacing a painting - and have it look really photographed there. Stage 1 takes the scene and the object. Stage 2 is a canvas with a 1:1 box, an Auto/Manual toggle (Auto default), a Remove Background toggle and an erase/restore brush. Auto shows the object itself and sends the clean scene plus the stamped composite; Manual shows an empty box with no rotation handle plus a prompt field, and sends the cropped scene plus the clean object. ONE dispatch on Klein 9B (4B tested and failed), Draw It In's crop -> edit -> ColorMatch -> stitch topology. Design settled and validated live over ~25 app runs 2026-08-26; two earlier designs dropped. Read brief.md then prompts.md.",
+  "column": "doing",
+  "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-21T11:04:19Z",
-  "updated_at": "2026-08-21T11:33:08Z",
+  "updated_at": "2026-08-26T17:06:00Z",
   "labels": [
     "feature",
     "flow",
-    "sam3",
-    "krea2"
+    "klein",
+    "krea2-dropped"
   ],
   "links": {
     "brief": "brief.md",
@@ -20,15 +20,21 @@
     "events": "events.jsonl"
   },
   "acceptance": [
-    "A new dev-gated Flow in flowsRegistry.js takes two image inputs: the image to stamp ONTO (image1) and the image to extract FROM (image2)",
-    "A kind:'fields' step carries one text field naming the object to extract, feeding a SAM3 text-segment branch in the workflow",
-    "A kind:'box' step on image1 reports where the object goes, bound to an injection param - NO new step kind and NO new UI component",
-    "The extracted cutout is fitted INSIDE that box preserving its aspect ratio, never stretched to fill it",
-    "A denoise slider controls the Krea2 detail pass that blends the placement, with a MEASURED default rather than a guessed one",
-    "The flow runs as ONE dispatch - no mid-flow generation and no preview round trip",
-    "A named object that is not present in image2 fails legibly, rather than returning the untouched target with no explanation",
-    "If the aspect-fit fork needs a new node, it ships through /mpi-nodes-sync and is PINNED in dev_configs/node_lock.json - committed but unpinned is not shipped",
-    "Live-run and reuse both pass per docs/playbooks/add-flow/05-verify.md",
-    "Tile still and hero clip ship via /mpi-flow-graphics"
+    "A new dev-gated Flow in flowsRegistry.js takes two image inputs: image1 = the scene, image2 = the object to place",
+    "requiredModels is a model SLOT on klein-9b ONLY - 4B was tested and failed - and modelParams carries the matching CLIP (qwen_3_8b_int8_convrot), because the text encoder moves with the checkpoint",
+    "Stage 2 is ONE step carrying a 1:1 box, an Auto/Manual toggle defaulting to Auto, a Remove Background toggle and an erase/restore brush - built from existing components (ShapeManager 'place' mode, the removeBackground branch, the add/subtract brush), never a bare form control",
+    "Auto shows the object on the canvas and dispatches slot 1 = clean scene, slot 2 = stamped composite; Manual shows an EMPTY box with NO rotation handle plus a prompt field, and dispatches slot 1 = cropped scene, slot 2 = clean object at full frame",
+    "The dispatch never sends more than TWO references in either mode - three causes identity mixing and drew two objects in testing",
+    "bgMask and userMask stay two layers composited only at dispatch, so toggling Remove Background never destroys the user's erasures; the brush works with the toggle off; every mask mutation records an UndoStack entry",
+    "A step can reach a second media role via a new `sourceRole` on the step declaration, mirroring the existing mediaRole - a step on image1 can see image2",
+    "The graph is ONE dispatch: composite -> InpaintCropImproved -> Klein 9B edit -> ColorMatch -> InpaintStitchImproved, with the crop sized so the placement clears the ~200px anchor threshold and shadows do not clip at the return edge",
+    "Both baked prompts match prompts.md and sit in the 40-120 word band; the Manual prompt field is declared on the STEP and nowhere else, and no undeclared Input_Positive node is left in the graph",
+    "The flow declares result: { compare: 'image1' }",
+    "A case is added to tests/inject-params-titles.test.cjs; npm test AND npm run test:desktop are green",
+    "Live-run BOTH modes and a reuse round trip pass per docs/playbooks/add-flow/05-verify.md",
+    "The angle limitation is stated in the stage-2 hint copy - supply the object photographed from roughly the angle you want - rather than engineered around",
+    "docs/playbooks/add-flow/existing-flows/object-stamp.md is added, and the generalisable laws are promoted into blending-into-a-photo.md",
+    "The flow is announced in docs/releases/UNRELEASED.md in BOTH the roster list and its own entry",
+    "Tile still and hero clip ship via /mpi-flow-graphics, cut from the runs already in the Stamp Flow Tests project"
   ]
 }

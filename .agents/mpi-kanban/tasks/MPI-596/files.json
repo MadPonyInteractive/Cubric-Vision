@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    ".agents/mpi-kanban/tasks/MPI-596/**",
+    "js/data/flowsRegistry.js",
+    "js/data/commandRegistry.js",
+    "js/data/modelConstants/universal_workflows.js",
+    "js/core/operationRegistry.js",
+    "operation_registry.json",
+    "comfy_workflows/raw/flow_object_stamp.json",
+    "comfy_workflows/flow_object_stamp.json",
+    "docs/playbooks/add-flow/existing-flows/object-stamp.md"
+  ]
+}

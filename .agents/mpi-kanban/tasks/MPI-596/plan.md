@@ -1,107 +1,130 @@
-# Object Stamp Flow — extract an object from one image, place it into another
+# Object Stamp — place a specific object from one photo into another
 
-Design settled in [brief.md](brief.md). **Run `/mpi-add-flow`** — it enforces
-`docs/playbooks/add-flow/`, and this plan does not restate it. Graphics are a separate pass
-(`/mpi-flow-graphics`, `06-preview-image.md`).
+Design settled in [brief.md](brief.md); the two baked prompts and the rules they obey are in
+[prompts.md](prompts.md). **Run `/mpi-add-flow`** — it enforces `docs/playbooks/add-flow/`, and
+this plan does not restate it. Graphics are a separate `/mpi-flow-graphics` pass.
+
+> **READ FIRST, in this order:** `brief.md` (the six measured laws — every one of them cost real
+> runs), `prompts.md`, then `docs/playbooks/add-flow/existing-flows/scribble-to-object.md`. This
+> flow is Draw It In's architecture with the scribble replaced by an object, so that file is the
+> closest worked example and most of its traps apply unchanged.
 
 ## Current State
 
-Project mode: `scalable-foundation`.
+Project mode: `scalable-foundation`. Card is in `doing`. **Nothing has been written yet** — the
+2026-08-26 session was entirely design and live validation in the app.
 
-The UI half is **already built**. Verified at plan time:
+### What the live session already settled (so it is NOT open work)
 
-| Assumption | Verified |
-|---|---|
-| The placement step needs no new step kind | `kind: 'box'` is registered (`stepKinds.js`), and `head-swap` already binds two of them to graph params (`flowsRegistry.js:283-312`) |
-| The naming step needs no new step kind | `kind: 'fields'` (FRAME_KINDS) is the media-less step — `character-sheet` uses it (`flowsRegistry.js:635-641`) |
-| The box gizmo is documented and reusable | `docs/playbooks/add-flow/ui/box-gizmo.md` — do NOT author new drag/resize behaviour |
-| SAM3 is available to a graph | `SAM3_Detect` is already a `class_type` in shipped workflows; `sam3-multiplex` installs with the engine |
-| A box reaches the graph as a mask at full frame size | `Mpi Box Mask` — "white rect on black at the box position, full frame size" (`box-gizmo.md:103`) — this is the inpaint mask for the detail pass |
-| A box unpacks to integers | `MpiFromBox` → `(width, height, x, y)` INTs (`ComfyUi-MpiNodes/img.py:564-581`) |
+| Question | Answer | Evidence |
+|---|---|---|
+| Architecture | Klein 9B edit, Draw It In's topology | ~25 runs, `events.jsonl` 2–12 |
+| Model | **9B only, 4B tested and failed** | Fabio, 2026-08-26 |
+| Reference count | **Two, never three** | 3 refs drew two guns |
+| Auto config | slot 1 clean scene, slot 2 stamped composite | passes mug + logo + cup |
+| Manual config | slot 1 cropped scene, slot 2 clean object | the run that fixed the gun |
+| Baked prompts | both written, in the 40–120 word band | `prompts.md` |
+| Aspect-fit fork | **dead** — nothing is pasted, so nothing needs fitting | brief.md § dropped designs |
+| Perspective/warp gizmo | **dead** — the stamp is a hint, not a paste | brief.md law 2 |
 
-**So the app-side work is a descriptor plus a workflow.** No new component, no new step kind,
-no mid-flow dispatch. The risk is entirely in the graph.
+### The one contract change
 
-### The one fork, decided here
+A step gets exactly **one** media today — `out.find(m => m?.role === step.role)`, in both
+`_buildStepSlide` and `_deriveRunMedia` (`MpiBaseFlow.js` ~1329 and ~2265). A step bound to
+`image1` therefore cannot see `image2`, which this flow needs.
 
-**Aspect-preserving fit is not expressible in the current node set.** `MpiFromBox` gives the
-box's `w/h/x/y` and core `ImageCompositeMasked` takes `x/y`, but scaling the cutout to *fit
-inside* the box without distorting it needs `scale = min(box_w/src_w, box_h/src_h)` — a
-computation core has no clean node for. Three ways, in preference order:
-
-1. **Author one node — `MpiFitInBox`** (image + MPI_BOX in; scaled image + placement x/y out).
-   One node, one file, in the pack that already owns `MpiBox` / `MpiBoxCrop` / `MpiBoxMask`, so
-   it sits exactly where a reader would look for it. Ships via **`/mpi-nodes-sync`**: committed,
-   pushed, and **pinned in `dev_configs/node_lock.json`** — a node change is not shipped until
-   it is pinned.
-2. Chain core math nodes if the bench shows a clean expression exists. Check before writing
-   Python; a graph that needs five nodes to do one multiplication is worse than the node.
-3. **Do NOT stretch the cutout to the box.** Rejected by design — a person stamped into a
-   non-matching box arrives squashed, and the box is a *bounding* box, not a target rectangle.
-
-**This changes the card's size.** If (1) is taken, MPI-596 is *descriptor + workflow + one node
-+ a pin bump*, not *descriptor + workflow*. Decide it on the bench in Phase 1 and record the
-answer in Plan Drift before building anything downstream.
-
-### Unresolved by design — measure, do not guess
-
-- **Denoise range for the detail pass.** Enough to blend the seam, little enough to keep the
-  object. Measure on the bench; do not ship a guessed default.
-- **What the box step actually renders at.** Step 0 loads media at thumbnail size, which is why
-  `kind: 'preview'` exists. If boxing a placement on a thumbnail is too coarse, add a `preview`
-  step — but check what `MpiStepBox` renders before adding UI.
-- **What happens when SAM3 finds nothing.** The named object may not be in the source image.
-  Returning the untouched target with no explanation is the bad outcome; the flow must say so.
-  Mind the `name:N` trap (`docs/masking-sam3.md`).
+Add **`sourceRole`** to the step declaration, mirroring the existing `mediaRole` that already
+routes a kind's *output* to another role. Symmetric, two `find`s and a prop. Do NOT reach for a
+bespoke component instead — MPI-572 deleted that surface and a third-party Flow can never ship
+one.
 
 ## Implementation
 
-- [ ] **Author and prove the graph on the bench FIRST.** SAM3 text-segment the named object out
-      of image2, fit the cutout into the box on image1, Krea2 detail pass over the `Mpi Box
-      Mask` region at the chosen denoise. Settle the aspect-fit fork above and record it.
-      **Verify:** a real run on the bench produces a correctly-scaled, blended stamp — and a
-      deliberate miss (an object that is not in the source) fails legibly.
-- [ ] **Ship the node, if the fork took option 1.** Via `/mpi-nodes-sync`: the sibling repo's
-      own `new-node.md` procedure, then commit, push, and pin in `dev_configs/node_lock.json`.
-      **Verify:** the pinned commit installs and the node appears in `/object_info` on a fresh
-      engine gate — read it back, do not assume the import succeeded.
-- [ ] **Wire the flow.** `FlowDef` in `flowsRegistry.js` (two image inputs; a `fields` step
-      naming the object; a `box` step on `image1` bound via `param`; a denoise slider on the run
-      slide) plus the op in its 4 files, per `01-descriptor-and-ops.md` and `02-media-io.md`.
-      Decide `result: { compare: 'image1' }` — the flow improves media the user supplied, which
-      is the stated trigger (MPI-585). **Verify:** the inject test and `node --check` from
-      `05-verify.md`.
-- [ ] **Live-run it in the app** end to end, including reuse. **Verify:** `05-verify.md`'s
-      Definition of Done — a live run and a reuse round trip, not a validation pass.
-
-## Completed
-
-- [ ] Nothing yet.
+- [ ] **Author and prove the graph on the bench FIRST** (port 8188; the app engine is 48188).
+      Draw It In's topology with the scribble swapped for the object:
+      `composite → InpaintCropImproved (mask = the placed bbox) → Klein 9B edit → ColorMatch →
+      InpaintStitchImproved`. Both modes are the SAME graph — only what lands in the two
+      reference slots differs, plus which prompt is baked.
+      **Verify:** a real bench run per mode; a vintage plate to confirm `ColorMatch` is earning
+      its place. Mind that Klein's edit pass CHANGES DIMENSIONS (snaps to ÷32, axes scale
+      unequally), so any composite-back must resize to the base.
+- [ ] **Settle crop sizing on the bench.** Draw It In's derivation does not transfer — there the
+      scribble sits *inside* the box, here the box *is* the region. Needs a context factor > 1.0
+      or Klein sees no scene to match lighting against; the return stays the box.
+      **Verify:** shadows do not clip at the return edge, and the ~200px anchor threshold is
+      cleared (this is what silently ate a Google logo whole-image).
+- [ ] **Build the stage-2 step kind** (`MpiStepPlace` or similar): `ShapeManager` in `'place'`
+      mode + the Remove Background branch + an add/subtract alpha brush + `UndoStack`. Mount the
+      History engines whole, exactly as `MpiStepPaint` mounts `PaintManager` rather than growing
+      a second brush. Keep **`bgMask` and `userMask` as two layers**, composited only at
+      dispatch — flatten them and toggling Remove Background destroys the user's erasures. The
+      brush must work with the toggle OFF (for sources BiRefNet whiffs entirely).
+      Returns ONE composited RGBA through the existing `STEP_MEDIA` adapter.
+      **Verify:** toggle off→on preserves erasures; Ctrl+Z covers every mask mutation.
+- [ ] **Add `sourceRole`** to the step contract (above). **Verify:** a step on `image1` receives
+      `image2`; existing flows unaffected.
+- [ ] **Wire the flow.** `FlowDef` in `flowsRegistry.js` + the op in its 4 files per
+      `01-descriptor-and-ops.md`. Copy Draw It In's `requiredModels` **slot** shape
+      (`{ label: 'Edit model', models: ['klein-9b'], loras: true }`) and its `modelParams` —
+      **the CLIP arm moves with the checkpoint** (9B needs `qwen_3_8b_int8_convrot`; 4B's
+      encoder dies with a shape error that reads as a sampler bug, MPI-600), and
+      `Input_Edit_Clip.clip_name` needs the **dotted** form while `Input_Edit_Model` stays plain.
+      Declare `result: { compare: 'image1' }`. Declare the Manual prompt **on the step and
+      nowhere else** — restating it in flow `fields` silently drops edits from the second run on.
+      **Verify:** `tests/inject-params-titles.test.cjs` case + `node --check`.
+- [ ] **Live-run both modes in the app**, including reuse across restart.
+      **Verify:** `05-verify.md`'s Definition of Done. `npm test` **and** `npm run test:desktop`
+      — green unit tests are not the CI gate.
+- [ ] **Announce it** in `docs/releases/UNRELEASED.md`: the roster list **and** its own entry.
+      Closing agent's debt, not the next session's.
 
 ## Remaining Work
 
-- All four implementation items above.
-- Graphics (tile + hero) — a separate `/mpi-flow-graphics` pass after the flow runs.
+All of the above. Graphics are a separate pass — and the ~25 runs already in the
+**Stamp Flow Tests** project are the plate material, so nothing needs re-generating for the
+tile or hero (`06-preview-image.md` § Plates).
 
 ## Verification
 
-**Verify mode:** user-ux
-
-The output is a picture whose whole point is that the stamp does not read as a sticker. The
-mechanical half self-verifies (inject test, `node --check`, `/object_info` for the node, a live
-run completing), but the blend quality is the user's call.
-
-Bench work goes to the standalone ComfyUI on **port 8188**; the app engine is **48188**. Drive
-the app with `npm run app:isolated`, never `:3000`.
+**Verify mode:** user-ux. The mechanical half self-verifies (inject test, `node --check`, a run
+completing), but whether the object still reads as *the user's object* is Fabio's call — that is
+the flow's whole claim.
 
 ## Preservation Notes
 
 - Add `docs/playbooks/add-flow/existing-flows/object-stamp.md` — one file per flow is the
-  convention, and it is where the denoise measurement and the aspect-fit decision belong.
-- If a new node ships, the pack's own `changelog.md` and the app's `node_lock.json` pin both
-  move. A node change that is committed but not pinned has not shipped.
-- Sibling card **MPI-454** (the Place tool) is the same capability on the workspace surface.
-  Deliberate duplication (`project_flows_are_the_beginner_surface`) — shared control
-  vocabulary, **zero shared code**. Do not converge them, and do not make one wait for the
-  other: they share no files.
-- Flows are dev-gated until there are enough of them; this one does not change that.
+  convention, and it is where the six laws, the crop sizing and the Auto/Manual split belong.
+  Promote the generalisable half (identity-vs-viewpoint, the three-reference limit, the
+  full-frame-reference rule) into `blending-into-a-photo.md`, which already names this card.
+- **NEVER write `preview`/`video` into the FlowDef before the files exist** — a declared name
+  with no file 404s and `tests/desktop/flows-tab-ring.spec.js` asserts a clean console. It held
+  master red for a day and eight pushes. ABSENT is the correct state while art is missing.
+- **Commit the art before anyone runs `scripts/sync-raw-workflows.mjs`** — its guard refuses on
+  any dirty path under `comfy_workflows/` outside `raw/`, and blocks a peer's sync with a
+  message naming neither your file nor art.
+- No app version bump for the Flow; a NEW op sets `appVersionIntroduced` in both op registries.
+
+## Plan Drift
+
+### 2026-08-26 — the aspect-fit fork closed, then became irrelevant
+
+The original plan's one fork was aspect-preserving fit into the box, expected to need a new
+`MpiFitInBox` node plus a `node_lock` pin. It needed neither: `ImageResizeKJv2`
+(`comfyui-kjnodes`, already pinned) runs `ratio = min(width/W, height/H)` verbatim, carries a
+mask through the same scale, and returns the fitted size as INTs — confirmed in the **shipped**
+engine via `/object_info` on 48188, not just the bench.
+
+Then the redesign made it moot: **nothing is pasted, so nothing needs fitting.** Recorded only
+so the fork is not re-opened. Two traps kept in case the node is ever wanted: `divisible_by`
+defaults to **2** (set 1), and `keep_proportion: "pad"` fills the padded mask with **ones**, so
+the pad region would composite as object.
+
+### 2026-08-26 — the card was superseded, and the whole design was rebuilt live
+
+MPI-621 had marked MPI-596 superseded and left "may not need to be a separate flow at all" as a
+board question for close-out that nobody answered — so the card sat in `todo` describing a route
+its own repo had measured as worse. Resolved this session: it stays a separate flow, on Draw It
+In's architecture, with an Auto/Manual split that has no equivalent in the sibling.
+
+Design 1 and design 2 and why each died are in `brief.md`; the twelve findings, including two
+predictions of mine that were measured wrong, are in `events.jsonl`.
