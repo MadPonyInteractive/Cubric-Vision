@@ -77,11 +77,11 @@
 
 - Flows are out of preview. The Flow Library is a set of outcome-shaped jobs you run without
   assembling a workspace: Head Swap, Extend Video, Add Foley, Upscale Video, Character
-  Sheet, Draw It In and Outpaint. Open it from the Flows button at the top of the gallery, from the
-  landing page, or with Tab — which now cycles the gallery, your last card and the flow you
-  have open, so you can step out to check a picture and land back where you left off. Each
-  flow says which models it needs and installs them for you; none of them download weights
-  of their own.
+  Sheet, Draw It In, Scribble and Outpaint. Open it from the Flows button at the top of the
+  gallery, from the landing page, or with Tab — which now cycles the gallery, your last card
+  and the flow you have open, so you can step out to check a picture and land back where you
+  left off. Each flow says which models it needs and installs them for you; none of them
+  download weights of their own.
 
 - Character Sheet turns a description into a reference sheet for a character. Describe who they
   are — wardrobe, age, hair, scars — and you get back one picture holding a large three-quarter
@@ -117,6 +117,15 @@
   tail gives the model far more to work with than a filled blob. The words carry style too — ask
   for a cartoon man and only he comes back a cartoon, the photo around him is untouched. Only the
   area you box is ever re-rendered; the rest of your picture comes back exactly as it was.
+
+- Scribble turns a drawing into a finished picture, starting from nothing at all. Pick the
+  shape you want, draw on the blank canvas — or bring in a sketch you made elsewhere — and say
+  what it is. The drawing gives the composition and the words give the subject and the look, so
+  it does not have to be a good drawing: rough placement and a readable silhouette are enough
+  for FLUX.2 Klein to build a finished image around. Nothing you draw survives into the result
+  — the lines are a guide, not part of the picture. Ask for an anime illustration and you get
+  one; load a style LoRA and it drives the whole look without you typing a word about style. 9B
+  is the recommended model and 4B runs the same flow on a smaller card.
 
 - Outpaint extends a picture past its edges. Drop an image, pick the shape you want — or drag
   the frame freely — and pull it out over the sides you want filled; the new area shows as black,
