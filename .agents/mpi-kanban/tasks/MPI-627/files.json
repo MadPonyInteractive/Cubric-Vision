@@ -1,0 +1,11 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "services/ffmpegThumb.js",
+    "routes/projects.js",
+    "js/services/projectService.js",
+    "tests/image-thumb-alpha.test.cjs",
+    "docs/gallery.md",
+    "docs/project-integrity.md"
+  ]
+}

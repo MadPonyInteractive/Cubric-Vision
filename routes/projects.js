@@ -33,7 +33,7 @@ const { v4: uuidv4 } = require('uuid');
 const { getProjectsRoot, COMFYUI_PORT, streamDownload, stripImageMetadata, readProjectPathsRegistry, addProjectPathToRegistry, removeProjectPathFromRegistry } = require('./shared');
 const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const { probeVideo, probeAudio } = require('../services/ffprobeVideo');
-const { extractVideoThumb, extractImageThumb } = require('../services/ffmpegThumb');
+const { extractVideoThumb, extractImageThumb, imageThumbPath } = require('../services/ffmpegThumb');
 const { ffmpegPath, ffprobePath, quote } = require('../services/ffmpegBinary');
 const { muxAudioIntoVideo } = require('../services/ffmpegMux');
 const { SCHEMA_VERSION } = require('../js/migrations/projectMigrations');
@@ -1092,8 +1092,10 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
                 await fs.remove(uuidMetaPath);
             }
             if (!thumbAbsPath) {
-                const fallback = path.join(metaDir, `${itemId}.thumb.jpg`);
-                if (await fs.pathExists(fallback)) thumbAbsPath = fallback;
+                for (const ext of ['.jpg', '.webp']) {
+                    const fallback = path.join(metaDir, `${itemId}.thumb${ext}`);
+                    if (await fs.pathExists(fallback)) { thumbAbsPath = fallback; break; }
+                }
             }
             if (thumbAbsPath && await fs.pathExists(thumbAbsPath)) {
                 try { await fs.remove(thumbAbsPath); }
@@ -1437,7 +1439,8 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
             const thumbPath = path.join(metaDir, `${id}.thumb.jpg`);
             const thumbed = await extractImageThumb(filePath, thumbPath);
             if (thumbed) {
-                metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbPath)}`;
+                // `thumbed`, not `thumbPath` — image thumbs land at .webp (MPI-627).
+                metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbed)}`;
             }
         }
         await fs.writeJson(metaPath, metaContent, { spaces: 2 });
@@ -1550,17 +1553,25 @@ router.post('/backfill-image-thumbs', async (req, res) => {
             let meta;
             try { meta = await fs.readJson(p); } catch { continue; }
             if (meta.type !== 'image') continue;
-            if (meta.thumbPath) continue;
 
             const inputPath = pathFromProjectFileUrl(meta.filePath);
             if (!inputPath || !(await fs.pathExists(inputPath))) continue;
+
+            // MPI-627: a pre-existing `.thumb.jpg` off an alpha-capable source is
+            // WRONG, not merely missing — the flatten restored the original RGB
+            // hiding under the cut-out. Re-encode those to WebP once; a JPG source
+            // can never carry alpha, so it keeps the thumb it already has.
+            const staleJpg = /\.thumb\.jpe?g(&|$)/i.test(meta.thumbPath || '')
+                && /\.(png|webp|avif|gif)$/i.test(inputPath);
+            if (meta.thumbPath && !staleJpg) continue;
 
             const id = meta.id || f.replace(/\.json$/, '');
             const thumbAbs = path.join(metaDir, `${id}.thumb.jpg`);
             const thumbed = await extractImageThumb(inputPath, thumbAbs);
             if (!thumbed) continue;
+            if (staleJpg) { try { await fs.remove(thumbAbs); } catch (_) {} }
 
-            meta.thumbPath = `/project-file?path=${encodeURIComponent(thumbAbs)}`;
+            meta.thumbPath = `/project-file?path=${encodeURIComponent(thumbed)}`;
             await fs.writeJson(p, meta, { spaces: 2 });
             thumbs[id] = meta.thumbPath;
             patched++;
@@ -1967,7 +1978,8 @@ router.post('/project/save-generation', async (req, res) => {
             const thumbPath = path.join(metaDir, `${id}.thumb.jpg`);
             const thumbed = await extractImageThumb(filePath, thumbPath);
             if (thumbed) {
-                metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbPath)}`;
+                // `thumbed`, not `thumbPath` — image thumbs land at .webp (MPI-627).
+                metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbed)}`;
             }
         }
         if (replaceItemId) {
@@ -1996,7 +2008,10 @@ router.post('/project/save-generation', async (req, res) => {
                 // On a same-id replace the new thumb IS this path — never delete
                 // it as if it were the stale previous one.
                 const newThumbAbs = path.join(metaDir, `${id}.thumb.jpg`);
-                if (path.normalize(_replacePrevThumbPath) !== path.normalize(newThumbAbs)) {
+                const newThumbWebp = imageThumbPath(newThumbAbs);
+                const prevNorm = path.normalize(_replacePrevThumbPath);
+                if (prevNorm !== path.normalize(newThumbAbs)
+                    && prevNorm !== path.normalize(newThumbWebp)) {
                     try { await fs.remove(_replacePrevThumbPath); }
                     catch (e) { logger.warn('project', 'replace: old thumb remove failed', e.message); }
                 }
@@ -2048,9 +2063,13 @@ router.post('/project/save-generation', async (req, res) => {
                 // Only delete if the referenced media file doesn't exist
                 if (!(await fs.pathExists(mediaPath))) {
                     await fs.remove(metaFilePath);
-                    if (!thumbPath) thumbPath = path.join(metaDir, `${baseName}.thumb.jpg`);
-                    if (await fs.pathExists(thumbPath)) {
-                        try { await fs.remove(thumbPath); } catch (_) {}
+                    const thumbCandidates = thumbPath
+                        ? [thumbPath]
+                        : ['.jpg', '.webp'].map(e => path.join(metaDir, `${baseName}.thumb${e}`));
+                    for (const t of thumbCandidates) {
+                        if (await fs.pathExists(t)) {
+                            try { await fs.remove(t); } catch (_) {}
+                        }
                     }
                 } else {
                     survivingIds.add(baseName);
@@ -2059,9 +2078,9 @@ router.post('/project/save-generation', async (req, res) => {
 
             // Pass 2: orphan thumbs with no surviving sidecar
             for (const f of entries) {
-                if (!f.endsWith('.thumb.jpg')) continue;
-                const baseName = f.slice(0, -'.thumb.jpg'.length);
-                if (survivingIds.has(baseName)) continue;
+                const m = f.match(/^(.*)\.thumb\.(jpg|webp)$/);
+                if (!m) continue;
+                if (survivingIds.has(m[1])) continue;
                 try { await fs.remove(path.join(metaDir, f)); } catch (_) {}
             }
         } catch (_) { /* GC failure is non-fatal */ }
@@ -2154,7 +2173,7 @@ router.post('/project-media/:projectId/add-from-cards', async (req, res) => {
             // Copy companion thumb if the source had one.
             const srcThumb = pathFromProjectFileUrl(item?.thumbPath) || pathFromProjectFileUrl(meta.thumbPath);
             if (srcThumb && await fs.pathExists(srcThumb)) {
-                const destThumb = path.join(metaDir, `${id}.thumb.jpg`);
+                const destThumb = path.join(metaDir, `${id}.thumb${path.extname(srcThumb)}`);
                 await fs.copy(srcThumb, destThumb);
                 meta.thumbPath = `/project-file?path=${encodeURIComponent(destThumb)}`;
             } else {
@@ -2386,8 +2405,9 @@ router.post('/project/composite-media', async (req, res) => {
         // Gallery thumb (MPI-319) — crop-media predates it, but a composite of a
         // 4K upscale is exactly the card that made full-res decode the scroll cost.
         const thumbPath = path.join(metaDir, `${id}.thumb.jpg`);
-        if (await extractImageThumb(filePath, thumbPath)) {
-            metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbPath)}`;
+        const thumbed = await extractImageThumb(filePath, thumbPath);
+        if (thumbed) {
+            metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbed)}`;
         }
 
         await fs.writeJson(path.join(metaDir, `${id}.json`), metaContent, { spaces: 2 });
@@ -2494,8 +2514,9 @@ router.post('/project/apply-paint', async (req, res) => {
         };
 
         const thumbPath = path.join(metaDir, `${id}.thumb.jpg`);
-        if (await extractImageThumb(filePath, thumbPath)) {
-            metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbPath)}`;
+        const thumbed = await extractImageThumb(filePath, thumbPath);
+        if (thumbed) {
+            metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbed)}`;
         }
 
         await fs.writeJson(path.join(metaDir, `${id}.json`), metaContent, { spaces: 2 });
@@ -2581,8 +2602,10 @@ router.delete('/delete-meta', (req, res) => {
         fs.removeSync(metaPath);
     }
     if (!thumbAbsPath) {
-        const fallback = path.join(metaDir, `${id}.thumb.jpg`);
-        if (fs.existsSync(fallback)) thumbAbsPath = fallback;
+        for (const ext of ['.jpg', '.webp']) {
+            const fallback = path.join(metaDir, `${id}.thumb${ext}`);
+            if (fs.existsSync(fallback)) { thumbAbsPath = fallback; break; }
+        }
     }
     if (thumbAbsPath && fs.existsSync(thumbAbsPath)) {
         try { fs.removeSync(thumbAbsPath); }

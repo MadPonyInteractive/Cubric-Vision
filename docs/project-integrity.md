@@ -130,7 +130,7 @@ Located at `<projectFolder>/Media/.meta/<uuid>.json`. One file per history item.
   **Preview asset validation + cold fallback + delete cleanup:** Full contract (validation route, `canFastPath`/`canColdFallback`/`blocked` states, Continue/Finish behavior per state, sidecar-driven cleanup) lives in `.claude/rules/comfy_injection.md` § "Preview support-asset validation + cold fallback".
 
 **Video-specific sidecar fields** (present when `type === 'video'`):
-- **`thumbPath`** — Server-relative URL to a first-frame thumbnail JPG (256px wide). Written by `services/ffmpegThumb.js` for upload/crop/generated video saves. Used by `MpiHistoryList` for row previews and `MpiGalleryGrid` for card thumbnails.
+- **`thumbPath`** — Server-relative URL to a thumbnail: a 256px first-frame **JPG** for video, a 512px **WebP** for images (alpha-preserving — see `gallery.md` § "Images get a thumb too"). Written by `services/ffmpegThumb.js` for upload/crop/generated saves. Used by `MpiHistoryList` for row previews and `MpiGalleryGrid` for card thumbnails.
 - **`fps`** — Frame rate as probed by ffprobe (number). Written by `services/ffprobeVideo.js` for upload/generated video saves.
 - **`duration`** — Duration in seconds (number). Written by `services/ffprobeVideo.js` for upload/generated video saves.
 - **`frameCount`** — Total frame count (number). Written by `services/ffprobeVideo.js` for upload/generated video saves.
@@ -242,7 +242,7 @@ All removals are **silent** — no error shown to the user. The project is simpl
 
 ### In-place replacement (multi-stage preview → final)
 
-Multi-stage video ops Continue path POSTs `/project/save-generation` with `replaceItemId: <uuid>`. The route forces the new sidecar id to that uuid (overwriting `<uuid>.json`), stamps `stage: 'final'`, drops `frozenParams` / `loraSnapshot`, then deletes the previous media file (and `<uuid>.thumb.jpg` if any) once the new file is committed. The history slot in `project.json` is unchanged because the uuid is reused. Listeners refresh via the `gallery:item-updated` event emitted by `generationService`.
+Multi-stage video ops Continue path POSTs `/project/save-generation` with `replaceItemId: <uuid>`. The route forces the new sidecar id to that uuid (overwriting `<uuid>.json`), stamps `stage: 'final'`, drops `frozenParams` / `loraSnapshot`, then deletes the previous media file (and its `<uuid>.thumb.jpg` / `.thumb.webp` if any) once the new file is committed. The history slot in `project.json` is unchanged because the uuid is reused. Listeners refresh via the `gallery:item-updated` event emitted by `generationService`.
 
 ### Orphaned sidecars (garbage collection)
 

@@ -318,7 +318,11 @@ async function _backfillImageThumbs(folderPath) {
         const itemGroups = proj.itemGroups.map((g) => ({
             ...g,
             history: g.history.map((item) => {
-                if (item?.id && thumbs[item.id] && !item.thumbPath) {
+                // `!==`, not `!item.thumbPath` (MPI-627): the backfill now also
+                // REPLACES a legacy `.thumb.jpg` that flattened away a cut-out,
+                // and it deletes that jpg — an item left holding the old URL
+                // would 404 its card until the next project load.
+                if (item?.id && thumbs[item.id] && item.thumbPath !== thumbs[item.id]) {
                     changed = true;
                     return { ...item, thumbPath: thumbs[item.id] };
                 }

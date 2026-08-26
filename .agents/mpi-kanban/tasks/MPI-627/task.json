@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-627",
+  "title": "Gallery card of a background-removed image showed the original",
+  "description": "A cut-out PNG rendered in the gallery as the untouched source image (white studio backdrop, drop-shadow) while the viewer showed the cut-out. Cause: the 512px gallery thumb was JPG, which has no alpha, and background removal leaves the source RGB intact under the mask — the flatten restored the original rather than painting a backdrop. Image thumbs are now WebP; the load-time backfill re-encodes legacy jpg thumbs of alpha-capable sources.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "created_at": "2026-08-26T15:46:00Z",
+  "updated_at": "2026-08-26T15:46:00Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

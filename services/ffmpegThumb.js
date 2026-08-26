@@ -2,14 +2,24 @@
 
 /**
  * ffmpegThumb.js — Extract a single JPG thumbnail from a video, or downscale
- * an image to a gallery-sized JPG thumbnail.
+ * an image to a gallery-sized WebP thumbnail.
  *
  * Uses bundled ffmpeg (see ffmpegBinary.js). Video thumbs are 256-wide JPGs
  * (height auto, preserves aspect) at the given timestamp (default 0s). Image
  * thumbs are 512-wide (sharp enough at the biggest gallery card, ~50x cheaper
  * to decode than a raw 4K PNG — the whole point of MPI-319).
  *
- * Returns outPath on success, null on failure (logs warning).
+ * Image thumbs are WebP, NOT JPG (MPI-627): JPG carries no alpha, and a
+ * background-removed PNG keeps its ORIGINAL RGB under the transparent pixels
+ * (the cut-out lives only in the alpha channel). Flattening that to JPG did not
+ * merely paint a white backdrop — it restored the untouched source image,
+ * backdrop and drop-shadow included. WebP keeps alpha, so the gallery card
+ * composites over the app surface, and it is SMALLER than the JPG it replaces
+ * at this size (measured 512px: 30 KB vs 44 KB photo, 16.8 KB vs 17.5 KB cut-out).
+ *
+ * Returns the path ACTUALLY written on success — an image thumb always lands at
+ * `.webp` whatever extension the caller asked for, so callers MUST use the
+ * return value, not the path they passed. null on failure (logs warning).
  */
 
 const { execFile } = require('child_process');
@@ -38,24 +48,32 @@ async function extractVideoThumb(inputPath, outPath, { atSeconds = 0 } = {}) {
     }
 }
 
+/** `<id>.thumb.jpg` → `<id>.thumb.webp`. The one place the swap is spelled. */
+function imageThumbPath(outPath) {
+    return String(outPath).replace(/\.jpe?g$/i, '.webp');
+}
+
 async function extractImageThumb(inputPath, outPath, { width = 512 } = {}) {
+    const webpPath = imageThumbPath(outPath);
     try {
         const args = [
             '-y',
             '-i', inputPath,
             // Downscale only — never upscale a small source ('force_original...'
-            // guards the min); -2 keeps height even for yuv420 JPG encoding.
+            // guards the min); -2 keeps height even for the yuva420p chroma
+            // subsampling libwebp uses.
             '-vf', `scale='min(${width},iw)':-2`,
             '-frames:v', '1',
-            '-q:v', '4',
-            outPath,
+            '-c:v', 'libwebp',
+            '-quality', '82',
+            webpPath,
         ];
         await execFileP(ffmpegPath, args, { maxBuffer: 4 * 1024 * 1024 });
-        return outPath;
+        return webpPath;
     } catch (err) {
         logger.warn('ffmpegThumb', `image thumb failed for ${inputPath}: ${err.message}`);
         return null;
     }
 }
 
-module.exports = { extractVideoThumb, extractImageThumb };
+module.exports = { extractVideoThumb, extractImageThumb, imageThumbPath };
