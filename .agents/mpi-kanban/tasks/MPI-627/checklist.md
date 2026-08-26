@@ -16,4 +16,6 @@
 - [x] Migration verified against a COPY of the user's own project: 5 cut-outs healed,
       3 opaque jpg sources untouched, second run patched 0
 - [x] Docs synced — `docs/gallery.md`, `docs/project-integrity.md`
-- [ ] **User confirms in the running app** (needs a restart — his server holds the old code)
+- [x] **User confirmed in the running app**, 2026-08-26 after a full restart: "fix worked.
+      The consistent colour is now not confusing anymore." Gun, cup and the `pal8` Google
+      logo all render on the gallery surface
