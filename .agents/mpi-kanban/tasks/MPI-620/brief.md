@@ -416,10 +416,10 @@ commit as the art files — never ahead of them.
 
 ---
 
-## OPEN FOLLOW-UPS — specified, NOT built (2026-08-26)
+## FOLLOW-UPS — BOTH BUILT 2026-08-26. Specification below, outcome at the end.
 
-Neither is a blocker for the flow, which is finished and green. Both came out of Fabio's live
-runs and both touch files MPI-620 does not own, so they are written down rather than done.
+Both came out of Fabio's live runs. `files.json` gained the four files they needed
+(`flowService.js`, `generationService.js`, `MpiGalleryGrid.js`, `statusBar.js`).
 
 ### 1. Reuse must open the flow even when a model is missing
 
@@ -466,3 +466,105 @@ multi-slot flow the answer stays "read the sidecar", exactly as it already is fo
 real detail panel (prompt + seed + models + settings) is its own card, not this one.
 
 This pairs with follow-up 1: the substitution toast has to NAME the tier it is substituting.
+
+---
+
+### BOTH SHIPPED — what was built, and the four decisions inside it
+
+**Storage rides `generationSettings`, not a new item field.** `flowService` puts
+`flowModelIds: flowModelIds(flow)` on the config; `generationService` copies it into the
+`generationSettings` blob beside `injectionParams`. That blob is already the sidecar's
+free-form run snapshot, so this needed **no** route, `projectModel`, reconciler or migration
+change — the alternative (a top-level item field like `flowId`/`flowInputs`) would have
+touched `projectModel` x3, `generationService` x2, `projectService`, five parity sites in
+`routes/projects.js` and the reconciler. Proven on disk rather than assumed: Fabio's eight
+live `flowScribble` sidecars carry `generationSettings` with exactly the keys
+`generationService` builds (`operation, modelId, injectionParams, mediaItems, previewOnly`),
+so the new key lands beside them and survives a restart the same way.
+
+**`ui:error` IS NOT A TOAST — that is why `ui:danger` now exists.** `ui:error` opens the
+blocking `MpiErrorDialog` (`shell.js:423`), and Fabio asked for a toast. `MpiToast` already
+had the `danger` variant with no event channel, so `statusBar.js` gained one line beside
+`ui:success` / `ui:warning` / `ui:info`. Verified rendering, not just emitting: one
+`.mpi-toast--danger` element, labelled "Failed".
+
+**Reuse now opens FIRST and toasts SECOND, in the same deferred tick.** The `setTimeout(0)`
+that already existed (so the reuse menu's `ui:close-all-popups` teardown cannot eat the
+overlay) now also carries the toast, so it lands over the open flow rather than behind it.
+`_missingLabel` was extracted from `submitFlowGeneration` — both toasts have to name whether
+a MODEL or a DEP is absent (MPI-304), and duplicating that ternary would have drifted.
+
+**The badge is suppressed by `flowModelChoices().length !== 1`, and Draw It In does NOT
+badge.** The follow-up text above says it would; measured, `scribble-object` has ONE slot with
+ONE candidate (klein-9b, 9B-only by its own live evidence), so it has **zero** choosable slots
+and correctly shows nothing — a card naming the only model it could ever run says nothing.
+Scribble and Outpaint are the flows with exactly one choosable slot today. Reading
+`ids[choices[0].index]` and not `ids[0]` is load-bearing: `flowModelIds` is indexed by
+`requiredModels` position, and `flowModelChoices` filters — which is exactly why it kept
+`index` (MPI-608).
+
+**Measured in a real renderer** (own isolated instance, `openFlowFromReuse` driven four ways
+with `s_installedModelIds` stubbed):
+
+| Case | Result |
+|---|---|
+| recorded 9B, only 4B installed | flow opens, inputs seeded, warning: *"Scribble will run on FLUX.2 Klein 4B instead of FLUX.2 Klein 9B — the model this was made with isn't installed."* |
+| nothing installed | flow opens, inputs seeded, DANGER toast: *"Scribble needs a model installed — install from Flows, then press Generate. Your inputs are kept."* |
+| recorded 9B, 9B installed | flow opens, no toast |
+| pre-MPI-620 card (no recorded ids) | flow opens, no toast — no guess made from weight filenames |
+
+Badge, four synthetic cards through a real `MpiGalleryGrid` mount: `scribble` +
+`flowModelIds:['klein-4b']` → row 1 `FLUX.2 KLEIN 4B`; `character-sheet` (2 choosable),
+`scribble-object` (0 choosable) and a scribble card with nothing recorded → row 1 suppressed,
+only `FLOW: SCRIBBLE`.
+
+`npm test` 737/738 (the failure is the same unrelated orphan-sweep isolation leak this card
+has carried throughout — `_localSharedDepsMap` stats the REAL models root, so an installed
+Boogu makes the fixture's "orphan" genuinely wanted; CI has no models and stays green).
+eslint clean on all four files.
+
+**Noticed, not actioned:** `badgeRows` in `MpiGalleryGrid._render` builds its row classes from
+the index AFTER `.filter(Boolean)`, so a card with an empty row 1 renders its operation text
+with the `--model` row class. Pre-existing and unchanged — every flow card has always looked
+that way — but it means "row 1 vs row 2" in the code is positional, not semantic.
+
+---
+
+## GRAPHICS — SHIPPED 2026-08-26 (`/mpi-flow-graphics`)
+
+`flow-scribble.webp` 107 KB (896×1120) + `flow-scribble.mp4` 1.30 MB (1280×800, 6.0s, 24fps).
+Both keys wired in `flowsRegistry.js` in the same commit as the files.
+
+**Plates are ONE real run, proven by hash rather than assumed.** `imported_002.png`'s sha256
+(`3f9d5b58…`) IS the `.preview-assets` filename that both `kleinEdit_011` (anime) and
+`kleinEdit_012` (photoreal) ate — same sketch, same model, same baked prefix, only the wording
+differing. Fabio first named `imported_001.png`; the hash said otherwise and a pixel diff put
+the two sketches **10.77% apart**, so it mattered. He confirmed 002. The two renders came from
+the `kleinEdit` op rather than `flowScribble`, which is the same graph and the same prefix.
+
+**Device — the layout holds while the LOOK changes**, which no shipped hero did before. The
+seam wipes the drawing away to the anime render, that crossfades to the photoreal one and back,
+and the composition never moves — so the only thing the eye reads is the style. Chosen over
+Draw It In's two-subjects device because Scribble's pitch is not "any subject" but "your shapes,
+your words decide the look". **The loop point IS the tile frame** (seam parked at 45%, base back
+on anime), which makes the loop invisible AND stops the `poster` cutting to a different picture.
+
+**Two rebuilds, both silent, both now in the playbook's trap table:**
+
+1. **A sliding cover shows the WRONG COLUMNS.** Sliding the sketch off to the left leaves its
+   RIGHT side sitting on the frame's LEFT — the drawn sea appeared on the wrong side of the
+   picture. Registered plates need `geq` + `alphamerge` with a moving SEAM, not a moving plate.
+2. **`split` then `format=gray` on one branch turns BOTH branches gray.** Negotiation runs back
+   through the split, so the sketch lost its pink and green and read as a pencil study. The mask
+   needs its own `color=black` source.
+
+Neither errored, and both were only visible at 446 px — which is the playbook's whole point
+about judging at real size.
+
+**Measured:** loop seam = first vs last frame MAD **0.53** (codec noise); wipe motion = first vs
+t=0.7 MAD **21.0** (so it genuinely animates — the `drawbox`/`crop` traps read as 0); style beat
+= anime vs real MAD **59.2**. Live in an isolated instance with the project open on the gallery:
+hero selected BY SRC (not `querySelector('video')`), `paused:false`, `muted`, `loop:true`,
+`currentTime` 2.455 → 3.356, `1280x800`, **cssW 444** — a real visible hero, not the 0-width
+hidden-overlay trap — poster `flow-scribble.webp`. Both assets **200** at exactly 107,188 and
+1,296,998 bytes. `npm test` **739/739** (the orphan-sweep flake did not reproduce this run).

@@ -20,6 +20,14 @@
     "docs/playbooks/add-flow/existing-flows/scribble.md",
     "docs/paint-gizmo.md",
     "tests/desktop/flow-clear-slot-advances.spec.js",
-    "js/utils/declaredFields.js"
+    "js/utils/declaredFields.js",
+    "js/services/flowService.js",
+    "js/services/generationService.js",
+    "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+    "js/shell/statusBar.js",
+    "tests/desktop/flow-reuse-opens-without-model.spec.js",
+    "comfy_workflows/display/flow-scribble.webp",
+    "comfy_workflows/display/flow-scribble.mp4",
+    "docs/playbooks/add-flow/06-preview-image.md"
   ]
 }
