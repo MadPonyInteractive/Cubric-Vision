@@ -6,6 +6,13 @@
 > archival `docs/releases/YYYY-MM-DD-v<newVersion>.md`, then clear this file
 > back to the header.
 >
+> **The next bump is intended as 2.0 — a major release, and Flows are what makes it
+> one** (Fabio, 2026-08-26). That is why `## What's new` opens with the Flows section
+> and every flow gets its own entry: no shipped release note has ever mentioned Flows
+> (checked across every version in `releaseNotes.js`), so this is the first time a user
+> sees any of them. Keep that order when folding. It also means **a "fix" to a flow is
+> not a fix to anything a user ever had** — see the § Fixes note below.
+>
 > **Cleared 2026-08-15 after 1.4.2 shipped.** All nine items (4 new + 5 fixes) were
 > folded into `RELEASE_NOTES['1.4.2']` and `docs/releases/2026-08-15-v1.4.2.md`.
 >
@@ -34,11 +41,105 @@
 - Inpainting no longer erases on an empty prompt — you have to say what you want removed.
   Clearing the prompt and painting over something used to delete it, and that was the whole
   erase gesture. Klein now samples with the mask as a real constraint, and an empty prompt is a
-  no-op — the same gesture hands the picture back unchanged. Name the thing instead: "remove the
-  tattoo", "remove the head". The bare word "remove" on its own does nothing either, and that is
-  exactly what Vision used to fill in for you behind the scenes. Both the 4B and 9B cards.
+  no-op — the same gesture hands the picture back unchanged. Name the thing instead: "remove
+  the tattoo", "remove the head". The bare word "remove" on its own does nothing either, and
+  that is exactly what Vision used to fill in for you behind the scenes. Both the 4B and 9B
+  cards.
 
 ## What's new
+
+- **Flows are here, and they are the headline of this release.** A flow is a whole job in one
+  place: it asks for what it needs a step at a time, brings its own models, and hands you a
+  finished result — no workspace to assemble, no settings to know. Open the Flow Library from
+  the Flows button at the top of the gallery, from the landing page, or with Tab, which cycles
+  the gallery, your last card and the flow you have open, so you can step out to check a
+  picture and land back where you left off. Eight to start with:
+
+  - **Head Swap** — put one picture's head on another
+  - **Extend Video** — carry on past the last frame
+  - **Add Foley** — give a silent clip its sound
+  - **Upscale Video** — double a clip's resolution
+  - **Draw It In** — draw something into a photo you already have
+  - **Scribble** — draw on nothing and have it rendered
+  - **Character Sheet** — turn a description into a reference sheet
+  - **Outpaint** — extend a picture past its edges
+
+  Each flow tells you which models it needs and installs them for you, and none of them download
+  weights of their own — everything they run on is a model the Library already offers, so a flow
+  costs you nothing extra once you own it. The three video flows all run on LTX 2.3 Balanced, so
+  installing it for one gives you the other two.
+
+- **Head Swap** takes a head from one picture and puts it on another. Load the picture you want
+  to keep, add the picture with the head you want, draw a square around each head, and run. It
+  runs on Qwen Image Edit with a head-swap LoRA. The square may sit past the edge of the
+  picture and stretch up to the picture's longest side, so a head near a border — or tall hair,
+  or a neck tattoo — can be taken in without the box swallowing whoever is standing next to
+  them. The reference head is padded back to square before the model sees it, and what you get
+  back is your own picture with no border strip added.
+
+- **Extend Video** continues a clip past its last frame. Drop a video, describe what happens
+  next, and LTX 2.3 generates the new seconds — with matching audio — onto the end of it.
+
+- **Add Foley** gives a silent clip a soundtrack. Drop a video, describe what it should sound
+  like, and LTX 2.3 generates matching foley across the whole clip. The picture comes back
+  untouched — only sound is added.
+
+- **Upscale Video** doubles a clip's resolution and rebuilds its detail. Drop a video and LTX
+  2.3 re-renders it at 2x, with the audio coming through untouched. Short clips first: the cost
+  grows with length, and a long one can still exhaust graphics memory. The same upscaler is
+  also in the History workspace as a tool, further down these notes — the flow is the version
+  you can run without assembling anything.
+
+- **Draw It In** puts something new into a photo you already have — a person, an animal, an
+  object. Load the picture, draw roughly where the thing goes, how big it is and what pose it
+  holds, say what you drew, and box the area to blend. FLUX.2 Klein 9B renders it straight into
+  the scene, matching the light, casting a shadow on the ground and letting whatever is already
+  in front of it overlap its edges — so it can stand behind things in the photo, not only on
+  top of them. The drawing carries the placement and the words carry the subject, so the better
+  you draw it the more detail survives and the less you have to fight the prompt: an outline
+  with a pose and a tail gives the model far more to work with than a filled blob. The words
+  carry style too — ask for a cartoon man and only he comes back a cartoon, the photo around
+  him is untouched. Only the area you box is ever re-rendered; the rest of your picture comes
+  back exactly as it was.
+
+- **Scribble** turns a drawing into a finished picture, starting from nothing at all. Pick the
+  shape you want, draw on the blank canvas — or bring in a sketch you made elsewhere — and say
+  what it is. The drawing gives the composition and the words give the subject and the look, so
+  it does not have to be a good drawing: rough placement and a readable silhouette are enough
+  for FLUX.2 Klein to build a finished image around. Nothing you draw survives into the result
+  — the lines are a guide, not part of the picture. Ask for an anime illustration and you get
+  one; load a style LoRA and it drives the whole look without you typing a word about style. 9B
+  is the recommended model and 4B runs the same flow on a smaller card.
+
+- **Character Sheet** turns a description into a reference sheet for a character. Describe who
+  they are — wardrobe, age, hair, scars — and you get back one picture holding a large
+  three-quarter portrait plus full-body front and back views on a plain grey studio backdrop,
+  in the layout a video model reads best. The front body comes back headless on purpose: a face
+  taken from a small, soft full-body figure is what makes a character drift, so removing that
+  head leaves the portrait as the only place a face can come from. It is a toggle if you want
+  the head. Enhance rewrites your description into the full phrase the sheet is generated from
+  and shows it to you — edit it freely, whatever is in that box is what runs. Four styles
+  (Photoreal, 3D animation, Anime, Cartoon), 1K or 2K, and a Turbo speed toggle.
+
+  It is the one flow that uses two models, and you pick both. A **Render model** draws the sheet
+  and a **Blend model** removes the head from the front body — two dropdowns in the Flows panel
+  when you select the flow, each with its own cogwheel opening that model's LoRA rack, so your own
+  LoRAs ride along on either stage. The same pair of cogwheels also sits on the last step beside
+  the result, so you can try a different LoRA and run again without leaving the picture you are
+  judging. Someone who has already trained a character can load it on the render side and describe
+  only the wardrobe on top. The Render model is Krea 2 or Krea 2 NSFW and the Blend model is
+  FLUX.2 Klein 4B or 9B; both dropdowns appear whether or not anything is installed, so you choose
+  which one downloads rather than getting whichever came first, and owning one candidate per slot
+  is enough to run the flow. Krea 2 is the stronger choice for stylised work; the NSFW model is
+  trained mostly on photographic source and is weaker at Anime and Cartoon.
+
+- **Outpaint** extends a picture past its edges. Drop an image, pick the shape you want — or
+  drag the frame freely — and pull it out over the sides you want filled; the new area shows as
+  black, and Krea 2 paints it in. It works best in small steps: a narrow strip on one or two
+  sides comes back seamless, while a big extension leaves the model inventing most of the
+  picture and it shows. To go a long way, run it again on the result rather than asking for it
+  all at once. Like Character Sheet, it runs on either Krea 2 or Krea 2 NSFW, and downloads no
+  weights of its own.
 
 - FLUX.2 Klein now comes in two sizes. The 9B card sits beside the 4B one and does the same
   seven things — generate, reshape, follow a depth reference, edit with up to three reference
@@ -68,72 +169,12 @@
   light, style and perspective of everything around it. Removing something now has to be asked
   for by name; see Important changes.
 
-- Place puts one picture inside another. Open an image, pick Place from the Composite tools, and
-  drop in a second image — a logo, a product, a person cut out of another shot. Drag it where you
-  want it, scale and rotate it with the handles, and Apply stamps it down as a new entry with both
-  originals untouched. Remove background cuts the object out first, so what lands is the object and
-  not its rectangle. The button beside Apply puts the picture back to its own size if you have
-  scaled it somewhere you did not mean to, without moving it.
-
-- Flows are out of preview. The Flow Library is a set of outcome-shaped jobs you run without
-  assembling a workspace: Head Swap, Extend Video, Add Foley, Upscale Video, Character
-  Sheet, Draw It In, Scribble and Outpaint. Open it from the Flows button at the top of the
-  gallery, from the landing page, or with Tab — which now cycles the gallery, your last card
-  and the flow you have open, so you can step out to check a picture and land back where you
-  left off. Each flow says which models it needs and installs them for you; none of them
-  download weights of their own.
-
-- Character Sheet turns a description into a reference sheet for a character. Describe who they
-  are — wardrobe, age, hair, scars — and you get back one picture holding a large three-quarter
-  portrait plus full-body front and back views on a plain grey studio backdrop, in the layout a
-  video model reads best. The front body comes back headless on purpose: a face taken from a
-  small, soft full-body figure is what makes a character drift, so removing that head leaves the
-  portrait as the only place a face can come from. It is a toggle if you want the head. Enhance
-  rewrites your description into the full phrase the sheet is generated from and shows it to you
-  — edit it freely, whatever is in that box is what runs. Four styles (Photoreal, 3D animation,
-  Anime, Cartoon), 1K or 2K, and a Turbo speed toggle.
-
-- Character Sheet uses two models, and you pick both. A **Render model** draws the sheet, and a
-  **Blend model** removes the head from the front body — two dropdowns in the Flows panel when
-  you select the flow, each with its own cogwheel opening that model's LoRA rack, so your own
-  LoRAs ride along on either stage. The same pair of cogwheels also sits on the last step beside
-  the result, so you can try a different LoRA and run again without leaving the picture you are
-  judging. Someone who has already trained a character can load it on the render side and
-  describe only the wardrobe on top.
-
-- The Render model is Krea 2 or Krea 2 NSFW; the Blend model is FLUX.2 Klein 4B or 9B. Both
-  dropdowns appear whether or not anything is installed, so you choose which one downloads
-  rather than getting whichever came first, and owning one candidate per slot is enough to run
-  the flow. Krea 2 is the stronger choice for stylised work; the NSFW model is trained mostly on
-  photographic source and is weaker at Anime and Cartoon.
-
-- Draw It In puts something new into a photo you already have — a person, an animal, an object.
-  Load the picture, draw roughly where the thing goes, how big it is and what pose it holds, say
-  what you drew, and box the area to blend. FLUX.2 Klein 9B renders it straight into the scene,
-  matching the light, casting a shadow on the ground and letting whatever is already in front of
-  it overlap its edges — so it can stand behind things in the photo, not only on top of them. The
-  drawing carries the placement and the words carry the subject, so the better you draw it the
-  more detail survives and the less you have to fight the prompt: an outline with a pose and a
-  tail gives the model far more to work with than a filled blob. The words carry style too — ask
-  for a cartoon man and only he comes back a cartoon, the photo around him is untouched. Only the
-  area you box is ever re-rendered; the rest of your picture comes back exactly as it was.
-
-- Scribble turns a drawing into a finished picture, starting from nothing at all. Pick the
-  shape you want, draw on the blank canvas — or bring in a sketch you made elsewhere — and say
-  what it is. The drawing gives the composition and the words give the subject and the look, so
-  it does not have to be a good drawing: rough placement and a readable silhouette are enough
-  for FLUX.2 Klein to build a finished image around. Nothing you draw survives into the result
-  — the lines are a guide, not part of the picture. Ask for an anime illustration and you get
-  one; load a style LoRA and it drives the whole look without you typing a word about style. 9B
-  is the recommended model and 4B runs the same flow on a smaller card.
-
-- Outpaint extends a picture past its edges. Drop an image, pick the shape you want — or drag
-  the frame freely — and pull it out over the sides you want filled; the new area shows as black,
-  and Krea 2 paints it in. It works best in small steps: a narrow strip on one or two sides comes
-  back seamless, while a big extension leaves the model inventing most of the picture and it
-  shows. To go a long way, run it again on the result rather than asking for it all at once.
-  Like Character Sheet, it runs on either Krea 2 or Krea 2 NSFW, and downloads no weights of its
-  own.
+- Place puts one picture inside another. Open an image, pick Place from the Composite tools,
+  and drop in a second image — a logo, a product, a person cut out of another shot. Drag it
+  where you want it, scale and rotate it with the handles, and Apply stamps it down as a new
+  entry with both originals untouched. Remove background cuts the object out first, so what
+  lands is the object and not its rectangle. The button beside Apply puts the picture back to
+  its own size if you have scaled it somewhere you did not mean to, without moving it.
 
 - Videos can be upscaled with LTX, sound and all. The Upscale tool in the History workspace
   has a new option on video — "LTX Video upscaler" — which doubles a clip's resolution using
@@ -146,13 +187,14 @@
   you already run LTX there is nothing to install. Video only, and a long or large clip can
   still exhaust graphics memory — a short clip is the safe first try.
 
-- Head Swap boxes can now leave the picture, and grow past it. The square you draw around a
-  head may sit beyond the image edge and stretch up to the picture's longest side, so a head
-  near a border — or tall hair, or a neck tattoo — can be taken in without the box swallowing
-  whoever is standing next to them. The reference head is padded back to square before the
-  model sees it, and the picture you get back is untouched: no border strip.
-
 ## Fixes
+
+> **A fix to a FLOW does not belong in this section for this release.** Flows debut here, so
+> no released build ever had the bug and no user can have met it — the fix is part of the
+> feature. One entry below is affected and was left alone rather than edited silently: "Live
+> latent previews now play everywhere they appear" names the **Flow result pane** alongside the
+> History workspace and the minimised preview window. The last two are real released bugs and
+> the entry is worth keeping; the Flow clause is the part to drop when folding.
 
 - The colour picker no longer opens off the bottom of the screen. Clicking the colour swatch
   in the Paint, Crop, Resize, Remove Background or Adjust tool options while the panel sat low
@@ -174,12 +216,12 @@
   produce it. A video already sitting on its first frame is now left alone. Hovering, playback
   and the silence-while-scrolling behaviour are unchanged.
 
-- The first engine start no longer looks frozen. Setting up a new engine installs a large set of
-  Python packages before ComfyUI can start, and for the minutes that took, the window only said
-  "Starting ComfyUI Engine…" — no progress, no explanation, so it read as a hang. That step now
-  names itself, "Installing Python packages… First engine start only", and hands over to
-  "Starting ComfyUI Engine…" the moment it finishes. Later starts skip the step entirely, as they
-  always did.
+- The first engine start no longer looks frozen. Setting up a new engine installs a large set
+  of Python packages before ComfyUI can start, and for the minutes that took, the window only
+  said "Starting ComfyUI Engine…" — no progress, no explanation, so it read as a hang. That
+  step now names itself, "Installing Python packages… First engine start only", and hands over
+  to "Starting ComfyUI Engine…" the moment it finishes. Later starts skip the step entirely, as
+  they always did.
 
 - The app no longer keeps running outdated engine components after an update. Anyone who had
   used "Skip the local engine install" kept that setting even after an engine was installed,
