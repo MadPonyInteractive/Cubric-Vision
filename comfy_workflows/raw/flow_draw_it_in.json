@@ -1,8 +1,8 @@
 {
   "id": "00000000-0000-0000-0000-000000000000",
   "revision": 0,
-  "last_node_id": 192,
-  "last_link_id": 45,
+  "last_node_id": 198,
+  "last_link_id": 51,
   "nodes": [
     {
       "id": 1,
@@ -2050,7 +2050,7 @@
         {
           "name": "model",
           "type": "MODEL",
-          "link": 30
+          "link": 51
         },
         {
           "name": "positive",
@@ -2199,6 +2199,354 @@
         1,
         true
       ]
+    },
+    {
+      "id": 193,
+      "type": "MpiLoraModel",
+      "pos": [
+        100,
+        3410
+      ],
+      "size": [
+        270,
+        122
+      ],
+      "flags": {},
+      "order": 38,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 30
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            46
+          ]
+        },
+        {
+          "name": "lora_name",
+          "type": "*",
+          "links": null
+        },
+        {
+          "name": "strength",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "title": "Input_Lora_Phase1_1",
+      "properties": {
+        "Node name for S&R": "MpiLoraModel",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "None",
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 194,
+      "type": "MpiLoraModel",
+      "pos": [
+        100,
+        3575
+      ],
+      "size": [
+        270,
+        122
+      ],
+      "flags": {},
+      "order": 39,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 46
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            47
+          ]
+        },
+        {
+          "name": "lora_name",
+          "type": "*",
+          "links": null
+        },
+        {
+          "name": "strength",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "title": "Input_Lora_Phase1_2",
+      "properties": {
+        "Node name for S&R": "MpiLoraModel",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "None",
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 195,
+      "type": "MpiLoraModel",
+      "pos": [
+        100,
+        3740
+      ],
+      "size": [
+        270,
+        122
+      ],
+      "flags": {},
+      "order": 40,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 47
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            48
+          ]
+        },
+        {
+          "name": "lora_name",
+          "type": "*",
+          "links": null
+        },
+        {
+          "name": "strength",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "title": "Input_Lora_Phase1_3",
+      "properties": {
+        "Node name for S&R": "MpiLoraModel",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "None",
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 196,
+      "type": "MpiLoraModel",
+      "pos": [
+        400,
+        3410
+      ],
+      "size": [
+        270,
+        122
+      ],
+      "flags": {},
+      "order": 41,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 48
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            49
+          ]
+        },
+        {
+          "name": "lora_name",
+          "type": "*",
+          "links": null
+        },
+        {
+          "name": "strength",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "title": "Input_Lora_Phase1_4",
+      "properties": {
+        "Node name for S&R": "MpiLoraModel",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "None",
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 197,
+      "type": "MpiLoraModel",
+      "pos": [
+        400,
+        3575
+      ],
+      "size": [
+        270,
+        122
+      ],
+      "flags": {},
+      "order": 42,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 49
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            50
+          ]
+        },
+        {
+          "name": "lora_name",
+          "type": "*",
+          "links": null
+        },
+        {
+          "name": "strength",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "title": "Input_Lora_Phase1_5",
+      "properties": {
+        "Node name for S&R": "MpiLoraModel",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "None",
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 198,
+      "type": "MpiLoraModel",
+      "pos": [
+        400,
+        3740
+      ],
+      "size": [
+        270,
+        122
+      ],
+      "flags": {},
+      "order": 43,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 50
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            51
+          ]
+        },
+        {
+          "name": "lora_name",
+          "type": "*",
+          "links": null
+        },
+        {
+          "name": "strength",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "title": "Input_Lora_Phase1_6",
+      "properties": {
+        "Node name for S&R": "MpiLoraModel",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "None",
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
     }
   ],
   "links": [
@@ -2435,14 +2783,6 @@
       "INT"
     ],
     [
-      30,
-      102,
-      0,
-      190,
-      0,
-      "MODEL"
-    ],
-    [
       31,
       108,
       0,
@@ -2561,6 +2901,62 @@
       169,
       1,
       "IMAGE"
+    ],
+    [
+      30,
+      102,
+      0,
+      193,
+      0,
+      "MODEL"
+    ],
+    [
+      46,
+      193,
+      0,
+      194,
+      0,
+      "MODEL"
+    ],
+    [
+      47,
+      194,
+      0,
+      195,
+      0,
+      "MODEL"
+    ],
+    [
+      48,
+      195,
+      0,
+      196,
+      0,
+      "MODEL"
+    ],
+    [
+      49,
+      196,
+      0,
+      197,
+      0,
+      "MODEL"
+    ],
+    [
+      50,
+      197,
+      0,
+      198,
+      0,
+      "MODEL"
+    ],
+    [
+      51,
+      198,
+      0,
+      190,
+      0,
+      "MODEL"
     ]
   ],
   "groups": [],
