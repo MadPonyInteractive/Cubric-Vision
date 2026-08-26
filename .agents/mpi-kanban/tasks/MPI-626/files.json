@@ -3,7 +3,6 @@
   "files": [
     ".agents/mpi-kanban/tasks/MPI-626/**",
     "comfy_workflows/display/flow-head-swap.webp",
-    "comfy_workflows/display/flow-draw-it-in.webp",
-    "docs/playbooks/add-flow/06-preview-image.md"
+    "comfy_workflows/display/flow-draw-it-in.webp"
   ]
 }
