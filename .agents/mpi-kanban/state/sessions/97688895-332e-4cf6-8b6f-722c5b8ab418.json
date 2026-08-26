@@ -10,14 +10,18 @@
     "verify",
     "implement"
   ],
-  "status": "active",
-  "heartbeat_at": "2026-08-22T14:35:00Z",
+  "status": "closed",
+  "heartbeat_at": "2026-08-22T14:52:52Z",
   "name": "MPI-573 - Record button placement + recording rate",
   "task": ".agents/mpi-kanban/state/tasks/505d3c7b-baa1-466a-90c8-ad24cfafc0a7.json",
   "recent_events": [
     {
       "at": "2026-08-22T10:31:00Z",
       "event": "heartbeat_renewed"
+    },
+    {
+      "at": "2026-08-22T14:52:52Z",
+      "event": "session_closed"
     }
   ]
 }

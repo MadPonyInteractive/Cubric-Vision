@@ -5,8 +5,12 @@
     "voices/**",
     "scripts/voice-library/**",
     "js/data/voiceLibrary.js",
-    "js/components/voicePicker.js",
-    "styles/components/voice-picker.css",
+    "tests/voice-library.test.cjs",
+    "js/components/Compounds/MpiVoicePicker/**",
+    "js/shell/preloadStyles.js",
+    "js/pages/components.js",
+    "templates/tpl-components.html",
+    "js/components/types.js",
     "docs/voice-library.md"
   ]
 }

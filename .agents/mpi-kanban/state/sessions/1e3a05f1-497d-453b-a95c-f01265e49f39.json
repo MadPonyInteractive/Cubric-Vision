@@ -10,14 +10,18 @@
     "verify",
     "implement"
   ],
-  "status": "active",
-  "heartbeat_at": "2026-08-22T19:28:00Z",
+  "status": "closed",
+  "heartbeat_at": "2026-08-22T22:10:27Z",
   "name": "MPI-567 session 9 - rebuild the flow graph onto the measured LanPaint route",
   "task": ".agents/mpi-kanban/state/tasks/18204563-f4a9-4be9-a3e3-355e7da15844.json",
   "recent_events": [
     {
       "at": "2026-08-22T19:28:00Z",
       "event": "session_started"
+    },
+    {
+      "at": "2026-08-22T22:10:27Z",
+      "event": "session_closed"
     }
   ]
 }

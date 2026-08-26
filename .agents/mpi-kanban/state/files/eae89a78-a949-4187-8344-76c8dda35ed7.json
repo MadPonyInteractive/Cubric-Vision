@@ -1,0 +1,28 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "eae89a78-a949-4187-8344-76c8dda35ed7",
+  "task_card": "MPI-622",
+  "task": ".agents/mpi-kanban/state/tasks/97be3bbb-5bee-4663-b3b1-53f7b6f043bc.json",
+  "owner_session": ".agents/mpi-kanban/state/sessions/7d171cb3-4ead-4965-97ee-ce923f01f0ac.json",
+  "owner_role": "implementer",
+  "status": "complete",
+  "claim_kind": "write",
+  "paths": [
+    "js/components/Compounds/MpiVoicePicker/",
+    "js/shell/preloadStyles.js",
+    "js/components/types.js",
+    "js/pages/components.js",
+    "templates/tpl-components.html"
+  ],
+  "claimed_at": "2026-08-25T18:29:42Z",
+  "heartbeat_at": "2026-08-25T18:56:59Z",
+  "note": "Parallel batch worker 2 - MpiVoicePicker. types.js was in MPI-599's claim, whose owner session is status=closed (heartbeat 2026-08-22, 3 days > the 120min timeout), so it is stale, not live.",
+  "completed_at": "2026-08-25T18:56:59Z",
+  "outcome_note": "MpiVoicePicker landed. Per-click component leak in _renderDetail fixed by the orchestrator as integrator; lint clean and full suite 737/737 re-run after.",
+  "recent_events": [
+    {
+      "at": "2026-08-25T18:56:59Z",
+      "event": "claim_completed"
+    }
+  ]
+}

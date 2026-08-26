@@ -10,8 +10,8 @@
     "verify",
     "implement"
   ],
-  "status": "active",
-  "heartbeat_at": "2026-08-23T17:25:00Z",
+  "status": "closed",
+  "heartbeat_at": "2026-08-25T05:02:02Z",
   "name": "MPI-607 session 14 - Gate 2 Flow A (Voice Changer Flow)",
   "task": ".agents/mpi-kanban/state/tasks/006e14b7-b550-43ac-8936-366d7faa6aee.json",
   "recent_events": [
@@ -19,6 +19,10 @@
       "at": "2026-08-23T16:50:00Z",
       "event": "session_started",
       "note": "Gate 2 Flow A - Voice Changer"
+    },
+    {
+      "at": "2026-08-25T05:02:02Z",
+      "event": "session_closed"
     }
   ]
 }

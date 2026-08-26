@@ -4,6 +4,27 @@
 
 **Project mode:** `scalable-foundation`.
 
+> **Session 17 note (2026-08-25) — READ THIS FIRST, it supersedes the session 16 note below.**
+> The Parallel Batch is DONE (import pipeline + `MpiVoicePicker`, both verified independently
+> of their worker reports) and **Phase 2's 12 clips are AUTHORED**. Nothing on this card is
+> blocked and nothing is waiting on Fabio except two listening calls and the `register`
+> wording in brief.md § 2.
+>
+> **The single next action is Fabio's ear, on two named asks** (control + axis both named,
+> level-matched set at `scratchpad/phase2_clips_lvl/`): (1) do the six R1 clips read as their
+> labels, and (2) do `perf_R1_neutral` (94.7 Hz) and `perf_R1_angry` (167.3 Hz) sound like the
+> SAME PERSON. Ask 2 exists because of a new measurement: emotion-driven pitch lift is
+> **register-asymmetric ~2:1** — R1 lifts +9.9/+11.6 st for angry/cheerful where R3 lifts only
+> +4.8/+4.4 st from identical prompt grammar. If one R1 character ever sounds like two people
+> across the emotion set, that asymmetry is the cause and R1 is where it shows first.
+>
+> After that: a CURATION pass before the full 228 import (the 10-voice sample is 6xR1/3xR2/1xR3
+> with no R4/R5 and every voice `kind: "both"`, so the kind filter is inert), then Phase 3.
+>
+> **Do NOT "repair" the angry and cheerful clips** because they measure out of band. The pitch
+> lift IS the emotion; `register` names the performer's baseline. The proof the persona prompt
+> worked is that all eight low-arousal cells landed in band.
+
 > **Session 16 note (2026-08-25).** Phase 0 RESOLVED on option 1, D1/D2 answered, Phase 1
 > SHIPPED (737/737, eslint clean), and the overdue voice-changer guidance rewrite is done.
 > Three of my own hypotheses died on the way and all three are recorded as wrong in
@@ -44,8 +65,11 @@ App-side facts checked 2026-08-25, so no one re-discovers them:
   points at (`flow-head-swap.webp` / `.mp4`), and `copyAppTree` in
   `scripts/build-portable.mjs` copies the app tree wholesale, so in-repo assets ship for
   free on all three platforms.
-- **No audio component exists yet** — `js/components/` has nothing for playback, recording,
-  or waveforms. The picker is new UI, built to `.claude/rules/components.md`.
+- ~~**No audio component exists yet**~~ — **WRONG, corrected 2026-08-25.** `MpiAudioRecorder`
+  (Compound, MPI-573) already records the mic, encodes WAV and plays a review clip, and
+  `MpiLevelMeter` (Primitive) already exists. Both belong to MPI-573/MPI-607 — the picker
+  reuses their patterns and must not edit either. The picker itself is still new UI, built to
+  `.claude/rules/components.md`.
 - Chatterbox weight deps are `targetPath` and **must stay that way** (the pack computes
   `<ComfyUI>/models/chatterbox/` from its own `__file__`). Same class as RIFE, MPI-222.
 
@@ -78,6 +102,17 @@ App-side facts checked 2026-08-25, so no one re-discovers them:
       a cap).
 - [x] **Phase 1 - the voice record and its loader** (2026-08-25). `js/data/voiceLibrary.js` +
       `tests/voice-library.test.cjs`. 8/8 green, full suite 737/737, eslint clean.
+- [x] **PARALLEL BATCH - both tasks landed** (2026-08-25, session 17). Import pipeline
+      (`scripts/voice-library/ingest.py` + a 10-voice `voices/` bundle) and `MpiVoicePicker`
+      (Compound + dev-gallery mount). Verified independently of the worker reports: lint
+      clean, 737/737, 10/10 manifest contract checks, idempotence by SHA. **Each worker had
+      one real defect its own report did not name** - a per-click component leak in the
+      picker, and a 48 kHz Opus encode escalated as a size decision on a false premise. Both
+      fixed at the root; detail in `validation.md`.
+- [x] **PHASE 2 - 12/12 clips authored** (2026-08-25, session 17). `research/phase2_perf_clips.py`
+      under the GPU lease. Verify half (a) passes: all eight low-arousal cells land inside
+      their declared register band. Half (b) - six distinguishable emotions through VC - is
+      Fabio's ear and is NOT done.
 
 ## Remaining Work
 
@@ -156,7 +191,8 @@ Both depend only on the Phase 1 schema and touch disjoint trees. Run through
       from the available performance clips. Registers its CSS in `js/shell/preloadStyles.js`,
       documents props in `js/components/types.js`, BEM throughout, `on()`/`off()` only, and a
       `destroy()` that clears every listener and any audio element. Ownership:
-      `js/components/voicePicker.js`, `styles/components/voice-picker.css`,
+      `js/components/Compounds/MpiVoicePicker/MpiVoicePicker.js`,
+      `js/components/Compounds/MpiVoicePicker/MpiVoicePicker.css`,
       `js/shell/preloadStyles.js`, `js/components/types.js`. Briefings: `components`,
       `dos_and_donts`, `events`. **Verify:** mounts in the dev component gallery against the
       Phase 1 fixture, filters narrow the list, audition plays, the mismatch warning appears
@@ -206,6 +242,22 @@ step for a take that lands off-register.
 
 ## Plan Drift
 
+- **2026-08-25 (session 17) -- the batch's picker ownership named paths this repo does not
+  use.** The plan said `js/components/voicePicker.js` + `styles/components/voice-picker.css`.
+  Components live at `js/components/<Tier>/<Name>/<Name>.{js,css}` (four tiers: Primitives,
+  Compounds, Organisms, Blocks) and `styles/` holds only `01_base.css`, `markdown.css` and
+  `shell/`. Corrected to `js/components/Compounds/MpiVoicePicker/MpiVoicePicker.{js,css}`.
+  Compound is the right tier: the picker composes MpiDropdown / MpiInput / MpiButton rather
+  than being a leaf control.
+- **2026-08-25 (session 17) -- "no audio component exists yet" was already false when
+  written.** `MpiAudioRecorder` (MPI-573) and `MpiLevelMeter` are both shipped. Corrected in
+  `## Current State`.
+- **2026-08-25 (session 17) -- the source clips are real audio, checked before dispatch.**
+  `kyutai/tts-voices/voice-donations/` holds 10 s 24 kHz `.wav` files (`0a67.wav`, plus
+  `_enhanced.wav` denoised twins) beside kyutai-specific `.safetensors` embeddings that are
+  irrelevant to Chatterbox. Public repo, no HF token. **There is no ffmpeg on this machine**,
+  but `G:/ComfyUi/python_embeded/python.exe` carries `soundfile` 0.14.0 / libsndfile 1.2.2
+  with `OGG/OPUS` write and `librosa` 1.0.0, so the opus transcode needs no ffmpeg.
 - **2026-08-25 -- the semitone figures in Phase 0 were wrong.** Phase 0 said "+7 and +12
   semitones ... into R3/R4". From Fabio's natural take (`recording_003.wav`, median 101.5 Hz)
   the arithmetic does not reach: +7 lands on **150.3 Hz (R2)** and +12 on **201.8 Hz (R3)**.

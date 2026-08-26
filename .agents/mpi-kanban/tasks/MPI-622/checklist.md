@@ -107,13 +107,97 @@
 - [x] **Verified: `node --test` 8/8 green, full suite 737/737, eslint clean.**
       `tests/voice-library.test.cjs`
 
-## Parallel batch
+## Parallel batch — BOTH LANDED 2026-08-25, verified independently
 
-- [ ] Import + measurement pipeline (`scripts/voice-library/**`, `voices/**`)
-- [ ] `MpiVoicePicker` component
+- [x] **Import + measurement pipeline** — `scripts/voice-library/ingest.py`. Fetches
+      `voice-donations/` ONLY (the CC0 subdir; `expresso/` and `ears/` are CC BY-NC and the
+      path is hard-coded, not configurable), measures with `librosa.pyin`, assigns register,
+      transcodes to Ogg Opus, emits `voices/manifest.json`. Re-runnable and idempotent —
+      identical SHA across a second run
+- [x] Calibrated against an INDEPENDENT tool's figures, not its own: `e0_neutral` 223.9 vs
+      225.2 (1.3 Hz), `A3_REF` 125.7 vs 125.7 (0.0 Hz). Both inside the 2 Hz gate
+- [x] 10/10 manifest contract checks against the shipped Phase 1 loader, incl. `accent` null
+      on every voice and every `median_f0` inside its own band
+- [x] 🔴 **Opus was 48 kHz and is now 24 kHz** — 772 KB -> 464 KB for ten voices. Opus takes
+      only 8/12/16/24/48 kHz and the `_enhanced` sources are 32 kHz, so a resample is
+      unavoidable, but 48 was the wrong target: 24 kHz is the plain clips' own rate and the
+      TTS/VC stack's rate. **At the decided ~60 voices the bundle is 2.5 MB — inside D1's
+      5 MB estimate, so there is NO size decision to make.** The escalation rested on
+      "soundfile exposes no bitrate knob", which is false (`compression_level` and
+      `bitrate_mode` both exist; left alone deliberately — 1.0 collapses to 6.5 kbps)
+- [x] **`MpiVoicePicker` component** — Compound at
+      `js/components/Compounds/MpiVoicePicker/`, composing MpiDropdown / MpiButton /
+      MpiRadioGroup. Filters, audition playback (never the raw sample), and the
+      pitch-distance warning that never blocks. Registered in `preloadStyles.js`, props in
+      `types.js`, mounted twice in the dev gallery
+- [x] 🔴 **Leak fixed at the root**: `_renderDetail()` was wiping its previously-mounted
+      MpiRadioGroup and MpiButton with `innerHTML =` without calling their `destroy()`, so
+      every voice click retained a dead instance and its detached DOM. The panel now owns a
+      separate `_detailUnsubs`, flushed before the early returns and again in `destroy()`
+- [x] Verified by me, not on report: `lint:components` exit 0, full suite **737/737**
+- [ ] 🟡 Curation pass needed before the full run — the 10-voice sample is alphabetical and
+      shows it: 6xR1 / 3xR2 / 1xR3, no R4 or R5, every voice `kind: "both"` (so the kind
+      filter is inert), and `gender` / `age` / `language` / `style` / `tags` all null. D2
+      chose ~60 CURATED for register spread, so this is a selection pass, not `--max 60`
+- [ ] Full 228-voice import not run; only 10 imported
+- [ ] Picker not wired into any Flow — MPI-607/MPI-621 territory, live peer holds those files
 
 ## Phase 2-4
 
-- [ ] Author 12 performance clips (R1 + R3 x six emotions)
+- [x] **12/12 clips GENERATED 2026-08-25** - `research/phase2_perf_clips.py`, Qwen3-TTS
+      VoiceDesign under the GPU lease, no failures. One shared phonetically-comprehensive
+      text so emotion is the only axis (VC takes articulation from the SOURCE, so every
+      character voice inherits these consonants)
+- [x] Verify half (a) DONE: every low-arousal cell lands inside its declared band on both
+      registers - 8/8. R1 flat/neutral/sad/whisper 94.7-104.5 Hz in R1 90-130; R3 the same
+      four 211.4-226.5 Hz in R3 190-260. The persona prompt held
+- [x] 🔴 **DO NOT "repair" `angry` and `cheerful`** - they measure R2 (167.3/185.1) and R4
+      (278.1/272.5), and that is CORRECT. `register` names the performer's baseline, and the
+      pitch lift IS the emotion. Shifting them back down would destroy it. The Phase 0
+      shifter repairs a wrong BASELINE, never emotion-driven lift
+- [x] 🟢 **ASYMMETRY RESOLVED - IDENTITY HOLDS. Fabio, 2026-08-26: "yeah, it's the same guy."**
+      The lift is register-ASYMMETRIC ~2:1 (R1 +9.9/+11.6 st for angry/cheerful, R3 only
+      +4.8/+4.4 st from identical prompt grammar), and R1's internal spread of 72.6 Hz
+      (94.7 -> 167.3) sits near the 93 Hz precedent. It costs nothing perceptually: one actor
+      across the emotion grid, judged on an EXACTLY level-matched pair. The asymmetry is a
+      property to record, not a defect to fix
+- [x] 🔴 **`pitch_tools.py norm` WIDENED the gap it exists to close** - raw 1.5 dB -> 2.0 dB
+      after norm. It targets `rms_active` but clamps at a -1.0 dBFS peak ceiling, so a
+      high-crest clip (angry, crest 19.7 dB) hits the ceiling before its RMS reaches target
+      and the loudest-peaking clip ends up the quietest-bodied. It produced a false "angry
+      sounds like it's down the street" on the first listen. **Fix: match `rms_active`
+      exactly at a target low enough that nothing needs limiting (-20 dBFS worked; peaks
+      landed -2.3 to -5.6). Never use a peak ceiling when the axis judged is not loudness.**
+      `research/proximity_probe.py`
+- [x] The "different room" hypothesis is DEAD, measured not assumed: angry vs neutral is
+      +0.1 dB HF/LF and +117 Hz centroid. A distant source loses highs; this one loses none
+- [x] Level-matched before any listening: 7.4 dB raw spread -> 2.9 dB. Residual is the
+      -1.0 dBFS peak ceiling, and it falls the safe way (angry is now the QUIETEST cell)
+- [ ] ⚪ Anomaly logged, NOT explained, do not write a rule on it: `perf_R3_sad` p10 = 72.3 Hz
+      against a p90 of 248.5. Creak, or a `pyin` octave error. Resolve by ear
+- [x] ✅ **ALL 12 CELLS ACCEPTED BY EAR 2026-08-26.** Ask 1 gave 5/6 first pass (angry, sad,
+      cheerful, whisper, neutral). Flat failed, was re-rolled, and both registers now pass:
+      *"the new flat sounds like the person is in shock, which is actually what flat is
+      supposed to be... soulless, in shock, or just empty or not paying attention. It's good."*
+      R1 seed 3600 (2.5 st span), R3 seed 3300 (4.2 st)
+- [x] 🟢 **Fabio's words are the picker's Flat description** - *"soulless, in shock, or just
+      empty, not paying attention."* Clearer than brief.md, and it came from the one person who
+      had to ASK what the emotion meant. Every emotion needs a one-line description in
+      `MpiVoicePicker`; if he had to ask, a user reading a dropdown has no chance
+- [x] 🔴 **The span gate must be RELATIVE to the register's neutral, never absolute.** My
+      3.5 st gate came from R1's neutral (5.8 st) and wrongly failed R3, whose neutral is
+      naturally 8.9 st. Relative, the two winners match: 43% and 47% of their own neutral
+- [x] R1 flat sits BELOW its band (83.4 Hz vs a 90 Hz floor) and is deliberately NOT shifted -
+      span and pitch are anti-correlated, so a genuinely flat read sits low. Same rule that
+      forbids shifting angry back down
+- [x] **12 clips shipped** to `voices/performance/` (489 KB, 24 kHz) and written into
+      `manifest.performanceClips`. Loader-verified: all twelve accepted, both register grids
+      return their six emotions, unknown register still throws. Each clip carries its **seed** -
+      real provenance, since flat ranged 2.5-8.5 st across eight identical-wording generations
+- [ ] ⚪ Two measurement artefacts, audio is FINE, do not chase as bugs: `perf_R3_sad` reports a
+      21.4 st span off the p10=72.3 Hz outlier, and whisper spans are meaningless in both
+      directions (R1 11.5, R3 3.3) because there is too little voiced tone for `pyin`
+- [ ] Verify half (b) NOT DONE: drive one R1 character through all six and confirm six
+      distinguishable emotions THROUGH VC. Needs the Chatterbox route. Verify mode `user-ux`
 - [ ] Generate auditions through the shipping route for every voice
 - [ ] Wire the picker into the voice-changer flow's "Target voice" slot

@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/session/v1",
+  "id": "831d595d-efda-4965-a36c-cfbf43a010a6",
+  "role": "implementer",
+  "claude_session_id": "831d595d-efda-4965-a36c-cfbf43a010a6",
+  "started_at": "2026-08-24T13:10:02Z",
+  "allowed_actions": [
+    "read",
+    "edit",
+    "verify",
+    "implement"
+  ],
+  "status": "closed",
+  "heartbeat_at": "2026-08-25T05:34:08Z",
+  "recent_events": [
+    {
+      "at": "2026-08-25T05:34:08Z",
+      "event": "session_closed"
+    }
+  ]
+}

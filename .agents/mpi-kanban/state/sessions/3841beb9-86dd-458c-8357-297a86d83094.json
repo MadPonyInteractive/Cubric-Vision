@@ -10,6 +10,12 @@
     "verify",
     "implement"
   ],
-  "status": "active",
-  "heartbeat_at": "2026-08-23T06:19:23Z"
+  "status": "closed",
+  "heartbeat_at": "2026-08-23T07:47:12Z",
+  "recent_events": [
+    {
+      "at": "2026-08-23T07:47:12Z",
+      "event": "session_closed"
+    }
+  ]
 }

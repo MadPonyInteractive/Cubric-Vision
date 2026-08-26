@@ -10,14 +10,18 @@
     "verify",
     "implement"
   ],
-  "status": "active",
-  "heartbeat_at": "2026-08-22T06:57:00Z",
+  "status": "closed",
+  "heartbeat_at": "2026-08-22T12:07:26Z",
   "task": ".agents/mpi-kanban/tasks/MPI-567/",
   "recent_events": [
     {
       "at": "2026-08-22T06:57:00Z",
       "event": "heartbeat_renewed",
       "note": "adopted handoff 53efd5be - MPI-567 paint step kind"
+    },
+    {
+      "at": "2026-08-22T12:07:26Z",
+      "event": "session_closed"
     }
   ]
 }

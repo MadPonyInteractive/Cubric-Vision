@@ -1,0 +1,30 @@
+{
+  "schema": "mpi-kanban/task/v1",
+  "id": "97be3bbb-5bee-4663-b3b1-53f7b6f043bc",
+  "title": "MPI-622 - Parallel Batch: import pipeline + MpiVoicePicker",
+  "task_card": "MPI-622",
+  "plan": ".agents/mpi-kanban/tasks/MPI-622/plan.md",
+  "status": "needs_verification",
+  "owner_session": ".agents/mpi-kanban/state/sessions/7d171cb3-4ead-4965-97ee-ce923f01f0ac.json",
+  "allowed_actions": [
+    "read",
+    "edit",
+    "verify",
+    "implement",
+    "coordinate",
+    "integrate"
+  ],
+  "created_at": "2026-08-25T18:29:42Z",
+  "updated_at": "2026-08-25T18:56:59Z",
+  "recent_events": [
+    {
+      "at": "2026-08-25T18:29:42Z",
+      "event": "task_attached"
+    },
+    {
+      "at": "2026-08-25T18:56:59Z",
+      "event": "batch_completed",
+      "note": "Parallel batch + Phase 2 clips done. Awaiting Fabio's ear on the two named listening asks (verify mode user-ux)."
+    }
+  ]
+}

@@ -721,3 +721,443 @@ So the finding does not need reversing, only re-reading. It stays NEGATIVE for a
   of thing"*), and this session added a labelled-angry clip that read as "upset". Phase 2's
   verify mode is already `user-ux` for exactly this reason — do not trust the prompt's label.
 - **The two-number QA gate still applies** to every authored clip: cosine AND median-f0 delta.
+
+---
+
+### 2026-08-25 — Phase 2: the 12 clips are authored, and emotion moves pitch TWICE as far in R1 as in R3
+
+`research/phase2_perf_clips.py`, run under the GPU lease against Qwen3-TTS VoiceDesign in
+the `_qwen_tts_rt` venv (transformers 4.57.3, torch 2.12.0+cu130, CUDA). **12/12 generated,
+no failures**, ~20 s each, 24 kHz. One shared text across the whole grid so emotion is the
+only axis — and built phonetically comprehensive on purpose, because VC takes articulation
+from the SOURCE, so every `character` voice in the library inherits these clips' consonants.
+
+#### Measured grid
+
+| clip | median f0 | p10–p90 | reads as | vs its own neutral |
+|---|---|---|---|---|
+| `perf_R1_neutral` | **94.7** | 78.7–110.2 | R1 ✅ | — |
+| `perf_R1_flat` | **104.5** | 84.3–123.5 | R1 ✅ | +1.7 st |
+| `perf_R1_sad` | **98.0** | 67.3–114.6 | R1 ✅ | +0.6 st |
+| `perf_R1_whisper` | **100.9** | 61.6–120.0 | R1 ✅ | +1.1 st |
+| `perf_R1_angry` | **167.3** | 119.3–217.6 | R2 | **+9.9 st** |
+| `perf_R1_cheerful` | **185.1** | 152.1–217.6 | R2 | **+11.6 st** |
+| `perf_R3_neutral` | **211.4** | 164.9–275.7 | R3 ✅ | — |
+| `perf_R3_flat` | **226.5** | 178.8–285.9 | R3 ✅ | +1.2 st |
+| `perf_R3_sad` | **221.4** | 72.3–248.5 | R3 ✅ | +0.8 st |
+| `perf_R3_whisper` | **222.6** | 207.7–251.4 | R3 ✅ | +0.9 st |
+| `perf_R3_angry` | **278.1** | 241.4–381.0 | R4 | **+4.8 st** |
+| `perf_R3_cheerful` | **272.5** | 233.2–381.0 | R4 | **+4.4 st** |
+
+#### 🟢 The baselines are CORRECT — do not "repair" the two high cells
+
+A later session reading the `register` column above will be tempted to shift `angry` and
+`cheerful` back down into their declared bands. **That would destroy the emotion, because the
+pitch lift IS the anger.** `register` names the PERFORMER'S BASELINE, never the clip's f0 —
+already documented in `js/data/voiceLibrary.js`'s header and in brief.md § 2, and this grid is
+what it was documenting. The proof the persona prompt worked is that **every low-arousal cell
+(flat / neutral / sad / whisper) lands inside its declared band on both registers** — 94.7–104.5
+in R1 90–130, and 211.4–226.5 in R3 190–260. Eight of eight. The persona held; the emotion moved.
+
+The Phase 0 shifter stays a repair step for a take whose BASELINE is wrong — a "low male"
+prompt that delivered a woman — not for emotion-driven lift.
+
+#### 🔴 NEW, and not predicted: the lift is register-ASYMMETRIC, roughly 2:1
+
+R1 lifts **+9.9 / +11.6 st** for angry / cheerful. R3 lifts only **+4.8 / +4.4 st** for the same
+two directions, from the same prompt grammar. Low male has far more headroom above its baseline
+and VoiceDesign uses it; high female is already near the top of its comfortable range.
+
+Why it matters, and why it is a listening question rather than a settled one: this card measured
+that **performer pitch leaks hard** — two clips 0.47 apart drove one character to outputs 93 Hz
+apart, and Fabio still heard **one actor** (brief.md finding 4). The R1 grid's internal spread is
+94.7 → 167.3 Hz = **72.6 Hz**, comparable to that 93 Hz precedent, so the precedent predicts it
+holds. But it is close enough to the edge that it must be heard, not assumed. **If one R1
+character sounds like two different people across the six emotions, this asymmetry is the cause
+and R1 is where it will show first.**
+
+#### Loudness: 7.4 dB spread, normalised to 2.9 dB, and the residual is structural
+
+Raw `rms_active` ran −18.4 (R3 angry) to −25.8 (R1 whisper) = **7.4 dB**, far past the ~1 dB
+threshold of noticing and exactly the confound that nearly decided a result by loudness alone on
+this card. `pitch_tools.py norm` brought it to −16.0…−18.9 = **2.9 dB**. The residual is the
+−1.0 dBFS peak ceiling clamping high-crest clips before their RMS reaches target, not a tool
+failure — and it lands the *right* way round: R1 angry is now the QUIETEST cell (−18.7) and
+whisper among the loudest (−16.0), so loudness is no longer helping the high-arousal reads.
+Level-matched set is the one to audition; originals kept beside it.
+
+#### One anomaly logged, NOT explained — do not write a rule on it
+
+`perf_R3_sad` has p10 = **72.3 Hz** against a p90 of 248.5 — a floor an octave and a half below
+its own median, where every other R3 cell sits at 165–242. Either genuine creak on a breathy sad
+read, or a `pyin` octave error. It does not affect the median and the clip may be perfectly
+usable. Flagged so the next session does not rediscover it as a bug; resolve it by ear, not by
+theory. (`perf_R1_whisper`'s p10 of 61.6 is NOT an anomaly — a whisper has little voiced tone, so
+pyin is unreliable there by construction.)
+
+#### Still open on Phase 2
+
+The verify has two halves and only the first is done. **Half (a) is answered**: measured f0 per
+clip, baselines in band, recorded above. **Half (b) is not** — "driving one R1 character through
+all six produces six distinguishable emotions" needs the Chatterbox VC route and Fabio's ear, and
+its verify mode is `user-ux`. Do not trust the prompt's label: MPI-607 measured a "sad" clip as
+"a sad-angry kind of thing", a labelled-angry clip read as "upset", and a "refined British" prompt
+produced a 1930s New Yorker.
+
+Clips: `scratchpad/phase2_clips/` (originals) and `scratchpad/phase2_clips_lvl/` (level-matched).
+They are NOT yet in `voices/` — that tree was under an active write claim by the import-pipeline
+worker while this ran.
+
+---
+
+### 2026-08-25 — The Parallel Batch: import pipeline + MpiVoicePicker, both landed
+
+Two workers, disjoint trees, dispatched through `mpi-execute-parallel`. Both reported done;
+both were then verified independently, and **each had one real defect the report did not
+name**. Recording that here because the pattern is the point: a worker's report is evidence,
+not truth.
+
+#### What shipped
+
+| | path | state |
+|---|---|---|
+| Import pipeline | `scripts/voice-library/ingest.py` | 10-voice sample imported, re-runnable |
+| Bundle | `voices/manifest.json` + 10 `.opus` | 464 KB, `performanceClips: []` |
+| Picker | `js/components/Compounds/MpiVoicePicker/{js,css}` | mounts in the dev gallery |
+| Wiring | `preloadStyles.js`, `types.js`, `pages/components.js`, `tpl-components.html` | registered |
+
+**Verified by me, not taken on report:** `npm run lint:components` exit 0; full suite
+**737/737**; 10/10 manifest contract checks against the shipped Phase 1 loader; idempotence
+proven by identical SHA (`8d179ac2f94c00f1…`) across a second run.
+
+Calibration held, and it was checked against figures from an independent tool rather than
+the pipeline's own: `e0_neutral` measured **223.9** vs the recorded 225.2 (1.3 Hz), and
+`A3_REF` **125.7** vs 125.7 (0.0 Hz). Both inside the card's 2 Hz gate.
+
+#### 🔴 Defect 1 — the picker leaked a component instance on every voice click
+
+`_renderDetail()` set `detailEl.innerHTML = …`, wiping the `MpiRadioGroup` and `MpiButton`
+it had mounted on the previous selection **without calling their `destroy()`**. Their
+teardowns were pushed onto the component-wide `_unsubs`, so they only fired at
+`el.destroy()` — meaning every voice a user clicked retained a dead component instance plus
+its detached DOM subtree, held alive by the closure in `_unsubs`.
+
+This is the exact rule CLAUDE.md states: *navigation MUST call `instance.destroy()` before
+clearing a mounted Block (never `innerHTML = ''` alone)*. The worker's own report described
+the accumulation as "intentional", which is what made it worth checking rather than
+accepting.
+
+Fixed at the root, not patched: the detail panel now owns its own lifecycle through a
+separate `_detailUnsubs`, flushed at the top of every `_renderDetail()` — **before** the
+early returns, since hiding the panel is a teardown too — and again in `el.destroy()`. The
+filter dropdowns stay on `_unsubs`, because they mount once and live for the component.
+
+#### 🔴 Defect 2 — the bundle was twice the size it needed to be, on a false premise
+
+The pipeline resampled every clip to **48 kHz** before the Opus encode, and the worker
+escalated the resulting size as a decision for Fabio, on the stated grounds that *"soundfile
+does not expose a bitrate knob for Opus"*.
+
+**That premise is wrong**: `soundfile.write` takes both `compression_level` and
+`bitrate_mode`. Probed on one 10 s clip:
+
+| encode | bytes | rate |
+|---|---|---|
+| 48 kHz, default | 77283 | 61.8 kbps |
+| **24 kHz, default** | **40225** | **32.2 kbps** |
+| 24 kHz, `compression_level=1.0` | 8132 | 6.5 kbps |
+
+So the fix was not a bitrate knob at all — it was the sample rate. Opus accepts only
+8/12/16/24/48 kHz; the `_enhanced` source clips are **32 kHz**, which is not one of them, so
+*a* resample is unavoidable — but 48 kHz was the wrong target. 24 kHz is the rate the plain
+kyutai clips already ship at and the rate the TTS/VC stack runs at, so nothing downstream
+gained anything from the upsample. Changed to 24 kHz: **772 KB → 464 KB** for ten voices,
+44 KB/voice.
+
+`compression_level` was deliberately left alone. It binds, but the libsndfile default already
+sits near 0.9, and 1.0 collapses to 6.5 kbps — which would wreck a clip whose entire job is
+to carry a voice's identity.
+
+**This dissolves the escalation rather than answering it.** At the decided ~60 curated voices
+(D2) the bundle is **2.5 MB**, inside D1's 5 MB estimate. Even all 228 would be 9.6 MB. There
+is no size decision for Fabio to make. The worker's 17 MB figure assumed all 228 at 48 kHz —
+two wrong assumptions compounding, and D2 already ruled out the first.
+
+#### 🟡 Curation findings for the full run — NOT bugs
+
+The 10-voice sample is alphabetical, not curated, and it shows:
+
+- **Register spread is poor**: 6×R1, 3×R2, 1×R3, and no R4 or R5 at all. D2 chose ~60
+  *curated* voices specifically for register spread, so the full run needs a selection pass,
+  not just `--max 60`.
+- **Every voice is `kind: "both"`**, which makes the kind filter inert — all ten answer both
+  the narration and character filters. A defensible import default, but a human pass has to
+  split them or the picker's first filter does nothing.
+- **`gender`, `age`, `language`, `style`, `tags` are all `null`.** Correct behaviour — the
+  corpus does not carry them and guessing is banned by the same rule that bans guessing
+  `accent` — but it means those filters are dead until the curation pass. 189 of the 228 IDs
+  are readable names (`Antoine Vala`), which is a starting point for `gender`/`language` but
+  is not evidence on its own.
+
+#### Still open
+
+- Full 228-voice run not done; only 10 imported. The pipeline handles it (`--force` re-does
+  an existing bundle, which is what the 24 kHz change needed).
+- Auditions are `null` pending Phase 3.
+- The picker is not wired into any Flow — that is MPI-607/MPI-621 territory and those
+  registries are held by a live peer session.
+
+---
+
+### 2026-08-26 — The level-matching tool WIDENED the gap it exists to close
+
+Fabio on the R1 identity pair (ask 2): *"It could be the same person, yes. The thing is,
+neutral is really close to the mic, and angry feels like it's down the street. Probably
+because of volume changes or normalisation."*
+
+**Identity: soft PASS.** He could not separate them as two people, which is what ask 2 asked.
+The register-asymmetry worry — R1 lifting +9.9 st for angry — does not sink the R1 grid.
+
+But "down the street" is a ROOM word, not a level word, so it had to be split before he judged
+the six emotion labels, or the same confound would have contaminated ask 1 too.
+
+#### The two hypotheses, and the cheap control that separated them
+
+- **H1 level** — the norm pass left angry quieter.
+- **H2 room** — VoiceDesign rendered a genuinely more distant acoustic space for the angry
+  direction. Distance is carried by HF rolloff, not loudness, so it would SURVIVE level
+  matching and would need a prompt fix rather than a gain fix.
+
+`research/`-adjacent probe (`scratchpad/proximity_probe.py`), measuring HF/LF band ratio,
+spectral centroid and crest factor:
+
+| clip | HF/LF | centroid | crest |
+|---|---|---|---|
+| `perf_R1_neutral` | −3.6 dB | 2253 Hz | 17.0 dB |
+| `perf_R1_angry` | −3.4 dB | 2370 Hz | 19.7 dB |
+| **delta** | **+0.1 dB** | **+117 Hz** | +2.7 dB |
+
+**H2 is dead.** A distant source loses highs; the angry clip loses none and is fractionally
+brighter. There is no spectral distance cue. The impression was level.
+
+#### 🔴 The finding that matters: `pitch_tools.py norm` under-levels high-crest clips
+
+In the RAW clips, R1 angry and R1 neutral sat **1.5 dB** apart on `rms_active`. After the norm
+pass they sat **2.0 dB** apart. The tool widened the gap.
+
+Cause, and it is structural rather than a bug in the numbers: `norm` targets `rms_active` but
+clamps at a −1.0 dBFS peak ceiling. A high-crest clip (angry: crest 19.7 dB, from hard
+consonant transients) hits that ceiling before its RMS reaches target, so **the clip with the
+loudest peaks ends up with the quietest body**. Across the twelve it left a 2.9 dB residual,
+which I reported at the time as "structural, and it falls the safe way" — that reading was
+half right. It is structural, but it is not safe: it bit on the exact comparison the constraint
+"LEVEL-MATCH EVERY LISTENING TEST" exists to protect.
+
+**Fix for any future listening set:** match `rms_active` exactly at a target low enough that no
+clip needs limiting (−20 dBFS worked here — all six R1 clips landed with peaks between −2.3 and
+−5.6 dBFS, nothing clipped, no ceiling engaged). Do not use a peak ceiling when the axis being
+judged is anything other than loudness.
+
+Matched set: `scratchpad/phase2_R1_matched/`.
+
+#### Predicted for the emotion listen, from the same measurement
+
+`perf_R1_sad` (centroid 3490 Hz) and `perf_R1_whisper` (3631 Hz) are far brighter than the
+other four (2253–2418 Hz). Whisper is expected — it is noise energy, not voiced tone. **Sad
+being up there means it came back breathy**, which is a delivery choice VoiceDesign made and
+not one the prompt asked for. Flagged before the listen so it is a prediction rather than a
+post-hoc explanation of whatever Fabio hears.
+
+**ASK 2 ANSWERED 2026-08-26 - CLEAN PASS.** Fabio on the exactly level-matched R1 pair:
+*"yeah, it's the same guy."* Identity survives a 72.6 Hz / +9.9 st emotion-driven lift within
+one register. The register asymmetry is a property to RECORD, not a defect to fix - and the
+first listen's "down the street" was entirely the peak-ceiling artefact above, since it
+disappeared on an exact level match. Ask 1 (do the six read as their labels) is still open.
+
+---
+
+### 2026-08-26 — Ask 1: five of six emotions read correctly. FLAT is the one that failed.
+
+Fabio, on the exactly level-matched R1 set: *"what is flat supposed to sound like? The other
+ones are right."*
+
+**PASS: angry, sad, cheerful, whisper, neutral.** VoiceDesign delivered the labelled emotion on
+five of six — a better hit rate than MPI-607 saw, and it vindicates authoring the grid rather
+than recording it.
+
+A prediction made BEFORE the listen was half wrong and is recorded as such: `perf_R1_sad`
+measured breathy (centroid 3490 Hz, up near whisper's 3631 against ~2250 for neutral) and I
+flagged it might read as breathy-sad rather than heavy-sad. It read as sad. The breathiness is
+real in the spectrum and simply did not cost the label.
+
+#### FLAT FAILED, and the measurement says so independently of taste
+
+The question *"what is it supposed to sound like"* is itself the finding: the cell did not read
+as anything in particular. Flat is the one emotion DEFINED by absence of pitch movement, so it
+is measurable — and it measures wrong.
+
+| emotion | p10–p90 span |
+|---|---|
+| neutral | 5.8 st |
+| cheerful | 6.2 st |
+| **flat** | **6.6 st** |
+| sad | 9.2 st |
+| angry | 10.4 st |
+| whisper | 11.5 st |
+
+**Flat moves in pitch MORE than the natural conversational read.** It should be the narrowest
+of the six by a clear margin; a true monotone is 1–3 st. What VoiceDesign produced is a mildly
+bored delivery, not an affectless one — which is precisely why it does not sound like a
+recognisable thing.
+
+The original direction already contained *"even monotone delivery"* and *"deliberately
+lifeless"*, and the model honoured neither. That is the standing rule again, one step worse:
+the prompt LABEL is not trustworthy, and here the prompt CONTENT was not honoured either.
+
+#### The fix, and the gate it must pass
+
+`research/phase2_reroll_flat.py` — four wordings of the same instruction (the original kept as
+a control, so the re-roll must be shown to BEAT it rather than merely differ), × R1 and R3.
+**The gate is objective: accepted only if p10–p90 span ≤ 3.5 st, against the 5.8 st the neutral
+cell reaches without trying.**
+
+Judging this cell by ear ALONE is what let the bad take through: "flat" and "a bit dull" are
+indistinguishable in isolation and separate only against the rest of the grid. Every other
+emotion on this card is an ear call; flat is the one with a number attached, and the number
+should be used.
+
+#### What flat is FOR — the question came up because the answer lives only in brief.md
+
+The soulless read: a robot, or a character losing their demeanour mid-scene. It is a CLIP and
+never a bypass, so that routing it through VC keeps the actor identical across the
+transformation — the beat where switching actor would hurt most. True robot voices are post-FX
+(vocoder / ring-mod / formant shift) on any voice: a later card, not the TTS model's job.
+
+**Worth surfacing in the picker UI.** If Fabio had to ask what the emotion means, a user
+choosing between "Flat" and "Neutral" in a dropdown has no chance. That is a one-line
+description per emotion in `MpiVoicePicker`, not a new mechanism.
+
+---
+
+### 2026-08-26 — 🔴 MY HYPOTHESIS WAS WRONG: the flat cell is SEED variance, not prompt wording
+
+I claimed VoiceDesign "did not honour the prompt content" for `flat` and that naming the
+constraint harder would fix it. **That is false, and it was falsified by the control I put in
+the same run rather than by anything cleverer.**
+
+`research/phase2_reroll_flat.py`, four wordings × two registers, R1 results:
+
+| variant | span | |
+|---|---|---|
+| **`v0_original`** — *the exact wording of the rejected take* | **2.9 st** | ✅ only one under the 3.5 st gate |
+| `v1_no_inflection` | 6.0 st | worse than neutral |
+| `v2_emotionless` | 6.3 st | worse than neutral |
+| `v3_dictation` | 7.0 st | worse than neutral |
+
+The rejected take was v0's wording at **seed 2002** → 6.6 st. The same wording at **seed 3000**
+→ **2.9 st**. Identical words, less than half the pitch movement. Meanwhile all three of my
+"harder" phrasings landed *looser* than the natural conversational read (5.8 st) — the exact
+opposite of their intent.
+
+**The lever is the seed. The prompt was already correct.** Had I dropped the control and
+shipped a reworded prompt, I would have reported a fix that was a coin-flip, and the reworded
+prompt would have been actively worse on average. This is the card's own standing rule —
+*run the cheap control before the strong claim* — earning its place a fourth time.
+
+#### The measurement that matters for authoring: this cell is a LOTTERY, so gate it
+
+Flat's span across five same-wording generations spans 2.9–7.0 st. That is not a prompt to be
+perfected; it is a distribution to be sampled and filtered. Every other emotion on this grid
+landed first try, so **flat is the one cell that needs generate-and-measure rather than
+generate-and-listen** — and it is the one cell where a number can decide, because flat is
+defined by absence of pitch movement.
+
+Next step is therefore a seed sweep on the unchanged wording
+(`research/phase2_flat_seedsweep.py`, 8 seeds × R1 and R3), keeping the narrowest span.
+
+#### Two open problems the re-roll surfaced
+
+- **R3 has no candidate.** All four wordings clustered 6.0–7.1 st against a 3.5 st gate —
+  nothing to pick, and the best was one of the rewordings rather than v0. R3 may simply be a
+  harder cell to flatten, or it may need more seeds. Unresolved; the sweep will say.
+- **The R1 winner drifted below its band** — median 81.5 Hz, under R1's 90 Hz floor and 2.6 st
+  below the neutral cell. Unlike angry/cheerful, `flat` is LOW-AROUSAL and should sit near the
+  performer's baseline, so this is a wrong BASELINE, not correct emotion-driven lift — the one
+  case where the Phase 0 shifter legitimately applies (validated ±19 st, no artefacts, emotion
+  intact). Shift it up ~2.6 st rather than re-rolling, if the sweep produces nothing both
+  narrow and in-band.
+
+---
+
+### 2026-08-26 — FLAT ACCEPTED. Phase 2 is 12/12, and Fabio defined the emotion better than the brief did
+
+Fabio on the level-matched flat/neutral set: *"flat old sounds a bit, almost on the angry side.
+It's got a bit too much emotion. That's why I asked 'what is flat supposed to be?' The new flat
+sounds like the person is in shock, which is actually what flat is supposed to be, I think.
+Like, it's soulless, in shock, or just empty or not paying attention. It's good."*
+
+**All twelve cells now pass by ear.** The seed-sweep winners replace the rejected flat takes:
+R1 seed 3600 (2.5 st span) and R3 seed 3300 (4.2 st).
+
+#### 🟢 Use his words as the picker's description string
+
+*"Soulless, in shock, or just empty — not paying attention."* That is clearer than brief.md's
+"the soulless read (robot, or a character losing their demeanour mid-film)", and it comes from
+the one person on this project who had to ask what the emotion meant. **If he had to ask, a
+user choosing between "Flat" and "Neutral" in a dropdown has no chance** — so every emotion
+needs a one-line description in `MpiVoicePicker`, and this is Flat's.
+
+His diagnosis of the failed take is also the definition working in reverse: *"almost on the
+angry side, too much emotion"* is exactly what a 6.6 st span predicts. Ear and measurement
+agreed, independently, on both takes.
+
+#### 🔴 The gate I set was calibrated on the wrong register
+
+Second correction in this line of work, and this one is my instrument rather than my
+hypothesis. The absolute ≤3.5 st gate came from R1's neutral (5.8 st) and was then applied to
+R3 — whose neutral is naturally **8.9 st**, far wider. So the same absolute number was a much
+harder test for R3, and it produced a false "R3 has no candidate at all".
+
+Relative to each register's own neutral the two winners are equivalent:
+
+| | neutral span | flat span | flat as % of neutral |
+|---|---|---|---|
+| R1 | 5.8 st | 2.5 st | 43% |
+| R3 | 8.9 st | 4.2 st | 47% |
+
+**The gate for any future emotion cell must be relative to that register's neutral, never an
+absolute semitone count.** Registers differ in natural expressiveness and an absolute threshold
+silently encodes one register's habits as the standard.
+
+#### Flat sits BELOW its band, and that is correct — do not shift it
+
+The sweep showed span and pitch are anti-correlated in R1: every narrow candidate is low
+(2.5 st → 83.4 Hz, 2.9 → 81.5, 3.1 → 73.0) and every in-band one is wide (5.5 → 94.7,
+7.4 → 98.6, 8.5 → 110.7). A monotone read sits at the bottom of the speaker's range. So R1
+flat landing at 83.4 Hz, under R1's 90 Hz floor, is *caused by* being genuinely flat — the same
+relationship as angry's upward lift, in the other direction.
+
+**Not shifted, on the same rule that forbids shifting angry back down.** Identity already
+survived a 72.6 Hz upward spread (ask 2); an 11 Hz downward drift is not a risk. The Phase 0
+shifter stays reserved for a persona that came back as the wrong person, not for a cell that
+correctly reflects its emotion.
+
+#### Shipped
+
+`voices/performance/` — 12 opus clips, 489 KB, 24 kHz (same rationale as the voice bundle).
+`manifest.performanceClips` written and verified: the loader accepts all twelve, the R1 and R3
+grids each return their six emotions, and an unknown register still throws.
+
+Each clip carries `median_f0`, `f0_p10_p90`, `pitch_span_st`, `measured_register` and — for the
+flat cells — the **seed**. The seed is real provenance here: flat's span ranged 2.5–8.5 st
+across eight generations of identical wording, so the cell is a lottery and the winning ticket
+number is worth keeping.
+
+#### Two measurement artefacts recorded so nobody re-discovers them as bugs
+
+- `perf_R3_sad` reports a **21.4 st** span, from the p10 = 72.3 Hz outlier logged earlier
+  against a p90 of 248.5. Creak or a `pyin` octave error. **The audio is fine** — Fabio passed
+  sad by ear — so this is the measurement misreading the clip, not the clip being wrong.
+- **Whisper spans are meaningless in both directions** (R1 11.5 st, R3 3.3 st). A whisper has
+  little voiced tone, so `pyin` has almost nothing to track. Do not rank whisper by span, and
+  note that R3 whisper's 3.3 st would otherwise "beat" flat's 4.2 st and look like a defect.

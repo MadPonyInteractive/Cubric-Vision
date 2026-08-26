@@ -10,8 +10,8 @@
     "verify",
     "implement"
   ],
-  "status": "completed",
-  "heartbeat_at": "2026-08-21T18:18:00Z",
+  "status": "closed",
+  "heartbeat_at": "2026-08-22T03:47:13Z",
   "name": "MPI-357 licence-verified install (probe gate)",
   "task_card": "MPI-357",
   "recent_events": [
@@ -24,6 +24,10 @@
       "at": "2026-08-21T18:18:00Z",
       "event": "session_completed",
       "note": "MPI-357 closed on evidence; MPI-528 dissolved; MPI-598 created."
+    },
+    {
+      "at": "2026-08-22T03:47:13Z",
+      "event": "session_closed"
     }
   ]
 }

@@ -10,14 +10,18 @@
     "verify",
     "implement"
   ],
-  "status": "active",
-  "heartbeat_at": "2026-08-23T12:05:00Z",
+  "status": "closed",
+  "heartbeat_at": "2026-08-23T16:17:10Z",
   "name": "MPI-607 session 13 - ship Chatterbox (engine onboarding, then the Flow)",
   "task": ".agents/mpi-kanban/state/tasks/006e14b7-b550-43ac-8936-366d7faa6aee.json",
   "recent_events": [
     {
       "event": "heartbeat_renewed",
       "at": "2026-08-23T12:05:00Z"
+    },
+    {
+      "at": "2026-08-23T16:17:10Z",
+      "event": "session_closed"
     }
   ]
 }

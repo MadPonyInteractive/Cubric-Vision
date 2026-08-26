@@ -1,0 +1,28 @@
+{
+  "schema": "mpi-kanban/session/v1",
+  "id": "0f732631-9a3c-48ce-a887-4415135acaaa",
+  "role": "implementer",
+  "claude_session_id": "0f732631-9a3c-48ce-a887-4415135acaaa",
+  "started_at": "2026-08-22T21:59:06Z",
+  "allowed_actions": [
+    "read",
+    "edit",
+    "verify",
+    "implement"
+  ],
+  "status": "closed",
+  "heartbeat_at": "2026-08-23T06:13:05Z",
+  "name": "MPI-567 session 10 - run /mpi-add-flow properly and clear Fabio UI feedback",
+  "task": ".agents/mpi-kanban/state/tasks/18204563-f4a9-4be9-a3e3-355e7da15844.json",
+  "recent_events": [
+    {
+      "at": "2026-08-22T22:16:00Z",
+      "event": "session_started",
+      "note": "adopted handoff 8f4c6968 - MPI-567 scribble-to-object"
+    },
+    {
+      "at": "2026-08-23T06:13:05Z",
+      "event": "session_closed"
+    }
+  ]
+}
