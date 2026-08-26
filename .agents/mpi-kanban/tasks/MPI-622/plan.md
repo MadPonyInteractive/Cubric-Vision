@@ -24,6 +24,35 @@
 > Read `torch_vram_total` out of `/system_stats` to see the retention — `nvidia-smi` alone
 > cannot attribute it, because WDDM reports no per-process VRAM on this machine.
 >
+> **THE KYUTAI CORPUS IS OUT OF THE BUNDLE AND THE LIBRARY IS IN** (commits `12174bc1`,
+> `beabe98f`). The 60 curated opus were removed and `manifest.voices` emptied, then refilled by
+> a new **`ingest.py --from-dir`** local-import mode: trim → level → measure → opus, category
+> from the `.txt` sidecar, register from the MEASURED f0. **12/12 `check_manifest.mjs`, 8/8
+> `voice-library.test.cjs`, bundle 3.46 MB, spread R1:22 R2:10 R3:13 R4:5 R5:10.**
+>
+> **TWO PENDING ITEMS WERE WRONG ABOUT THE CODE.** (1) "Move the sustained-energy trim into
+> `ingest.py`, librosa's `trim(top_db=35)` is the thing it replaces" — `ingest.py` had **no
+> trim at all**; it was added, not moved. (2) "Import lib_v2 **through** `ingest.py`" — that
+> script is a kyutai HuggingFace *downloader* end to end (`fetch_voice_ids`, `--ids-file`
+> filtering against the corpus listing), with no local path. A new mode had to be written.
+>
+> **R1's FLOOR WENT 90 → 70 Hz** in all three mirrors (`ingest.py`, `js/data/voiceLibrary.js`,
+> `research/pitch_tools.py`), on Fabio's call. Six VoiceDesign voices measure 79.2–89.4 Hz —
+> four of them the whole `narrator_trailer` category, which is *meant* to be that deep — and at
+> 90 they were unclassifiable, so the first import silently shipped **54, not 60**. An R0 band
+> was the alternative and was rejected: no R0 performance grid exists, so those six would ship
+> unable to do emotions. The two hardcoded 90s left in message paths now read `REGISTERS[0][1]`.
+>
+> **STILL OPEN: `voices[].licence` is `null` on all 60.** `VOICEDESIGN_LICENCE` in `ingest.py`
+> carries a TODO — Fabio to confirm what licence a Qwen3-TTS VoiceDesign *output* carries. Not
+> guessed, because MiniMax H3 proved a model licence can bind Outputs and restrict territory.
+> Also now dead: `ingest.py`'s whole download/curate half, and `voices/curated.txt`, whose header
+> still claims "the ~60 voices that SHIP".
+>
+> **NOT OURS, pre-existing at HEAD:** `tests/orphan-sweep.test.cjs` "collects a dep no installed
+> model wants" fails. Its import graph (`downloadManager` → `dependencies` → `models`) contains
+> no file this card touched.
+>
 > **A SEVENTH METRIC LOST TO THE EAR.** Fabio heard "huge pitch oscillations" in the three VC
 > intermediates and called the three finals fine; a smoothed-f0 wobble measure ranked the
 > intermediates *no worse than* the finals, and flagged his own two recordings as the wobbliest
