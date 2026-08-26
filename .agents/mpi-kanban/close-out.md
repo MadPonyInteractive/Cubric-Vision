@@ -59,6 +59,23 @@ either, propose the edit to `UNRELEASED.md` (right section: `importantChanges` /
 — this step exists because a reverted "Wan 2.2 model split" note nearly shipped
 after the model was merged back to one.
 
+### A NEW FLOW is the closing agent's debt (Fabio, 2026-08-26)
+
+**Did a new Flow ship this session? Then adding it to `docs/releases/UNRELEASED.md` is yours,
+not the next person's.** Two places, both required:
+
+1. the **roster list** in the Flows entry under `## What's new` — the list enumerates the
+   Library's contents, so a missing name makes an existing entry wrong, not merely incomplete;
+2. its **own entry** below, in the same shape as the others: what it does, what it runs on, and
+   the one caveat a user needs.
+
+Standing rule, stated after Scribble shipped with neither — the flow was built, live-run,
+graphics and all, and the notes still listed seven flows. Nobody was assigned the gap, which is
+exactly why it survived to close-out.
+
+**A flow with no preview art is not ready to announce** — Voice Changer was deliberately left
+out of the 2.0 roster on that basis while MPI-607 is open. Ship the art, then the entry.
+
 ### A change to an UNRELEASED thing owes no entry
 
 Before writing "X changed from A to B", grep `UNRELEASED.md` and

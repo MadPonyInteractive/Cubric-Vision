@@ -142,6 +142,7 @@ Flow-specific additions:
 - [ ] Verify: inject test green, `node --check`, live run (each media type + multi-output), reuse across restart — [05](05-verify.md)
 - [ ] `preview` image: its OWN 4/5 webp under `comfy_workflows/display/`, named for the flow — never a reused model preview, never shared with another flow — [06](06-preview-image.md)
 - [ ] NO app version bump for the Flow itself; a NEW op sets `appVersionIntroduced` in both op registries
+- [ ] **Announce it: add the flow to BOTH the roster list and its own entry in `docs/releases/UNRELEASED.md`.** The roster enumerates the Library, so a missing name makes an existing entry WRONG. This is the closing agent's debt, not the next session's — `.agents/mpi-kanban/close-out.md` § A NEW FLOW (Scribble shipped with neither, and the notes still said seven flows)
 
 ## Files (the flow subsystem)
 
