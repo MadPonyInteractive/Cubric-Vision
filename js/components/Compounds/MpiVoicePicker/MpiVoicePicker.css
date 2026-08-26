@@ -1,0 +1,221 @@
+/* MpiVoicePicker — Compound (MPI-622)
+   BEM root: .mpi-voice-picker
+   All colours from styles/01_base.css tokens only — no hardcoded values. */
+
+.mpi-voice-picker {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    font-size: var(--t-sm);
+    color: var(--ink-1);
+}
+
+/* ── Filters ──────────────────────────────────────────────────────────────── */
+
+.mpi-voice-picker__filters {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+}
+
+.mpi-voice-picker__filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-2);
+}
+
+.mpi-voice-picker__filter-slot {
+    min-width: 140px;
+    flex: 1 1 140px;
+}
+
+/* ── Voice list ───────────────────────────────────────────────────────────── */
+
+.mpi-voice-picker__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.mpi-voice-picker__empty {
+    color: var(--ink-3);
+    padding: var(--s-3);
+    text-align: center;
+}
+
+/* ── Voice card ───────────────────────────────────────────────────────────── */
+
+.mpi-voice-picker__card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-2);
+    padding: var(--s-2) var(--s-3);
+    background: var(--surface-2);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-2);
+    cursor: pointer;
+    transition: background var(--t-fast) var(--ease),
+                border-color var(--t-fast) var(--ease);
+    user-select: none;
+}
+
+.mpi-voice-picker__card:hover {
+    background: var(--surface-3);
+}
+
+.mpi-voice-picker__card:focus-visible {
+    outline: 2px solid var(--accent-frost);
+    outline-offset: 2px;
+}
+
+.mpi-voice-picker__card--selected {
+    border-color: var(--accent-heat);
+    background: var(--surface-3);
+}
+
+.mpi-voice-picker__card-main {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+    min-width: 0;
+}
+
+.mpi-voice-picker__card-name {
+    font-size: var(--t-md);
+    color: var(--ink-1);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mpi-voice-picker__card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-1);
+    align-items: center;
+}
+
+/* ── Badges ───────────────────────────────────────────────────────────────── */
+
+.mpi-voice-picker__badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 1px var(--s-1);
+    border-radius: var(--r-pill);
+    background: var(--surface-1);
+    color: var(--ink-3);
+    font-size: var(--t-2xs);
+    text-transform: capitalize;
+    white-space: nowrap;
+}
+
+.mpi-voice-picker__badge--narration {
+    color: var(--accent-frost);
+    background: color-mix(in oklch, var(--accent-frost) 15%, transparent);
+}
+
+.mpi-voice-picker__badge--character {
+    color: var(--accent-heat);
+    background: color-mix(in oklch, var(--accent-heat) 15%, transparent);
+}
+
+.mpi-voice-picker__badge--both {
+    color: var(--accent-ok);
+    background: color-mix(in oklch, var(--accent-ok) 15%, transparent);
+}
+
+/* ── Pitch-distance warning (warn, never block) ───────────────────────────── */
+
+.mpi-voice-picker__warn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-1);
+    color: var(--accent-warn);
+    font-size: var(--t-xs);
+}
+
+.mpi-voice-picker__warn svg {
+    flex-shrink: 0;
+}
+
+/* ── Audition button (bare button — no native chrome, part of the card) ───── */
+
+.mpi-voice-picker__card-actions {
+    flex-shrink: 0;
+}
+
+.mpi-voice-picker__audition-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    color: var(--ink-2);
+    border-radius: var(--r-2);
+    cursor: pointer;
+    transition: color var(--t-fast) var(--ease),
+                background var(--t-fast) var(--ease);
+}
+
+.mpi-voice-picker__audition-btn[hidden] {
+    display: none;
+}
+
+.mpi-voice-picker__audition-btn:hover {
+    color: var(--ink-1);
+    background: var(--surface-1);
+}
+
+.mpi-voice-picker__audition-btn--playing {
+    color: var(--accent-heat);
+}
+
+/* ── Detail panel ─────────────────────────────────────────────────────────── */
+
+.mpi-voice-picker__detail {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    padding: var(--s-3);
+    background: var(--surface-1);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+}
+
+.mpi-voice-picker__detail[hidden] {
+    display: none;
+}
+
+.mpi-voice-picker__detail-name {
+    font-size: var(--t-md);
+    color: var(--ink-1);
+    font-weight: 600;
+}
+
+.mpi-voice-picker__detail-row {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    font-size: var(--t-sm);
+}
+
+.mpi-voice-picker__detail-label {
+    color: var(--ink-3);
+    min-width: 60px;
+}
+
+.mpi-voice-picker__emotion-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+}
+
+.mpi-voice-picker__detail-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: var(--s-1);
+}

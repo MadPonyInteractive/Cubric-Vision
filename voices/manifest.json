@@ -1,0 +1,431 @@
+{
+  "version": 1,
+  "variant": "enhanced",
+  "note": "CC0 voices from kyutai/tts-voices voice-donations/ (Unmute Voice Donation Project). _enhanced.wav used consistently for pitch measurement and VC conditioning. accent is null for all — must be assigned by a human listener, never inferred.",
+  "voices": [
+    {
+      "id": "0a67",
+      "display_name": "Voice 0a67",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": null,
+      "kind": "both",
+      "register": "R2",
+      "median_f0": 134.7,
+      "f0_p10_p90": [
+        105.7,
+        159.3
+      ],
+      "sample": "0a67.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": "CC0-1.0",
+      "source_url": "https://huggingface.co/kyutai/tts-voices/blob/main/voice-donations/0a67_enhanced.wav",
+      "added_at": "2026-08-25"
+    },
+    {
+      "id": "1410",
+      "display_name": "Voice 1410",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": null,
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 122.8,
+      "f0_p10_p90": [
+        106.9,
+        136.3
+      ],
+      "sample": "1410.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": "CC0-1.0",
+      "source_url": "https://huggingface.co/kyutai/tts-voices/blob/main/voice-donations/1410_enhanced.wav",
+      "added_at": "2026-08-25"
+    },
+    {
+      "id": "1dd0",
+      "display_name": "Voice 1dd0",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": null,
+      "kind": "both",
+      "register": "R2",
+      "median_f0": 134.7,
+      "f0_p10_p90": [
+        116.6,
+        428.1
+      ],
+      "sample": "1dd0.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": "CC0-1.0",
+      "source_url": "https://huggingface.co/kyutai/tts-voices/blob/main/voice-donations/1dd0_enhanced.wav",
+      "added_at": "2026-08-25"
+    },
+    {
+      "id": "2181",
+      "display_name": "Voice 2181",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": null,
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 122.1,
+      "f0_p10_p90": [
+        103.0,
+        144.9
+      ],
+      "sample": "2181.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": "CC0-1.0",
+      "source_url": "https://huggingface.co/kyutai/tts-voices/blob/main/voice-donations/2181_enhanced.wav",
+      "added_at": "2026-08-25"
+    },
+    {
+      "id": "245e",
+      "display_name": "Voice 245e",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": null,
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 125.0,
+      "f0_p10_p90": [
+        109.4,
+        137.0
+      ],
+      "sample": "245e.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": "CC0-1.0",
+      "source_url": "https://huggingface.co/kyutai/tts-voices/blob/main/voice-donations/245e_enhanced.wav",
+      "added_at": "2026-08-25"
+    },
+    {
+      "id": "29da",
+      "display_name": "Voice 29da",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": null,
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 120.0,
+      "f0_p10_p90": [
+        111.3,
+        136.3
+      ],
+      "sample": "29da.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": "CC0-1.0",
+      "source_url": "https://huggingface.co/kyutai/tts-voices/blob/main/voice-donations/29da_enhanced.wav",
+      "added_at": "2026-08-25"
+    },
+    {
+      "id": "30c5",
+      "display_name": "Voice 30c5",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": null,
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 109.4,
+      "f0_p10_p90": [
+        62.5,
+        122.4
+      ],
+      "sample": "30c5.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": "CC0-1.0",
+      "source_url": "https://huggingface.co/kyutai/tts-voices/blob/main/voice-donations/30c5_enhanced.wav",
+      "added_at": "2026-08-25"
+    },
+    {
+      "id": "3973",
+      "display_name": "Voice 3973",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": null,
+      "kind": "both",
+      "register": "R3",
+      "median_f0": 203.0,
+      "f0_p10_p90": [
+        62.1,
+        255.7
+      ],
+      "sample": "3973.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": "CC0-1.0",
+      "source_url": "https://huggingface.co/kyutai/tts-voices/blob/main/voice-donations/3973_enhanced.wav",
+      "added_at": "2026-08-25"
+    },
+    {
+      "id": "4189",
+      "display_name": "Voice 4189",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": null,
+      "kind": "both",
+      "register": "R2",
+      "median_f0": 137.0,
+      "f0_p10_p90": [
+        114.6,
+        164.9
+      ],
+      "sample": "4189.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": "CC0-1.0",
+      "source_url": "https://huggingface.co/kyutai/tts-voices/blob/main/voice-donations/4189_enhanced.wav",
+      "added_at": "2026-08-25"
+    },
+    {
+      "id": "468c",
+      "display_name": "Voice 468c",
+      "gender": null,
+      "age": null,
+      "accent": null,
+      "language": null,
+      "style": null,
+      "tags": null,
+      "kind": "both",
+      "register": "R1",
+      "median_f0": 121.4,
+      "f0_p10_p90": [
+        106.3,
+        138.6
+      ],
+      "sample": "468c.opus",
+      "audition_narration": null,
+      "audition_character": null,
+      "licence": "CC0-1.0",
+      "source_url": "https://huggingface.co/kyutai/tts-voices/blob/main/voice-donations/468c_enhanced.wav",
+      "added_at": "2026-08-25"
+    }
+  ],
+  "performanceClips": [
+    {
+      "id": "perf_R1_flat",
+      "register": "R1",
+      "emotion": "flat",
+      "clip": "performance/perf_R1_flat.opus",
+      "median_f0": 83.4,
+      "f0_p10_p90": [
+        76.2,
+        88.2
+      ],
+      "pitch_span_st": 2.5,
+      "measured_register": null,
+      "source": "qwen3-tts-voicedesign",
+      "seed": 3600,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "perf_R1_neutral",
+      "register": "R1",
+      "emotion": "neutral",
+      "clip": "performance/perf_R1_neutral.opus",
+      "median_f0": 94.7,
+      "f0_p10_p90": [
+        78.7,
+        110.2
+      ],
+      "pitch_span_st": 5.8,
+      "measured_register": "R1",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2001,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "perf_R1_angry",
+      "register": "R1",
+      "emotion": "angry",
+      "clip": "performance/perf_R1_angry.opus",
+      "median_f0": 167.3,
+      "f0_p10_p90": [
+        119.3,
+        217.6
+      ],
+      "pitch_span_st": 10.4,
+      "measured_register": "R2",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2002,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "perf_R1_sad",
+      "register": "R1",
+      "emotion": "sad",
+      "clip": "performance/perf_R1_sad.opus",
+      "median_f0": 98.0,
+      "f0_p10_p90": [
+        67.3,
+        114.6
+      ],
+      "pitch_span_st": 9.2,
+      "measured_register": "R1",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2003,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "perf_R1_cheerful",
+      "register": "R1",
+      "emotion": "cheerful",
+      "clip": "performance/perf_R1_cheerful.opus",
+      "median_f0": 185.1,
+      "f0_p10_p90": [
+        152.1,
+        217.6
+      ],
+      "pitch_span_st": 6.2,
+      "measured_register": "R2",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2004,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "perf_R1_whisper",
+      "register": "R1",
+      "emotion": "whisper",
+      "clip": "performance/perf_R1_whisper.opus",
+      "median_f0": 100.9,
+      "f0_p10_p90": [
+        61.6,
+        120.0
+      ],
+      "pitch_span_st": 11.5,
+      "measured_register": "R1",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2005,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "perf_R3_flat",
+      "register": "R3",
+      "emotion": "flat",
+      "clip": "performance/perf_R3_flat.opus",
+      "median_f0": 216.3,
+      "f0_p10_p90": [
+        194.9,
+        248.5
+      ],
+      "pitch_span_st": 4.2,
+      "measured_register": "R3",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 3300,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "perf_R3_neutral",
+      "register": "R3",
+      "emotion": "neutral",
+      "clip": "performance/perf_R3_neutral.opus",
+      "median_f0": 211.4,
+      "f0_p10_p90": [
+        164.9,
+        275.7
+      ],
+      "pitch_span_st": 8.9,
+      "measured_register": "R3",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2007,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "perf_R3_angry",
+      "register": "R3",
+      "emotion": "angry",
+      "clip": "performance/perf_R3_angry.opus",
+      "median_f0": 278.1,
+      "f0_p10_p90": [
+        241.4,
+        381.0
+      ],
+      "pitch_span_st": 7.9,
+      "measured_register": "R4",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2008,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "perf_R3_sad",
+      "register": "R3",
+      "emotion": "sad",
+      "clip": "performance/perf_R3_sad.opus",
+      "median_f0": 221.4,
+      "f0_p10_p90": [
+        72.3,
+        248.5
+      ],
+      "pitch_span_st": 21.4,
+      "measured_register": "R3",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2009,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "perf_R3_cheerful",
+      "register": "R3",
+      "emotion": "cheerful",
+      "clip": "performance/perf_R3_cheerful.opus",
+      "median_f0": 272.5,
+      "f0_p10_p90": [
+        233.2,
+        381.0
+      ],
+      "pitch_span_st": 8.5,
+      "measured_register": "R4",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2010,
+      "added_at": "2026-08-26"
+    },
+    {
+      "id": "perf_R3_whisper",
+      "register": "R3",
+      "emotion": "whisper",
+      "clip": "performance/perf_R3_whisper.opus",
+      "median_f0": 222.6,
+      "f0_p10_p90": [
+        207.7,
+        251.4
+      ],
+      "pitch_span_st": 3.3,
+      "measured_register": "R3",
+      "source": "qwen3-tts-voicedesign",
+      "seed": 2011,
+      "added_at": "2026-08-26"
+    }
+  ]
+}

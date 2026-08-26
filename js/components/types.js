@@ -1993,3 +1993,36 @@
  *
  * Emits: nothing. Closing is the only interaction.
  */
+
+
+/**
+ * @typedef {Object} MpiVoicePickerProps (Compound — js/components/Compounds/MpiVoicePicker, MPI-622)
+ * @property {object} manifest              - Plain voice manifest (voices[] + performanceClips[]).
+ *                                            Pass a fixture at dev/gallery time; the component
+ *                                            never fetches. At runtime callers pass the result
+ *                                            of loadVoiceLibrary() (its raw parsed JSON, not the
+ *                                            library instance).
+ * @property {string} [selectedVoiceId]     - Pre-selected voice id.
+ * @property {number|null} [userPitchHz]    - Median F0 of the user's own uploaded sample (Hz).
+ *                                            When provided, pitch-distance warnings are shown
+ *                                            beside voices whose median_f0 is far. The voice
+ *                                            is never blocked — warning only (brief.md § 4).
+ * @property {number} [warnSemitones=6]     - Threshold (semitones) above which the warning
+ *                                            appears. Defaults to 6 (~perfect fourth).
+ * @property {string} [kind]                - Initial kind filter: '' | 'narration' | 'character'.
+ *
+ * Emits:
+ *   'select'         { voice, emotion? }  — user confirmed; emotion set for character/both.
+ *   'audition-start' { voice }            — audition playback began.
+ *   'audition-stop'  {}                   — audition playback stopped.
+ *
+ * Two voice kinds, and a voice may be both (kind:'both'):
+ *   narration — direct TTS, no emotion, sounds exactly like its voice clip.
+ *   character — TTS(performance clip) → VC(character clip), full emotion set.
+ *
+ * Filtering: kind / register / gender / language. accent is hidden — it is nullable on
+ * purpose (a wrong label is worse than a missing one) and meaningless for character voices.
+ * Emotion picker is shown in the detail panel for character/both voices only.
+ *
+ * Audio: plays audition_narration.opus / audition_character.opus, never sample.opus.
+ */
