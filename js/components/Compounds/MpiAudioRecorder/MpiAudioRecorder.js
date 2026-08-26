@@ -130,7 +130,7 @@ export const MpiAudioRecorder = ComponentFactory.create({
             if (!_blob) return;
             acceptBtn.el.setDisabled(true);
             hintSlot.textContent = 'Encoding…';
-            const file = await _toWavFile(_blob);
+            const file = await toWavFile(_blob);
             if (!file) {
                 hintSlot.textContent = 'That recording could not be encoded. Try again.';
                 acceptBtn.el.setDisabled(false);
@@ -306,10 +306,18 @@ const WAV_RATE = 48000;
  * times the bytes with nothing a mic can put in them. WAV is kept deliberately:
  * a lossy round trip before a voice clone costs quality in the one workflow the
  * recorder exists for, and ComfyUI's audio loaders take WAV with no transcode.
+ * EXPORTED because the voice library needs the identical treatment (MPI-622). Its samples
+ * are `.opus`, and `opus` is missing from four of the five extension lists that classify a
+ * file as audio — the same class of bug as the `.webm` one above, which is why this function
+ * exists at all. Decoding the sample here hands the Flow slot a WAV: the one container every
+ * list already knows, and the exact bytes a recording produces, so a library pick and a
+ * recording reach the graph as the same kind of file.
+ *
  * @param {Blob} blob
+ * @param {string} [name='recording.wav'] Filename for the returned File. Keep the .wav.
  * @returns {Promise<File|null>} null if the blob could not be decoded.
  */
-async function _toWavFile(blob) {
+export async function toWavFile(blob, name = 'recording.wav') {
     try {
         const decoded = await new OfflineAudioContext(1, 1, WAV_RATE)
             .decodeAudioData(await blob.arrayBuffer());
@@ -318,7 +326,7 @@ async function _toWavFile(blob) {
         src.buffer = decoded;
         src.connect(off.destination);
         src.start();
-        return new File([encodeWav(await off.startRendering())], 'recording.wav', { type: 'audio/wav' });
+        return new File([encodeWav(await off.startRendering())], name, { type: 'audio/wav' });
     } catch (err) {
         clientLogger.warn('audio-recorder', `wav encode failed: ${err?.message || err}`);
         return null;

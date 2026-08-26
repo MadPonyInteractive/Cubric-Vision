@@ -2,40 +2,35 @@
    BEM root: .mpi-voice-picker
    All colours from styles/01_base.css tokens only — no hardcoded values. */
 
+/* Fills whatever height its host gives it, and the LIST is the only thing that scrolls.
+   `min-height: 0` is load-bearing: without it a flex child refuses to shrink below its
+   content, the list never scrolls, and the host scrolls instead — which is how the panel
+   ended up with TWO scrollbars (Fabio, 2026-08-26: "these two scrollbars don't make any
+   sense here"). An unconstrained host (the component gallery) just lets it grow. */
 .mpi-voice-picker {
     display: flex;
     flex-direction: column;
     gap: var(--s-3);
+    height: 100%;
+    min-height: 0;
     font-size: var(--t-sm);
     color: var(--ink-1);
 }
 
-/* ── Filters ──────────────────────────────────────────────────────────────── */
-
-.mpi-voice-picker__filters {
-    display: flex;
-    flex-direction: column;
-    gap: var(--s-2);
-}
-
-.mpi-voice-picker__filter-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--s-2);
-}
-
-.mpi-voice-picker__filter-slot {
-    min-width: 140px;
-    flex: 1 1 140px;
-}
+/* No filter styles. The four filter dropdowns were removed in Phase 4 — 15 sections do
+   not need filtering, and three of the four could not narrow anything. */
 
 /* ── Voice list ───────────────────────────────────────────────────────────── */
 
+/* The ONE scroll container. The old `max-height: 360px` capped it at roughly four rows no
+   matter how much room the overlay had, which is what made the library feel cramped. It now
+   takes every pixel the host offers and scrolls only when it runs out. */
 .mpi-voice-picker__list {
     display: flex;
     flex-direction: column;
     gap: var(--s-1);
-    max-height: 360px;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
 }
 
@@ -43,6 +38,33 @@
     color: var(--ink-3);
     padding: var(--s-3);
     text-align: center;
+}
+
+/* ── Demographic group ────────────────────────────────────────────────────── */
+/* The outer divider — "Young male", "Mature female", "Character". It is the whole of
+   the navigation now that the filters are gone, so it has to out-rank the section
+   heading at a glance: uppercase and tracked, where a section name is sentence case.
+   A rule under it does the separating, so the groups need no boxes. */
+
+.mpi-voice-picker__group + .mpi-voice-picker__group {
+    margin-top: var(--s-4);
+}
+
+.mpi-voice-picker__group-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    /* Opaque, because it IS sticky and cards scroll under it. The section heading is
+       deliberately not sticky (see below) — with two levels pinned, a short group would
+       be all header and no list. */
+    background: var(--surface-1);
+    padding: var(--s-2) var(--s-1) var(--s-1);
+    border-bottom: 1px solid var(--line-soft);
+    color: var(--ink-2);
+    font-size: var(--t-2xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 /* ── Section ──────────────────────────────────────────────────────────────── */
@@ -137,6 +159,9 @@
 }
 
 /* ── Badges ───────────────────────────────────────────────────────────────── */
+/* One badge survives, `language`, and it is usually absent. The kind badge and its three
+   colour modifiers went with the filters: every voice is `kind: 'both'`, so it said "both"
+   on all 56 rows. Gender and age went too — the group heading now says both. */
 
 .mpi-voice-picker__badge {
     display: inline-flex;
@@ -148,21 +173,6 @@
     font-size: var(--t-2xs);
     text-transform: capitalize;
     white-space: nowrap;
-}
-
-.mpi-voice-picker__badge--narration {
-    color: var(--accent-frost);
-    background: color-mix(in oklch, var(--accent-frost) 15%, transparent);
-}
-
-.mpi-voice-picker__badge--character {
-    color: var(--accent-heat);
-    background: color-mix(in oklch, var(--accent-heat) 15%, transparent);
-}
-
-.mpi-voice-picker__badge--both {
-    color: var(--accent-ok);
-    background: color-mix(in oklch, var(--accent-ok) 15%, transparent);
 }
 
 /* ── Pitch-distance warning (warn, never block) ───────────────────────────── */
@@ -212,38 +222,18 @@
     color: var(--accent-heat);
 }
 
-/* ── Detail panel ─────────────────────────────────────────────────────────── */
+/* ── Footer: always on screen, never moves ──────────────────────────────- */
+/* Pinned below the list and rendered whether or not a voice is selected. The button is
+   disabled until there is something to select, rather than absent - an action that appears
+   only after a click is one the user cannot see is available. */
 
-.mpi-voice-picker__detail {
+.mpi-voice-picker__footer {
     display: flex;
     flex-direction: column;
     gap: var(--s-2);
-    padding: var(--s-3);
-    background: var(--surface-1);
-    border: 1px solid var(--line);
-    border-radius: var(--r-2);
-}
-
-.mpi-voice-picker__detail[hidden] {
-    display: none;
-}
-
-.mpi-voice-picker__detail-name {
-    font-size: var(--t-md);
-    color: var(--ink-1);
-    font-weight: 600;
-}
-
-.mpi-voice-picker__detail-row {
-    display: flex;
-    align-items: center;
-    gap: var(--s-2);
-    font-size: var(--t-sm);
-}
-
-.mpi-voice-picker__detail-label {
-    color: var(--ink-3);
-    min-width: 60px;
+    flex: 0 0 auto;
+    padding-top: var(--s-2);
+    border-top: 1px solid var(--line-soft);
 }
 
 .mpi-voice-picker__emotion-row {
@@ -252,8 +242,15 @@
     gap: var(--s-1);
 }
 
-.mpi-voice-picker__detail-actions {
+.mpi-voice-picker__emotion-row[hidden] {
+    display: none;
+}
+
+/* Full width, because it is the one action on the surface and nothing shares the row. */
+.mpi-voice-picker__footer-actions {
     display: flex;
-    justify-content: flex-end;
-    margin-top: var(--s-1);
+}
+
+.mpi-voice-picker__footer-actions > .mpi-btn {
+    flex: 1 1 auto;
 }

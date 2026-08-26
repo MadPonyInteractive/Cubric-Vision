@@ -5,7 +5,9 @@ import { state } from '../../../state.js';
 import { resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { qs, ce, on } from '../../../utils/dom.js';
 import { renderIcon } from '/js/utils/icons.js';
-import { recordAudioIntoProject } from '../MpiAudioRecorder/MpiAudioRecorder.js';
+import { recordAudioIntoProject, toWavFile } from '../MpiAudioRecorder/MpiAudioRecorder.js';
+import { MpiVoicePicker } from '../MpiVoicePicker/MpiVoicePicker.js';
+import { clientLogger } from '../../../services/clientLogger.js';
 
 /**
  * MpiMediaPicker — pick media the project ALREADY holds, or bring one in (Compound)
@@ -42,10 +44,17 @@ import { recordAudioIntoProject } from '../MpiAudioRecorder/MpiAudioRecorder.js'
  * @param {Function} [onPick] - (item:{filePath:string,mediaType:string}) => void
  * @param {Function} [onImport] - (files:File[]) => void — from the upload card.
  *        Omit it and the upload card is not rendered.
+ * @param {'narration'|'character'|null} [voiceRoute=null] - Opt in to the shipped voice
+ *        library as a THIRD source, and say which route its play button previews. Omit
+ *        it and no voice card is rendered. Per-SLOT, never per-flow: Voice Changer wants
+ *        it on "Target voice" and emphatically not on "Your performance", where offering
+ *        a stock voice as the thing you performed would invite converting one library
+ *        voice into another. Requires `onImport` — see `_buildVoiceCard`.
  *
  * Emits:
  * 'pick'   { filePath, mediaType } — a tile was chosen (modal closes)
- * 'import' { files }               — files chosen from disk (modal closes)
+ * 'import' { files }               — files chosen from disk, or one voice decoded from
+ *                                    the library (modal closes)
  * 'cancel' {}                      — Cancel pressed (NOT on Escape/backdrop)
  */
 
@@ -242,6 +251,146 @@ export const MpiMediaPicker = ComponentFactory.create({
             return card;
         }
 
+        /**
+         * The voice-library card — audio slots that opted in via `voiceRoute` (MPI-622).
+         *
+         * A THIRD SOURCE INSIDE THIS PICKER, not a second button beside the slot. The slot
+         * already has exactly one job (open this picker) and that was a deliberate repair;
+         * bolting a rival button next to it would undo it. So the library sits where the
+         * user's own media and the filesystem already are.
+         *
+         * It routes through `onImport`, which is the whole point: a library voice becomes an
+         * ordinary content-addressed project asset by the SAME path an upload takes, so the
+         * graph sees no difference and no new injection plumbing exists to go wrong.
+         */
+        function _buildVoiceCard() {
+            const card = mountButton({
+                variant: 'ghost',
+                size: 'sm',
+                extraClasses: 'mpi-media-picker__tile mpi-media-picker__tile--voice',
+            });
+            card.title = 'Choose from the voice library';
+            const icon = ce('span', { className: 'mpi-media-picker__upload-icon' });
+            // `audio`, not `mic` — the Record card next to it is the mic, and two cards
+            // under one microphone would read as two ways to do the same thing.
+            icon.innerHTML = renderIcon('audio', 'lg');
+            const label = ce('span', { className: 'mpi-media-picker__upload-label' });
+            label.textContent = 'Voice library';
+            card.appendChild(icon);
+            card.appendChild(label);
+            _unsubs.push(on(card, 'click', _openVoiceLibrary));
+            return card;
+        }
+
+        // The voice panel's two halves: the mounted component (may be absent if the manifest
+        // failed to load) and the layer it sits in. Tracked separately because destroying the
+        // component does not remove the layer, and the failure path has a layer and no
+        // component — one variable for both would leak whichever half it did not name.
+        let _voicePicker = null;
+        let _voiceLayer = null;
+
+        function _closeVoiceLibrary() {
+            _voicePicker?.destroy?.();
+            _voiceLayer?.remove();
+            _voicePicker = null;
+            _voiceLayer = null;
+            // Give the grid and its filter tabs back.
+            grid.hidden = false;
+            qs('#filters-slot', el).hidden = false;
+        }
+
+        /**
+         * Swap the grid for the voice picker, inside this same modal.
+         *
+         * IN FLOW, NOT AN OVERLAY. It started as `position: absolute; inset: 0` over the
+         * grid, which meant it inherited the grid's height — and with an empty project that
+         * is barely four rows tall, so the library opened into a letterbox (Fabio,
+         * 2026-08-26: "the voice library is too small and can be a lot taller"). An absolute
+         * layer cannot grow its parent, so the fix is to stop being one: hide the grid and
+         * its filter tabs, and take their place as a normal flex child that can claim height.
+         *
+         * The manifest is fetched HERE and passed down as a prop: MpiVoicePicker never
+         * fetches (so a test can drive it with a fixture), and fetching on open rather than
+         * on mount keeps 56 voices out of every image slot's picker.
+         */
+        async function _openVoiceLibrary() {
+            _closeVoiceLibrary();
+            grid.hidden = true;
+            // The tabs filter the GRID, which is no longer on screen.
+            qs('#filters-slot', el).hidden = true;
+
+            const layer = ce('div', { className: 'mpi-media-picker__voice' });
+            const head = ce('div', { className: 'mpi-media-picker__voice-head' });
+            const title = ce('span', { className: 'mpi-media-picker__voice-title' });
+            title.textContent = 'Voice library';
+            head.appendChild(title);
+
+            const back = mountButton({
+                text: 'Back', icon: 'back', size: 'sm', variant: 'ghost',
+            });
+            _unsubs.push(on(back, 'click', _closeVoiceLibrary));
+            head.appendChild(back);
+            layer.appendChild(head);
+
+            const body = ce('div', { className: 'mpi-media-picker__voice-body' });
+            body.textContent = 'Loading voices…';
+            layer.appendChild(body);
+            // Exactly where the grid was, so Cancel stays the last row rather than floating
+            // above the library.
+            el.insertBefore(layer, qs('#actions-slot', el));
+            _voiceLayer = layer;
+
+            let manifest;
+            try {
+                const res = await fetch('/voices/manifest.json');
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                manifest = await res.json();
+            } catch (err) {
+                clientLogger.error('media-picker', `voice manifest load failed: ${err?.message || err}`);
+                body.textContent = 'The voice library could not be loaded.';
+                return;
+            }
+            // Back was pressed while the fetch was in flight — the layer is already gone, so
+            // mounting into it would leak a component nothing can reach.
+            if (_voiceLayer !== layer) return;
+
+            body.textContent = '';
+            const picker = MpiVoicePicker.mount(ce('div'), {
+                manifest,
+                route: props.voiceRoute,
+                // No emotion control here. Voice Changer has no TTS stage, so the emotion set
+                // has nothing to act on — the user's own recording carries the delivery, and
+                // VC preserves it rather than adding one. Settled with Fabio 2026-08-26.
+                emotions: false,
+            });
+            picker.on('select', ({ voice }) => { _pickVoice(voice); });
+            body.appendChild(picker.el);
+            _voicePicker = picker;
+        }
+
+        /**
+         * Turn a chosen library voice into a File and hand it to `onImport`.
+         *
+         * DECODED TO WAV, not passed through as `.opus`. `opus` is missing from four of the
+         * five extension lists that classify a file as audio (js/utils/file.js AUDIO_EXTS and
+         * three lists in routes/projects.js), which is the same trap that made
+         * MpiAudioRecorder re-mux its WebM. `toWavFile` is that recorder's own encoder, so a
+         * library pick and a recording reach the graph as byte-identical kinds of file.
+         */
+        async function _pickVoice(voice) {
+            try {
+                const res = await fetch(`/voices/${voice.sample}`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const file = await toWavFile(await res.blob(), `${voice.id}.wav`);
+                if (!file) throw new Error('decode returned null');
+                props.onImport([file]);
+                emit('import', { files: [file] });
+                el.hide();
+            } catch (err) {
+                clientLogger.error('media-picker', `voice "${voice?.id}" could not be loaded: ${err?.message || err}`);
+            }
+        }
+
         function _buildTile(entry) {
             const { item, type } = entry;
             const name = _stripExt(item.displayName || _basename(item.filePath));
@@ -327,6 +476,12 @@ export const MpiMediaPicker = ComponentFactory.create({
             // "All media" is the user looking around, not a change of what the slot
             // takes, and a Record card under an image slot would be a dead end.
             if (slotType === 'audio') grid.appendChild(_buildMicCard());
+            // Same gating, plus the slot's own opt-in. `onImport` is required because that
+            // is the route a picked voice takes — without it the card would open a library
+            // whose selection had nowhere to go.
+            if (slotType === 'audio' && props.voiceRoute && props.onImport) {
+                grid.appendChild(_buildVoiceCard());
+            }
 
             if (!entries.length) {
                 const empty = ce('div', { className: 'mpi-media-picker__empty' });
@@ -377,10 +532,11 @@ export const MpiMediaPicker = ComponentFactory.create({
         cancel.on('click', () => { emit('cancel', {}); modal.el.hide(); });
 
         el.show = () => modal.el.show();
-        el.hide = () => { _closePreview(); modal.el.hide(); };
+        el.hide = () => { _closePreview(); _closeVoiceLibrary(); modal.el.hide(); };
 
         el.destroy = () => {
             _closePreview();
+            _closeVoiceLibrary();
             _unsubs.forEach(fn => fn());
             _unsubs.length = 0;
             cancel?.el?.destroy?.();

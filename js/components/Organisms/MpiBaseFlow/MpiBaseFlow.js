@@ -102,7 +102,7 @@ import { buildField, mapDeclaredValue, isInjectionParam } from '../../../utils/d
 /**
  * Returns the declared media groups from the flow's inputSchema, or [] for media-free flows.
  * @param {import('../../../data/flowsRegistry.js').FlowDef} [flow]
- * @returns {Array<{type:string,mode:string,max:number,roles:string[]}>}
+ * @returns {Array<{type:string,mode:string,max:number,roles:string[],voiceLibrary?:Array<string|null>}>}
  */
 function _getMediaGroups(flow) {
     const schema = flow?.inputSchema;
@@ -157,20 +157,6 @@ function _slotLabel(group, idx) {
  * @param {string} type
  * @returns {string}
  */
-/**
- * Display name for a media URL, extension dropped.
- *
- * A slot URL is a `/project-file?path=<urlencoded absolute path>` form, so
- * splitting it on slashes yields the ENCODED query tail rather than a filename.
- * Decode the `path` parameter first.
- */
-function _mediaName(url) {
-    const raw = String(url || '');
-    const q = raw.indexOf('path=');
-    const p = q === -1 ? raw : decodeURIComponent(raw.slice(q + 5).split('&')[0]);
-    return (p.split(/[/\\]/).pop() || '').replace(/\.[^.\s]+$/, '');
-}
-
 /**
  * An MpiButton the caller places itself. `mount()` REPLACES its container's
  * innerHTML, and every button here lands in a tree that already has siblings —
@@ -658,9 +644,38 @@ export const MpiBaseFlow = ComponentFactory.create({
                         muted: true, loop: true, autoplay: true, playsInline: true,
                     }));
                 } else {
-                    const name = ce('span', { className: 'mpi-base-flow__slot-name' });
-                    name.textContent = _mediaName(item.url);
-                    slot.appendChild(name);
+                    // A FILLED AUDIO SLOT IS A PLAYER, NOT A FILENAME (MPI-622).
+                    //
+                    // It used to print `_mediaName(item.url)`, and every flow input is stored
+                    // content-addressed, so that name is a sha256 — "dc6ac18b7ee7b4a712…"
+                    // told the user nothing about what was in the slot, least of all which
+                    // library voice they had just chosen. Audio was the last media type with
+                    // no way to confirm its own content.
+                    //
+                    // Hover plays, exactly as a filled VIDEO slot does, and for the same
+                    // reason: click already means "reopen the picker and swap this", so
+                    // playback cannot have the click. Muted is deliberately NOT set — an
+                    // audio preview that makes no sound is not a preview.
+                    const icon = ce('span', { className: 'mpi-base-flow__slot-icon' });
+                    icon.innerHTML = renderIcon('play', 'lg');
+                    slot.appendChild(icon);
+
+                    const audio = ce('audio', {
+                        className: 'mpi-base-flow__slot-audio',
+                        src: resolveMediaUrl(item.url),
+                        preload: 'metadata',
+                        loop: true,
+                    });
+                    slot.appendChild(audio);
+                    unsubs.push(on(slot, 'mouseenter', () => {
+                        icon.innerHTML = renderIcon('pause', 'lg');
+                        audio.play().catch(() => { icon.innerHTML = renderIcon('play', 'lg'); });
+                    }));
+                    unsubs.push(on(slot, 'mouseleave', () => {
+                        audio.pause();
+                        audio.currentTime = 0;
+                        icon.innerHTML = renderIcon('play', 'lg');
+                    }));
                 }
                 const clear = _mountButton({
                     icon: 'close', size: 'sm', variant: 'ghost', info: 'Remove',
@@ -698,7 +713,12 @@ export const MpiBaseFlow = ComponentFactory.create({
                 }));
             } else {
                 const icon = ce('span', { className: 'mpi-base-flow__slot-icon' });
-                icon.innerHTML = renderIcon('image', 'lg');
+                // The slot's own type, not a hardcoded 'image' — an audio slot showing a
+                // picture frame was the first thing that made audio feel like a bolt-on.
+                icon.innerHTML = renderIcon(
+                    group.type === 'video' ? 'video' : group.type === 'audio' ? 'audio' : 'image',
+                    'lg',
+                );
                 const hint = ce('span', { className: 'mpi-base-flow__slot-hint' });
                 hint.textContent = `Choose ${group.type}`;
                 slot.appendChild(icon);
@@ -752,6 +772,12 @@ export const MpiBaseFlow = ComponentFactory.create({
         function _openMediaPicker(entry, idx, onDirty) {
             const picker = MpiMediaPicker.mount(document.createElement('div'), {
                 mediaType: entry.group.type,
+                // The voice library as a third source, opted into PER SLOT and
+                // index-aligned with `roles`/`labels` exactly as they are. Voice Changer
+                // declares [null, 'character']: the library belongs on "Target voice" and
+                // must not appear on "Your performance", where a stock voice is not the
+                // thing the user performed. Undeclared → undefined → no voice card.
+                voiceRoute: entry.group.voiceLibrary?.[idx] ?? null,
                 onPick: ({ filePath }) => {
                     entry.items[idx] = {
                         url: filePath,

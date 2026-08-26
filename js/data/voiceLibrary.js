@@ -46,7 +46,48 @@ export const EMOTIONS = Object.freeze(['flat', 'neutral', 'angry', 'sad', 'cheer
 
 export const VOICE_KINDS = Object.freeze(['narration', 'character', 'both']);
 
+/**
+ * The order the user meets the library in, and the ONLY axis they see (Fabio, 2026-08-26).
+ *
+ * Filters are gone — "we don't have that many voices to even think of filters at this point.
+ * I think if they're properly organised, that's more than enough." So the demographic is
+ * ORDERING, not a second grouping level: a group is a divider holding whole SECTIONS, and the
+ * section is still the voice. Flattening the sections into the group was considered and
+ * rejected — Standard Female and Mature Female both land in "Mature female" and are NOT the
+ * same voice, so one heading over both would re-make the claim his ear rejected in Phase 3.
+ *
+ * `Character` catches every section with no gender AND no age — Cartoon Critter,
+ * Narrator / Trailer, Villain Monster. They are not a demographic and never will be.
+ * A group with no sections is dropped, so this list may safely name more than ships.
+ */
+export const VOICE_GROUPS = Object.freeze([
+    Object.freeze({ id: 'young_male',    label: 'Young male',    gender: 'male',   ages: ['young'] }),
+    Object.freeze({ id: 'young_female',  label: 'Young female',  gender: 'female', ages: ['young'] }),
+    // `adult` and `mature` are one group. They are two manifest values for the same place in
+    // a user's head, and splitting them would put Standard Male and Deep Male under different
+    // headings for a distinction nobody outside the manifest can hear.
+    Object.freeze({ id: 'mature_male',   label: 'Mature male',   gender: 'male',   ages: ['adult', 'mature'] }),
+    Object.freeze({ id: 'mature_female', label: 'Mature female', gender: 'female', ages: ['adult', 'mature'] }),
+    Object.freeze({ id: 'old_male',      label: 'Old male',      gender: 'male',   ages: ['elderly'] }),
+    Object.freeze({ id: 'old_female',    label: 'Old female',    gender: 'female', ages: ['elderly'] }),
+    // No sex split for children — the library has none, and inventing one would be a label
+    // no listener could verify.
+    Object.freeze({ id: 'child',         label: 'Child',         gender: null,     ages: ['child'] }),
+    Object.freeze({ id: 'character',     label: 'Character',     gender: null,     ages: [] }),
+]);
+
 const isRegister = r => Object.prototype.hasOwnProperty.call(REGISTERS, r);
+
+/**
+ * Every age `VOICE_GROUPS` can place, plus `null`.
+ *
+ * `null` is legitimate and must stay legal — Cartoon Critter, Narrator / Trailer and Villain
+ * Monster have no age and belong in `Character` by design. But an age that is merely
+ * MISSPELLED matches no group and falls into `Character` too, which puts a deep male voice
+ * under "Character" where nobody will look for it. Same failure the register throw exists to
+ * prevent: the manifest still reads correctly while the picker quietly shows the wrong thing.
+ */
+const KNOWN_AGES = new Set(VOICE_GROUPS.flatMap(g => g.ages));
 
 /**
  * Build a library over an already-parsed manifest.
@@ -76,6 +117,10 @@ export function createVoiceLibrary(manifest, { baseUrl = '/voices/' } = {}) {
         if (!VOICE_KINDS.includes(v.kind)) {
             throw new Error(`voiceLibrary: voice "${v.id}" has unknown kind "${v.kind}"`);
         }
+        // `null`/absent is fine — see KNOWN_AGES. A non-empty unknown value is not.
+        if (v.age != null && !KNOWN_AGES.has(v.age)) {
+            throw new Error(`voiceLibrary: voice "${v.id}" has unknown age "${v.age}"`);
+        }
     }
     for (const c of clips) {
         if (!isRegister(c.register)) {
@@ -102,36 +147,61 @@ export function createVoiceLibrary(manifest, { baseUrl = '/voices/' } = {}) {
             && (!section || v.section === section));
     };
 
+    /**
+     * The library grouped the way the user meets it: SECTIONS, each holding its
+     * variations in `variation` order.
+     *
+     * This is the primary list, not a convenience over `listVoices`. The library is not
+     * N distinct voices and never was — Fabio's ear, 2026-08-26, on headphones and on
+     * raw samples: "every single section of 5 samples is like the same person just
+     * talking slightly differently". Presenting 56 flat rows would promise 56 voices and
+     * deliver 15. A section of one is a voice; `isVariations` is what the UI branches on
+     * so a singleton is never labelled "Variation 1 of 1".
+     *
+     * Sections come back in manifest order, which is the import's sorted order, so the
+     * list is stable across runs.
+     */
+    function listSections(filter = {}) {
+        const groups = new Map();
+        for (const v of filterVoices(filter)) {
+            if (!groups.has(v.section)) {
+                groups.set(v.section, { section: v.section, label: sectionLabel(v.section), voices: [] });
+            }
+            groups.get(v.section).voices.push(v);
+        }
+        for (const g of groups.values()) {
+            g.voices.sort((a, b) => a.variation - b.variation);
+            g.isVariations = g.voices.length > 1;
+        }
+        return [...groups.values()];
+    }
+
     return {
         listVoices: filterVoices,
 
+        listSections,
+
         /**
-         * The library grouped the way the user meets it: SECTIONS, each holding its
-         * variations in `variation` order.
+         * The sections again, but divided into `VOICE_GROUPS` order — the list the picker
+         * actually renders.
          *
-         * This is the primary list, not a convenience over `listVoices`. The library is not
-         * N distinct voices and never was — Fabio's ear, 2026-08-26, on headphones and on
-         * raw samples: "every single section of 5 samples is like the same person just
-         * talking slightly differently". Presenting 56 flat rows would promise 56 voices and
-         * deliver 15. A section of one is a voice; `isVariations` is what the UI branches on
-         * so a singleton is never labelled "Variation 1 of 1".
+         * The group is derived from the section's FIRST voice, because a section is one
+         * performer and its gender/age are declared per voice from the same source. A section
+         * whose gender/age match no group (both null) falls to `character`.
          *
-         * Sections come back in manifest order, which is the import's sorted order, so the
-         * list is stable across runs.
+         * Empty groups are dropped rather than rendered as a heading over nothing.
          */
-        listSections(filter = {}) {
-            const groups = new Map();
-            for (const v of filterVoices(filter)) {
-                if (!groups.has(v.section)) {
-                    groups.set(v.section, { section: v.section, label: sectionLabel(v.section), voices: [] });
-                }
-                groups.get(v.section).voices.push(v);
+        listGroups(filter = {}) {
+            const bucket = new Map(VOICE_GROUPS.map(g => [g.id, []]));
+            for (const s of listSections(filter)) {
+                const { gender, age } = s.voices[0] ?? {};
+                const g = VOICE_GROUPS.find(grp => grp.ages.includes(age)
+                    && (grp.gender === null || grp.gender === gender));
+                bucket.get(g ? g.id : 'character').push(s);
             }
-            for (const g of groups.values()) {
-                g.voices.sort((a, b) => a.variation - b.variation);
-                g.isVariations = g.voices.length > 1;
-            }
-            return [...groups.values()];
+            return VOICE_GROUPS
+                .map(g => ({ id: g.id, label: g.label, sections: bucket.get(g.id) }))
+                .filter(g => g.sections.length > 0);
         },
 
         getVoice: id => byId.get(id) ?? null,

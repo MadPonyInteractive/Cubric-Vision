@@ -34,7 +34,7 @@ const FIXTURE = {
             id: 'lib_m_midage_authoritative',
             display_name: 'Deep Male',
             gender: 'male',
-            age: 'midage',
+            age: 'mature',
             accent: null, // never inferred from a prompt — MPI-622
             language: 'en',
             style: 'documentary narration',
@@ -284,5 +284,85 @@ test('an empty manifest is a working empty library, not a crash', async () => {
         assert.deepStrictEqual(lib.listVoices(), []);
         assert.deepStrictEqual(lib.listPerformanceClips(), []);
         assert.strictEqual(lib.getVoice('anything'), null);
+        assert.deepStrictEqual(lib.listGroups(), [],
+            'no voices means no group headings, not eight empty ones');
     }
+});
+
+test('listGroups divides the sections demographically, and never flattens them', async () => {
+    const { createVoiceLibrary } = await load();
+    const lib = createVoiceLibrary(clone());
+
+    const groups = lib.listGroups();
+    assert.deepStrictEqual(groups.map(g => g.id), ['young_female', 'mature_male', 'child'],
+        'groups come back in VOICE_GROUPS order, and an EMPTY group is dropped rather than '
+        + 'rendered as a heading over nothing');
+
+    // THE LOAD-BEARING ASSERTION. A group holds whole SECTIONS, never a flat voice list:
+    // two sections under one heading are two DIFFERENT voices, so flattening would re-make
+    // the "these are all one voice" claim Fabio's ear rejected in Phase 3.
+    const young = groups.find(g => g.id === 'young_female');
+    assert.strictEqual(young.sections.length, 1);
+    assert.strictEqual(young.sections[0].section, 'young_female');
+    assert.strictEqual(young.sections[0].voices.length, 2, 'the section keeps its variations');
+    assert.strictEqual(young.sections[0].isVariations, true);
+
+    // Gender and age are DECLARED fields, never inferred from f0 — an f0 split was proposed
+    // for the villains and was wrong on two of five (Phase 3.5). This voice measures R1 and
+    // is placed by `age: 'mature'` + `gender: 'male'`, not by its pitch.
+    const mature = groups.find(g => g.id === 'mature_male');
+    assert.deepStrictEqual(mature.sections.map(s => s.section), ['deep_male']);
+    assert.strictEqual(mature.sections[0].voices[0].register, 'R1');
+
+    // A null GENDER is not by itself a fallback to Character: the Child group declares
+    // `gender: null` and so takes any age-'child' voice whatever its gender, which is the
+    // "no sex split for children" rule expressed as data. Only a voice that matches no
+    // group's AGE falls through — see the unknown-age test below for the null-age case.
+    const child = groups.find(g => g.id === 'child');
+    assert.deepStrictEqual(child.sections.map(s => s.section), ['cartoon_critter']);
+    assert.strictEqual(child.sections[0].isVariations, false,
+        'a section of one is a voice and is never labelled "Variation 1 of 1"');
+});
+
+test('an unknown age throws — it would land the voice under Character in silence', async () => {
+    const { createVoiceLibrary } = await load();
+
+    const bad = clone();
+    bad.voices[0].age = 'midage';
+    assert.throws(() => createVoiceLibrary(bad), /unknown age "midage"/,
+        'a misspelled age matches no group and falls into Character, which hides a deep male '
+        + 'voice where nobody will look for it — and the manifest still reads fine');
+
+    // null stays LEGAL, and is the only intended way into Character.
+    const nullAge = clone();
+    nullAge.voices[0].age = null;
+    const lib = createVoiceLibrary(nullAge);
+    const character = lib.listGroups().find(g => g.id === 'character');
+    assert.ok(character.sections.some(s => s.section === 'deep_male'),
+        'a null age is a deliberate value and places the section in Character');
+});
+
+test('listGroups places every voice in the SHIPPED manifest, and loses none', async () => {
+    const { createVoiceLibrary } = await load();
+    const manifest = require('../voices/manifest.json');
+    const lib = createVoiceLibrary(manifest);
+
+    const groups = lib.listGroups();
+    const placed = groups.flatMap(g => g.sections).flatMap(s => s.voices);
+    assert.strictEqual(placed.length, manifest.voices.length,
+        'every voice in the shipped manifest reaches a group — a lost voice is unreachable '
+        + 'in the picker, and there are no filters left to find it with');
+
+    // The demographic groups are the WHOLE of the navigation now that the filters are gone,
+    // so a section quietly sitting in the wrong one is not cosmetic: it is a voice the user
+    // cannot find.
+    const idOf = (section) => groups.find(g => g.sections.some(s => s.section === section))?.id;
+    assert.strictEqual(idOf('standard_male'), 'mature_male');
+    assert.strictEqual(idOf('standard_female'), 'mature_female');
+    assert.strictEqual(idOf('mature_female'), 'mature_female', 'ages "mature" and "adult" share one group');
+    assert.strictEqual(idOf('elderly_male'), 'old_male');
+    assert.strictEqual(idOf('child'), 'child', 'children are not split by sex — the library has no such split');
+    assert.strictEqual(idOf('villain_young'), 'young_male', 'gendered from its DIRECTION sidecar, never from f0');
+    assert.strictEqual(idOf('narrator_trailer'), 'character');
+    assert.strictEqual(idOf('villain_monster'), 'character');
 });

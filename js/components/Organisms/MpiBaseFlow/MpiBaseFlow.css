@@ -338,17 +338,19 @@
     width: auto;
     height: auto;
 }
-/* AUDIO still has no thumbnail — the filename fills the box. */
-.mpi-base-flow__slot-name {
-    display: block;
-    max-width: 208px;
-    padding: var(--s-3);
-    font-size: var(--t-sm);
-    line-height: 1.4;
+/* A filled AUDIO slot is a play button that sounds on hover — the audio equivalent of the
+   video slot above. The element itself is never seen; the icon is the whole control. It
+   replaced a filename, which for a content-addressed flow input was always a sha256. */
+.mpi-base-flow__slot-audio {
+    display: none;
+}
+/* Lit rather than the empty slot's muted --ink-4: this one is a control, not a placeholder. */
+.mpi-base-flow__slot--filled .mpi-base-flow__slot-icon {
     color: var(--ink-2);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    transition: color var(--t-fast) var(--ease);
+}
+.mpi-base-flow__slot--filled:hover .mpi-base-flow__slot-icon {
+    color: var(--accent-heat);
 }
 .mpi-base-flow__slot-clear {
     position: absolute;

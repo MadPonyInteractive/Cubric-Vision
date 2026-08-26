@@ -1339,14 +1339,23 @@
  *                                 to route these through its own place/hash path, so an
  *                                 imported file is handled identically whichever surface
  *                                 reached it.
+ * @property {'narration'|'character'|null} [voiceRoute=null] - Opt this slot into the shipped
+ *                                 voice library, and say which route its play button previews
+ *                                 (MPI-622). Omit it and no voice card renders. AUDIO slots
+ *                                 only, and requires `onImport` — a picked voice is fetched,
+ *                                 decoded to WAV and handed to `onImport` as a File, so it
+ *                                 becomes an ordinary content-addressed project asset by the
+ *                                 same path an upload takes.
  *
  * Two sources, one surface (settled with the user 2026-08-16): the project's own
  * media AND the filesystem. Still not a file manager — no cross-project browsing.
  *
- * On an AUDIO slot there is a THIRD source: a Record card opening MpiAudioRecorder
- * (MPI-573). It takes no prop — the picker owns that wiring, because a recording is
- * not an imported file and does not go through `onImport`: it is saved as project
- * media first and then resolves as an ordinary `pick`.
+ * On an AUDIO slot there are up to TWO more: a Record card opening MpiAudioRecorder
+ * (MPI-573), and — where `voiceRoute` is set — a Voice library card opening
+ * MpiVoicePicker (MPI-622). Record takes no prop, because a recording is not an
+ * imported file and does not go through `onImport`: it is saved as project media first
+ * and then resolves as an ordinary `pick`. A library voice is the opposite — it IS an
+ * import, and deliberately reuses that path so the graph sees no difference.
  *
  * Instance methods (on instance.el):
  *   show() — Self-portals a backdrop + centred dialog to document.body (via MpiModal).
@@ -2018,10 +2027,26 @@
  *                                            is never blocked — warning only (brief.md § 4).
  * @property {number} [warnSemitones=6]     - Threshold (semitones) above which the warning
  *                                            appears. Defaults to 6 (~perfect fourth).
- * @property {string} [kind]                - Initial kind filter: '' | 'narration' | 'character'.
+ * @property {string} [kind]                - Narrow to one route's voices: '' | 'narration' |
+ *                                            'character'. NO UI — the filter dropdowns were
+ *                                            removed in Phase 4 and this is inert against the
+ *                                            shipped library, where every voice is kind:'both'.
+ * @property {boolean} [emotions=true]      - Render the emotion control at all. FALSE on the
+ *                                            Voice Changer mount: that flow has no TTS stage,
+ *                                            so the user's own recording carries the delivery
+ *                                            and VC preserves it rather than adding one — the
+ *                                            control would act on nothing. Emotion is a TTS
+ *                                            control: the dropdown picks a performance clip,
+ *                                            TTS speaks with that clip's delivery, and VC then
+ *                                            swaps the voice while carrying it through.
+ *
+ * NO FILTERS, and the sections are divided into DEMOGRAPHIC GROUPS (Fabio, 2026-08-26 —
+ * "we don't have that many voices to even think of filters at this point"). The group
+ * (VOICE_GROUPS in js/data/voiceLibrary.js) is ORDERING only: two sections under one
+ * heading are two different voices, so a group never flattens the sections inside it.
  *
  * Emits:
- *   'select'         { voice, emotion? }  — user confirmed; emotion set for character/both.
+ *   'select'         { voice, emotion? }  — user confirmed; emotion only when the control showed.
  *   'audition-start' { voice }            — audition playback began.
  *   'audition-stop'  {}                   — audition playback stopped.
  *

@@ -681,11 +681,24 @@ function createEngine({ engine, alwaysLocal }) {
     },
 
     /**
-     * Generates a random 15-digit seed value for KSampler nodes.
-     * @returns {number}
+     * A random seed for the `Input_Seed` MpiInt every seeded workflow carries.
+     *
+     * CAPPED AT 2^32-1, WHICH IS THE WIDEST RANGE EVERY NODE ACCEPTS. This used to return up
+     * to 1e14 — about 23,000x the 32-bit ceiling — because core KSampler takes a 64-bit seed
+     * and nothing had ever objected. `FL_ChatterboxVC` does: it raises
+     * `ValueError: Seed must be between 0 and 2**32 - 1`, which killed ~99.996% of Voice
+     * Changer runs (the odds of 1e14 landing under 4.29e9 by chance). The flow could not
+     * complete a single generation from the app.
+     *
+     * Narrowing is the right fix rather than special-casing that one node: a seed is only
+     * useful if it is reproducible, and a value a node cannot accept is not a seed at all.
+     * 4.29e9 is still far more than anyone exhausts, and every 64-bit sampler takes it
+     * happily. Old seeds above the cap survive in sidecars and still replay — Reuse passes
+     * the stored value through, and the models that produced them accept it.
+     * @returns {number} 0 .. 4294967295
      */
     generateRandomSeed() {
-        return Math.floor(Math.random() * 100000000000000);
+        return Math.floor(Math.random() * 2 ** 32);
     },
 
     /**

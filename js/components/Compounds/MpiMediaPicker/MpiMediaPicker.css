@@ -180,9 +180,11 @@
 }
 
 /* ── upload card ───────────────────────────────────────────────────────── */
-/* The mic card (MPI-573) is the upload card wearing a different icon - same
-   affordance, same dashed-tile language, so they read as one row of sources. */
+/* The mic card (MPI-573) and the voice-library card (MPI-622) are the upload card
+   wearing a different icon - same affordance, same dashed-tile language, so all three
+   read as one row of sources rather than one control and two afterthoughts. */
 .mpi-btn.mpi-media-picker__tile--upload,
+.mpi-btn.mpi-media-picker__tile--voice,
 .mpi-btn.mpi-media-picker__tile--mic {
     display: flex;
     flex-direction: column;
@@ -199,10 +201,55 @@
 
 /* Keeps the canvas fill on hover — the ghost rule (0,2,1) would tint it. */
 .mpi-btn.mpi-btn--ghost.mpi-media-picker__tile--upload:hover:not(:disabled),
+.mpi-btn.mpi-btn--ghost.mpi-media-picker__tile--voice:hover:not(:disabled),
 .mpi-btn.mpi-btn--ghost.mpi-media-picker__tile--mic:hover:not(:disabled) {
     background: var(--surface-canvas);
     border-color: var(--accent-heat);
     color: var(--ink-1);
+}
+
+/* ── voice library panel ───────────────────────────────────────────────── */
+/* REPLACES the grid inside the SAME modal rather than opening a second one. The library is
+   a third source for this slot, so it stays inside the one dialog the user opened; a modal
+   over a modal would make Back ambiguous.
+
+   IN FLOW, not `position: absolute; inset: 0`. As an absolute layer it could only ever be
+   as tall as the grid behind it, and an empty project's grid is one row — so the library
+   opened into a letterbox. In flow it claims its own height, and 62vh gives roughly a dozen
+   voices at a glance without the modal outgrowing a laptop screen. */
+.mpi-media-picker__voice {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+    min-height: 62vh;
+    max-height: 72vh;
+    min-width: 0;
+}
+
+.mpi-media-picker__voice-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-3);
+    flex-shrink: 0;
+}
+
+.mpi-media-picker__voice-title {
+    font-size: var(--t-md);
+    font-weight: 600;
+    color: var(--ink-1);
+}
+
+/* NO `overflow-y` HERE. The voice picker's own list is the scroll container; a second one
+   on this wrapper is what produced the two side-by-side scrollbars. This only has to give
+   the picker room and get out of its way — `min-height: 0` so it can actually shrink, and
+   `display: flex` so the picker's `height: 100%` has something to resolve against. */
+.mpi-media-picker__voice-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    color: var(--ink-3);
 }
 
 .mpi-media-picker__upload-icon {

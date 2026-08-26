@@ -1192,11 +1192,14 @@ function mountAll() {
     });
 
     // ── MpiVoicePicker (Compound, MPI-622) ──────────────────────────────────────
-    // Fixture manifest — two SECTIONS, one with variations and one alone, because the
-    // picker's list is sections-of-variations rather than a flat voice list (Phase 3.5).
-    // `rex` sits at 100 Hz so the second gallery card (userPitchHz=250) shows its warning.
+    // Fixture manifest — three SECTIONS across three demographic GROUPS, because the
+    // picker's list is groups-of-sections-of-variations, not a flat voice list. `rex` sits
+    // at 100 Hz so the second gallery card (userPitchHz=250) shows its warning, and carries
+    // null gender AND null age so the Character fallback renders here too.
     // Auditions are null: the gallery serves no /voices/ assets, so play is a deliberate
     // no-op here — audition PLAYBACK is covered by the unit test over assetUrl, not here.
+    // AGES MUST BE REAL: `createVoiceLibrary` now throws on an age no group can place, so
+    // an invented value like "young adult" takes the whole gallery page down.
     const _voiceFixtureManifest = {
         voices: [
             {
@@ -1209,7 +1212,7 @@ function mountAll() {
             {
                 id: 'yuki-r3', display_name: 'Standard Female · Variation 2', kind: 'narration',
                 section: 'standard_female', variation: 2,
-                register: 'R3', median_f0: 240, gender: 'female', age: 'young adult',
+                register: 'R3', median_f0: 240, gender: 'female', age: 'adult',
                 accent: null, language: 'ja',
                 sample: 'yuki-r3.opus', audition_narration: null,
             },
@@ -1223,7 +1226,9 @@ function mountAll() {
             {
                 id: 'rex-r1', display_name: 'Villain Monster', kind: 'character',
                 section: 'villain_monster', variation: 1,
-                register: 'R1', median_f0: 100, gender: 'male', age: 'adult',
+                // Null gender AND null age, exactly as the shipped manifest has it — this is
+                // what puts a section in the Character group, and it is a deliberate value.
+                register: 'R1', median_f0: 100, gender: null, age: null,
                 accent: null, language: 'en',
                 sample: 'rex-r1.opus', audition_narration: null,
             },
@@ -1240,7 +1245,7 @@ function mountAll() {
             console.log('[gallery] MpiVoicePicker select:', voice.id, emotion || '(no emotion)'));
         picker.on('audition-start', ({ voice }) =>
             console.log('[gallery] MpiVoicePicker audition-start:', voice.id));
-        console.log('[gallery] MpiVoicePicker mounted. Filter voices, play auditions (audition URLs are null in fixture so play will no-op). Standard Female shows as 2 variations of one voice; the other two are lone voices. No pitch warning — userPitchHz not set.');
+        console.log('[gallery] MpiVoicePicker mounted. Three group headings — Mature female, Mature male, Character — with Standard Female showing as 2 variations of one voice and the other two lone voices. NO filter row and no kind badge (both removed in Phase 4). Play auditions is a no-op: audition URLs are null in this fixture. No pitch warning — userPitchHz not set.');
     });
 
     mount('preview-voice-picker-warn', () => {

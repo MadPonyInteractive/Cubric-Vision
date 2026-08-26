@@ -11,6 +11,13 @@
     "js/pages/components.js",
     "templates/tpl-components.html",
     "js/components/types.js",
-    "docs/voice-library.md"
+    "docs/voice-library.md",
+    "js/components/Compounds/MpiMediaPicker/**",
+    "js/components/Compounds/MpiAudioRecorder/MpiAudioRecorder.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/data/flowsRegistry.js",
+    "js/services/comfyController.js",
+    "tests/seed-uint32-range.test.cjs",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.css"
   ]
 }

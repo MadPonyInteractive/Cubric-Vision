@@ -1370,6 +1370,15 @@ export const FLOWS = [
                     type: 'audio', mode: 'upto', max: 2,
                     roles: ['audio1', 'audio2'],
                     labels: ['Your performance', 'Target voice'],
+                    // The shipped voice library, offered as a third source inside the
+                    // media picker on the "Target voice" slot only (MPI-622). Index-aligned
+                    // with roles/labels, and `null` on slot 0 deliberately: "Your
+                    // performance" is the one thing that has to be the user's own take, and
+                    // a stock voice there would just convert one library voice into another.
+                    // The value is the picker ROUTE, so the play button previews the raw
+                    // sample — the actual file handed to `target_voice` — rather than a
+                    // generated audition of a conversion that has not happened yet.
+                    voiceLibrary: [null, 'character'],
                 },
             ],
         },

@@ -4,6 +4,34 @@
 
 **Project mode:** `scalable-foundation`.
 
+> **Session 23 note (2026-08-26) — PHASE 4 IS BUILT AND VERIFIED EXCEPT FOR ONE RUN.**
+> The voice library is wired into `voice-changer`'s "Target voice" slot as a third source
+> inside the existing media-picker overlay, opted in per slot by
+> `voiceLibrary: [null, 'character']` on the flow's media group. A picked voice is fetched,
+> decoded to WAV and routed through `_handleFiles`, so it lands as an ordinary
+> content-addressed project asset and needs no injection plumbing.
+>
+> **Three product questions closed with Fabio this session.** (1) EMOTION belongs to the TTS
+> flow, not here — and VC does not add emotion, it preserves the source delivery while
+> swapping timbre, so the emotion set is picked at the TTS stage as a performance clip and
+> carried through. The VC mount passes `emotions: false`. (2) ALL FOUR FILTERS ARE GONE, and
+> so are the kind/gender/age badges. (3) The sections are divided into eight DEMOGRAPHIC
+> GROUPS, and the group is ORDERING only — it holds whole sections and never flattens them,
+> because two sections under one heading are two different voices.
+>
+> **Fabio then drove it and named five things — all five are fixed and measured** (see the
+> "Phase 4 round 2" block below). The big one was NOT a UI item: `generateRandomSeed()`
+> returned seeds ~23,000x larger than `FL_ChatterboxVC` accepts, so **Voice Changer had never
+> completed a single generation from the app**. He guessed it was a stale app needing a
+> restart; it was not, and it was not caused by this card's wiring either.
+>
+> **THE ONE THING NOT DONE: the flow has still never been RUN successfully.** The seed fix
+> should unblock it. That is the phase's `user-ux` gate and only Fabio can close it.
+>
+> **Next action:** Fabio opens Voice Changer, records or uploads a performance, picks a
+> library voice as the target, and runs it. Watch for the British-accent question carried
+> over from session 22.
+
 > **Session 22 note (2026-08-26) — PHASE 3 FAILED ITS EAR GATE. The library is not 60
 > distinct voices and will not be made into them.** Supersedes the session 21 note below on
 > every point about audition quality; the generation mechanics it records are still accurate.
@@ -587,26 +615,119 @@ picker chrome that Phase 4 should settle with the route in hand.
 
 ## Phase 4: Wire the library into the flows
 
-- [ ] Add the picker to `voice-changer`'s "Target voice" slot beside the existing upload, and
-      expose the emotion set for `character` voices only. `narration` voices show no emotion
-      control. Follow `docs/playbooks/add-flow/` for any descriptor change; do NOT add
-      `ComfyUI-MpiNodes` to `requiredDeps`.
-      **Verify:** a full run in an isolated app instance (`npm run app:isolated`) — pick a
-      library voice, run the flow, and a real gallery card lands. Then `npm test` green and
-      the desktop suite green. **Phase verify mode: `user-ux`.**
-- [ ] Mount the picker with `route: 'character'` so the play button previews the raw sample.
-      The camelCase fixture item that was deferred here is DONE (Phase 3.5). Two open picker
-      questions come with it: the `kind` badge says "both" on every row, and the register
-      filter still exposes R1–R5 as a user-facing axis. Also unresolved from the Phase 4
-      brief: **what emotion means in voice-changer at all** — VC has no TTS stage, so the
-      user's own recording carries the delivery and the emotion set may be audition-only
-      here. Settle it before wiring the emotion control through.
-- [ ] Selecting a library voice routes through `_handleFiles` so it lands as an ordinary
-      content-addressed project asset — no new injection plumbing, and the graph sees exactly
-      what an upload produces.
+- [x] **DONE 2026-08-26.** The picker is a THIRD SOURCE inside the existing `MpiMediaPicker`
+      overlay on `voice-changer`'s "Target voice" slot, beside Upload and Record — not a
+      second button next to the slot, because the slot's "exactly one job" was a deliberate
+      repair and a rival button would undo it. Opted in per SLOT by one index-aligned array
+      on the media group, `voiceLibrary: [null, 'character']`, which carries the opt-in AND
+      the route in one field. Slot 0 ("Your performance") gets no voice card by design.
+      Descriptor change is one additive field; `ComfyUI-MpiNodes` NOT added to `requiredDeps`.
+- [x] **EMOTION IS ANSWERED, and it is NOT audition-only — it belongs to the TTS flow.**
+      Fabio, 2026-08-26: in the TTS flow emotion is a real final-stage dropdown. The
+      mechanism, corrected in the same exchange: **VC does not ADD emotion.** The dropdown
+      picks a PERFORMANCE CLIP, TTS speaks the text with that clip's delivery, and VC then
+      swaps the voice while carrying that delivery through. Voice Changer has no TTS stage,
+      so the user's own recording already carries the emotion and the control would act on
+      nothing. New prop `emotions` (default true); the VC mount passes `false`. The `select`
+      payload omits `emotion` whenever the control did not show — reporting a choice the user
+      was never offered would be inventing one.
+- [x] **BOTH PICKER-CHROME QUESTIONS ANSWERED — the filters are GONE, all four of them.**
+      Fabio: *"we don't have that many voices to even think of filters at this point. I think
+      if they're properly organised, that's more than enough."* On the kind badge: *"I don't
+      even know what badge you're talking about"* — which is the answer, since it read "both"
+      on all 56 rows. Gender and age badges went too: the group heading now says both.
+- [x] **THE SECTIONS ARE DIVIDED INTO DEMOGRAPHIC GROUPS** — `VOICE_GROUPS` + `listGroups()`
+      in `js/data/voiceLibrary.js`, 8 groups over the shipped 15 sections. Fabio picked
+      option **A**: the demographic is ORDERING, holding whole sections. Option B (the
+      demographic REPLACES the section, flattening its voices) was rejected because Standard
+      Female and Mature Female both land in "Mature female" and are NOT one voice — B would
+      re-make the claim his ear rejected in Phase 3. `adult` and `mature` share one group;
+      children are not split by sex; `Character` catches the three sections with no gender
+      and no age. Silence on where those three go was taken as agreement, per his convention.
+- [x] Mounted with `route: 'character'` — PROVEN live, not assumed: `window.Audio` was
+      monkey-patched in the running app and the play button built `/voices/elderly_female_2.opus`
+      (the raw sample), which serves 200.
+- [x] Selecting a voice routes through `_handleFiles`. It is fetched, **decoded to WAV**, and
+      handed to `onImport` as a File — see the drift note below for why `.opus` could not be
+      passed through. Landed on disk as
+      `Media/.preview-assets/f3cbd0077649…beca788.wav`, `RIFF…WAVE`, 1,005,612 bytes
+      (≈10.5 s at 48 kHz mono), which is exactly what an upload produces.
+
+**Verified 2026-08-26:** `npm test` 745/745, `npm run test:desktop` 29/29, eslint clean, plus
+a live probe of the REAL flow in an isolated instance — slot 0 offers Upload + Record only,
+slot 1 offers Upload + Record + Voice library, the library renders 8 groups / 15 sections /
+56 cards with 0 filter dropdowns and 0 badges, the detail panel shows no emotion control, and
+confirming a voice fills the Target voice slot with a content-addressed WAV.
+
+### Phase 4 round 2 — Fabio's UI pass, 2026-08-26
+
+He drove it and named five things. All five are done and measured live.
+
+- [x] **THE SEED BUG — HE ASKED IF A RESTART WOULD FIX IT. IT WOULD NOT.**
+      `FL_ChatterboxVC failed: ValueError: Seed must be between 0 and 2**32 - 1`.
+      `comfyController.generateRandomSeed()` returned up to **1e14** — roughly 23,000x the
+      node's ceiling — so the odds of a run landing in range were about 1 in 23,000. **Voice
+      Changer had never been able to complete a single generation from the app**, with any
+      target voice, on any machine. Nothing to do with MPI-622's wiring. Capped at 2^32-1,
+      which is the widest range EVERY node accepts; core samplers take 64-bit seeds and were
+      simply never the ones to object. Guarded by `tests/seed-uint32-range.test.cjs`, which
+      also pins the graph wiring so the cap cannot stop protecting this flow silently.
+      **This is MPI-607's file territory** — its session is stale (heartbeat 2026-08-23) and
+      the fix was blocking this card's own gate.
+- [x] **The library was letterboxed, and had two scrollbars.** Both had one cause: the panel
+      was `position: absolute; inset: 0` over the grid, so it could only ever be as tall as
+      the grid behind it — one row, in an empty project — and BOTH the panel wrapper and the
+      picker's own `max-height: 360px` list were scroll containers. Now the panel is IN FLOW
+      (the grid and its filter tabs hide), and the picker's list is the only scroller.
+      Measured: panel 518px, list 400px, exactly one scrolling element.
+- [x] **Clicking a row plays it.** The 32px play icon was the only way to hear anything, which
+      made the list's primary action a tiny target. Card click now selects AND plays; the icon
+      is a state indicator that no longer needs its own handler. **Switching rows stops the
+      previous one** — measured `play A → pause A, play B` — and re-clicking the playing row
+      stops it.
+- [x] **The confirm button is a pinned footer, always visible.** The old detail PANEL appeared
+      on selection, carried a redundant copy of the voice name, and moved the button around.
+      Footer renders always; the button is disabled until something is selected. Emotion sits
+      above it, hidden rather than unmounted so the button never jumps.
+- [x] **A filled AUDIO slot is a player, not a filename.** It printed `_mediaName(item.url)`,
+      and every flow input is content-addressed, so that was always a sha256 —
+      `dc6ac18b7ee7b4a712…` told the user nothing, least of all which library voice they had
+      picked. Now: play icon, hover plays (unmuted — a silent audio preview is not one), leave
+      resets, click still reopens the picker. `_mediaName` was orphaned by this and removed.
+      The EMPTY slot also stopped showing a picture-frame icon for audio and video.
+
+**Verified round 2:** `npm test` 747/747, `npm run test:desktop` 29/29, eslint clean, plus a
+live probe measuring every claim above rather than eyeballing it.
+
+**STILL NOT VERIFIED — the phase's actual gate:** a full generation. The flow has never been
+RUN successfully by anyone, because of the seed bug above. Fabio must open Voice Changer,
+record a performance, pick a library voice and press Generate. That run is also the first
+chance to test the open question from session 22: whether VC sometimes produces a British
+accent and whether re-pressing Generate re-rolls it. His ear wins there.
 
 ## Plan Drift
 
+- **2026-08-26 (session 23) -- `.opus` could not be handed to the Flow slot, and passing it
+  through would have failed the way `.webm` already did once.** `opus` is present in exactly
+  ONE of the five extension lists that classify a file as audio (`routes/projects.js:90`); it
+  is missing from `js/utils/file.js` AUDIO_EXTS and from three more lists in
+  `routes/projects.js` (:1008, :2765, :2843). That is the same trap that made
+  `MpiAudioRecorder` re-mux its WebM rather than store it. So a picked voice is fetched and
+  DECODED TO WAV before it reaches `_handleFiles`, reusing that recorder's own `_toWavFile`
+  (now exported as `toWavFile`) — a library pick and a recording therefore reach the graph as
+  the same kind of file. The alternative, adding `opus` to four lists, is a change to shared
+  media classification for one feature's benefit and would still leave ComfyUI's loaders to
+  argue with.
+- **2026-08-26 (session 23) -- an unknown `age` now THROWS, because it was a silent
+  misfiling.** `listGroups` places a section by its declared gender+age, and an age matching
+  no group falls into `Character`. `null` is legitimate there (Cartoon Critter, Narrator /
+  Trailer, Villain Monster) — but a MISSPELLED age falls the same way, which would put a deep
+  male voice under "Character" where nobody looks, with the manifest still reading correctly.
+  With the filters gone the groups ARE the navigation, so a misfiled section is an unreachable
+  voice. This is the same reasoning as the existing register/kind throws. The Phase-1 test
+  fixture was already carrying `age: 'midage'`, a value the shipped manifest never had, and
+  the gallery fixture was carrying `age: 'young adult'` — both would now throw, and both were
+  corrected. **The bug this catches was live in the repo before it was written.**
 - **2026-08-26 (session 22) -- "60 distinct voices" was never true, and the ear gate is what
   found it.** The whole plan is written around a library of 60 voices. It is 12 sections of
   4-5 VARIATIONS, and Fabio's ear says so on raw samples, not just on auditions. Three voices
