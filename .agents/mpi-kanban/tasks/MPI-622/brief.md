@@ -95,26 +95,47 @@ predicts whether a pairing lands or sounds like a costume, and no user will gues
 Cosine (`../MPI-607/research/speaker_similarity.py`) for timbre **AND** median-f0 delta
 (`librosa.pyin`) for pitch. Cosine alone is disqualified — see finding 2.
 
-## Sourcing (already researched — do not re-research)
+## Sourcing (settled 2026-08-26 — do not re-research)
 
-- **Ship now:** the 228 CC0 voices in `kyutai/tts-voices` — real consent, public domain.
-- **Quality/breadth upgrade:** VCTK + GLOBE, optionally HiFiTTS-2 for premium narration.
-- **Long game:** synthetic voices authored OFFLINE with Qwen3-TTS VoiceDesign (Apache-2.0).
-  This does **not** contradict "Qwen3-TTS is never shipped" — it is an authoring tool that
-  never becomes an app dependency. The `vd_*` / `A3_REF` clips used throughout MPI-607 came
-  from exactly that route.
+- **Shipping:** 60 voices authored in-house with Qwen3-TTS VoiceDesign — 12 categories x 5,
+  every one approved by Fabio's ear. This was the "long game" below, promoted after the
+  corpus route failed. VoiceDesign stays an OFFLINE authoring tool and never becomes an app
+  dependency; that constraint held.
+- **REJECTED IN FULL:** the 228 CC0 voices in `kyutai/tts-voices`. Fabio auditioned all 60
+  curated: *"I think 99% of this voice library is garbage... none of it is usable."* Accents
+  unintelligible, mic quality poor, R4/R5 one voice each. Removed from the bundle in
+  `12174bc1`. **The curation could not have caught it** — `voiced_frac`/`snr_proxy` measure
+  SIGNAL, not SPEECH, and the deciding attribute (accent) is the one field the design forbids
+  inferring. Any future corpus inherits that same blind spot: a human must listen before it
+  ships.
+- **VCTK + GLOBE / HiFiTTS-2** were the quality/breadth upgrade path. Untested, and the
+  breadth they were wanted for is now met in-house. Treat as a fallback, not a plan — and
+  audition by ear first.
+- **Licence:** `voices/LICENCE.md` (Cubric-Vision-Voice-Licence-1.0). The clips are
+  proprietary and may not be extracted or redistributed as a voice pack; audio a user
+  generates with them is theirs, commercial use included, no royalty, no territory limit.
+  Upstream claims nothing — Qwen3-TTS VoiceDesign is Apache-2.0 over weights and code only.
+  Four `elderly_male` clips derive from Fabio's own recording.
 
 Detail: `../MPI-607/research/voice-library-02-permissive-corpora.md`, `-03-legal-landscape.md`,
 `-04-prior-art-and-synthetic.md`.
 
-## Gate before authoring the clip grid
+## The clip-grid gate — ANSWERED, grid shipped
 
-**Does voice-changer processing survive VC?** Identity does not leak, but artefacts might —
-F3's rumble survived VC this morning. Fabio has a voice changer and offered to supply
-performances, which is what makes R3-R5 authorable in-house. Record one angry line at his
-natural pitch and one pitched up to child register, run both through VC into the same
-character, and judge by ear whether the processing rides through. Answer this before
-committing to 12-30 clips.
+The question was **"does voice-changer processing survive VC?"** — identity does not leak,
+but artefacts might, and F3's rumble had survived VC. It was a gate because 12–30 clips
+should not be committed to on a guess.
+
+**Answered yes, and the grid shipped:** 12 performance cells, R1 + R3 x 6 emotions, all
+accepted in Phase 2 and still in `voices/performance/`. The later VC measurement says why
+it works — **jitter ROSE through the transfer (3.30% -> 4.00–4.75%) while output pitch
+tracked the TARGET, not the source.** Tremor and artefacts ride through; pitch does not.
+That split is the useful half to remember: VC is the tool for carrying a *performance*, and
+never the tool for moving a voice's *pitch*.
+
+**Still open, additive, gates nothing:** there are no performance grids for R2, R4 or R5, so
+child / cartoon / villain characters have no emotions yet. Voices in those registers ship
+and work; they just fall back to no performance clip.
 
 ## Out of scope here
 
