@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    ".agents/mpi-kanban/tasks/MPI-633/**",
+    "services/ffmpegThumb.js",
+    "routes/projects.js",
+    "js/services/projectService.js",
+    "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+    "tests/image-thumb-alpha.test.cjs",
+    "tests/gallery-renditions.test.cjs",
+    "tests/desktop/gallery-renditions.spec.js",
+    "docs/gallery.md",
+    "docs/releases/UNRELEASED.md"
+  ]
+}
