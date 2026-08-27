@@ -318,7 +318,7 @@ Chatterbox is unblocked today and ships first regardless.
 |---|---|---|
 | Chatterbox | MIT | Ship first. Clone-only, ~8 light deps, no transformers move, 1.97M HF dl/30d |
 | Qwen3-TTS | Apache-2.0 | Only model that DESIGNS a voice from text. Blocked, see below |
-| DramaBox | LTX-2 Community | Rejected: 240 HF dl/30d, stale since 2026-05-23, 24GB VRAM, no weight sharing |
+| DramaBox | LTX-2 Community | ~~Rejected: 240 HF dl/30d, stale since 2026-05-23, 24GB VRAM, no weight sharing~~ **RE-OPENED 2026-08-27 by Fabio. The VRAM and weight-sharing halves were scored against the `kat3ri` pack; a THIRD pack (`ComfyUI-MelodramaBox` 2.1.0) measures 13.5 GB peak with a Q8_0 GGUF DiT and DOES honour `extra_model_paths.yaml` for 2 of its 3 components. See validation.md 2026-08-27 session 27** |
 | VibeVoice | MIT | Only NATIVE multi-speaker (4 spk / 90 min), but hard-excludes transformers 5 |
 
 **The Qwen blocker.** `qwen-tts` pins `transformers==4.57.3`; Vision's engine is on

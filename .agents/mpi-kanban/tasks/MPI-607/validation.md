@@ -2088,3 +2088,160 @@ dropdown is the thing that was wrong here.
 This costs nothing to honour while the shipped list is curated anyway (the `language` combo
 refuses a link, so each language is a hand-added graph arm regardless).
 
+
+## 2026-08-27 (session 27) -- THREE DramaBox PACKS, NOT ONE. The rejection table was scored against the WORST of them.
+
+**Nothing downloaded, nothing installed, nothing queued on the bench.** Fabio was pulling LTX
+2.3 and said no downloads; the only fetch was MelodramaBox's **283 KB source zip** off the
+ComfyUI registry CDN, read in the scratchpad. Everything below is from that source, from
+`gh api`, and from the repo READMEs.
+
+### The registry has SIX "drama" hits and only three are DramaBox
+
+| pack | registry | stars | last push | shape |
+|---|---|---|---|---|
+| `kat3ri/ComfyUI-DramaBox` | yes (1 node) | 19 | 2026-05-25 | one monolithic node wrapping upstream `TTSServer` |
+| `FranckyB/ComfyUI-DramaBox` | **NOT in registry** | 47 | 2026-05-20 | wrapper + own downloader, offload policy widget |
+| **`doggeddalle/ComfyUI-MelodramaBox` 2.1.0** | yes | 0 (169 dl) | 2026-07-20 | **native ComfyUI, componentized, GGUF** |
+
+`ComfyUI-OldTimeRadio`, `ComfyUI-SingleLinePicker`, `comfyui_audio_translator` and
+`ComfyUI-Direct3D-S2` are the other four hits and are not DramaBox integrations.
+
+### 🔴 THE REJECTION TABLE'S NUMBERS WERE RIGHT AND ITS VERDICT WAS SCOPED TO ONE FORK
+
+`plan.md` rejects DramaBox on "24GB VRAM, no weight sharing". Both are true **of kat3ri**.
+Neither is true of MelodramaBox:
+
+| claim on the card | MelodramaBox |
+|---|---|
+| "24 GB VRAM" | **Q8_0 GGUF DiT + 4-bit Gemma = ~13.5 GB peak, measured on a 3090.** bf16 = 16.6 GB |
+| "no weight sharing" | DiT + audio components resolve via `get_filename_list` / `get_full_path` -- **they honour `extra_model_paths.yaml`** |
+| "~6 GB" (handoff) | **~16.5 GB to download**: DiT 6.6 + audio components 1.9 + Gemma-3-12B 4-bit ~8 |
+
+The ~6 GB figure in the previous handoff is the DiT alone. There is **no upstream GGUF of the
+audio DiT** (the published LTX-2.3 GGUFs are the full 22B audio+video model), so the 6.6 GB
+bf16 download is unavoidable -- Q8_0 (3.5 GB) is produced locally afterwards by the pack's own
+converter.
+
+### 🔴 THE `folder_paths` CHECK: 2 of 3 COMPONENTS PASS, AND THE ONE THAT FAILS IS THE BIGGEST
+
+This was the cheap check the handoff flagged as failing silently (`ComfyUI_Fill-ChatterBox`
+computes its dir from `__file__` and never reads `extra_model_paths.yaml`, which is why the
+Chatterbox weights had to ship as `targetPath` deps). Result per pack:
+
+- **kat3ri**: `MODELS_DIR = Path(folder_paths.models_dir) / "DramaBox"`
+- **FranckyB**: `_comfy_models_dir() -> Path(_fp.models_dir)`
+
+`folder_paths.models_dir` is `<ComfyUI>/models` and **nothing else**. `extra_model_paths.yaml`
+registers per-category search paths; it never moves `models_dir`. So for those two the Cubric
+models root is invisible -- the handoff's instruction "weights into G:/CubricModels" would not
+have been seen.
+
+**MelodramaBox splits by component:**
+
+| component | size | how it resolves | Cubric root? |
+|---|---|---|---|
+| DiT | 6.6 GB / 3.5 GB Q8_0 | `_folder_choices` -> `get_filename_list("diffusion_models")`, `_resolve_model_file` -> `get_full_path` | ✅ found |
+| audio components (VAE + BigVGAN vocoder) | 1.9 GB | same, folder `vae` | ✅ found |
+| **Gemma-3-12B text encoder** | **~8 GB** | `config.TEXT_ENCODER_DIR = get_folder_paths("text_encoders")[0]`, hardcoded | ❌ **pinned to `[0]`** |
+
+The text encoder is **not a file dropdown**. `_VARIANTS` is a fixed two-entry list (4-bit
+unsloth / bf16 google-gated) and `load()` calls `downloader.ensure_text_encoder(repo_id,
+dirname)` unconditionally. That function checks exactly one directory
+(`os.path.join(config.TEXT_ENCODER_DIR, dirname)`) and `snapshot_download`s if absent. There
+is no multi-root search on that path at all.
+
+**And `[0]` is never the Cubric root.** `routes/yamlHelper.js` emits additive blocks
+(`comfyui:` + `comfyui_default:`) with **no `is_default: true`**, so Vision's models root is
+appended to ComfyUI's list, never prepended. `get_folder_paths("text_encoders")[0]` is
+`<engine>/ComfyUI/models/text_encoders`.
+
+**FABIO'S RULING (2026-08-27): weights outside the dedicated models folder are NOT OK** --
+*"It would mean that we couldn't share them across other models."* Gemma-3-12B is a general
+text encoder, so this is the single most shareable file in the set. Three routes out, cheapest
+first:
+
+1. **Junction** `<engine>/ComfyUI/models/text_encoders/gemma-3-12b-it-bnb-4bit` -> the Cubric
+   root. Zero code, but it lives in the engine tree the app reinstalls, and this repo has a
+   standing rule against recursive deletes near junctions.
+2. **Patch `config.py`** -- resolve `TEXT_ENCODER_DIR` by scanning
+   `get_folder_paths("text_encoders")` for an existing snapshot. ~3 lines. **There is no
+   upstream GitHub repo (see below), so adopting this pack means maintaining a fork
+   regardless** -- which makes this the honest option and the smallest diff.
+3. **Ship it `targetPath`** like Chatterbox -- established pattern, but concedes the sharing.
+
+### 🔴 MELODRAMABOX'S GITHUB REPO DOES NOT EXIST
+
+`gh api repos/doggeddalle/ComfyUI-MelodramaBox` -> 404. The registry record points at
+`https://github.com/doggeddalle/ComfyUI-MelodramaBox`, which is gone or private. **The
+registry zip is the only source**, served from
+`https://cdn.comfy.org/doggeddalle/comfyui-melodramabox/2.1.0/node.zip` (283 KB). No issue
+tracker, no upstream to file against, 0 stars.
+
+Weighed against that: the code is materially better engineered than the 19-star pack --
+vendored LTX-2 core with `ATTRIBUTION.md` and the licence text, each model component a real
+`ModelPatcher` (so ComfyUI owns VRAM, offload and eviction, with a live progress bar and
+Cancel), a GGUF loader plus its own pure-Python quantizer, LoRA support, and Perth
+watermarking already wired -- Perth being the watermarker this card already committed to.
+
+**This also fixes a known Chatterbox failure mode.** The handoff records the bench holding
+~4 GB because `keep_model_loaded` parks models in the Chatterbox pack's module-level
+`_MODEL_CACHE`, invisible to `model_management`, so `POST /free` returns 200 having released
+nothing. Real `ModelPatcher`s do not have that hole. (One exception the pack documents: the
+4-bit Gemma is pinned by bitsandbytes and comfy cannot evict it automatically -- hence its
+`DramaBox Unload Models` node and the `keep_loaded` toggle.)
+
+### THE LICENCE IS THREE LAYERS AND ONE IS NON-COMMERCIAL
+
+- pack code: **Apache-2.0**
+- DramaBox model + the vendored LTX-2 inference code: **LTX-2 Community License**
+- optional **RE-USE reference denoising: NSCLv1, NON-COMMERCIAL**
+
+The third must stay off for anything that ships. This does not change the LTX-2 Community
+licence question the card already carries.
+
+### ✅ THE AUDIO-BRANCH EXTRACTOR IS REAL AND IT IS THIS PACK'S
+
+`dramabox_nodes/finetune_extract.py` (and standalone
+`conversion_scripts/ltx_finetune_to_gguf.py`). It splits an **LTX-2.3 checkpoint**, not a video
+file:
+
+```
+python -m dramabox_nodes.finetune_extract \
+    --src  <path or HF url to a full LTX-2.3 .safetensors> \
+    --dst  models/diffusion_models/<name>-audio-only.safetensors
+```
+
+- Keeps exactly the audio-only DiT's own `state_dict()` key set and drops the rest -- the
+  ~14 GB video stream **and** the audio<->video cross-attention. Output ~6.6 GB.
+- Pure safetensors header parsing; no torch, no ComfyUI; streams from a URL. fp8 sources
+  (e.g. `fp8mixed`) are dequantized to bf16 so the output is universally loadable.
+- Self-validating: the keep-set IS the target model's `state_dict()` names, so it either fills
+  every parameter or hard-fails listing what is missing.
+- Output loads through the normal `DramaBoxDiTLoader`, accepts LoRAs, GGUF-converts.
+
+**ITS OWN CAVEAT, and do not lose it:** the audio-only forward disables the audio<->video
+cross-attention the finetune was trained with, so a finetune's flavour may come out generic or
+degraded. *"Loadability is guaranteed; audio quality is an experiment."*
+
+**Why it matters to this card:** Vision already ships LTX 2.3. This is the bridge between the
+DramaBox route and the third route Fabio raised.
+
+### GGUF quant sizes (pack's own measurements, RTX 3090, same prompt/seed)
+
+| quant | DiT file | peak VRAM w/ 4-bit Gemma |
+|---|---|---|
+| bf16 | 6.6 GB | 16.6 GB |
+| **Q8_0** (near-lossless, recommended) | **3.5 GB** | **13.5 GB** |
+| Q5_0 | ~2.3 GB | lower |
+| Q4_0 | ~1.9 GB | lower |
+
+K-quants (Q4_K/Q5_K/Q6_K) can be **read** by the loader but not produced in pure Python --
+convert to F16 here, then `llama-quantize`.
+
+### NOT YET ANSWERED
+
+- Which pack to adopt. MelodramaBox is the recommendation on the evidence above; the dead
+  GitHub repo is the one real argument against it.
+- Nothing has been generated. Every quality claim here is upstream's or the pack's own -- **no
+  DramaBox audio has been heard by anyone on this card yet.**
