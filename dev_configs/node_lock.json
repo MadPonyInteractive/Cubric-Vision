@@ -124,6 +124,13 @@
       "commit": "596850bc61665e9318914841b41ee4154253f020",
       "filename": "ComfyUI_Fill-ChatterBox",
       "installRequirements": true
+    },
+    "ComfyUI-MelodramaBox": {
+      "source": "git-commit",
+      "repo": "MadPonyInteractive/ComfyUI-MelodramaBox",
+      "commit": "9ebb44be49f7848d31a6cc168732e003ec14b097",
+      "filename": "ComfyUI-MelodramaBox",
+      "installRequirements": true
     }
   }
 }

@@ -80,6 +80,30 @@
 
 Project mode: scalable-foundation.
 
+> **2026-08-27 (session 28) — FABIO SAID YES. DramaBox ships as a Flow, and the reason is
+> IDENTITY:** *"it sticks to the reference a lot better than Chatterbox, especially when we add
+> our performances to Chatterbox. Chatterbox just deviates a lot from the original voice."*
+> Two flows now, both audio-only: **DramaBox** (prompt + duration slider + a voice source) and
+> **Chatterbox**. His testing CORRECTED earlier sessions twice: an explicit duration is the
+> single biggest quality win (it stops the model reading the prompt aloud, and stops over-long
+> clips where the delivery should be fast), and the chain order is **TTS -> VC**, not VC -> TTS,
+> with `cfg_weight` back to **0.5** — the 0.3 was compensating for the wrong order and is void.
+>
+> **Both graphs are staged in `comfy_workflows/raw/`** as `flow_drama_box.json` and
+> `flow_chatter_box.json`, with five real bugs fixed on the way in (`validation.md`, session 28)
+> — the worst being an `Input_Negative` node whose baked value `_buildParams` wipes on EVERY
+> run. **Chatterbox's API twin is BAKED AND VALIDATED** against the live engine (0 missing
+> required inputs, 0 dangling links). **DramaBox's is not**: the engine has no DramaBox classes
+> until it restarts and installs the pack.
+>
+> **`ComfyUI-MelodramaBox` is now a MadPony FORK** —
+> https://github.com/MadPonyInteractive/ComfyUI-MelodramaBox @ `9ebb44b`, public, Apache-2.0,
+> carrying the three patches upstream has nowhere to receive. Pinned in `node_lock.json`,
+> declared in `nodesDeps.js`, four uncovered requirements added to `python_deps.in`.
+>
+> **NOTHING ELSE IS WIRED.** No FlowDef, no op, no weight deps, no registry edit. The graphs,
+> the fork and its dep entry are the whole of it.
+
 > **2026-08-27 (session 27) — DRAMABOX IS INSTALLED AND GENERATING ON THE BENCH, and the
 > evaluation is now a QUALITY question, not a plumbing one.** Three DramaBox packs exist, not
 > one; the card's rejection was scored against the worst of them. `ComfyUI-MelodramaBox` 2.1.0

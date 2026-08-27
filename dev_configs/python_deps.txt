@@ -2,6 +2,8 @@
 #    uv pip compile --universal --python-version 3.12 --constraint C:\Users\Fabio\AppData\Local\Temp\cubric-core-constraints-v0.31.0.txt --no-emit-package torch --no-emit-package torchvision --no-emit-package torchaudio --output-file C:\AI\Mpi\Cubric-Vision\dev_configs\python_deps.txt C:\AI\Mpi\Cubric-Vision\dev_configs\python_deps.in
 absl-py==2.5.0
     # via mediapipe
+accelerate==1.14.0
+    # via -r dev_configs/python_deps.in
 addict==2.4.0
     # via -r dev_configs/python_deps.in
 albucore==0.0.24
@@ -20,6 +22,8 @@ attrs==26.1.0
     # via
     #   jsonschema
     #   referencing
+bitsandbytes==0.50.2 ; platform_machine == 'arm64' or sys_platform != 'darwin'
+    # via -r dev_configs/python_deps.in
 certifi==2026.7.22
     # via
     #   httpcore
@@ -95,6 +99,8 @@ ftfy==6.3.1
     # via -r dev_configs/python_deps.in
 fvcore==0.1.5.post20221221
     # via -r dev_configs/python_deps.in
+gguf-connector==3.6.9
+    # via -r dev_configs/python_deps.in
 h11==0.16.0
     # via httpcore
 hf-xet==1.6.0 ; platform_machine == 'AMD64' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'arm64' or platform_machine == 'x86_64'
@@ -109,6 +115,7 @@ httpx==0.28.1
 huggingface-hub==1.26.0
     # via
     #   -r dev_configs/python_deps.in
+    #   accelerate
     #   diffusers
     #   timm
     #   tokenizers
@@ -205,8 +212,10 @@ numpy==2.5.1
     # via
     #   -c C:/Users/Fabio/AppData/Local/Temp/cubric-core-constraints-v0.31.0.txt
     #   -r dev_configs/python_deps.in
+    #   accelerate
     #   albucore
     #   albumentations
+    #   bitsandbytes
     #   color-matcher
     #   contourpy
     #   diffusers
@@ -255,6 +264,8 @@ opencv-contrib-python-headless==5.0.0.93
     # via -r dev_configs/python_deps.in
 packaging==26.2
     # via
+    #   accelerate
+    #   bitsandbytes
     #   color-matcher
     #   huggingface-hub
     #   kornia
@@ -297,7 +308,9 @@ protobuf==7.35.1
     #   onnx
     #   onnxruntime-gpu
 psutil==7.2.2
-    # via ultralytics
+    # via
+    #   accelerate
+    #   ultralytics
 pycollada==0.9.3
     # via trimesh
 pycparser==3.0 ; implementation_name != 'PyPy'
@@ -324,6 +337,7 @@ pywavelets==1.9.0
 pyyaml==6.0.3
     # via
     #   -r dev_configs/python_deps.in
+    #   accelerate
     #   albumentations
     #   fvcore
     #   huggingface-hub
@@ -364,6 +378,7 @@ safetensors==0.8.0
     # via
     #   -c C:/Users/Fabio/AppData/Local/Temp/cubric-core-constraints-v0.31.0.txt
     #   -r dev_configs/python_deps.in
+    #   accelerate
     #   diffusers
     #   timm
     #   transformers
@@ -382,6 +397,8 @@ scipy==1.18.0
     #   scikit-learn
     #   trimesh
 segment-anything==1.0
+    # via -r dev_configs/python_deps.in
+sentencepiece==0.2.2
     # via -r dev_configs/python_deps.in
 setuptools==83.0.0
     # via torch

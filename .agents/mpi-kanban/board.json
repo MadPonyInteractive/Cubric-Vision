@@ -1,8 +1,9 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 630,
+  "next_id": 631,
   "columns": {
     "todo": [
+      "MPI-630",
       "MPI-623",
       "MPI-616",
       "MPI-612",
@@ -125,7 +126,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-27T15:31:00Z",
+  "updated_at": "2026-08-27T15:57:47Z",
   "events": [
     {
       "at": "2026-08-27T15:31:00Z",
@@ -3935,6 +3936,13 @@
       "task": "MPI-629",
       "actor": "claude",
       "note": "Board entry backfilled - the card folder and next_id existed but the id was never added to columns, so it was invisible."
+    },
+    {
+      "at": "2026-08-27T15:57:47Z",
+      "type": "task.created",
+      "task": "MPI-630",
+      "actor": "claude",
+      "note": "Raised from MPI-607. pipPins are dead data since MPI-413 removed the per-pack pip install, but tests/node-drift.test.cjs still enforces them on every baked node - which forced inventing pins for ComfyUI-MelodramaBox just to get the suite green."
     }
   ]
 }

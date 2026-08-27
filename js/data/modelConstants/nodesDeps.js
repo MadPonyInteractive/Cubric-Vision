@@ -340,4 +340,35 @@ export const nodesDeps = {
         ],
         size: '2.6MB',
     },
+
+    // MPI-607. A FORK, and the pin is ours: MadPonyInteractive/ComfyUI-MelodramaBox.
+    // The registry release (comfyui-melodramabox 2.1.0) names
+    // github.com/doggeddalle/ComfyUI-MelodramaBox as its source and that URL 404s, so
+    // there is no upstream to send a patch to and no commit for lockUrl() to pin. The
+    // fork carries three fixes the published zip does not have, each marked MPI-607 in
+    // place and described in the repo's NOTICE: the shared text-encoder root is honoured
+    // (otherwise ~8GB of Gemma-3 is re-downloaded over a copy already on disk), the
+    // documented .gguf DiT path is actually selectable, and the unload node stops being
+    // served from cache - it exists only for its side effect, so a cached run silently
+    // did nothing and surfaced as an OOM further down the graph.
+    //
+    // TWO dependency paths, and this entry feeds both. The LOCAL engine never resolves a
+    // pack's requirements.txt (MPI-413) - its four uncovered lines (accelerate,
+    // sentencepiece, gguf-connector, bitsandbytes) are declared in
+    // dev_configs/python_deps.in instead. The POD bakes requirements with --upgrade, so
+    // installRequirements:true still obliges pipPins on the drift-risky shared libs, and
+    // tests/node-drift.test.cjs asserts that every baked node has them. torchaudio is
+    // deliberately absent from these pins: the torch family is engine-owned and never
+    // ours to move, on either path.
+    'ComfyUI-MelodramaBox': {
+        id: 'ComfyUI-MelodramaBox',
+        name: 'ComfyUI MelodramaBox (DramaBox TTS)',
+        type: 'custom_nodes',
+        filename: 'ComfyUI-MelodramaBox',
+        url: lockUrl('ComfyUI-MelodramaBox'),
+        installRequirements: true,
+        pipPins: ['numpy==2.5.1', 'transformers==5.13.0', 'einops==0.8.2',
+                  'safetensors==0.8.0'],
+        size: '0.3MB',
+    },
 };

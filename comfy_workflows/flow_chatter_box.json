@@ -1,0 +1,191 @@
+{
+  "31": {
+    "inputs": {
+      "use_cpu": false,
+      "keep_model_loaded": false,
+      "input_audio": [
+        "43",
+        0
+      ],
+      "target_voice": [
+        "56",
+        0
+      ],
+      "seed": [
+        "61",
+        0
+      ]
+    },
+    "class_type": "FL_ChatterboxVC",
+    "_meta": {
+      "title": "FL Chatterbox VC"
+    }
+  },
+  "33": {
+    "inputs": {
+      "language": "English (en)",
+      "exaggeration": 0.8,
+      "cfg_weight": 0.5,
+      "temperature": 0.8,
+      "repetition_penalty": 1.5,
+      "min_p": 0.05,
+      "top_p": 1,
+      "use_cpu": false,
+      "keep_model_loaded": false,
+      "audio_prompt": [
+        "54",
+        0
+      ],
+      "text": [
+        "34",
+        0
+      ],
+      "seed": [
+        "61",
+        0
+      ]
+    },
+    "class_type": "FL_ChatterboxMultilingualTTS",
+    "_meta": {
+      "title": "Input_Language"
+    }
+  },
+  "34": {
+    "inputs": {
+      "string": "Hello and welcome to Cubric Studio."
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Positive"
+    }
+  },
+  "43": {
+    "inputs": {
+      "exaggeration": 0.5,
+      "cfg_weight": 0.5,
+      "temperature": 0.8,
+      "use_cpu": false,
+      "keep_model_loaded": false,
+      "audio_prompt": [
+        "54",
+        0
+      ],
+      "text": [
+        "34",
+        0
+      ],
+      "seed": [
+        "61",
+        0
+      ]
+    },
+    "class_type": "FL_ChatterboxTTS",
+    "_meta": {
+      "title": "FL Chatterbox TTS"
+    }
+  },
+  "52": {
+    "inputs": {
+      "boolean": true,
+      "true": [
+        "33",
+        0
+      ],
+      "false": [
+        "43",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Input_Is_Multilingual"
+    }
+  },
+  "53": {
+    "inputs": {
+      "true": [
+        "31",
+        0
+      ],
+      "false": [
+        "52",
+        0
+      ],
+      "boolean": [
+        "57",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "54": {
+    "inputs": {
+      "string": "",
+      "block_if_empty": true
+    },
+    "class_type": "MpiLoadAudio",
+    "_meta": {
+      "title": "Input_Audio"
+    }
+  },
+  "56": {
+    "inputs": {
+      "block_if_empty": true,
+      "string": [
+        "57",
+        0
+      ]
+    },
+    "class_type": "MpiLoadAudio",
+    "_meta": {
+      "title": "Mpi Load Audio"
+    }
+  },
+  "57": {
+    "inputs": {
+      "any": [
+        "58",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "58": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Input_Audio_2"
+    }
+  },
+  "59": {
+    "inputs": {
+      "filename_prefix": "audio/Chatterbox",
+      "format": "flac",
+      "audio": [
+        "53",
+        0
+      ]
+    },
+    "class_type": "SaveAudioAdvanced",
+    "_meta": {
+      "title": "Output_Audio"
+    }
+  },
+  "61": {
+    "inputs": {
+      "int": 0
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    }
+  }
+}

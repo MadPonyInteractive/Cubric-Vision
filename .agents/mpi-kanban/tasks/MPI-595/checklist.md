@@ -64,6 +64,14 @@ at pickup.
       eight and the registry held nine (`voice-changer`, in no bullet).
 - [ ] MPI-515's outcome recorded — shipped, or a known-issue line.
 - [ ] macOS: known-issue line carried forward, or macOS dropped from the claim surface.
+      - [ ] **DramaBox on Apple Silicon is UNVERIFIED** (MPI-607). Its text encoder is a 4-bit
+            Gemma-3-12B that needs `bitsandbytes`, and 0.50.2 ships exactly one Mac wheel:
+            `macosx_14_0_arm64`. A wheel is not a working backend, so whether nf4 runs on MPS
+            is unknown, and the wheel does not cover an arm64 Mac on macOS < 14. Answered by
+            the MPI-249 trip. If it fails there, the flow needs a platform gate before 2.0 -
+            none exists today (no `platform` field on a dep, no `process.platform` check in
+            any registry), and a Mac user would download 16.36 GB before finding out, which
+            reads as a broken app rather than an unsupported flow.
 - [ ] MPI-543 / MPI-544 / MPI-569 explicitly in or out.
 - [x] **2.0-specific: why is this a major?** — **ANSWERED 2026-08-26.** Flows make it major, on
       audience not code. No migration/compat note owed. Flows open the app to a user who could not

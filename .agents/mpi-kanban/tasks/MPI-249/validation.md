@@ -47,3 +47,42 @@ strengthen that wording without a completed install on capable hardware.
 nothing on it. The machine is at **192.168.0.209** (found by sweeping the /24 for an
 open port 22); the config now points there. First failure of the session was a dead
 ethernet cable — `hostname -I` returning EMPTY is the whole diagnosis, no lease.
+
+
+## 2026-08-27 -- ADD TO THE macOS LEG: does DramaBox's 4-bit text encoder work on Apple Silicon?
+
+Raised from MPI-607, which wires DramaBox (ComfyUI-MelodramaBox) as a Flow for 2.0. Gate line
+lives on MPI-595's checklist under the existing macOS item; this is the actual check to run.
+
+**Background.** DramaBox's recommended text encoder is a 4-bit Gemma-3-12B (~8 GB), which needs
+`bitsandbytes`. The alternative is bf16 at ~24 GB and HF-gated, so if 4-bit does not work the
+flow has no text encoder it can load on that machine.
+
+MelodramaBox's own requirements.txt excludes macOS outright (`platform_system != "Darwin"`).
+**That marker is stale** - 0.50.2 publishes `bitsandbytes-0.50.2-py3-none-macosx_14_0_arm64.whl`.
+Copying it would have excluded the only Mac we ship to, since `build:portable:mac` is
+`--arch arm64`. `dev_configs/python_deps.in` therefore carries an INVERTED marker:
+`platform_system != "Darwin" or platform_machine == "arm64"` - Apple Silicon installs it,
+Intel Macs do not (no wheel AND no sdist, and a line pip cannot satisfy fails the whole install,
+which is the MPI-370 class).
+
+**What to check on the Mac, in order:**
+
+1. Does `pip install -r python_deps.txt` complete? A resolve failure here is MPI-370 all over
+   again and outranks everything below.
+2. Does an arm64 Mac on **macOS < 14** resolve? The wheel is tagged `macosx_14_0`. If it does
+   not, the marker needs a version bound too, or a floor documented.
+3. Does the 4-bit encoder actually LOAD and RUN? `bitsandbytes` having a Mac wheel does not
+   mean nf4 works on MPS. `dramabox_nodes/model/text_encoder.py:167` builds a
+   `BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4")`; the pre-quantized branch
+   skips that config but still needs bitsandbytes to dequantize, so both paths depend on it.
+4. If 3 fails: DramaBox needs a platform gate before 2.0. **None exists** - there is no
+   `platform` field on any dep and no `process.platform` check in flowsRegistry, commandRegistry
+   or the Model Library. Fabio's preference (2026-08-27) is a WARNING at install that still lets
+   the user through, then an error toast on run - not a hard block, because a hard block written
+   from a guess could wrongly kill a working feature. The reason a gate is justified at all
+   rather than just a description line (cf. MPI-584, "the user's GPU is the limit"): the failure
+   arrives AFTER a 16.36 GB download and reads as a broken app, i.e. misattributed.
+
+Not testable from Windows. `ssh macbox` was refused on 2026-08-27 (rented box, connection
+refused at gate1.rentamac.io) and no Mac was rented for this.

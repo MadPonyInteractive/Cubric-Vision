@@ -72,6 +72,11 @@ opencv-contrib-python-headless==5.0.0.93
 # ── The rest ────────────────────────────────────────────────────────────────────
 # Unpinned here on purpose: python_deps.txt pins them transitively, so the engine still
 # gets one chosen set, and a node bump can move them without a hand edit.
+# accelerate — transformers needs it to place a model with `device_map`, which is the
+# ONLY way to load MelodramaBox's 4-bit Gemma-3 text encoder (a bnb-quantised model
+# cannot be `.to()`'d). Without it the pack falls back to the bf16 encoder: ~24 GB and
+# HF-gated (MPI-607).
+accelerate>=0.25.0
 addict
 albumentations
 conformer
@@ -79,6 +84,13 @@ diffusers
 filelock
 ftfy
 fvcore
+# gguf-connector — the GGUF reader/dequant backend behind MelodramaBox's quantised DiT
+# path. Every import of it is LAZY (inside `load_dit_gguf` / the convert tool), so a
+# bf16 run never touches it and the pack loads fine without it. Declared anyway: the
+# DiT dropdown offers any `.gguf` sitting in a model root, so leaving it out turns a
+# valid pick into an ImportError. Q8_0 measured WORSE than bf16 on a 16 GB card
+# (97.6% VRAM, MPI-607) - this path is for cards SMALLER than that.
+gguf-connector>=3.6
 huggingface_hub>=0.25.2
 librosa
 # imageio-ffmpeg — NOT a transitive, and NOT the same package as `imageio` (which the
@@ -113,6 +125,8 @@ s3tokenizer
 safetensors
 scikit-learn
 segment-anything
+# sentencepiece — the Gemma-3 tokenizer MelodramaBox's text encoder loads (MPI-607).
+sentencepiece>=0.1.99
 soundfile
 tqdm
 trimesh[easy]
@@ -126,3 +140,20 @@ yapf
 # file. NOT swapped for CPU `onnxruntime`: DepthAnythingV2 runs through AIO_Preprocessor,
 # which is torch-based. Add it if an ONNX-dependent preprocessor is ever wired.
 onnxruntime-gpu; platform_system != "Darwin"
+
+# bitsandbytes is what makes MelodramaBox's RECOMMENDED text encoder possible: the
+# 4-bit Gemma-3-12B at ~8 GB. The alternative is the bf16 encoder at ~24 GB and HF-gated,
+# so without this DramaBox has no text encoder it can actually load.
+#
+# THE MARKER IS NOT UPSTREAM'S. MelodramaBox's requirements.txt says
+# `platform_system != "Darwin"`, which was true when it was written and is not any more:
+# 0.50.2 publishes `bitsandbytes-0.50.2-py3-none-macosx_14_0_arm64.whl`. Copying that
+# marker would exclude the ONLY Mac we ship to (build:portable:mac is --arch arm64) while
+# admitting the one we do not. Inverted here: Apple Silicon gets the wheel, Intel Macs are
+# excluded because they have no wheel AND no sdist - and a line pip cannot satisfy fails
+# the WHOLE install, which is the MPI-370 failure class this file exists to prevent.
+#
+# UNVERIFIED, and tracked on MPI-249 (verify a portable build on Linux + macOS): a wheel
+# existing is not a working backend, so whether nf4 4-bit actually runs on MPS is unknown.
+# Same trip should check an arm64 Mac on macOS < 14, which the wheel does not cover.
+bitsandbytes>=0.45.0; platform_system != "Darwin" or platform_machine == "arm64"

@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-630", "type": "task.created", "at": "2026-08-27T15:57:47Z", "actor": "claude", "summary": "Raised from MPI-607. pipPins correct a pip install that no longer happens on either path; the MPI-222 invariant test still demands them."}
