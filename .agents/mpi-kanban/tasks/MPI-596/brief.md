@@ -26,12 +26,22 @@ character's hand.
 | Stage | What |
 |---|---|
 | 1 | Two image inputs: `image1` = the scene, `image2` = the object |
-| 2 | Canvas + a **1:1 box**, an **Auto/Manual** toggle (Auto default), **Remove Background** toggle, and an **erase/restore brush** |
+| 2 | **The OBJECT alone on a large canvas** — Remove Background, plus a brush and an eraser to paint pixels off and back on. **SKIPPABLE**: a supplied cut-out needs nothing done to it |
+| 3 | The SCENE with a **1:1 box** and an **Auto/Manual** toggle (Auto default) |
 | run | Generate |
+
+> **THE CLEANUP IS ITS OWN STAGE (Fabio, 2026-08-27).** It was drawn as one stage — box, toggle,
+> background and brush together — and that is wrong, because the two halves are about different
+> pictures. Cleaning the object is work on the OBJECT; placing it is work on the SCENE. Squeezing
+> both onto the scene canvas forced the brush to be Auto-only (Manual shows no object, so there
+> was nothing to brush) and gave the object a few hundred px of a shared stage to be cleaned in.
+> Split, the brush serves BOTH modes, the object gets the whole canvas, and a user whose PNG
+> arrived already cut out just presses Next.
 
 ### Auto (default) — the object's own pixels are used
 
-Canvas shows **the object itself**; the user moves, scales and rotates it. No prompt box.
+Canvas shows **the object itself** (as stage 2 left it); the user moves, scales and rotates it.
+No prompt box.
 Helper: *the model will match the object's lighting and scale to the scene.*
 
 Dispatch sends **slot 1 = the clean scene, slot 2 = the stamped composite.**

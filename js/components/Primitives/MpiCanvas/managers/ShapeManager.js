@@ -181,6 +181,24 @@ export class ShapeManager {
         return { x: dx * c - dy * s, y: dx * s + dy * c };
     }
 
+    /**
+     * `_toLocal` as part of the public geometry surface, beside `handlePoint` and
+     * `outlinePoints` (MPI-596).
+     *
+     * A consumer that stores something PER-SHAPE rather than per-image needs this
+     * transform: Object Stamp's erase/restore brush records into a mask sized to the
+     * placed object, so a pointer in image space has to cross into the shape's own
+     * frame before it means anything. Exposed rather than copied, because a second
+     * copy of the rotation maths is a copy that can disagree with the handles.
+     *
+     * @param {number} imgX
+     * @param {number} imgY
+     * @returns {{x:number,y:number}} offsets from the centre along the shape's own axes
+     */
+    toLocal(imgX, imgY) {
+        return this._toLocal(imgX, imgY);
+    }
+
     /** Image-space position of a handle key (`'body'`/centre included). */
     handlePoint(key) {
         const u = HANDLE_UNITS[key];

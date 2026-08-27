@@ -7,7 +7,7 @@
   "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-21T11:04:19Z",
-  "updated_at": "2026-08-26T17:06:00Z",
+  "updated_at": "2026-08-27T08:05:00Z",
   "labels": [
     "feature",
     "flow",
@@ -17,7 +17,9 @@
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "validation": "validation.md",
+    "files": "files.json"
   },
   "acceptance": [
     "A new dev-gated Flow in flowsRegistry.js takes two image inputs: image1 = the scene, image2 = the object to place",

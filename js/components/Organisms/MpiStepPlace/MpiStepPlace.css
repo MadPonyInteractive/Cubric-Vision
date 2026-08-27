@@ -1,0 +1,65 @@
+/* ═══════════════════════════════════════════════════════════════
+   MpiStepPlace — the `place` step kind (MPI-596)
+
+   A canvas stage the SCENE is fitted into, the object placed on,
+   and the placement reported from. Everything visible is painted
+   in JS — the scene, the composited object through the gizmo's
+   rotated rect, the gizmo itself and the brush ring — so this
+   sheet only sizes the stage and lays the control row out. The
+   row's controls are Primitives and their chrome is theirs
+   (MpiRadioGroup, MpiCheckbox, MpiButton); nothing here restates it.
+═══════════════════════════════════════════════════════════════ */
+
+.mpi-step-place {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--s-3);
+    width: 100%;
+}
+
+/* Fixed box, like MpiStepPaint's and for the same reason: a stage that resized
+   with its content would move the control row under the cursor mid-gesture. */
+.mpi-step-place__stage {
+    position: relative;
+    width: 100%;
+    height: min(46vh, 500px);
+    border: 1px solid var(--line);
+    background: var(--surface-canvas);
+    touch-action: none;
+    line-height: 0;
+}
+
+/* The cursor is set in JS per tool — the gizmo's resize/grab map while Move is
+   armed, and `none` under a brush, where the ring drawn on the canvas IS the
+   cursor and a second arrow beside it reads as two pointers. */
+.mpi-step-place__canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* The gizmo's own row: mode, tool, background, then the actions. */
+.mpi-step-place__bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s-4);
+    flex-wrap: wrap;
+}
+
+.mpi-step-place__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+}
+
+/* The note line carries both guidance and every error this step can raise, so it
+   holds its height rather than reflowing the row each time one clears. */
+.mpi-step-place__note {
+    min-height: 1.25rem;
+    margin: 0;
+    text-align: center;
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+}

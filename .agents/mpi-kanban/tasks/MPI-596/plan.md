@@ -26,9 +26,20 @@ with `mask_expand_pixels` at **~30% of the box side**. Canvas == region written 
 larger than the box cannot be sliced and its shadow has room. App-side that 30% comes off
 `MpiMaskSquareBbox.size` through an `MpiMath` (it is an INT input).
 
-Next action: build the stage-2 step kind. Nothing app-side has been written yet. The bench was
-stopped at the end of the session - restart it (`G:/ComfyUi/run_nvidia_gpu.bat`, port 8188) only
-if more graph work is needed; the stage-2 step does not need it.
+**The placement step kind is BUILT and probed** (2026-08-27). `js/components/Organisms/MpiStepPlace/`
+is the `place` kind, registered in `stepKinds.js` with both adapters; `sourceRole` landed with it.
+Every claim in `validation.md` was measured live and still holds.
+
+**Then Fabio split the stage** (same day, § Plan Drift): the object cleanup — Remove Background,
+brush, eraser — becomes its OWN stage 2 on a large canvas, skippable, and the placement moves to
+stage 3. So the next action is **split `MpiStepPlace` into a `cutout` kind and a `place` kind**
+per the drift table, not the flow wiring. It is a move of proven code plus one new frame line
+(`sourceValue`); nothing measured needs re-deriving.
+
+The flow wiring is the step after, and it needs MPI-607's stale Gate-2 claim resolved first.
+
+The bench stays stopped — restart it (`G:/ComfyUi/run_nvidia_gpu.bat`, port 8188) only if more
+graph work comes up.
 
 **Two bench-only deviations must NOT reach the shipped graph:** `MpiClearVram` (node 170) was
 dropped to keep the checkpoint resident, and the seed is pinned. Both are in the saved graphs.
@@ -73,7 +84,7 @@ one.
       grown ~30%** (law 8), NOT Draw It In's `4.267` — that constant sizes the crop, which is now
       pinned. The real requirements are law 7 (matched framing) and law 8 (canvas == write-back);
       see `brief.md` and `events.jsonl` findings 13–19.
-- [ ] **Build the stage-2 step kind** (`MpiStepPlace` or similar): `ShapeManager` in `'place'`
+- [x] **Build the stage-2 step kind** (`MpiStepPlace` or similar): `ShapeManager` in `'place'`
       mode + the Remove Background branch + an add/subtract alpha brush + `UndoStack`. Mount the
       History engines whole, exactly as `MpiStepPaint` mounts `PaintManager` rather than growing
       a second brush. Keep **`bgMask` and `userMask` as two layers**, composited only at
@@ -81,8 +92,24 @@ one.
       brush must work with the toggle OFF (for sources BiRefNet whiffs entirely).
       Returns ONE composited RGBA through the existing `STEP_MEDIA` adapter.
       **Verify:** toggle off→on preserves erasures; Ctrl+Z covers every mask mutation.
-- [ ] **Add `sourceRole`** to the step contract (above). **Verify:** a step on `image1` receives
+      **DONE 2026-08-27**, probed live in an isolated app instance — erase 1600px, toggle
+      off→on, second stroke → 3192px with the first intact; one Undo → back to exactly 1600
+      (per-gesture), a second → 0 and the button disables. `composeObjectAlpha` returns the
+      ORIGINAL RGB at every surviving pixel, so Restore reveals real pixels; with the toggle
+      OFF the base alpha is the whole rectangle, so the brush still cuts.
+- [x] **Add `sourceRole`** to the step contract (above). **Verify:** a step on `image1` receives
       `image2`; existing flows unaffected.
+      **DONE 2026-08-27 — and it is ONE `find`, not two.** `_deriveRunMedia` needed no change:
+      `place` carries the object's url in its own reported value, so the derivation rebuilds the
+      picture from the snapshot alone and never looks the second role up. That is also what makes
+      Reuse exact months later. Only `_buildStepSlide` resolves `sourceRole`, into `props.source`.
+- [ ] **Split the built kind in two** per § Plan Drift 2026-08-27: a `cutout` kind on `image2`
+      (large canvas, Remove Background, Erase/Restore, `UndoStack` — no gizmo, so no `move` tool)
+      and `place` on `image1` keeping the gizmo and Auto/Manual. Add `sourceValue` beside the
+      `sourceRole` prop so stage 3 can show what stage 2 produced.
+      **Verify:** re-run the two probes in `validation.md` against the split pair — they are
+      written against `composeObjectAlpha` and the reported value, both of which survive; plus
+      skipping stage 2 must leave `image2` untouched at the run.
 - [ ] **Wire the flow.** `FlowDef` in `flowsRegistry.js` + the op in its 4 files per
       `01-descriptor-and-ops.md`. Copy Draw It In's `requiredModels` **slot** shape
       (`{ label: 'Edit model', models: ['klein-9b'], loras: true }`) and its `modelParams` —
@@ -100,7 +127,7 @@ one.
 
 ## Remaining Work
 
-All of the above. Graphics are a separate pass — and the ~25 runs already in the
+The flow wiring, the live run, the announcement. Graphics are a separate pass — and the ~25 runs already in the
 **Stamp Flow Tests** project are the plate material, so nothing needs re-generating for the
 tile or hero (`06-preview-image.md` § Plates).
 
@@ -125,6 +152,70 @@ the flow's whole claim.
 - No app version bump for the Flow; a NEW op sets `appVersionIntroduced` in both op registries.
 
 ## Plan Drift
+
+### 2026-08-27 — THE CLEANUP BECOMES ITS OWN STAGE, so the built kind SPLITS IN TWO
+
+Fabio, on reading the Auto-only-brush question back: the brush and Remove Background belong to a
+**stage of their own**, before the placement. `brief.md` § The shape now carries the three-stage
+table. This supersedes drift note 2 below — that question is answered by the split, not by a flag.
+
+**This is a SPLIT of working code, not a rewrite.** Everything built on 2026-08-27 is proven and
+keeps its behaviour; it moves house. Do NOT re-derive any of it.
+
+| Goes to the NEW stage-2 kind (`cutout`, on `image2`) | Stays in `place` (stage 3, on `image1`) |
+|---|---|
+| `MaskManager` + `UndoStack` + `drawBrushRing`, the whole brush half | `ShapeManager` armed `'place'`, the gizmo half |
+| the Remove Background toggle + `_cutOut()` dispatch | `CompositeManager.drawPlaced` / `rasterisePlace` |
+| `composeObjectAlpha()` — unchanged, it is already the shared law | Auto/Manual, `_setAspect`, the square-Manual lock |
+| the stage/`ViewManager`/Space-pan plumbing (both need a copy; it is ~60 lines and the two stages fit different pictures) | ditto |
+
+Three things fall out, and they are the whole design of the split:
+
+1. **The tool radio loses `move`.** Stage 2 has no gizmo, so the pointer is always the brush and
+   Erase/Restore is a plain pair — the same shape `MpiStepPaint` has. That deletes the
+   three-tool router and the `aria-disabled` dance with it.
+2. **Stage 2 is skippable by construction**, no flag needed: with no cut and no stroke, its
+   `STEP_MEDIA` adapter returns null and the frame treats that as "this kind changed nothing",
+   so `image2` reaches the run exactly as the user supplied it.
+3. **Stage 3 must SEE what stage 2 did**, and `sourceRole` alone does not give it that —
+   `_buildStepSlide` resolves media from `_mediaGroups` (the user's inputs), while stage 2's
+   result is derived at Run. The seam is one more line beside the `source` prop already added:
+   hand the step `sourceValue: _stepValues[step.sourceRole]`. `MpiStepPlace` then composes the
+   object from `bgUrl` + `userMask` exactly as `composePlacedObject` already does — the function
+   takes that shape today, so no new mechanism is invented. Do this rather than persisting a
+   derived file, which would re-cut an already-cut picture on every Reuse.
+
+`composePlacedObject` keeps its current job (rebuild from the value alone) — it just reads the
+masks out of the `cutout` step's value rather than its own.
+
+### 2026-08-27 — three things the step kind decided that the plan did not
+
+**1. The brush needed a THIRD tool, because the gizmo body and the brush both want a drag.**
+The plan said "an add/subtract alpha brush" and left the pointer conflict unnamed. Resolved the
+way `MpiCanvas` already resolves it — one tool owns the pointer: `move` drags the gizmo,
+`erase`/`restore` paint. Default `move`, and the pair carries the same B/E hotkey ids
+`MpiMaskStrip` binds.
+
+**2. The brush is armed in AUTO ONLY, and this is the one call worth Fabio's eyes.** Manual
+draws no object on the canvas — deliberately, that is brief law 2 — so there is nothing to brush
+there, and the Erase/Restore buttons are `aria-disabled` with a note saying to switch to Auto.
+The two mask layers survive the mode switch, so cleaning a cut is: flip to Auto, brush, flip
+back. The alternative (ghosting the object inside Manual's box) was rejected as the same lie the
+rotation handle would be. **If Fabio wants the brush in Manual, the fix is a surface for the
+object, not a flag.**
+
+**3. Manual's box is squared MECHANICALLY, not by asking.** Switching to Manual re-derives the
+gizmo to 1:1 about its own centre, zeroes the rotation, and passes `shiftHeld` permanently to
+`ShapeManager.drag` — which locks whatever ratio the shape HAS, and Manual's is 1:1. Auto goes
+back to the object's own aspect on the way out, because `drawPlaced` stretches into the rect and
+a square box would squash a wide object. Both preserve area and centre, so the switch is
+reversible.
+
+Also settled: **`ShapeManager` gained one public method**, `toLocal()`, a pure alias of the
+existing `_toLocal`. The mask is sized to the OBJECT, not the scene — an erasure has to travel
+with the placement when it moves — so a pointer has to cross into the shape's own frame, and a
+second copy of the rotation maths is a copy that can disagree with the handles. No behaviour
+change, no consumer sweep needed.
 
 ### 2026-08-26 (bench) — the cut-off object, spotted by Fabio in the bench outputs
 

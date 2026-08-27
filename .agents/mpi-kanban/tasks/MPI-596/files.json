@@ -2,6 +2,12 @@
   "schema": "mpi-kanban/files/v1",
   "files": [
     ".agents/mpi-kanban/tasks/MPI-596/**",
+    "js/components/Organisms/MpiStepPlace/**",
+    "js/components/Organisms/MpiBaseFlow/stepKinds.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/shell/preloadStyles.js",
+    "js/components/Primitives/MpiCanvas/managers/ShapeManager.js",
+    "js/components/types.js",
     "js/data/flowsRegistry.js",
     "js/data/commandRegistry.js",
     "js/data/modelConstants/universal_workflows.js",

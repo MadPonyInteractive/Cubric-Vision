@@ -1353,6 +1353,19 @@ export const MpiBaseFlow = ComponentFactory.create({
 
                 const inst = Kind.mount(host, {
                     media,
+                    // A SECOND media role, declared (MPI-596). A step gets exactly one
+                    // media today — the one matching its own `role` — which is right up
+                    // until a gizmo's whole job is putting one image into another: Object
+                    // Stamp's stage 2 draws on the scene and places the OBJECT, and a step
+                    // bound to `image1` could not see `image2` at all.
+                    //
+                    // Mirrors the existing `mediaRole`, which already routes a kind's
+                    // OUTPUT to another role — this is the same idea pointing inward, so
+                    // the pair reads symmetrically and stays declarable by a manifest.
+                    // Deliberately NOT threaded into `_deriveRunMedia`: `place` carries the
+                    // source's url in its own reported value, so the derivation needs no
+                    // second lookup and Reuse re-derives from the snapshot alone.
+                    source: step.sourceRole ? _mediaForRole(step.sourceRole) : null,
                     step,
                     value: _stepValues[step.role] || null,
                     onChange: (val) => {

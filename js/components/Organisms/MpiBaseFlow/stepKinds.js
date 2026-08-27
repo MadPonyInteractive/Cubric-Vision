@@ -2,6 +2,7 @@ import { MpiStepBox } from '../MpiStepBox/MpiStepBox.js';
 import { MpiStepPreview } from '../MpiStepPreview/MpiStepPreview.js';
 import { MpiStepCrop, composePaddedImage } from '../MpiStepCrop/MpiStepCrop.js';
 import { MpiStepPaint, composePaintLayer, composePaintComposite } from '../MpiStepPaint/MpiStepPaint.js';
+import { MpiStepPlace, composePlacedObject } from '../MpiStepPlace/MpiStepPlace.js';
 
 /**
  * STEP_KINDS — the step-kind registry (MPI-306 Phase 1).
@@ -37,6 +38,14 @@ export const STEP_KINDS = {
     // `param`, and like `crop` it mounts the History tool's own engine whole
     // (`PaintManager` + `brushDab.js`) rather than growing a second brush.
     paint: MpiStepPaint,
+    // `place` is the placement gizmo: the user says WHERE in one image a SECOND
+    // image goes, and cuts that second image down until only the object is left.
+    // It is the first kind to read two media roles — its own `role` is the scene it
+    // draws on, and `sourceRole` names the object it places. Like `crop` and `paint`
+    // it binds through STEP_MEDIA, and like them it mounts the History engines whole
+    // (`ShapeManager` in `'place'` mode, `MaskManager`'s add/subtract pair,
+    // `CompositeManager.drawPlaced`) rather than growing a second gizmo or brush.
+    place: MpiStepPlace,
     // mask, light, mood… as they are built.
 };
 
@@ -105,6 +114,23 @@ const STEP_PARAMS = {
         ? { x: v.box.x, y: v.box.y, width: v.box.w, height: v.box.h }
         : null),
     // `preview` reports nothing, so it has no adapter and can carry no `param`.
+    // `place` reports the gizmo's rect as the region the model looks at, in the same
+    // absolute top-left source pixels `box` uses, so a flow can point either kind at
+    // `Mpi Box` and get the same unit.
+    //
+    // ROTATION IS DROPPED, and only Manual consumes this: Manual's box is square and
+    // unrotated by construction — it is a region, not a placement — so there is no
+    // angle to lose. In Auto the region comes off the placed object's own ALPHA
+    // instead, the same read Draw It In does, so a rotated placement never reaches
+    // here. A future flow that wants a rotated region needs a node that takes one.
+    place: (v) => (v?.place?.halfW > 0
+        ? {
+            x: Math.round(v.place.cx - v.place.halfW),
+            y: Math.round(v.place.cy - v.place.halfH),
+            width: Math.round(v.place.halfW * 2),
+            height: Math.round(v.place.halfH * 2),
+        }
+        : null),
 };
 
 /**
@@ -164,6 +190,12 @@ const STEP_MEDIA = {
     paint: (value, media, step) => (step?.composite
         ? composePaintComposite(value, media)
         : composePaintLayer(value)),
+    // `place` needs NEITHER argument: the object's url, the cut-out's url, the two
+    // mask layers and the rect are all in the value, so the picture is rebuilt from
+    // the snapshot alone. That is what makes Reuse exact — a run restored months
+    // later re-derives the same file rather than depending on which media the frame
+    // happens to hand this role.
+    place: (value) => composePlacedObject(value),
 };
 
 /**

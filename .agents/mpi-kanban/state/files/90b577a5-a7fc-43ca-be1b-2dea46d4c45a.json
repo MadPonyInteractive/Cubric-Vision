@@ -1,0 +1,33 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "90b577a5-a7fc-43ca-be1b-2dea46d4c45a",
+  "task_card": "MPI-596",
+  "task": ".agents/mpi-kanban/state/tasks/3889611c-f635-419f-a82d-43886026bb69.json",
+  "owner_session": ".agents/mpi-kanban/state/sessions/89c2ff06-351d-4113-a2e9-16ed7feb76ed.json",
+  "owner_role": "implementer",
+  "status": "needs_verification",
+  "claim_kind": "write",
+  "paths": [
+    "js/components/Organisms/MpiStepPlace/",
+    "js/components/Organisms/MpiBaseFlow/stepKinds.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/components/Primitives/MpiCanvas/managers/ShapeManager.js",
+    "js/shell/preloadStyles.js",
+    "js/components/types.js",
+    ".agents/mpi-kanban/tasks/MPI-596/"
+  ],
+  "claimed_at": "2026-08-27T07:36:00Z",
+  "heartbeat_at": "2026-08-27T08:05:00Z",
+  "note": "Stage-2 step kind only. The Flow WIRING files (flowsRegistry / commandRegistry / operationRegistry / operation_registry.json / universal_workflows / tests/inject-params-titles.test.cjs) are deliberately NOT claimed here - MPI-607 Gate 2 holds a stale claim on them and that belongs to the next step. types.js sits inside MPI-599's claim, heartbeat 2026-08-22T04:12Z, four days past the 120-minute timeout: reclaimed, and the edit there is an APPEND of one typedef block. ShapeManager.js is in scope for ONE pure addition: a public toLocal() alias of the existing _toLocal, no behaviour change.",
+  "recent_events": [
+    {
+      "at": "2026-08-27T07:36:00Z",
+      "event": "files_claimed"
+    },
+    {
+      "at": "2026-08-27T08:05:00Z",
+      "event": "files_completed"
+    }
+  ],
+  "outcome": "Stage-2 step kind complete and self-verified. Card verify mode is user-ux, so the human check in the app is outstanding."
+}
