@@ -22,6 +22,12 @@
     gap: var(--s-2);
 }
 
+/* MPI-629: the Update section is absent unless an update is due, and `display:flex`
+   above would otherwise win over the `hidden` attribute. */
+.mpi-settings__section[hidden] {
+    display: none;
+}
+
 .mpi-settings__section-title {
     display: flex;
     align-items: center;

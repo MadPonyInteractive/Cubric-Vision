@@ -1,0 +1,13 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    ".agents/mpi-kanban/tasks/MPI-629/**",
+    "js/services/updateChecker.js",
+    "js/components/Compounds/MpiOkCancel/MpiOkCancel.js",
+    "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js",
+    "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.css",
+    "js/components/types.js",
+    "js/core/storage.js",
+    "docs/releases/portable-distribution-contract.md"
+  ]
+}

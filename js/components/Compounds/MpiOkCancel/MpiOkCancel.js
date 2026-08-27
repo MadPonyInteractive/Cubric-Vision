@@ -34,7 +34,8 @@ import { renderIcon } from '../../../utils/icons.js';
  *
  * Emits:
  * 'ok'     { inputValue?: string, checkboxChecked?: boolean } — Confirm button clicked
- * 'cancel' {}                      — Cancel button clicked (NOT emitted on Escape/hide)
+ * 'cancel' { inputValue?: string, checkboxChecked?: boolean } — Cancel button clicked
+ *                                    (NOT emitted on Escape/hide)
  * 'input'  { value: string }       — Input field changed
  */
 export const MpiOkCancel = ComponentFactory.create({
@@ -137,7 +138,10 @@ export const MpiOkCancel = ComponentFactory.create({
                 size: 'md'
             });
             cancelBtn.on('click', () => {
-                emit('cancel', {});
+                // MPI-629: cancel carries the same payload as ok. A checkbox whose
+                // whole meaning is "and stop asking" is ticked on the way OUT, so a
+                // cancel that dropped it could never be acted on.
+                emit('cancel', _okPayload());
                 el.hide();
             });
             actionsSlot.appendChild(cancelBtn.el);

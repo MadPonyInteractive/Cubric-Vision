@@ -364,7 +364,7 @@ The `update/` directory may hold helper scripts, manifests, temporary
 extraction folders, and rollback data. Users should run the root update script;
 they should not manually copy files between folders.
 
-### In-app update prompt (MPI-334)
+### In-app update prompt (MPI-334, MPI-629)
 
 On startup, **portable builds** check GitHub for a newer release and offer a
 one-click update — the in-app trigger for the `update.*` scripts above. Main
@@ -372,11 +372,28 @@ one-click update — the in-app trigger for the `update.*` scripts above. Main
 skipped), fetches `releases/latest`, and returns `{portable, current, latest}`
 (current = `package.json` version). The renderer (`js/services/updateChecker.js`,
 called from `js/init.js`) runs `compareSemVer`; if newer it shows an `MpiOkCancel`.
-**OK** → `run-update` (main.js) spawns the platform `update.*` script detached +
-`app.quit()`. **Cancel** is counted per version (localStorage `UPDATE_DISMISSED`);
-after 3 declines that version is muted until a newer one lands. Dev escape hatch:
-localStorage `mpi_dev_force_update=<version>` forces the dialog in a non-portable
-build. Note: the prompt only fires once a GitHub release exists to compare against.
+**OK** → `runUpdate()` → `run-update` (main.js) spawns the platform `update.*`
+script detached + `app.quit()`. Dev escape hatch: localStorage
+`mpi_dev_force_update=<version>` drives both surfaces in a non-portable build.
+Note: the prompt only fires once a GitHub release exists to compare against.
+
+**There are TWO routes, and the mute silences only one (MPI-629).** The popup
+carries a **"Don't ask again"** checkbox and offers on EVERY boot until it is
+ticked; ticking it writes `{version, muted:true}` to localStorage
+`UPDATE_DISMISSED`, which stops the popup for that version alone. Settings then
+carries an **Update section as its first section, rendered only while an update
+is due** — `getPendingUpdate()` answers from the boot check and answers
+regardless of the mute, so a muted user still has a route to the update and a
+user who simply wants one can ask. Both surfaces call the same `runUpdate()`,
+which reports a failure (no IPC, or a `run-update` error) through `showError`
+rather than no-op'ing silently.
+
+> Before MPI-629 `UPDATE_DISMISSED` held `{version, count}` and the popup muted
+> itself after 3 declines. That was correct for a nag and a dead end for
+> everything else: the popup was the ONLY route, so three Laters left the user
+> with no way back to that update short of clearing localStorage, and no way to
+> ask for one. A pre-MPI-629 record has no `muted` key and therefore reads as
+> not muted — an upgrading user is offered the update once more, then chooses.
 
 > **`stdio: 'ignore'` means the updater can never capture a child's stdout
 > through a shell redirect.** Proven live 2026-08-01 (MPI-387). `run-update`
@@ -440,8 +457,10 @@ reopen"*. Both are fixed; the contract each updater now honours:
   `<root>/update/update-result.json` (`{ok:false, error, at}`) carrying the last
   helper *stderr* line, not the useless `"<script> exited with code 1"`. Main's
   `update-last-result` IPC reads-and-deletes it on the next boot and
-  `updateChecker.js` raises `showError`; that boot skips the update prompt so the
-  user gets one message, not two stacked dialogs.
+  `updateChecker.js` raises `showError`; that boot skips the update POPUP so the
+  user gets one message, not two stacked dialogs. The update stays "due", so the
+  Settings section still offers the retry (MPI-629) — the suppression is of the
+  second dialog, never of the route.
 
 **Testing the updater without cutting a release.** Both halves that look like they
 need a newer GitHub release do not — neither needs an upload (proved 2026-08-03):

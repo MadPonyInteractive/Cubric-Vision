@@ -1349,7 +1349,10 @@
  * Emits:
  * 'ok'     { inputValue?: string, checkboxChecked?: boolean }
  *              — OK button clicked; checkboxChecked included when checkbox prop is set.
- * 'cancel' {}  — Cancel BUTTON clicked only (NOT emitted on Escape or hide())
+ * 'cancel' { inputValue?: string, checkboxChecked?: boolean }
+ *              — Cancel BUTTON clicked only (NOT emitted on Escape or hide()).
+ *                Same payload as 'ok' since MPI-629: a "don't ask again" checkbox is
+ *                ticked on the way out, so the cancel path has to carry it.
  * 'input'  { value: string } — Optional input field value changed
  */
 

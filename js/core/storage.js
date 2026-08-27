@@ -249,8 +249,11 @@ export const Storage = {
   getMaturityAcknowledged: () => get(STORAGE_KEYS.MATURITY_ACKNOWLEDGED, false),
   setMaturityAcknowledged: (v) => set(STORAGE_KEYS.MATURITY_ACKNOWLEDGED, !!v),
 
-  // MPI-334: dismissed-update record — { version, count }. Default count 0.
-  getUpdateDismissed: () => get(STORAGE_KEYS.UPDATE_DISMISSED, { version: null, count: 0 }),
+  // MPI-334 / MPI-629: dismissed-update record — { version, muted }. `muted` is set
+  // only by an explicit "Don't ask again" tick; it silences the boot popup for that
+  // version and nothing else. It used to be a dismissal COUNT that muted after 3,
+  // which is why a pre-MPI-629 record (no `muted`) correctly reads as not muted.
+  getUpdateDismissed: () => get(STORAGE_KEYS.UPDATE_DISMISSED, { version: null, muted: false }),
   setUpdateDismissed: (v) => set(STORAGE_KEYS.UPDATE_DISMISSED, v),
 
   // MPI-451: licence acceptance receipts, keyed by model id. Read/written only by

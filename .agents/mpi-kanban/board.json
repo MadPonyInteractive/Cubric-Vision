@@ -3,7 +3,6 @@
   "next_id": 630,
   "columns": {
     "todo": [
-      "MPI-629",
       "MPI-623",
       "MPI-616",
       "MPI-612",
@@ -70,6 +69,7 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-629",
       "MPI-622",
       "MPI-603",
       "MPI-607",
@@ -125,8 +125,17 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-27T10:04:06Z",
+  "updated_at": "2026-08-27T15:02:00Z",
   "events": [
+    {
+      "at": "2026-08-27T15:02:00Z",
+      "type": "task.moved",
+      "task": "MPI-629",
+      "actor": "implementer:a755a5b9-b745-4e2f-aad2-9415de7ac5b9",
+      "from": "todo",
+      "to": "doing",
+      "note": "todo -> doing. Popup gains a Don't ask again checkbox (replacing the 3x dismiss count) plus a pointer to Settings; Settings gains an Update section at the very top, shown only when an update is due."
+    },
     {
       "at": "2026-08-25T04:12:00Z",
       "type": "task.moved",

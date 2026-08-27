@@ -14,6 +14,7 @@ import { Storage } from '../../../../core/storage.js';
 import { clientLogger } from '../../../../services/clientLogger.js';
 import { loadAll as loadAssets } from '../../../../services/assetService.js';
 import { reSyncInstalledModels } from '../../../../data/modelRegistry.js';
+import { getPendingUpdate, runUpdate } from '../../../../services/updateChecker.js';
 import { ce, qs } from '../../../../utils/dom.js';
 
 const REUSE_PARTS = [
@@ -42,6 +43,20 @@ export const MpiSettings = ComponentFactory.create({
     template: () => `
         <div class="mpi-settings">
             <div class="mpi-settings__content">
+                <!-- MPI-629: first section on purpose, and present ONLY while an
+                     update is due. Nothing to check, nothing to configure — if it is
+                     here there is a newer version, and this is the way to get it. -->
+                <section class="mpi-settings__section" id="mpiSettingsUpdateSection" hidden>
+                    <h3 class="mpi-settings__section-title">Update</h3>
+                    <div class="mpi-settings__plate mpi-settings__plate--on">
+                        <div class="mpi-settings__plate-main">
+                            <span class="mpi-settings__plate-label">A new version is available</span>
+                            <span class="mpi-settings__plate-desc" id="mpiSettingsUpdateDesc"></span>
+                        </div>
+                        <div class="mpi-settings__plate-ctrl" id="mpiSettingsUpdateSlot"></div>
+                    </div>
+                </section>
+
                 <section class="mpi-settings__section">
                     <h3 class="mpi-settings__section-title">App Behavior</h3>
                     <div class="mpi-settings__plate" id="mpiSettingsAutoStartPlate">
@@ -373,7 +388,43 @@ export const MpiSettings = ComponentFactory.create({
             _monitor = null;
         }
 
+        /**
+         * MPI-629: the Update section. Shown only when the boot check found a newer
+         * version — a permanently-present "check for updates" row would be a control
+         * that does nothing on almost every open.
+         *
+         * `getPendingUpdate()` answers from the boot check, and it answers regardless
+         * of the popup's mute: a user who ticked "Don't ask again" has said stop
+         * asking, not stop offering, and this row is the place they were pointed at.
+         */
+        async function _initUpdate(root) {
+            const section = qs('#mpiSettingsUpdateSection', root);
+            const slot = qs('#mpiSettingsUpdateSlot', root);
+            if (!section || !slot) return;
+            section.hidden = true;              // re-hidden per open; the check may say no
+
+            const info = await getPendingUpdate();
+            if (!info) return;
+
+            const desc = qs('#mpiSettingsUpdateDesc', root);
+            if (desc) {
+                desc.textContent = `You have v${info.current}, and v${info.latest} is out. `
+                    + `The app will close, update, and reopen.`;
+            }
+            slot.innerHTML = '';
+            const btn = MpiButton.mount(slot, {
+                text: `Update to v${info.latest}`,
+                variant: 'primary',
+                size: 'sm',
+            });
+            btn.on('click', () => runUpdate(info.latest));
+            section.hidden = false;
+        }
+
         function _initFields(root) {
+            // ── Update (MPI-629) — first section, only when one is due ───────
+            _initUpdate(root);
+
             // ── Auto-start toggle ────────────────────────────────────────────
             _mountSwitchPlate('#mpiSettingsAutoStartSlot', Storage.getAutoStartComfy(),
                 (v) => Storage.setAutoStartComfy(v));
