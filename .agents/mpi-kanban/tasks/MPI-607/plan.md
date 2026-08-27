@@ -80,6 +80,37 @@
 
 Project mode: scalable-foundation.
 
+> **2026-08-27 (session 27) — DRAMABOX IS INSTALLED AND GENERATING ON THE BENCH, and the
+> evaluation is now a QUALITY question, not a plumbing one.** Three DramaBox packs exist, not
+> one; the card's rejection was scored against the worst of them. `ComfyUI-MelodramaBox` 2.1.0
+> is installed and working, weights (16.36 GB) in `G:/CubricModels`. Three pack bugs patched
+> (shared text-encoder root, `.gguf` listing, a missing `IS_CHANGED` on the unload node).
+> **Fabio's own VRAM fix beat mine — one `Mpi Clear Vram` at the end of the graph, our own
+> node — so neither of my unload nodes is needed.**
+>
+> **DramaBox is ENGLISH-ONLY (HF language tag, no multilingual claim), so the multilingual arm
+> is untouched and this is an English-EXPRESSIVENESS play only.** Zero-shot clone measured at
+> **-0.53 semitones** median-f0 vs its reference in ONE stage, against the Chatterbox chain's
+> winning 1.20 st that needed TTS->VC — the direct argument for dropping the VC stage for
+> English, still pending Fabio's ear.
+>
+> **Fabio's ear tests (they outrank every measurement):** accent on a supplied reference is a
+> LOTTERY not a block (Australian and strong British landed on two elderly-male samples, failed
+> on `deep_male_5`); prompt-only runs open with a long silence needing an output-side trim;
+> chained references BLEND the voices — because `extra_ref` concatenates waveforms and discards
+> the inner node's `strength`, and only the first 10 s is encoded, so his 9 s performance clip
+> WAS the reference; single reference plus a prompted emotion delivers "not greatly, but that
+> might be prompting".
+>
+> **`Audio8_TTS` evaluated (Fabio's link): NOT a DramaBox replacement — a
+> `chatterbox_multilingual` one.** Apache-2.0 code AND weights, 0.6B, **2.57 GB**, 11 languages,
+> 22,736 HF dl/30d, pushed two days ago. **But no prompt-driven emotion/accent/style control at
+> all**, which is the whole reason DramaBox was re-opened. No ComfyUI node exists. No Portuguese
+> — the one language Fabio actually validated the multilingual arm on.
+>
+> Detail: `validation.md` 2026-08-27 sessions 27. **Nothing has been wired into the app — no op,
+> no FlowDef, no registry edit — and that is still correct while the design is unproven.**
+
 > **2026-08-25 — THE VC QUALITY QUESTION IS ANSWERED, and the library is now MPI-622.**
 > Chatterbox VC moves a voice roughly HALFWAY and stops. Proven bias-free: a stranger's
 > clip converted into the gravel character was described cold as "35, deep but not too

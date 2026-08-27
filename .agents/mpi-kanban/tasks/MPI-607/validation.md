@@ -2625,3 +2625,160 @@ loaded inside an upstream `TTSServer` cloned at runtime. Every lever MelodramaBo
 have to be written from scratch.
 
 **Still not heard by ear.** None of this touches whether DramaBox SOUNDS good.
+
+## 2026-08-27 (session 27, fourth) -- FABIO'S OWN DRAMABOX TESTS, and why `extra_ref` did not do what it looked like
+
+**These are HIS ear results on the bench, and they outrank every measurement above.**
+
+### What he found
+
+1. **Accent + a supplied voice reference is a LOTTERY, not a block.** First conclusion was
+   "you can't get an accent on a supplied voice, only without a reference." **He then
+   disproved it himself**: Australian came through on `elderly_male_1`, a strong British accent
+   on `elderly_male_3`, and it **failed on `deep_male_5`**. So accent transfer is
+   voice-dependent and seed-dependent. (`elderly_male_1` is one of the few samples carrying
+   Fabio's own voice.)
+   **Same lesson as `docs/models/ltx/audio-input.md` already records for the ID-LoRA path:
+   "accent transfer = LOTTERY (not never)" -- an earlier absolute call there was wrong too.**
+   I had just told him the frozen anchor made it structurally impossible. It does not; it makes
+   it hard and voice-dependent.
+2. **With NO reference, the clip opens with a long silence.** Nothing in the pack trims it --
+   the only silence fix (`_patch_silence_prior`) targets a training-length artifact at latent
+   frames 512/513, i.e. past ~20.4 s, and is unrelated. **Generating new voices from
+   prompt-only will need an output-side trim at head AND tail.**
+3. **Chained references blend the two voices together**, even with the performance clip at
+   `strength` 0.10. **It does improve performance delivery.**
+4. **Single reference + a prompted emotion delivers -- "not greatly, but that might be
+   prompting."** Identity usually holds, deviating a bit sometimes but not far off.
+
+### 🔴 WHY #3 HAPPENED: `extra_ref` DOES NOT WEIGHT-BLEND, IT CONCATENATES WAVEFORMS
+
+```python
+if extra_ref is not None:
+    clips.append((extra_ref["waveform"], extra_ref["sample_rate"]))
+```
+
+It takes the **waveform** -- not the latent, not the strength. **The inner node's `strength` is
+discarded**; only the OUTER node's strength reaches `_encode_reference`. The clips are stitched
+into ONE reference and encoded as a single latent.
+
+**And the order makes it worse.** `extra_ref` clips are appended FIRST, and the final prep does
+`w = w[..., :target_samples]` -- **the first 10 s only** (`VOICE_REF_ENCODE_SECONDS = 10.0`).
+Fabio's inner node held `perf_R1_angry.opus`, **9 seconds long**. So the encoded reference was
+~9 s of the ANGRY PERFORMANCE plus ~1 s of `deep_male_1`. The performance clip *was* the voice
+reference. That is exactly why the voices blended and why delivery improved.
+
+The docstring is explicit that chaining exists to *"combine several short clips of the same
+speaker"*. Two-speaker mixing is off-label.
+
+**Only control available: the DURATION RATIO.** Identity clip in the INNER node (goes first),
+performance in the outer -- or ~9 s identity to ~1 s performance. There is no weight.
+
+### 🔴 `strength` IS A DENOISE MASK, NOT AN IDENTITY DIAL
+
+`AudioConditionByReferenceLatent`: `denoise_mask = 1.0 - strength`. **1.0 = reference tokens
+FROZEN and clean = maximum anchor, and that is already the ceiling.** Below 1.0 the reference
+itself is noised during sampling, degrading the anchor.
+
+So: **you can deviate MORE (0.85, 0.7). You cannot stick CLOSER than 1.0.** The ref is appended
+as read-only tokens with an asymmetric attention mask (target->ref attends, ref->target does
+not), which is why it anchors timbre and prosody together.
+
+**The lever for the other direction is `cfg_scale`** -- the reference anchors identity while CFG
+pushes toward the voice the PROMPT describes. Lower cfg (2.0-2.2) = reference dominates. **It
+only takes effect at `quality_preset: custom`** (see below).
+
+### 🔴 `quality_preset` SILENTLY OVERWRITES steps / cfg_scale / stg_scale
+
+```python
+QUALITY_PRESETS = {"draft": {12, 2.0, 1.0}, "default": {30, 2.5, 1.5}, "high": {50, 3.0, 1.8}}
+```
+
+At any preset but `custom`, those three widgets are ignored. They READ 30 / 2.5 / 1.5 because
+that is what `default` is, so editing them looks like it should work and does nothing.
+`duration_seconds`, `duration_multiplier` and `cfg_rescale` are always live.
+
+### `modality_scale` IS NOT AN IDENTITY LEVER HERE -- checked before recommending it
+
+It looked like DramaBox's equivalent of LTX's `identity_guidance_scale`. It is not. Its
+perturbation pass is `SKIP_A2V_CROSS_ATTN` / `SKIP_V2A_CROSS_ATTN` -- **audio<->video**
+cross-attention. DramaBox is audio-only, so it is inert, and it is hardcoded to 1.0 which zeroes
+that term anyway.
+
+### Other parameter facts, read from source
+
+- **Reference is capped at 10 s.** `max_duration_sec: 30` does not buy a 30 s anchor --
+  `VOICE_REF_ENCODE_SECONDS = 10.0` and shorter clips are TILED to fill it. A clean,
+  characteristic 10 s beats a long one.
+- **`duration_seconds: 0`** estimates from the prompt: spoken text taken as **quoted text ->
+  text after a colon -> the whole string**; 14 chars/sec (x0.6 under 40 chars, x0.8 under 80);
+  +0.3 s per `.!?`; plus detected non-verbal cues; then `max(3.0, duration + 2.0)`. **The flat
+  +2.0 s and the 1.10 multiplier are the likely source of trailing silence** -- set
+  `duration_seconds` explicitly to shrink it.
+- **`cfg_rescale: -1`** = automatic, `0` below cfg 2.0 then `0.6*(cfg-2)`, capping at 0.8 for
+  cfg 3-8. At cfg 2.5 that is **0.30**.
+- **STG** perturbs transformer block 29 (`STG_BLOCKS=[29]`) -- a coherence lever, NOT prompt
+  adherence.
+
+### ✅ FABIO'S VRAM SOLUTION BEAT MINE -- use `Mpi Clear Vram`, our own node
+
+He replaced both of my unload nodes with **one `Mpi Clear Vram`** (`ComfyUi-MpiNodes`, `vram.py`)
+at the end of the graph, and Task Manager shows dedicated GPU memory returning to
+**1.0 / 16.0 GB** after each run.
+
+It works for a better reason than mine did: **`OUTPUT_NODE = True`**, and its passthrough is fed
+by the audio, so it cannot be cached out -- exactly the property `DramaBoxUnloadModels` lacked.
+Clearing at the END also sidesteps the ordering problem entirely: the next run starts clean, so
+"DiT still resident when the encode wants Gemma" never arises.
+
+**`keep_loaded: false` on the Text Encoder Loader stays load-bearing.** `unload_all_models()`
+does not free the 4-bit Gemma (not patcher-managed); `keep_loaded: false` releases the Python
+reference and `Mpi Clear Vram`'s `gc.collect()` + `empty_cache()` returns the bytes. **Correcting
+myself: `keep_loaded: false` does not itself free Gemma, it drops the reference.**
+
+**The three MelodramaBox patches are still required** (shared text-encoder root, `.gguf`
+listing, `IS_CHANGED`), but the graph now needs neither of my unload nodes.
+
+---
+
+## 2026-08-27 -- AUDIO8_TTS EVALUATED (Fabio's link). NOT a DramaBox replacement; a CHATTERBOX-MULTILINGUAL one.
+
+`github.com/Audio8-AI/Audio8_TTS` -- *"SOTA-Class TTS at Compact Scale"*.
+
+| | Audio8-TTS Preview 0.6b | DramaBox | chatterbox_multilingual |
+|---|---|---|---|
+| licence | **Apache-2.0, code AND weights** | LTX-2 Community | MIT |
+| size | **2.57 GB** (`model.safetensors` 1.20 + `codec.pth` 1.35) | 16.5 GB with Gemma | ~3.2 GB |
+| params | **0.6B** (601,159,424 excl. codec); a 0.1B exists | 3.3B | -- |
+| languages | **11**: Cantonese, Chinese, Dutch, English, French, German, Italian, Japanese, Korean, Polish, Spanish | **English only** | 23 |
+| HF downloads/30d | **22,736** (376 likes) | 240 | 1.97M (base) |
+| activity | created 2026-07-29, **pushed 2026-08-25** | stale since 2026-05-25 | -- |
+| GitHub | **973 stars, 83 forks** | 19 / 47 | -- |
+| ONNX INT8 build | **yes** (`Audio8/audio8-TTS-0.1B-ONNX-INT8`), ~1 GiB on CPU | no | no |
+
+**🔴 THE DISQUALIFIER FOR THIS CARD'S ACTUAL QUESTION: NO PROMPT-DRIVEN EMOTION, ACCENT OR
+STYLE CONTROL.** The docs make no mention of it. Prompt-carried performance is the ENTIRE reason
+DramaBox was re-opened, so Audio8 does not compete for that slot.
+
+**Where it DOES compete: the multilingual arm.** It is a compact, permissively-licensed,
+zero-shot multilingual cloner -- the `chatterbox_multilingual` job, at 2.57 GB instead of 3.2 GB,
+with an ONNX CPU path, under Apache-2.0 rather than needing the four missing tokenizer deps
+(`pykakasi`, `dicta_onnx`, `russian_text_stresser`, `spacy_pkuseg`). Its 11 languages are a
+SUBSET of Chatterbox's 23 -- **no Portuguese**, which is the language Fabio actually tested and
+the reason the multilingual arm survived at all.
+
+**🔴 UX DIFFERENCE THAT MATTERS: cloning needs a reference AUDIO *plus* a REFERENCE TRANSCRIPT**
+that "should match the spoken content in the reference audio". DramaBox and Chatterbox need
+audio only. For a shipped voice library that means every clip carries a transcript -- a real
+content obligation on the 56 staged voices, not a code change.
+
+**NO ComfyUI NODE EXISTS.** Checked the ComfyUI registry (`comfyui-audio8`, `audio8`,
+`comfyui-audio8-tts`, `comfyui-audio8tts` -- all "Node not found") and GitHub search. The
+derivative repos that exist (`OpenTTSGroup/audio8-tts-open-tts`, `instavar/audio8-tts-lora-finetuning`,
+`Pranavharshans/Audio8-tts`, `y2k3073/Audio8_TTS`) are forks/experiments at 0-1 stars, none a
+Comfy wrapper. **Wrapping it would be our work** -- but at 0.6B, Apache-2.0, with HF remote code
+and an ONNX path, it is a far smaller wrapping job than anything else evaluated on this card.
+
+**Not verified and worth checking before any decision:** whether "Preview" weights carry a
+stability commitment, real GPU VRAM (only an ONNX-on-M2 ~1 GiB figure is published), and quality
+by ear against Chatterbox multilingual on the same text.
