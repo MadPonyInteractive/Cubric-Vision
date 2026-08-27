@@ -5,6 +5,13 @@
 > second. **Portable:** any flow whose graph carries `Input_Lora_Phase<N>_1..6` and whose
 > user might already own a LoRA.
 >
+> ⚠️ **NO SHIPPED FLOW DECLARES TWO SLOTS RIGHT NOW** (MPI-628 took the Character Sheet's
+> blend slot when its head removal stopped being a model pass). The per-phase machinery is
+> live and tested — `tests/flow-model-choice.test.cjs` carries a synthetic two-slot fixture
+> for it — but the two-slot examples below are written from a flow that no longer has two.
+> They are still the contract to build against; they are just not currently on screen
+> anywhere. The Library detail panel's multi-slot render has no desktop probe left.
+>
 > 🔴 **`settingsModel`, `flowSettingsModel()` and `config.loraModelId` are GONE** (MPI-608).
 > One string could name only one rack, so a flow choosing a model per phase could never fill
 > both. A FlowDef still declaring `settingsModel` reads as wired and injects nothing;

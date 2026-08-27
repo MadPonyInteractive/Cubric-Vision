@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    ".agents/mpi-kanban/tasks/MPI-628/**",
+    "comfy_workflows/raw/flow_character_sheet.json",
+    "comfy_workflows/flow_character_sheet.json",
+    "js/data/flowsRegistry.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "tests/flow-model-choice.test.cjs",
+    "tests/flow-lora-rack.test.cjs",
+    "tests/inject-params-titles.test.cjs",
+    "tests/desktop/flow-lora-button.spec.js",
+    "docs/playbooks/add-flow/ui/lora-rack.md",
+    "docs/playbooks/add-flow/any-of-models.md"
+  ]
+}

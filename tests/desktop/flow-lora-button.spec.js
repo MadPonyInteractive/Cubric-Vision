@@ -52,15 +52,24 @@ test('each model slot gets its OWN cogwheel, opening Model Settings on THAT slot
       tile.click();
     });
 
-    // TWO labelled slots (MPI-610): the Krea 2 render phase and the Klein blend phase.
-    // Two fields both reading "Model" would say nothing, so each slot labels its own.
+    // ONE labelled slot since MPI-628. This probe was written for MPI-610's TWO slots —
+    // Krea 2 rendering and Klein removing the head — and the head removal stopped being a
+    // model pass, so the blend slot went with it. No shipped flow declares two slots now,
+    // so the MULTI-slot render has no desktop probe left; the machinery behind it is
+    // covered at node level in tests/flow-model-choice.test.cjs against a synthetic
+    // fixture. Restore the second half here the day a two-slot flow ships — a fixture flow
+    // is NOT the answer in this file, because the Library renders a tile and a missing
+    // preview asset 404s the whole suite.
+    //
+    // Still worth its run: the slot must label itself rather than read "Model", and the
+    // cogwheel has to open on the slot's own model.
     await expect(window.locator('.mpi-detail__field-label:text-is("Render model")')).toHaveCount(1);
-    await expect(window.locator('.mpi-detail__field-label:text-is("Blend model")')).toHaveCount(1);
-    await expect(window.locator('.mpi-detail__model-pick')).toHaveCount(2);
+    await expect(window.locator('.mpi-detail__field-label:text-is("Blend model")')).toHaveCount(0);
+    await expect(window.locator('.mpi-detail__model-pick')).toHaveCount(1);
 
-    // …and a cogwheel in each, because both slots declare `loras: true`.
+    // …and a cogwheel in it, because the slot declares `loras: true`.
     const cogs = window.locator('.mpi-detail__loras-btn');
-    await expect(cogs).toHaveCount(2);
+    await expect(cogs).toHaveCount(1);
 
     // Listen first, then press. A bare emit would look identical from the outside.
     const asked = await window.evaluate(async () => {
@@ -73,8 +82,8 @@ test('each model slot gets its OWN cogwheel, opening Model Settings on THAT slot
       return seen;
     });
 
-    // Slot order is declaration order, so cogwheel 0 is the render model and 1 the blend.
-    expect(asked).toEqual([{ modelId: 'krea2' }, { modelId: 'klein-4b' }]);
+    // The cogwheel opens on the SLOT's running model, not on a flow-level default.
+    expect(asked).toEqual([{ modelId: 'krea2' }]);
   } finally {
     await window.evaluate(() => { window.__mpi610?.el?.destroy?.(); }).catch(() => {});
     await closeApp(app);

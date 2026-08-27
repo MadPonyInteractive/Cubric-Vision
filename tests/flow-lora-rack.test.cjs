@@ -251,27 +251,30 @@ test('opening the LoRA panel does not close the slide-over underneath it', () =>
 // MOVED OFF THE SCRIBBLE FLOW 2026-08-25 (MPI-621): Draw It In was rebuilt on ONE
 // model with NO rack at all — style rides in the user's own words there, and a
 // character LoRA from another family will not load on Klein regardless. The
-// character sheet is now the two-phase flow (Krea 2 renders, Klein removes the
-// head), so it inherits the pin. Its phase 1 is `MpiLoraModel` and not
+// character sheet inherited the pin. Its phase 1 is `MpiLoraModel` and not
 // `MpiLoraModelClip`: Krea 2 comes off a `UNETLoader`, so there is no CLIP to carry
 // through the rack, which is why the old third test in this block is gone.
+//
+// DOWN TO ONE PHASE 2026-08-27 (MPI-628). Phase 2 was the Klein head-removal pass;
+// the head is now subtracted from a BiRefNet matte, so there is no second model and
+// no second rack. The walk below still handles N phases — NO SHIPPED FLOW HAS TWO
+// ANY MORE, so the day one lands, add its row here rather than rebuilding this.
 const PHASES = [
     { n: 1, loader: 'Input_Base_Model', type: 'MpiLoraModel', consumer: '143', input: 'model' },
-    { n: 2, loader: 'Input_Edit_Model', type: 'MpiLoraModel', consumer: '777', input: 'model' },
 ];
 
-const scribble = () => JSON.parse(read('comfy_workflows/flow_character_sheet.json'));
+const sheet = () => JSON.parse(read('comfy_workflows/flow_character_sheet.json'));
 const idByTitle = (g, title) => Object.keys(g)
     .filter(k => (g[k]._meta || {}).title === title);
 
 test('a two-phase flow carries six LoRA slots for EACH of its model phases', () => {
-    const g = scribble();
+    const g = sheet();
     for (const { n, type } of PHASES) {
         for (let i = 1; i <= 6; i++) {
             const title = `Input_Lora_Phase${n}_${i}`;
             const ids = idByTitle(g, title);
             assert.equal(ids.length, 1,
-                `flow_draw_it_in.json must carry exactly one node titled "${title}" — ` +
+                `flow_character_sheet.json must carry exactly one node titled "${title}" — ` +
                 'injection matches a title EXACTLY, so a duplicate is never driven');
             assert.equal(g[ids[0]].class_type, type,
                 `${title} must be a ${type}: the SDXL chain carries CLIP and the Klein chain ` +
@@ -293,7 +296,7 @@ test('each phase rack is CHAINED into its own model path, loader through to samp
     // sampler, and a permutation still satisfies that. A rack may also hang off an
     // intermediate the graph bakes for itself (phase 1's filter-bypass LoRA), so the
     // walk stops at the loader rather than demanding slot 1 read it directly.
-    const g = scribble();
+    const g = sheet();
     for (const { n, loader, consumer, input } of PHASES) {
         const loaderId = idByTitle(g, loader)[0];
         assert.ok(loaderId, `${loader} must exist to feed phase ${n}`);

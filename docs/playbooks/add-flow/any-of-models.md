@@ -22,15 +22,23 @@ modelParams: {
 
 Character Sheet and Outpaint declare the Krea 2 pair — the same architecture with a different
 bake, so demanding both means asking for a **second 12.25GB** download of a model the user
-effectively already has. Character Sheet's SECOND slot used to be exactly the fixed form
-above (`'klein-4b'`); MPI-610 opened it into a choosable `klein-4b` / `klein-9b` blend slot,
-which is the ordinary way a fixed slot grows up.
+effectively already has.
 
-**A flow may declare SEVERAL choosable slots, and they resolve independently.** The scribble flow
-picks an SDXL checkpoint for its render phase and an edit model for its blend phase; each gets its
+**A slot can also go the other way — be deleted rather than grown.** Character Sheet had a
+second slot for its head-removal phase: fixed `'klein-4b'`, opened by MPI-610 into a choosable
+`klein-4b` / `klein-9b` blend slot, then removed entirely by MPI-628 when the head removal
+stopped being a model pass at all (a BiRefNet matte minus the SAM3 head mask, composited onto
+a flat plate — no checkpoint, no sampler). Deleting a slot means deleting its `modelParams`
+arms in the same edit: an arm naming a model that is in no slot is a dead pick, and
+`tests/flow-model-choice.test.cjs` § 'every modelParams title EXISTS in the flow workflow'
+fails on it.
+
+**A flow may declare SEVERAL choosable slots, and they resolve independently** — each gets its
 own dropdown, its own pick, and its own `modelParams` contribution to the one merged
 `injectionParams`. `label` is what the picker shows — two fields both reading "Model" tell the
-user nothing, which is why the label is not optional in the object form.
+user nothing, which is why the label is not optional in the object form. **No shipped flow
+declares two slots today**; the resolver is exercised by a synthetic fixture in
+`tests/flow-model-choice.test.cjs`.
 
 **`models[0]` is the RECOMMENDED candidate.** Declaration order is preference order: it is what an
 untouched picker resolves to, and the picker stars it. There is no separate `recommended` field —

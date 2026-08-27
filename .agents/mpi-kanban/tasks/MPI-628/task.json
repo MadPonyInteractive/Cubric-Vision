@@ -1,0 +1,23 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-628",
+  "title": "Character Sheet - head removal without the Klein edit pass",
+  "description": "The head-removal branch is now a BiRefNet subject matte minus the SAM3 head mask, composited onto a flat #808080 plate - no second checkpoint, no sampler pass. Sync the rebaked workflow, then strip the phase-2 Blend model slot, its modelParams and the Phase2 LoRA rack from the descriptor and tests.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "created_at": "2026-08-27T09:04:15Z",
+  "updated_at": "2026-08-27T09:16:36Z",
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "validation": "validation.md"
+  },
+  "attention": {
+    "state": "required",
+    "reason": "Two visual gates only Fabio can call, both on the new plate: the hair matte at 100% on the portrait panel (BiRefNet edge, and the whole backdrop is replaced now), and the neck cut (GrowMask 6 hard-edged where the removed branch grew 32 with a 16px blur). Everything else is verified - 747/747, lint clean, both workflow gates green, desktop spec passing.",
+    "updated_at": "2026-08-27T09:16:36Z"
+  }
+}

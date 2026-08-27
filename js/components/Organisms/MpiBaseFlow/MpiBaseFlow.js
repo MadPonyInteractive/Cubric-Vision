@@ -1110,9 +1110,11 @@ export const MpiBaseFlow = ComponentFactory.create({
 
         /**
          * One labelled cogwheel per rack-bearing model slot, for the run slide's control
-         * column. Driven off the flow's DECLARED racks, so this is generic — both current
-         * two-rack flows (character-sheet, scribble-object) and any future one get it with
-         * no FlowDef, graph or per-flow change.
+         * column. Driven off the flow's DECLARED racks, so this is generic — every flow
+         * gets it with no FlowDef, graph or per-flow change. Written for the two-rack
+         * flows of MPI-608/610; none is left (MPI-628 took the character sheet's second
+         * slot when its head removal stopped being a model pass), so today every caller
+         * renders exactly one. The loop is still the contract — do not collapse it.
          *
          * The `MpiModelSettings` overlay is mounted HERE rather than reached through
          * `ui:open-model-settings`. That event is listened for by exactly two components,

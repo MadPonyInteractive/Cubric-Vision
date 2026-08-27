@@ -466,7 +466,7 @@
   "494": {
     "inputs": {
       "images": [
-        "742",
+        "851",
         0
       ]
     },
@@ -670,475 +670,6 @@
       "title": "H_1k"
     }
   },
-  "680": {
-    "inputs": {
-      "stitcher": [
-        "689",
-        0
-      ],
-      "inpainted_image": [
-        "682",
-        0
-      ]
-    },
-    "class_type": "InpaintStitchImproved",
-    "_meta": {
-      "title": "✂️ Inpaint Stitch"
-    }
-  },
-  "681": {
-    "inputs": {
-      "any": [
-        "680",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "inpaint output"
-    }
-  },
-  "682": {
-    "inputs": {
-      "guide_size": 512,
-      "guide_size_for": true,
-      "max_size": 1024,
-      "mask_mode": true,
-      "steps": 2,
-      "cfg": 1,
-      "sampler_name": "euler",
-      "scheduler": "simple",
-      "denoise": 0.4,
-      "feather": 6,
-      "crop_factor": 1.8,
-      "drop_size": 10,
-      "refiner_ratio": 0.2,
-      "batch_size": 1,
-      "cycle": 1,
-      "inpaint_model": true,
-      "noise_mask_feather": 20,
-      "bbox_fill": false,
-      "contour_fill": false,
-      "image": [
-        "689",
-        1
-      ],
-      "mask": [
-        "684",
-        0
-      ],
-      "basic_pipe": [
-        "687",
-        0
-      ],
-      "seed": [
-        "503",
-        0
-      ]
-    },
-    "class_type": "MaskDetailerPipe",
-    "_meta": {
-      "title": "MaskDetailer (pipe)"
-    }
-  },
-  "683": {
-    "inputs": {
-      "batch_size": 1,
-      "color": 16777215,
-      "width": [
-        "685",
-        0
-      ],
-      "height": [
-        "685",
-        1
-      ]
-    },
-    "class_type": "EmptyImage",
-    "_meta": {
-      "title": "Empty Image"
-    }
-  },
-  "684": {
-    "inputs": {
-      "channel": "red",
-      "image": [
-        "683",
-        0
-      ]
-    },
-    "class_type": "ImageToMask",
-    "_meta": {
-      "title": "Convert Image to Mask"
-    }
-  },
-  "685": {
-    "inputs": {
-      "image": [
-        "689",
-        1
-      ]
-    },
-    "class_type": "GetImageSize",
-    "_meta": {
-      "title": "Get Image Size"
-    }
-  },
-  "687": {
-    "inputs": {
-      "model": [
-        "783",
-        0
-      ],
-      "clip": [
-        "724",
-        0
-      ],
-      "vae": [
-        "725",
-        0
-      ],
-      "positive": [
-        "691",
-        0
-      ],
-      "negative": [
-        "693",
-        0
-      ]
-    },
-    "class_type": "ToBasicPipe",
-    "_meta": {
-      "title": "ToBasicPipe"
-    }
-  },
-  "689": {
-    "inputs": {
-      "downscale_algorithm": "bilinear",
-      "upscale_algorithm": "bicubic",
-      "preresize": false,
-      "preresize_mode": "ensure maximum resolution",
-      "preresize_min_width": 1024,
-      "preresize_min_height": 1024,
-      "preresize_max_width": 16384,
-      "preresize_max_height": 16384,
-      "mask_fill_holes": false,
-      "mask_expand_pixels": 6,
-      "mask_invert": false,
-      "mask_blend_pixels": 32,
-      "mask_hipass_filter": 0.1,
-      "extend_for_outpainting": false,
-      "extend_up_factor": 1,
-      "extend_down_factor": 1,
-      "extend_left_factor": 1,
-      "extend_right_factor": 1,
-      "context_from_mask_extend_factor": 1.2,
-      "output_resize_to_target_size": true,
-      "output_padding": "32",
-      "device_mode": "gpu (much faster)",
-      "image": [
-        "696",
-        0
-      ],
-      "mask": [
-        "690",
-        0
-      ],
-      "optional_context_mask": [
-        "721",
-        0
-      ],
-      "output_target_width": [
-        "694",
-        0
-      ],
-      "output_target_height": [
-        "694",
-        0
-      ]
-    },
-    "class_type": "InpaintCropImproved",
-    "_meta": {
-      "title": "✂️ Inpaint Crop"
-    }
-  },
-  "690": {
-    "inputs": {
-      "expand": 32,
-      "incremental_expandrate": 0,
-      "tapered_corners": true,
-      "flip_input": false,
-      "blur_radius": 16,
-      "lerp_alpha": 1,
-      "decay_factor": 1,
-      "fill_holes": false,
-      "mask": [
-        "757",
-        0
-      ]
-    },
-    "class_type": "GrowMaskWithBlur",
-    "_meta": {
-      "title": "Grow Mask With Blur"
-    }
-  },
-  "691": {
-    "inputs": {
-      "text": "",
-      "clip": [
-        "724",
-        0
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "override"
-    }
-  },
-  "693": {
-    "inputs": {
-      "conditioning": [
-        "691",
-        0
-      ]
-    },
-    "class_type": "ConditioningZeroOut",
-    "_meta": {
-      "title": "Conditioning Zero Out"
-    }
-  },
-  "694": {
-    "inputs": {
-      "any": [
-        "719",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "W + H"
-    }
-  },
-  "696": {
-    "inputs": {
-      "stitcher": [
-        "718",
-        0
-      ],
-      "inpainted_image": [
-        "698",
-        0
-      ]
-    },
-    "class_type": "InpaintStitchImproved",
-    "_meta": {
-      "title": "✂️ Inpaint Stitch"
-    }
-  },
-  "698": {
-    "inputs": {
-      "samples": [
-        "777",
-        0
-      ],
-      "vae": [
-        "725",
-        0
-      ]
-    },
-    "class_type": "VAEDecode",
-    "_meta": {
-      "title": "VAE Decode"
-    }
-  },
-  "706": {
-    "inputs": {
-      "conditioning": [
-        "707",
-        0
-      ]
-    },
-    "class_type": "ConditioningZeroOut",
-    "_meta": {
-      "title": "Conditioning Zero Out"
-    }
-  },
-  "707": {
-    "inputs": {
-      "conditioning": [
-        "712",
-        0
-      ],
-      "latent": [
-        "710",
-        0
-      ]
-    },
-    "class_type": "ReferenceLatent",
-    "_meta": {
-      "title": "Set Reference Latent"
-    }
-  },
-  "710": {
-    "inputs": {
-      "pixels": [
-        "718",
-        1
-      ],
-      "vae": [
-        "725",
-        0
-      ]
-    },
-    "class_type": "VAEEncode",
-    "_meta": {
-      "title": "VAE Encode"
-    }
-  },
-  "712": {
-    "inputs": {
-      "text": "Remove the head, leaving only the clothes behind.",
-      "clip": [
-        "724",
-        0
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "718": {
-    "inputs": {
-      "downscale_algorithm": "bilinear",
-      "upscale_algorithm": "bicubic",
-      "preresize": false,
-      "preresize_mode": "ensure minimum resolution",
-      "preresize_min_width": 1024,
-      "preresize_min_height": 1024,
-      "preresize_max_width": 16384,
-      "preresize_max_height": 16384,
-      "mask_fill_holes": false,
-      "mask_expand_pixels": 40,
-      "mask_invert": false,
-      "mask_blend_pixels": 32,
-      "mask_hipass_filter": 0.1,
-      "extend_for_outpainting": false,
-      "extend_up_factor": 1,
-      "extend_down_factor": 1,
-      "extend_left_factor": 1,
-      "extend_right_factor": 1,
-      "context_from_mask_extend_factor": 1.2,
-      "output_resize_to_target_size": true,
-      "output_padding": "32",
-      "device_mode": "gpu (much faster)",
-      "image": [
-        "723",
-        0
-      ],
-      "mask": [
-        "757",
-        0
-      ],
-      "optional_context_mask": [
-        "721",
-        0
-      ],
-      "output_target_width": [
-        "719",
-        0
-      ],
-      "output_target_height": [
-        "719",
-        0
-      ]
-    },
-    "class_type": "InpaintCropImproved",
-    "_meta": {
-      "title": "✂️ Inpaint Crop"
-    }
-  },
-  "719": {
-    "inputs": {
-      "any": [
-        "720",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "W + H"
-    }
-  },
-  "720": {
-    "inputs": {
-      "min_value": 0,
-      "max_value": 1024,
-      "value": [
-        "721",
-        3
-      ]
-    },
-    "class_type": "MpiClamp",
-    "_meta": {
-      "title": "Mpi Clamp"
-    }
-  },
-  "721": {
-    "inputs": {
-      "padding": 64,
-      "mask": [
-        "757",
-        0
-      ]
-    },
-    "class_type": "MpiMaskSquareBbox",
-    "_meta": {
-      "title": "Mpi Mask Square Bbox"
-    }
-  },
-  "723": {
-    "inputs": {
-      "any": [
-        "730",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Inpaint image Input"
-    }
-  },
-  "724": {
-    "inputs": {
-      "clip_name": "qwen_3_4b.safetensors",
-      "type": "flux2",
-      "device": "default"
-    },
-    "class_type": "CLIPLoader",
-    "_meta": {
-      "title": "Input_Edit_Clip"
-    }
-  },
-  "725": {
-    "inputs": {
-      "vae_name": "flux2-vae.safetensors"
-    },
-    "class_type": "VAELoader",
-    "_meta": {
-      "title": "Load VAE"
-    }
-  },
-  "726": {
-    "inputs": {
-      "unet_name": "flux-2-klein-4b-int8-convrot.safetensors",
-      "weight_dtype": "default"
-    },
-    "class_type": "UNETLoader",
-    "_meta": {
-      "title": "Input_Edit_Model"
-    }
-  },
   "730": {
     "inputs": {
       "any": [
@@ -1163,11 +694,11 @@
   "742": {
     "inputs": {
       "true": [
-        "681",
+        "858",
         0
       ],
       "false": [
-        "730",
+        "860",
         0
       ],
       "boolean": [
@@ -1392,154 +923,109 @@
       "title": "left 25% of the sheet width"
     }
   },
-  "775": {
+  "851": {
     "inputs": {
-      "samples": [
-        "710",
+      "x": 0,
+      "y": 0,
+      "resize_source": true,
+      "destination": [
+        "730",
+        0
+      ],
+      "source": [
+        "852",
         0
       ],
       "mask": [
-        "718",
-        2
-      ]
-    },
-    "class_type": "SetLatentNoiseMask",
-    "_meta": {
-      "title": "Set Latent Noise Mask"
-    }
-  },
-  "776": {
-    "inputs": {
-      "guidance": 4,
-      "conditioning": [
-        "707",
+        "859",
         0
       ]
     },
-    "class_type": "FluxGuidance",
+    "class_type": "ImageCompositeMasked",
     "_meta": {
-      "title": "FluxGuidance"
+      "title": "Image Composite Masked"
     }
   },
-  "777": {
+  "852": {
     "inputs": {
-      "steps": 4,
-      "cfg": 1,
-      "sampler_name": "euler",
-      "scheduler": "simple",
-      "denoise": 1,
-      "LanPaint_NumSteps": 2,
-      "LanPaint_PromptMode": "Image First",
-      "LanPaint_Info": "LanPaint KSampler.",
-      "Inpainting_mode": "🖼️ Image Inpainting",
-      "model": [
-        "783",
+      "width": 512,
+      "height": 512,
+      "batch_size": 1,
+      "color": 8421504
+    },
+    "class_type": "EmptyImage",
+    "_meta": {
+      "title": "Empty Image"
+    }
+  },
+  "854": {
+    "inputs": {
+      "expand": 6,
+      "tapered_corners": true,
+      "mask": [
+        "757",
+        0
+      ]
+    },
+    "class_type": "GrowMask",
+    "_meta": {
+      "title": "Grow Mask"
+    }
+  },
+  "858": {
+    "inputs": {
+      "x": 0,
+      "y": 0,
+      "operation": "subtract",
+      "destination": [
+        "860",
         0
       ],
-      "positive": [
-        "776",
+      "source": [
+        "854",
+        0
+      ]
+    },
+    "class_type": "MaskComposite",
+    "_meta": {
+      "title": "Combine Masks"
+    }
+  },
+  "859": {
+    "inputs": {
+      "mask": [
+        "742",
+        0
+      ]
+    },
+    "class_type": "InvertMask",
+    "_meta": {
+      "title": "Invert Mask"
+    }
+  },
+  "860": {
+    "inputs": {
+      "bg_removal_model": [
+        "861",
         0
       ],
-      "negative": [
-        "706",
-        0
-      ],
-      "latent_image": [
-        "775",
-        0
-      ],
-      "seed": [
-        "503",
+      "image": [
+        "730",
         0
       ]
     },
-    "class_type": "LanPaint_KSampler",
+    "class_type": "RemoveBackground",
     "_meta": {
-      "title": "LanPaint KSampler"
+      "title": "Remove Background"
     }
   },
-  "778": {
+  "861": {
     "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "model": [
-        "726",
-        0
-      ]
+      "bg_removal_name": "birefnet.safetensors"
     },
-    "class_type": "MpiLoraModel",
+    "class_type": "LoadBackgroundRemovalModel",
     "_meta": {
-      "title": "Input_Lora_Phase2_1"
-    }
-  },
-  "779": {
-    "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "model": [
-        "778",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_Lora_Phase2_2"
-    }
-  },
-  "780": {
-    "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "model": [
-        "779",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_Lora_Phase2_3"
-    }
-  },
-  "781": {
-    "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "model": [
-        "780",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_Lora_Phase2_4"
-    }
-  },
-  "782": {
-    "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "model": [
-        "781",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_Lora_Phase2_5"
-    }
-  },
-  "783": {
-    "inputs": {
-      "lora_name": "None",
-      "strength_model": 1,
-      "model": [
-        "782",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Input_Lora_Phase2_6"
+      "title": "Load Background Removal Model"
     }
   }
 }

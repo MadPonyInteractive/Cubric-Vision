@@ -45,25 +45,72 @@ async function load() {
     return { state, registry };
 }
 
+// THE MULTI-SLOT MACHINERY HAS NO SHIPPED FLOW LEFT (MPI-628). The Character Sheet was
+// the last two-slot flow and carried these tests as a real fixture; its head-removal phase
+// is now a mask subtraction, not a Klein edit, so its second slot is gone. Every shipped
+// flow declares exactly one.
+//
+// The machinery itself stays — `flowModelChoices` / per-slot picks / per-phase racks are
+// live code, and MPI-586's Prop Sheet needs the same shape — so the coverage moves to a
+// synthetic flow rather than being deleted with the slot that happened to exercise it.
+// That also stops the next flow re-shape from breaking these tests again, which is what
+// just happened. The push/splice pattern is the one 'picks are PER SLOT' already used.
+//
+// `loras: true` on both slots and a `modelParams` arm per candidate, because the rack and
+// the params are two of the things under test.
+const TWO_SLOT_FIXTURE = {
+    id: 'two-slot-fixture',
+    requiredModels: [
+        { label: 'Render model', models: [SFW, NSFW], loras: true },
+        { label: 'Blend model', models: ['klein-4b', 'klein-9b'], loras: true },
+    ],
+    modelParams: {
+        [SFW]: { 'Input_Base_Model': 'krea2_raw_int8_convrot.safetensors' },
+        [NSFW]: { 'Input_Base_Model': 'lustify-v10-krea-raw-int8_convrot.safetensors' },
+        'klein-4b': { 'Input_Edit_Model': 'flux-2-klein-4b-int8-convrot.safetensors' },
+        'klein-9b': { 'Input_Edit_Model': 'flux-2-klein-9b-int8-convrot.safetensors' },
+    },
+};
+
+// Registered for the duration of the callback and removed in `finally` — a throw inside
+// must not leave every later test running against a phantom flow.
+async function withTwoSlotFlow(registry, fn) {
+    assert.equal(registry.getFlowById(TWO_SLOT_FIXTURE.id), null,
+        'fixture id must not collide with a real flow');
+    registry.FLOWS.push(TWO_SLOT_FIXTURE);
+    try {
+        return await fn(TWO_SLOT_FIXTURE, TWO_SLOT_FIXTURE.id);
+    } finally {
+        registry.FLOWS.splice(registry.FLOWS.indexOf(TWO_SLOT_FIXTURE), 1);
+    }
+}
+
 test('an any-of set is satisfied by EITHER member', async () => {
     const { state, registry } = await load();
-    const flow = registry.getFlowById(FLOW_ID);
 
-    state.s_installedModelIds = [NSFW, 'klein-4b'];
-    assert.equal(registry.flowAvailability(flow).available, true,
+    // The real Character Sheet still proves the one-slot half — that is the shipped shape.
+    const sheet = registry.getFlowById(FLOW_ID);
+    state.s_installedModelIds = [NSFW];
+    assert.equal(registry.flowAvailability(sheet).available, true,
         'the NSFW bake alone must satisfy the sheet — the whole point is not asking for a second 12.25GB base');
-    assert.deepEqual(registry.flowModelIds(flow), [NSFW, 'klein-4b']);
+    assert.deepEqual(registry.flowModelIds(sheet), [NSFW]);
 
-    state.s_installedModelIds = [SFW, 'klein-4b'];
-    assert.equal(registry.flowAvailability(flow).available, true);
-    assert.deepEqual(registry.flowModelIds(flow), [SFW, 'klein-4b']);
+    state.s_installedModelIds = [SFW];
+    assert.equal(registry.flowAvailability(sheet).available, true);
+    assert.deepEqual(registry.flowModelIds(sheet), [SFW]);
 
-    // A slot with no installed member still names ONE id to install, or the Install
-    // button has nothing to start.
-    state.s_installedModelIds = ['klein-4b'];
-    const { available, missing } = registry.flowAvailability(flow);
-    assert.equal(available, false);
-    assert.equal(missing.length, 1, 'one unsatisfied slot must produce exactly one missing id');
+    await withTwoSlotFlow(registry, (flow) => {
+        state.s_installedModelIds = [NSFW, 'klein-4b'];
+        assert.equal(registry.flowAvailability(flow).available, true);
+        assert.deepEqual(registry.flowModelIds(flow), [NSFW, 'klein-4b']);
+
+        // A slot with no installed member still names ONE id to install, or the Install
+        // button has nothing to start.
+        state.s_installedModelIds = ['klein-4b'];
+        const { available, missing } = registry.flowAvailability(flow);
+        assert.equal(available, false);
+        assert.equal(missing.length, 1, 'one unsatisfied slot must produce exactly one missing id');
+    });
 });
 
 test('a single-id flow gates exactly as before', async () => {
@@ -102,74 +149,78 @@ test('the picker offers UNINSTALLED candidates too — that is how the user pick
     // installed got no picker and silently downloaded models[0]. That user is the one the
     // picker is for: the choice only exists before the 12.25GB lands.
     const { state, registry } = await load();
-    const flow = registry.getFlowById(FLOW_ID);
 
-    state.s_installedModelIds = [];
-    // `index` is the slot's ORIGINAL position in requiredModels, carried through the
-    // single-candidate filter because the phase number is that index (MPI-608). `loras`
-    // is the per-slot rack opt-in.
-    assert.deepEqual(registry.flowModelChoices(flow), [
-        { label: 'Render model', models: [SFW, NSFW], loras: true, index: 0, recommended: SFW },
-        { label: 'Blend model', models: ['klein-4b', 'klein-9b'], loras: true, index: 1, recommended: 'klein-4b' },
-    ], 'nothing installed must still offer both candidates of BOTH slots, each with its recommendation');
+    await withTwoSlotFlow(registry, (flow) => {
+        state.s_installedModelIds = [];
+        // `index` is the slot's ORIGINAL position in requiredModels, carried through the
+        // single-candidate filter because the phase number is that index (MPI-608). `loras`
+        // is the per-slot rack opt-in.
+        assert.deepEqual(registry.flowModelChoices(flow), [
+            { label: 'Render model', models: [SFW, NSFW], loras: true, index: 0, recommended: SFW },
+            { label: 'Blend model', models: ['klein-4b', 'klein-9b'], loras: true, index: 1, recommended: 'klein-4b' },
+        ], 'nothing installed must still offer both candidates of BOTH slots, each with its recommendation');
 
-    state.s_installedModelIds = [SFW, 'klein-4b'];
-    assert.deepEqual(registry.flowModelChoices(flow).map(s => s.models),
-        [[SFW, NSFW], ['klein-4b', 'klein-9b']],
-        'holding one candidate must not hide the other — that is how the second gets installed');
+        state.s_installedModelIds = [SFW, 'klein-4b'];
+        assert.deepEqual(registry.flowModelChoices(flow).map(s => s.models),
+            [[SFW, NSFW], ['klein-4b', 'klein-9b']],
+            'holding one candidate must not hide the other — that is how the second gets installed');
 
-    // The recommendation is declaration order, not install state: it must not drift to
-    // whatever the user happens to have.
-    state.s_installedModelIds = [NSFW, 'klein-4b'];
-    assert.equal(registry.flowModelChoices(flow)[0].recommended, SFW);
+        // The recommendation is declaration order, not install state: it must not drift to
+        // whatever the user happens to have.
+        state.s_installedModelIds = [NSFW, 'klein-4b'];
+        assert.equal(registry.flowModelChoices(flow)[0].recommended, SFW);
+    });
 });
 
 test('a pick for an UNINSTALLED candidate drives the install, not just the label', async () => {
     // The pick has to reach flowModelIds, or the Required-models row, the install keys and
     // the Install button all keep describing the candidate the user just rejected.
     const { state, registry } = await load();
-    const flow = registry.getFlowById(FLOW_ID);
 
-    state.s_installedModelIds = ['klein-4b'];
-    registry.setFlowModel(FLOW_ID, NSFW);
-    assert.deepEqual(registry.flowModelIds(flow), [NSFW, 'klein-4b']);
-    assert.deepEqual(registry.flowAvailability(flow).missing, [NSFW],
-        'the Install button must fetch the PICKED candidate, not the default');
+    await withTwoSlotFlow(registry, (flow, id) => {
+        state.s_installedModelIds = ['klein-4b'];
+        registry.setFlowModel(id, NSFW);
+        assert.deepEqual(registry.flowModelIds(flow), [NSFW, 'klein-4b']);
+        assert.deepEqual(registry.flowAvailability(flow).missing, [NSFW],
+            'the Install button must fetch the PICKED candidate, not the default');
 
-    // And picking one you do not have while holding the other is the deliberate trade
-    // (MPI-599): the flow goes unavailable until it downloads. Session-only, one click back.
-    state.s_installedModelIds = [SFW, 'klein-4b'];
-    registry.setFlowModel(FLOW_ID, NSFW);
-    assert.equal(registry.flowAvailability(flow).available, false);
-    registry.setFlowModel(FLOW_ID, SFW);
-    assert.equal(registry.flowAvailability(flow).available, true);
+        // And picking one you do not have while holding the other is the deliberate trade
+        // (MPI-599): the flow goes unavailable until it downloads. Session-only, one click back.
+        state.s_installedModelIds = [SFW, 'klein-4b'];
+        registry.setFlowModel(id, NSFW);
+        assert.equal(registry.flowAvailability(flow).available, false);
+        registry.setFlowModel(id, SFW);
+        assert.equal(registry.flowAvailability(flow).available, true);
+    });
 });
 
 test('the pick reaches the params and the LoRA rack', async () => {
     const { state, registry } = await load();
-    const flow = registry.getFlowById(FLOW_ID);
-    state.s_installedModelIds = [SFW, NSFW, 'klein-4b'];
 
-    // The rack is keyed by PHASE now, not by a flow-level `settingsModel` (MPI-608), but
-    // the property under test is unchanged: it must follow the PICKED member, or the user
-    // on the NSFW arm edits the SFW card's rack and gets no LoRAs at all, silently.
-    registry.setFlowModel(FLOW_ID, NSFW);
-    assert.deepEqual(registry.flowLoraPhases(flow),
-        [{ phase: 1, modelId: NSFW }, { phase: 2, modelId: 'klein-4b' }],
-        'the phase-1 rack must follow the pick, or the NSFW arm edits the SFW rack');
-    const nsfwParams = registry.flowModelParams(flow);
+    await withTwoSlotFlow(registry, (flow, id) => {
+        state.s_installedModelIds = [SFW, NSFW, 'klein-4b'];
 
-    registry.setFlowModel(FLOW_ID, SFW);
-    const sfwParams = registry.flowModelParams(flow);
-    assert.notDeepEqual(nsfwParams, sfwParams,
-        'if both arms resolve to the same params the picker is a no-op');
-    assert.deepEqual(registry.flowLoraPhases(flow),
-        [{ phase: 1, modelId: SFW }, { phase: 2, modelId: 'klein-4b' }]);
+        // The rack is keyed by PHASE now, not by a flow-level `settingsModel` (MPI-608), but
+        // the property under test is unchanged: it must follow the PICKED member, or the user
+        // on the NSFW arm edits the SFW card's rack and gets no LoRAs at all, silently.
+        registry.setFlowModel(id, NSFW);
+        assert.deepEqual(registry.flowLoraPhases(flow),
+            [{ phase: 1, modelId: NSFW }, { phase: 2, modelId: 'klein-4b' }],
+            'the phase-1 rack must follow the pick, or the NSFW arm edits the SFW rack');
+        const nsfwParams = registry.flowModelParams(flow);
 
-    // An id that is not a candidate in any slot must not shadow the resolution order.
-    registry.setFlowModel(FLOW_ID, 'qwen-edit');
-    assert.deepEqual(registry.flowLoraPhases(flow),
-        [{ phase: 1, modelId: SFW }, { phase: 2, modelId: 'klein-4b' }]);
+        registry.setFlowModel(id, SFW);
+        const sfwParams = registry.flowModelParams(flow);
+        assert.notDeepEqual(nsfwParams, sfwParams,
+            'if both arms resolve to the same params the picker is a no-op');
+        assert.deepEqual(registry.flowLoraPhases(flow),
+            [{ phase: 1, modelId: SFW }, { phase: 2, modelId: 'klein-4b' }]);
+
+        // An id that is not a candidate in any slot must not shadow the resolution order.
+        registry.setFlowModel(id, 'qwen-edit');
+        assert.deepEqual(registry.flowLoraPhases(flow),
+            [{ phase: 1, modelId: SFW }, { phase: 2, modelId: 'klein-4b' }]);
+    });
 });
 
 test('picks are PER SLOT — a second pick must not overwrite the first', async () => {
@@ -211,16 +262,18 @@ test('picks are PER SLOT — a second pick must not overwrite the first', async 
 
 test('a pick survives its candidate being uninstalled, per slot', async () => {
     const { state, registry } = await load();
-    const flow = registry.getFlowById(FLOW_ID);
-    state.s_installedModelIds = [SFW, NSFW, 'klein-4b'];
 
-    registry.setFlowModel(FLOW_ID, NSFW);
-    state.s_installedModelIds = [SFW, 'klein-4b'];
-    // Deliberate reversal of the MPI-590 behaviour: the pick is a statement of intent, so
-    // it holds and the flow asks for the model back. The user un-asks by picking the other.
-    assert.deepEqual(registry.flowModelIds(flow), [NSFW, 'klein-4b']);
-    registry.setFlowModel(FLOW_ID, SFW);
-    assert.deepEqual(registry.flowModelIds(flow), [SFW, 'klein-4b']);
+    await withTwoSlotFlow(registry, (flow, id) => {
+        state.s_installedModelIds = [SFW, NSFW, 'klein-4b'];
+
+        registry.setFlowModel(id, NSFW);
+        state.s_installedModelIds = [SFW, 'klein-4b'];
+        // Deliberate reversal of the MPI-590 behaviour: the pick is a statement of intent, so
+        // it holds and the flow asks for the model back. The user un-asks by picking the other.
+        assert.deepEqual(registry.flowModelIds(flow), [NSFW, 'klein-4b']);
+        registry.setFlowModel(id, SFW);
+        assert.deepEqual(registry.flowModelIds(flow), [SFW, 'klein-4b']);
+    });
 });
 
 test('every modelParams title EXISTS in the flow workflow', async () => {
@@ -279,88 +332,92 @@ test('the Character Sheet arms match the weights and the twin graph', async () =
         'running lustify with the SFW bypass still applied is a half-switched model',
     );
 
-    // SLOT 2 — the BLEND model (MPI-610), the head-removal pass. Same trap as
-    // scribble-to-object's blend slot: Klein 9B needs qwen_3_8b_int8_convrot and 4B needs
-    // qwen_3_4b, and pairing 9B with 4B's encoder dies with a shape error that reads as a
-    // LanPaint bug (MPI-600). So the CLIP must move WITH the checkpoint on every arm.
-    const editUnet = byTitle('Input_Edit_Model');
-    const editClip = byTitle('Input_Edit_Clip');
-    assert.ok(editUnet && editUnet.class_type === 'UNETLoader',
-        'the blend phase needs its OWN injectable UNETLoader, separate from Input_Base_Model');
-    assert.notEqual(editUnet, loader, 'the two slots must address two different loaders');
-    assert.ok(editClip && editClip.class_type === 'CLIPLoader',
-        'the CLIPLoader must be TITLED — untitled, the 9B arm keeps 4B\'s encoder and dies on a shape error');
-    assert.equal(typeof editClip.inputs.clip_name, 'string', 'clip_name must be a widget, not a link');
-
-    for (const [model, unetDep, clipDep] of [
-        ['klein-4b', 'klein-4b-transformer', 'qwen3-4b-clip'],
-        ['klein-9b', 'klein-9b-transformer', 'qwen3-8b-clip'],
-    ]) {
-        registry.setFlowModel(FLOW_ID, model);
-        const blend = registry.flowModelParams(flow);
-        assert.equal(blend.Input_Edit_Model, basename(unetDep), `${model}: wrong transformer`);
-        assert.equal(blend['Input_Edit_Clip.clip_name'], basename(clipDep),
-            `${model}: the encoder must move with the checkpoint, or the arm dies on a shape error`);
+    // THE BLEND SLOT IS GONE (MPI-628). The head removal was a Klein edit pass — a second
+    // checkpoint with its own CLIP and VAE, loaded mid-run to paint studio grey. It is now
+    // a BiRefNet subject matte minus the SAM3 head mask, composited onto a flat plate, so
+    // there is no second model to choose and no second loader to inject into.
+    //
+    // Asserted as an ABSENCE because a leftover `Input_Edit_*` title is the silent kind of
+    // wrong: injection matches titles and skips a miss without a word, so a descriptor that
+    // still named these would read as wired and write nothing.
+    for (const title of ['Input_Edit_Model', 'Input_Edit_Clip']) {
+        assert.equal(byTitle(title), undefined,
+            `${title} survives in the graph — the Klein blend pass was removed in MPI-628`);
     }
+    for (const id of ['klein-4b', 'klein-9b']) {
+        assert.ok(!(flow.modelParams || {})[id],
+            `modelParams still carries an arm for ${id}, which is in no slot any more`);
+    }
+    assert.deepEqual(registry.flowModelSlots(flow).length, 1,
+        'the sheet declares ONE slot now — the render model');
 
-    // …and the 4B arm is the BAKE, so it must restate what the graph already loads —
-    // otherwise the default silently moves the day someone re-exports the graph.
-    registry.setFlowModel(FLOW_ID, 'klein-4b');
-    const baked = registry.flowModelParams(flow);
-    assert.equal(baked.Input_Edit_Model, editUnet.inputs.unet_name);
-    assert.equal(baked['Input_Edit_Clip.clip_name'], editClip.inputs.clip_name);
-
-    // Picking a blend model must NOT disturb the render pick — they are separate slots.
-    assert.equal(baked.Input_Base_Model, basename('krea2-raw-transformer-nsfw'),
-        'choosing a blend model reset the render slot');
+    // The render pick still stands after all of that.
+    assert.equal(registry.flowModelParams(flow).Input_Base_Model,
+        basename('krea2-raw-transformer-nsfw'));
 });
 
-test('the Character Sheet fills BOTH LoRA racks, and no flat rack survives (MPI-610)', async () => {
+test('the Character Sheet fills its ONE LoRA rack, and no flat or phase-2 rack survives (MPI-628)', async () => {
     const { state, registry } = await load();
     const flow = registry.getFlowById(FLOW_ID);
-    state.s_installedModelIds = [SFW, NSFW, 'klein-4b', 'klein-9b'];
+    state.s_installedModelIds = [SFW, NSFW];
     registry.setFlowModel(FLOW_ID, SFW);
-    registry.setFlowModel(FLOW_ID, 'klein-9b');
 
-    // Both slots declare `loras: true`, so both phases resolve to a rack owner — that is
-    // the whole point of the two-slot shape, and a slot that loses `loras` fails silently
-    // with a run that succeeds carrying none of the user's LoRAs.
-    assert.deepEqual(registry.flowLoraPhases(flow), [
-        { phase: 1, modelId: SFW },
-        { phase: 2, modelId: 'klein-9b' },
-    ], 'each phase must resolve to its OWN slot\'s running model');
+    // One slot, one rack owner. A slot that loses `loras` fails silently — the run
+    // succeeds carrying none of the user's LoRAs.
+    assert.deepEqual(registry.flowLoraPhases(flow), [{ phase: 1, modelId: SFW }],
+        'the render phase must resolve to its slot\'s running model');
 
-    // The graph has to carry the nodes those phases inject into, and must NOT also carry
+    // The graph has to carry the nodes that phase injects into, and must NOT also carry
     // the flat pre-MPI-608 titles: commandExecutor still emits `Lora_N` alongside
     // `Lora_Phase1_N`, so a graph holding both forms would take the phase-1 rack twice.
+    // Phase 2's titles are the same hazard from the other direction — the rack UI is gone
+    // with the slot, so a surviving node would take injections nothing declares.
     const sheet = readJson('comfy_workflows/flow_character_sheet.json');
     const titles = Object.values(sheet).map(n => n?._meta?.title);
     for (let i = 1; i <= 6; i += 1) {
         assert.ok(titles.includes(`Input_Lora_Phase1_${i}`), `missing Input_Lora_Phase1_${i}`);
-        assert.ok(titles.includes(`Input_Lora_Phase2_${i}`), `missing Input_Lora_Phase2_${i}`);
+        assert.ok(!titles.includes(`Input_Lora_Phase2_${i}`),
+            `Input_Lora_Phase2_${i} survived — the blend slot it belonged to is gone (MPI-628)`);
         assert.ok(!titles.includes(`Input_Lora_${i}`),
             `flat Input_Lora_${i} survived — phase 1 would be injected twice`);
     }
 
-    // Phase 2's rack must sit on the KLEIN chain, i.e. between the blend loader and the
-    // sampler that runs it. Walk it: every node model-chains back to Input_Edit_Model.
-    const byId = id => sheet[id];
-    const rack = Object.entries(sheet)
-        .filter(([, n]) => /^Input_Lora_Phase2_\d$/.test(n?._meta?.title || ''))
-        .sort((a, b) => a[1]._meta.title.localeCompare(b[1]._meta.title));
-    assert.equal(rack.length, 6);
-    let [, node] = rack[0];
-    assert.equal(byId(node.inputs.model[0])._meta.title, 'Input_Edit_Model',
-        'the phase-2 rack must start at the blend loader, not the render one');
-    for (let i = 1; i < 6; i += 1) {
-        assert.equal(rack[i][1].inputs.model[0], rack[i - 1][0],
-            'the phase-2 rack must be one chain, or the later slots are never applied');
+    // The rack must be ONE chain off the render loader and end at what the sampler runs,
+    // or the later slots are silently never applied.
+    const rackIds = Object.entries(sheet)
+        .filter(([, n]) => /^Input_Lora_Phase1_\d$/.test(n?._meta?.title || ''))
+        .map(([id]) => id);
+    assert.equal(rackIds.length, 6);
+
+    // The property is ONE CHAIN ORIGINATING AT THE RENDER LOADER, walked rather than
+    // asserted edge by edge, for two reasons. The graph chains the six in an order that is
+    // not their title order — harmless, LoRA application is a stack — so a positional
+    // assertion tests the export's accidents. And the baked `Input_Bypass_Filter_Lora`
+    // sits between the loader and the rack, with room for more bakes later. What actually
+    // fails silently is a rack node falling OUT of the chain: the run succeeds and that
+    // slot's LoRA is simply never applied.
+    const tail = rackIds.filter(id => !rackIds.some(o => sheet[o].inputs?.model?.[0] === id));
+    assert.equal(tail.length, 1, 'the rack must be one chain, not a fork — each slot feeds the next');
+
+    const seen = new Set();
+    let cursor = sheet[tail[0]], hops = 0;
+    while (cursor && hops < 30) {
+        if (rackIds.includes(String(cursor.inputs?.model?.[0]))) seen.add(String(cursor.inputs.model[0]));
+        if (!cursor.inputs?.model) break;
+        cursor = sheet[cursor.inputs.model[0]];
+        hops += 1;
     }
-    // …and the END of that chain is what the blend sampler actually runs.
-    const lanpaint = Object.values(sheet).find(n => n.class_type === 'LanPaint_KSampler');
-    assert.ok(lanpaint, 'the head-removal pass is LanPaint since MPI-603');
-    assert.equal(lanpaint.inputs.model[0], rack[5][0],
-        'LanPaint must run the model coming OUT of the rack, not the bare loader');
+    seen.add(tail[0]);
+    assert.equal(seen.size, 6, 'a rack node fell out of the chain — its LoRA would never be applied');
+    assert.equal(cursor?._meta?.title, 'Input_Base_Model',
+        'the rack chain must originate at the render loader');
+
+    // The head removal is a MASK SUBTRACTION now, not a sampler pass. Asserted here
+    // because this is the test that used to prove the opposite.
+    assert.ok(!Object.values(sheet).some(n => n.class_type === 'LanPaint_KSampler'),
+        'the LanPaint head-removal pass should be gone — MPI-628 replaced it with a matte');
+    assert.ok(Object.values(sheet).some(n => n.class_type === 'RemoveBackground'),
+        'the head removal now subtracts the head mask from a BiRefNet subject matte');
 });
 
 test('the Outpaint arms match the weights and the twin graph (MPI-594)', async () => {
@@ -536,11 +593,13 @@ test('two candidates sharing a NAME are told apart in the picker (MPI-567)', asy
     const { registry } = { registry: await import('../js/data/flowsRegistry.js') };
     const { sizeTierLetter, tierLetterFor, getModelById, MODELS } =
         await import('../js/data/modelRegistry.js');
-    // MOVED OFF THE SCRIBBLE FLOW 2026-08-25 (MPI-621): Draw It In is Klein 9B ONLY now,
-    // and a slot with one candidate is not a choice, so it has no dropdown to
-    // disambiguate. The character sheet still picks between the two Klein cards for its
-    // head-removal phase, so the fixture moves there.
-    const flow = registry.getFlowById('character-sheet');
+    // MOVED TWICE. Off Draw It In 2026-08-25 (MPI-621) — it is Klein 9B ONLY now, and a
+    // slot with one candidate is not a choice, so it has no dropdown to disambiguate — and
+    // then off the character sheet 2026-08-27 (MPI-628), whose head-removal phase stopped
+    // being a Klein edit at all. Scribble is the flow that still picks between the two
+    // Klein cards. Found rather than hardcoded would be better, but the assertions below
+    // name the two ids anyway, so a named flow is the honest form.
+    const flow = registry.getFlowById('scribble');
     // `flowModelChoices`, not `flowModelSlots`: only the choices rows carry `recommended`,
     // and only a slot with a real choice in it gets a dropdown to disambiguate at all.
     const blend = registry.flowModelChoices(flow).find(s => s.models.includes('klein-9b'));
