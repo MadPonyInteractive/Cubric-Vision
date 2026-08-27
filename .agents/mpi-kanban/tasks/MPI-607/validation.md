@@ -2224,8 +2224,16 @@ python -m dramabox_nodes.finetune_extract \
 cross-attention the finetune was trained with, so a finetune's flavour may come out generic or
 degraded. *"Loadability is guaranteed; audio quality is an experiment."*
 
-**Why it matters to this card:** Vision already ships LTX 2.3. This is the bridge between the
-DramaBox route and the third route Fabio raised.
+**🔴 CORRECTION, same day, Fabio: DO NOT REACH FOR THIS TOOL HERE.** *"But why would we
+extract the audio component when it already exists?"* -- correct. `dramabox-dit-v1.safetensors`
+(6.58 GB on HF) **is already** the extracted, finetuned audio branch. Extracting it yourself is
+backwards.
+
+And the "this bridges the DramaBox route to the LTX route" line first written here was **WRONG**.
+Vision ships `ltx-2.3-22b-dev-fp8`. Extracting *its* audio branch yields the **un-finetuned base**
+audio branch -- which is exactly what DramaBox is a finetune OF. You would be hand-building a worse
+DramaBox. The tool earns its place only if some future THIRD-PARTY LTX-2.3 finetune has a voice
+flavour worth lifting. Speculative; not a reason to adopt anything.
 
 ### GGUF quant sizes (pack's own measurements, RTX 3090, same prompt/seed)
 
@@ -2238,6 +2246,49 @@ DramaBox route and the third route Fabio raised.
 
 K-quants (Q4_K/Q5_K/Q6_K) can be **read** by the loader but not produced in pure Python --
 convert to F16 here, then `llama-quantize`.
+
+### 🔴 DRAMABOX IS TAGGED **ENGLISH**, AND IT DOES NOT REPLACE THE MULTILINGUAL ARM
+
+`huggingface.co/ResembleAI/Dramabox` carries the **`English`** language tag, every example on the
+model card is English, and the card makes **no multilingual claim anywhere**. Nothing states an
+English-only limitation either -- it simply never addresses the question.
+
+**Consequence for this card, and it narrows the whole re-opening:** the 2026-08-27 LANGUAGE finding
+is untouched. Non-English still goes through `chatterbox_multilingual`; DramaBox cannot take that
+job. DramaBox is an **English-EXPRESSIVENESS** play only.
+
+That is still the right axis to test -- English expressiveness is precisely where Chatterbox VC is
+failing ("VC is very inconsistent, it destroys voices") -- but the goal is narrower than the handoff
+framed it. "Do DramaBox + Chatterbox combine into a product" resolves to: DramaBox for performed
+ENGLISH, Chatterbox multilingual for everything else, and the VC stage possibly dropped rather than
+fixed.
+
+### Upstream's own numbers (HF model card, for contrast with the pack's)
+
+| | upstream card | MelodramaBox measured |
+|---|---|---|
+| VRAM | **~24 GB peak, warm server** | **13.5 GB** (Q8_0 DiT + 4-bit Gemma, RTX 3090) |
+| speed | ~2.5 s / generation on an **H100**, once warm | not measured |
+
+`gen_duration` guidance on the card is *"Set to 20-60 s for music or long scenes"*; no hard maximum
+is stated. Watermarking is **on by default** unless explicitly disabled -- which matches the
+watermark-always decision already on this card.
+
+The 24 GB is upstream's own always-warm server holding everything resident. It is the number the
+rejection table inherited, and it is the number the GGUF route undercuts.
+
+### Weight sizes, read off the HF repo (not inferred)
+
+| file | size |
+|---|---|
+| `dramabox-dit-v1.safetensors` | **6.58 GB** |
+| `dramabox-audio-components.safetensors` | **1.94 GB** |
+| repo total | **8.55 GB** |
+| + `unsloth/gemma-3-12b-it-bnb-4bit` text encoder | ~8 GB |
+| **total to download** | **~16.5 GB** |
+
+Repo is 24 commits, last touched 4 months ago (matches the "stale since 2026-05-23" line), 318
+likes, 9 community threads, licence `ltx-2-community`.
 
 ### NOT YET ANSWERED
 
