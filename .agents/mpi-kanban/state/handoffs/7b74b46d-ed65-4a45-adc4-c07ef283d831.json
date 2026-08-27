@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/handoff/v1",
   "id": "7b74b46d-ed65-4a45-adc4-c07ef283d831",
   "generated_at": "2026-08-26T18:40:00Z",
-  "status": "open",
+  "status": "superseded",
   "session": {
     "name": "MPI-596 Object Stamp - the graph authored and proven on the bench",
     "branch": "master"
