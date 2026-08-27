@@ -1,8 +1,9 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 629,
+  "next_id": 630,
   "columns": {
     "todo": [
+      "MPI-629",
       "MPI-623",
       "MPI-616",
       "MPI-612",
@@ -124,7 +125,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-27T09:21:29Z",
+  "updated_at": "2026-08-27T10:04:06Z",
   "events": [
     {
       "at": "2026-08-25T04:12:00Z",
@@ -3909,6 +3910,13 @@
       "task": "MPI-595",
       "actor": "claude",
       "note": "Two Gate C questions ANSWERED by Fabio 2026-08-26. (1) WHY MAJOR: Flows make it major, on AUDIENCE not code - no migration or compat note is owed. Flows open the app to a user who could not use it before, or for whom it was hard; they are extremely simple and straightforward and will draw a different kind of user. Plus a competitive half that belongs in the release body: some of these Flows exist NOWHERE ELSE, or only behind proprietary websites. (2) THE FLOW LIST IS STILL GROWING - more Flows land before 2.0 cuts, so no number can be pinned now. The gate was reframed from 'freeze the list' to a mechanical reconcile run ONCE, immediately before the notes freeze: diff flowsRegistry.js ids against the Flows named in UNRELEASED.md and fix the count sentence. The 8-vs-9 voice-changer drift is kept as the worked example, not as the answer. Fabio also confirmed the card stays - keep, do not delete."
+    },
+    {
+      "at": "2026-08-27T10:04:06Z",
+      "type": "task.created",
+      "task": "MPI-629",
+      "actor": "claude",
+      "note": "Board entry backfilled - the card folder and next_id existed but the id was never added to columns, so it was invisible."
     }
   ]
 }
