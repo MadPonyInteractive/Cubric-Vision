@@ -6,7 +6,9 @@
 - [x] Step 2b' RESOLVED - Qwen NOT shipped; Chatterbox + self-authored library is the route
 - [x] Accent via VoiceDesign - CLOSED NEGATIVE after 22 generations; American prior, not controllable
 - [ ] Does a GENUINELY accented reference survive Chatterbox? (all tests so far used accent-free refs)
-- [ ] Multilingual clone durations are anomalous (22-30s for ~12 words) - sweep repetition_penalty/min_p/top_p
+- [x] Multilingual clone durations RESOLVED - same cause as the trailing noise, not a separate defect.
+      Warm, multilingual costs ~1s over base (8.0s vs 7.1s); the 18-21s runs are exactly the ones that
+      fail to stop and decode to the cap. The cold measurement that suggested otherwise was model LOAD
 - [x] Emotion transfer - WORKS at cfg_weight 0.3 (node default 0.5 suppresses it)
 - [ ] Library size decider - does emotional TEXT on a NEUTRAL voice work at cfg 0.3? (mpi607_emotion3)
 - [x] Speaker-similarity QA gate built (research/speaker_similarity.py, CAMPPlus cosine)
@@ -28,12 +30,32 @@
   - [x] REMOTE twin FIXED (Fabio approved): _isImageResident now needs targetPath AND bakedOnPod; rife47 carries the flag. Chatterbox reports MISSING on remote = fails closed. Logic + full-registry sweep, no Pod rented
   - [ ] Flow A on REMOTE still unsupported: the wrapper cannot install a targetPath weight, and FL_ChatterboxVC is not in the Pod image. Decide later: bake, or teach the wrapper a targetPath destination
   - [ ] Gate 2 FLOW A - UI: record button (MPI-573 recorder) + voice selector from the library + custom-voice library item. NOT designed yet
-  - [ ] Gate 2 FLOW B - Text to Speech (FL_ChatterboxTTS -> VC). 4.25GB, needs the performance clips
-  - [ ] Gate 2 FLOW B - accent routing: none -> base model, <lang> -> multilingual (+3.0GB, optional-dep question OPEN)
+  - [~] Gate 2 FLOW B - Text to Speech. **GRAPH SHAPE PROVEN ON THE BENCH 2026-08-27, 4/4 quadrants.**
+        Shape approved by Fabio: TWO independent axes (accent picks the MODEL, emotion picks the
+        REFERENCE and whether VC runs) = four routes, fanned out in the GRAPH as MpiAnySwitch banks
+        off two MpiInts. Zero app code for the fan-out. `research/flow_b_graph_probe.py`.
+        Proven, not assumed: the switch is LAZY (a straight read runs with an EMPTY perf-clip loader
+        and `block_if_empty` armed, and it does not fire); `*` links into AUDIO and FLOAT inputs; and
+        all four outputs are DISTINCT (4/4 sha256, envelope r 0.07-0.48) - which is the check that
+        matters, since a lost selector silently pins every run to any_1 and still succeeds.
+        Performance clips are NOT a blocker any more: 30 shipped by MPI-622.
+        STILL TO DO: op in 4 files, FlowDef, the app-side perf-clip resolver, the raw/ LiteGraph file,
+        and the multilingual dep entries.
+  - [~] Gate 2 FLOW B - accent routing WORKS end to end (q3/q4 above). **`language` is a COMBO and
+        REFUSES a link** - measured: `received_type(STRING) mismatch input_type([...23])`. So the accent
+        literal is BAKED one arm per shipped accent and the app injects only the selector INT. That makes
+        the accent list a CURATED product list, not all 23 - which also dodges ja/he/ru/zh, whose
+        tokenizer deps (pykakasi, dicta_onnx, russian_text_stresser, spacy_pkuseg) are not in the lock.
+        TWO THINGS STILL NEED FABIO: which accents ship, and whether the 3.2GB multilingual set is
+        bundled or an optional install (his own parked question - `requiredDeps` cannot express optional).
   - [x] Perth marking APPLIED - proven on this flow's own output: watermark 1.0 vs 0.0 on the source control
 - [x] Turbo - NOT SHIPPED. Reason is REDUNDANCY, not weakness: VC passes laughs/coughs/shushes through natively, so the tags win nothing, and a tuned baseline would need a node patch. NOT measured fairly - the node hides exaggeration + cfg_weight and runs both at 0.0
 - [x] VC passes NON-VERBAL sound through (cough, shush) - Flow A exclusive, Flow B structurally cannot
 - [x] Pitch: matching the target helps (confirmed); pitch DRIFT within a take drifts the output
 - [x] Accent IS a runtime parameter (multilingual `language` selector) - library needs no accent axis
 - [x] Accent SURVIVES VC - and comes from the SOURCE, not the target. One source into two cross-gender targets (218.8Hz female, 125.7Hz gravel male) gave the SAME accent. Flow B gate opens. Evidence: MPI-622/validation.md 2026-08-25 phase0e
-- [ ] Multilingual trailing noise - sweep repetition_penalty 1.2/1.5/2.0 (default 2.0, multilingual-only)
+- [x] **Multilingual trailing noise SOLVED - `repetition_penalty` 2.0 is the cause. SHIP 1.5** (fallback 1.2).
+      24 warm runs, 6 seeds x 4 configs: 3/6 overshoot at the default (4.97 / 11.18 / 11.97s against a 3.90s
+      base), two with tails 2.65x and 3.05x flatter than their own body and ~0 voiced frames = hiss. 0/12
+      failures at 1.5 or 1.2. Bake it in the graph, not a user control. Flow B's ACCENT path is unblocked.
+      `research/mtl_repetition_sweep.py`; detail + the two measurement traps in validation.md 2026-08-27

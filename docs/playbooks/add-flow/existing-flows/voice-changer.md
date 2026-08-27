@@ -165,13 +165,18 @@ measured fairly, because its node hides `exaggeration` AND `cfg_weight` and runs
 
 ## Not in this flow
 
-- **No TTS.** Flow B is separate, needs the other 4.25 GB (`chatterbox-ve` / `-t3` /
-  `-s3gen` / `-tokenizer` / `-conds`), and waits on ~5–8 authored performance clips that do
-  not exist yet. Those five dep ids are deliberately owned by nobody until it lands.
+- **No TTS.** Flow B is separate and adds the five TTS dep ids (`chatterbox-ve` / `-t3` /
+  `-s3gen` / `-tokenizer` / `-conds`), **3.19 GB** on top of this flow's 1.06 GB. The
+  often-quoted **4.25 GB is all SEVEN weights** — the five plus the VC pair this flow
+  already owns — so it is the size of the CHARACTER route (TTS → VC), not of the five.
+  Those five ids stay owned by nobody until Flow B lands. The performance clips it waits
+  on **now exist**: 30 of them, 5 registers × 6 emotions, ear-approved and shipped in
+  `voices/performance/` alongside the 56-voice library (MPI-622).
 - **No accent selector.** Accent is a runtime parameter of
   `FL_ChatterboxMultilingualTTS`'s `language` selector, which is a stage-1 concern — this
-  flow has no stage 1. Whether an accent SURVIVES the VC stage is still open and gates
-  Flow B, not this one.
+  flow has no stage 1. Whether an accent SURVIVES the VC stage is **no longer open**: it
+  does, it comes from the SOURCE, and it OVERWRITES the target's (MPI-622 — the "What
+  comes from you" table above already says so). That gate on Flow B is closed.
 - **The dialog node is broken** for an unrelated reason: torchaudio 2.11 routes `.save()`
   through torchcodec, which is not installed, so `chatterbox_dialog_node.py:63` dies
   before parsing a single `SPEAKER` line. Our own dialogue splitter would hit this

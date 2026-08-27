@@ -1870,3 +1870,60 @@ fix, it is the dictation preset.
 
 **Evidence:** `Desktop/MPI607_listen_4/`, clips from `research/emotion_text_c03.py`
 (generated 2026-08-23, judged 2026-08-25). No GPU spent -- the clips already existed.
+
+## 2026-08-27 (session 26) -- THE MULTILINGUAL DEFECT IS `repetition_penalty`, PROVEN. Accent path unblocked.
+
+`research/mtl_repetition_sweep.py`. 24 warm bench runs: 6 seeds x {base English, multilingual
+French at rp 2.0 / 1.5 / 1.2}. Text, reference clip (`standard_male_1.opus`, the SHIPPED opus
+decoded) and every other parameter held fixed; only seed and `repetition_penalty` move.
+
+| config | n | median dur | vs base | median wall | runs that overshot |
+|---|---|---|---|---|---|
+| base, English | 6 | 3.90s | -- | 7.1s | 0 |
+| **multilingual, rp 2.0 (node default)** | 6 | 4.38s | +0.48s | **14.2s** | **3 / 6** |
+| multilingual, rp 1.5 | 6 | 3.56s | -0.34s | 8.0s | 0 / 6 |
+| multilingual, rp 1.2 | 6 | 3.71s | -0.19s | 8.1s | 0 / 6 |
+
+**The three failures at the default: 4.97s, 11.18s and 11.97s** against a 3.90s base median --
+up to 3x the length of the line. Two carry a tail 2.65x and 3.05x flatter than their own body
+(spectral flatness; noise is flat, voiced speech is peaky) with 0.00 and 0.09 voiced frames in
+the last second: that is hiss, measured. The third babbles speech-like filler instead. All
+three also ran 18-21s WARM. **Zero failures in the twelve runs at 1.5 or 1.2**, every duration
+inside base's own 3.60-4.20s spread and no flatness ratio above 1.11x.
+
+**Both of Fabio's symptoms are ONE cause, exactly as the card argued.** The multilingual model
+is not inherently slow -- warm it is 8.0s against base's 7.1s, a ~1s overhead. It is slow
+precisely on the runs where it fails to land a stop token, because it keeps decoding to the
+cap. "A few extra seconds with some noise" and "it takes quite a while" are the same event.
+
+**SHIP `repetition_penalty` 1.5** (fallback 1.2). 1.5 is the smaller move off the default and
+keeps more of the penalty's actual purpose; no repetition appeared at either value across
+twelve runs. Bake it in the graph -- it is not a user control.
+
+### Two measurement traps hit on the way, both worth more than the result
+
+1. **A COLD RUN CANNOT TIME ANYTHING.** The first pass ran `keep_model_loaded: False`, so
+   every job reloaded ~3GB and measured 24.4s for the BASE model against 23.2s for
+   multilingual -- indistinguishable, and both almost entirely load. That reads as "the
+   multilingual model is not slow after all", which is the opposite of the truth. Warm, the
+   gap is 14.2s vs 7.1s. **Never time a Chatterbox config cold.**
+2. **A SILENCE TRIM CANNOT SEE TRAILING NOISE.** The first pass measured the tail with the
+   `ingest.sustained_trim` rule and reported **0.00s of tail on the very run that overshot** --
+   because NOISE HAS ENERGY, so an energy trim files it as speech. Same class of error as
+   MPI-622's `trim(top_db=35)` finding, one layer up. What separates the two is SPECTRAL
+   FLATNESS, and the ratio against the clip's OWN body is what makes it comparable across
+   voices. A duration check against a control is the backstop that caught it either way.
+
+### Scope of the claim -- do not widen it
+
+One reference voice, one twelve-word English line, one language (French). It establishes that
+the default is the cause and that lowering it removes the symptom on this line; it does NOT
+establish a failure RATE, and it has not been checked on a second language. Neither gates the
+graph build. **Fabio's ear is still owed** on the three overshooting clips -- the numbers say
+"noise", only he can say it is the noise he heard. Clips:
+`%LOCALAPPDATA%/cubric-vision/mpi607/mtl_sweep/` -- `mtl_rp20_s12345`, `mtl_rp20_s4242`,
+`mtl_rp20_s1301` against `mtl_rp12_s12345` as the clean control.
+
+**The bench holds ~4GB** from the `--warm` run: `keep_model_loaded` parks models in the pack's
+module-level `_MODEL_CACHE`, which `model_management` never sees, so `POST /free` returns 200
+having released nothing. It clears on restart.
