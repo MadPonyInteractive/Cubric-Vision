@@ -35,6 +35,7 @@ NOT mechanically split these):
 - `releases/build-experience-log.md` — build evidence log
 - `project-integrity.md`, `runpod-remote-engine.md`, `releases/portable-distribution-contract.md`, `download-manager.md` — coherent single-subject contracts, near/over the line by design (download-manager: the full install/download/uninstall lifecycle + store/reconciler/snapshot, MPI-276)
 - `versioning.md` — coherent single-subject contract (APP/SCHEMA/COMFY versioning + op registry)
+- `testing-harnesses.md` — a numbered CATALOGUE of independent harnesses, one per section (it was already 46 lines over before MPI-633 added the GPU one). Splitting it by harness would mean searching several files for "can I run this without the app?", which is the single question it exists to answer. Add a numbered section; do not mechanically split.
 - `preview-bus.md` — coherent single-subject contract (the whole latent-preview path: bus, attribution, the one shared consumer, blob ownership). Its decoder half WAS split out to `preview-decoders.md` (MPI-571); what is left is one contract and splitting it further would scatter "who paints this frame, and who frees it" across files.
 - `toasts.md` — coherent single-subject contract (the full toast/notification call-site map: `ui:*`, `StatusBar.notify`, `notificationService`, the sound model, and which events must NOT toast). Splitting it would scatter "does this fire a toast?" across files, which is the one question the doc exists to answer in one place.
 - `playbooks/add-flow/06-preview-image.md` — coherent single-subject contract, marginally over (a flow's preview media end to end: the two assets, their three placements, the art direction, and the ffmpeg/sharp build recipes). Splitting "which asset / what shape / how to build it" would mean nobody making one has the whole answer in front of them.
@@ -51,7 +52,7 @@ NOT mechanically split these):
 | Orientation hub (architecture, invariants) | [PROJECT.md](PROJECT.md) |
 | Dev setup / commands / reading `logs/app.log` | [DEVELOPMENT.md](DEVELOPMENT.md) |
 | Tests — both suites, the release gate, writing a desktop spec | [testing.md](testing.md) |
-| **Harnesses — running app code WITHOUT the app** (bare-Node registry imports + the absolute-path import boundary, `CUBRIC_ENGINE_ROOT` install harness, one router on a spare port, your own `app:isolated` instance) | [testing-harnesses.md](testing-harnesses.md) |
+| **Harnesses — running app code WITHOUT the app** (bare-Node registry imports + the absolute-path import boundary, `CUBRIC_ENGINE_ROOT` install harness, one router on a spare port, your own `app:isolated` instance, **measuring GPU memory** — which the standard desktop harness can never do) | [testing-harnesses.md](testing-harnesses.md) |
 | Workspaces / routing | [workspaces.md](workspaces.md) |
 | Data layer (registries, projectModel, resolver, persist whitelist, reuse/sidecar) | [data.md](data.md) |
 | Project data model (.meta sidecars, reconciliation) | [project-integrity.md](project-integrity.md) |

@@ -199,7 +199,9 @@ and `name` is the generated one; prefer `customName` when it exists.
 |---|---|
 | `displayName` | e.g. `t2i_017`, matches the file in `Media/` |
 | `filePath` | `/project-file?path=…` form, URL-decode to get the real path |
-| `thumbPath` | same form, points at the `.thumb.jpg` |
+| `thumbPath` | same form. `.thumb.jpg` for a video (256px first frame), `.thumb.webp` for an image (512px, alpha-preserving) |
+| `thumbPathLg` | image only, and only when the source is WIDER than 1280 — the 1280px `.thumb.1280.webp` a large gallery card mounts. Absent means the ORIGINAL is that tier |
+| `proxyPath` | video only, and only when the clip is TALLER than 720p — the `.proxy.mp4` the gallery hovers. The viewer and every export still read `filePath` |
 | `operation` | `t2i`, `inpaint`, `detail`, … |
 | `prompt`, `negativePrompt` | exact text used |
 | `modelId` | e.g. `krea2` |

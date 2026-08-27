@@ -131,6 +131,8 @@ Located at `<projectFolder>/Media/.meta/<uuid>.json`. One file per history item.
 
 **Video-specific sidecar fields** (present when `type === 'video'`):
 - **`thumbPath`** — Server-relative URL to a thumbnail: a 256px first-frame **JPG** for video, a 512px **WebP** for images (alpha-preserving — see `gallery.md` § "Images get a thumb too"). Written by `services/ffmpegThumb.js` for upload/crop/generated saves. Used by `MpiHistoryList` for row previews and `MpiGalleryGrid` for card thumbnails.
+- **`thumbPathLg`** — Image only. The 1280px `.thumb.1280.webp` a LARGE gallery card mounts (MPI-633). Written only when the source is WIDER than 1280, because at or below it the original IS that tier — so absent is the normal case rather than a miss, and the card correctly falls back to `filePath`. See `gallery.md` § "The rendition ladder".
+- **`proxyPath`** — Video only. The 720p `.proxy.mp4` the gallery mounts for hover playback (MPI-633), because a decoder works at the clip's NATIVE resolution however small the card is. Written only when the clip is TALLER than 720p. The viewer, drag-out and every export path still read `filePath`.
 - **`fps`** — Frame rate as probed by ffprobe (number). Written by `services/ffprobeVideo.js` for upload/generated video saves.
 - **`duration`** — Duration in seconds (number). Written by `services/ffprobeVideo.js` for upload/generated video saves.
 - **`frameCount`** — Total frame count (number). Written by `services/ffprobeVideo.js` for upload/generated video saves.

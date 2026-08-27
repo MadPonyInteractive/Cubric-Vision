@@ -244,3 +244,40 @@ prints `READY <url>`. Drive that URL, never 3000.
 Launch mechanics for a hand-rolled instance (why `unset ELECTRON_RUN_AS_NODE` is mandatory, and the
 two failure signatures — lock = silent exit 0, port = loud `[FATAL] [main] server-exit` + exit 1) are
 in [testing.md](testing.md) § The desktop suite and [DEVELOPMENT.md](DEVELOPMENT.md).
+
+
+## 5. Measuring GPU memory — the standard harness CANNOT
+
+Sampled with `Get-Counter '\GPU Process Memory(*)\Dedicated Usage'` summed over the app's own
+pids, median of 3, ComfyUI engine OFF so the app is measured alone. Four traps, each of which
+returns a confident number that is wrong (MPI-631, MPI-633):
+
+- **`tests/desktop/launch.js` can never measure VRAM.** It sets `CUBRIC_E2E`, and `main.js`
+  turns that into `disableHardwareAcceleration()` + `--disable-gpu`, so every sample reads
+  **0.0 MB on a perfectly healthy app**. A measurement rig has to launch Electron itself,
+  deleting `CUBRIC_E2E` from the env while KEEPING `CUBRIC_E2E_USER_DATA` and the run's
+  `CUBRIC_PORT` — those two are what actually keep it off the user's app (MPI-458).
+- **Do not sample by process TREE.** `Win32_Process` reports no children for the Electron main
+  pid (measured: `tree(1)` while `getAppMetrics()` listed Browser/GPU/Tab/Utility), so a tree
+  walk reads 0.0 MB; `app.process().pid` is worse, since Playwright spawns Electron through a
+  `cmd.exe` shim on Windows. Take the pid list from `app.getAppMetrics()`. Three rig runs read
+  a confident 0.0 MB before this was found.
+- **ONE app launch per measured config.** A torn-down grid does not hand GPU memory back within
+  seconds (a 3000x1280 run left 740 MB resident after unmount), so configs sharing a process
+  measure only what they need BEYOND the pool the previous config grew.
+- **Absolute numbers drift between sessions.** The same unchanged control config read 23.7 MB
+  in one run and 72.9 MB in another. Only compare configs measured in ONE run, and re-measure
+  the control alongside anything you are comparing against.
+
+**A rig is not a spec.** Name it `*.rig.js`: the repo's `playwright.desktop.config.js` sets no
+`testMatch`, so the default `*.spec.js`/`*.test.js` leaves rigs out of `npm run test:desktop` —
+which matters, because one run is minutes and launches five to seven Electron instances. The CLI
+has **no `--testMatch` flag** (it errors with `unknown option`); to run one, point `--config` at
+a throwaway config that spreads the repo one and adds `testMatch: '**/*.rig.js'`.
+
+**And a scroll tour must step by a VIEWPORT, not by a fraction of `scrollHeight`.** Content
+height varies ~9x across the gallery's size slider, so a fixed step count skips most of the
+cards at one level and none at another — the two runs then differ in how many cards were ever
+rasterised rather than in what a card costs. Separately, a stepped tour with rests is a
+DIFFERENT gesture from a fling, and for anything gated on scroll-idle the two give answers
+minutes apart in meaning: measure both and say which is which.

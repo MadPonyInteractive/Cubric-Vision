@@ -90,13 +90,15 @@ evicts it. See `validation.md` § "The reversal".
       fling (73.8 vs the 72.9 floor).
 - [x] Unit test for the tier-selection rule — `tests/gallery-renditions.test.cjs`, 8 cases
       including the clamp and the `filePath` fallback, plus the client/server seam.
-- [x] Desktop spec — `tests/desktop/gallery-renditions.spec.js`, 4 cases, REAL shipped media
+- [x] Desktop spec — `tests/desktop/gallery-renditions.spec.js`, 5 cases, REAL shipped media
       from `comfy_workflows/display/`.
-- [x] Mutation-tested: 3 mutations against the unit test, 3 against the desktop spec, all
-      RED. The band-ignoring sweep was GREEN on the first pass — that hole is what the fling
-      case was added to close.
+- [x] Mutation-tested: 10 distinct mutations, all RED — 3 against the unit test (boundary,
+      clamp fallback, rendition naming) and 7 against the desktop spec (`setRenderBox`,
+      promote, demote, scroll gate, idle sweep, band-ignoring sweep, proxy). The
+      band-ignoring sweep was GREEN on its first pass — that hole is what the fling case was
+      added to close.
 - [x] `npm test` 759/759 · `npx playwright test --config=playwright.desktop.config.js`
-      35/35 · eslint clean.
+      37/37 · eslint clean. Both re-run at close-out, after Phase 2 landed.
 - [x] `docs/gallery.md` documents the ladder, the selection rule, the retention finding and
       the proxy; `docs/releases/UNRELEASED.md` has two entries.
 - [ ] `validate_board.py .` at close-out.

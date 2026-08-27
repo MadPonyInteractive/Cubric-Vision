@@ -158,14 +158,17 @@ nobody re-derives the original expectation from it.
   `imageThumbPath` writes are the names the picker looks for, and both survive the GC's
   prefix match. Mutations: boundary `>` → `>=` RED, `filePath` fallback dropped RED, large
   rendition writing over the small name RED.
-- `tests/desktop/gallery-renditions.spec.js` — 4 cases: big card takes the large rendition
+- `tests/desktop/gallery-renditions.spec.js` — 5 cases: big card takes the large rendition
   and a small one does not (with the box asserted against the boundary, so a fixture that
   proves nothing fails loudly); no large rendition ⇒ the ORIGINAL, never an upscaled thumb;
   a fling past 40 cards does not fetch 40 large renditions; scroll-out demote and return.
-  Mutations: `setRenderBox` unwired RED, promote unwired RED, demote unwired RED, scroll
-  gate removed RED, idle sweep removed RED, sweep ignoring the band RED.
-- `npm test` 759/759, `npx playwright test --config=playwright.desktop.config.js` 35/35,
-  eslint clean.
+  Mutations, all RED: `setRenderBox` unwired, promote unwired, demote unwired, scroll gate
+  removed, idle sweep removed, sweep ignoring the band, proxy unwired. Seven here plus three
+  on the unit test is ten — the `6eff5708` commit message says "six", which was already an
+  undercount when written and cannot be fixed in a pushed message.
+- `npm test` 759/759, `npx playwright test --config=playwright.desktop.config.js` 37/37,
+  eslint clean. Both re-run at close-out, after Phase 2 landed — the earlier 35/35 predated
+  both the proxy case and the Phase 2 code.
 
 **Two fixture traps, both of which read as a working feature.** The first fixture gave its
 items no `pixelDimensions`, so the packer used ratio 1.0, fitted four cards per row and
@@ -200,5 +203,41 @@ sampled a gallery of PROXIED clips.
   home in `docs/testing-harnesses.md`. Neither the rigs nor `tasks/MPI-633/rig/` should
   survive the card — delete both at close-out.
 
-Raw: `scratchpad/m2phase4.log`, `scratchpad/m2fling.log` (and Phase 0's
-`m1-decode-cost.json` / `m2-gallery-vram.json`).
+Raw, inlined because the rigs and their logs do NOT survive the card — a session scratchpad
+is deleted by Windows temp cleanup, so a pointer to one is a dead reference by the time
+anyone reads this. `delta` is resting minus baseline, each the median of 3 samples.
+
+**Run A — before the scroll gate existed.** The demote comparison lives here, and both of its
+rows are from this one run:
+
+```
+L4_thumb512        box 775x484  visible  4/120  natural  512x320  steps 44 | base 313.4  resting 551.0  delta 237.6
+L4_master          box 775x484  visible  4/120  natural 1280x800  steps 44 | base 319.0  resting 553.5  delta 234.5
+L4_master_noscroll box 775x484  visible  4/120  natural 1280x800  steps  0 | base 319.1  resting 391.9  delta  72.8
+L4_ladder          box 775x484  visible  4/120  natural  512x320  steps 44 | base 315.0  resting 551.5  delta 236.5
+L1_ladder          box 253x158  visible 36/120  natural  512x320  steps  5 | base 331.0  resting 345.3  delta  14.3
+```
+
+`L4_ladder` 236.5 against `L4_master` 234.5 is the demote returning nothing. `L4_thumb512`
+reads 237.6 rather than Phase 0's 12 because on this build it has no large rendition, so the
+ladder correctly sends a 775px card to `filePath` — the 1280x800 master.
+
+**Run B — with the scroll gate, and with `onLarge` added** (how many cards still hold the large
+rendition at rest). The fling comparison lives here:
+
+```
+L4_master_noscroll box 775x484  visible  4/120  onLarge 120  steps  0 | base 319.0  resting 391.9  delta  72.9
+L4_ladder          box 775x484  visible  4/120  onLarge   6  steps 44 | base 329.1  resting 551.0  delta 221.9
+L4_ladder_fling    box 775x484  visible  4/120  onLarge   6  steps 44 | base 332.9  resting 406.7  delta  73.8
+L4_master_fling    box 775x484  visible  4/120  onLarge 120  steps 44 | base 313.3  resting 554.8  delta 241.5
+```
+
+`onLarge 120` with `steps 0` is not a contradiction: all 120 imgs are in the DOM holding the
+master, but only the ~4 visible ones are ever PAINTED, which is why that config costs 72.9 and
+not 240. That row is the clearest single piece of evidence that cost tracks painting, not
+references — and it is the row that killed the demote.
+
+`L4_master_noscroll` read 72.8 in run A and 72.9 in run B, unchanged config, which is the
+noise floor for this rig. `L4_ladder` read 236.5 in A and 221.9 in B — the gate barely helps a
+DWELL tour, which is expected: 44 rests are 44 requests. Phase 0's `m1-decode-cost.json` /
+`m2-gallery-vram.json` went with the rig directory.
