@@ -1362,10 +1362,26 @@ export const MpiBaseFlow = ComponentFactory.create({
                     // Mirrors the existing `mediaRole`, which already routes a kind's
                     // OUTPUT to another role — this is the same idea pointing inward, so
                     // the pair reads symmetrically and stays declarable by a manifest.
-                    // Deliberately NOT threaded into `_deriveRunMedia`: `place` carries the
-                    // source's url in its own reported value, so the derivation needs no
-                    // second lookup and Reuse re-derives from the snapshot alone.
                     source: step.sourceRole ? _mediaForRole(step.sourceRole) : null,
+                    // …and the VALUE that role's own step reported, which is the other
+                    // half of the same seam (MPI-596). `source` above resolves from
+                    // `_mediaGroups` — the user's own inputs — so it can only ever be the
+                    // picture as UPLOADED. When an earlier step derives a new picture from
+                    // it, that file is made at Run and never enters the map, so a later
+                    // step reading `source` alone would preview the wrong pixels: Object
+                    // Stamp's stage 3 would place the UNCUT object.
+                    //
+                    // Handing over the value instead of the file is deliberate. The
+                    // producing step's value is small, already persisted for Reuse, and
+                    // re-derivable — so the consumer re-runs the SAME compose function the
+                    // producer draws with, and the two cannot disagree. Persisting a
+                    // derived file to hand over instead would re-cut an already-cut
+                    // picture on every Reuse.
+                    //
+                    // Freshness is free: `_renderSlide` tears the slide down and rebuilds
+                    // it on every navigation, so going back to fix the cut and returning
+                    // re-reads this.
+                    sourceValue: step.sourceRole ? (_stepValues[step.sourceRole] || null) : null,
                     step,
                     value: _stepValues[step.role] || null,
                     onChange: (val) => {
@@ -2336,7 +2352,15 @@ export const MpiBaseFlow = ComponentFactory.create({
                 // reach the deriver with no source, or the drawing never becomes media
                 // and the run goes out with nothing in the slot (MPI-620).
                 if (!media && !step.composite) continue;
-                const file = await stepValueToMedia(step.kind, _stepValues[step.role], media, step);
+                // The SOURCE role's media, read out of `out` rather than `_mediaGroups`:
+                // a kind that derives its picture from a second role wants that role as
+                // the run will see it, which is an EARLIER step's derived file whenever
+                // one exists. Object Stamp's stage 3 stamps the object stage 2 cut, and
+                // gets it because this loop walks the steps in flow order (MPI-596).
+                const source = step.sourceRole
+                    ? out.find(m => m?.role === step.sourceRole) || null
+                    : null;
+                const file = await stepValueToMedia(step.kind, _stepValues[step.role], media, step, source);
                 if (!file) continue;   // this kind derives nothing, or nothing changed
                 const project = state.currentProject;
                 const url = project ? await _placePreviewAsset(file, 'image', project) : null;

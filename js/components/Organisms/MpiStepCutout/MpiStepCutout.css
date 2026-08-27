@@ -1,0 +1,80 @@
+/* ═══════════════════════════════════════════════════════════════
+   MpiStepCutout — the `cutout` step kind (MPI-596)
+
+   A canvas stage the OBJECT alone is fitted into, cut down, and
+   reported from. Everything visible is painted in JS — the object
+   wearing its composited alpha, and the brush ring — so this sheet
+   only sizes the stage, draws the transparency ground, and lays
+   the control row out. The row's controls are Primitives and their
+   chrome is theirs (MpiRadioGroup, MpiCheckbox, MpiButton);
+   nothing here restates it.
+═══════════════════════════════════════════════════════════════ */
+
+.mpi-step-cutout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--s-3);
+    width: 100%;
+}
+
+/* Fixed box, like MpiStepPaint's and for the same reason: a stage that resized
+   with its content would move the control row under the cursor mid-gesture.
+   TALLER than MpiStepPlace's, because the object gets a stage of its own here —
+   that extra room is the point of the split (plan.md § Plan Drift 2026-08-27). */
+.mpi-step-cutout__stage {
+    position: relative;
+    width: 100%;
+    height: min(56vh, 620px);
+    border: 1px solid var(--line);
+    touch-action: none;
+    line-height: 0;
+
+    /* THE TRANSPARENCY GROUND, and it is load-bearing rather than decoration: the
+       canvas is CLEARED where the object's alpha is 0, so without a checker a white
+       object on a flat ground is indistinguishable from a removed background — the
+       one thing this step exists to show. Two theme tokens, no hardcoded colour, and
+       deliberately FIXED rather than following the view: a checker that panned with
+       the image would read as texture on the object. */
+    background-color: var(--surface-canvas);
+    background-image:
+        linear-gradient(45deg, var(--surface-2) 25%, transparent 25%),
+        linear-gradient(-45deg, var(--surface-2) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, var(--surface-2) 75%),
+        linear-gradient(-45deg, transparent 75%, var(--surface-2) 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+
+/* The cursor is set in JS: `none` under the brush, where the ring drawn on the
+   canvas IS the cursor and a second arrow beside it reads as two pointers. */
+.mpi-step-cutout__canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+/* The step's own row: tool, background, then the actions. */
+.mpi-step-cutout__bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--s-4);
+    flex-wrap: wrap;
+}
+
+.mpi-step-cutout__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+}
+
+/* The note line carries both guidance and every error this step can raise, so it
+   holds its height rather than reflowing the row each time one clears. */
+.mpi-step-cutout__note {
+    min-height: 1.25rem;
+    margin: 0;
+    text-align: center;
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+}

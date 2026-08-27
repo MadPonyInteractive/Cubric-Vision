@@ -2,6 +2,7 @@ import { MpiStepBox } from '../MpiStepBox/MpiStepBox.js';
 import { MpiStepPreview } from '../MpiStepPreview/MpiStepPreview.js';
 import { MpiStepCrop, composePaddedImage } from '../MpiStepCrop/MpiStepCrop.js';
 import { MpiStepPaint, composePaintLayer, composePaintComposite } from '../MpiStepPaint/MpiStepPaint.js';
+import { MpiStepCutout, composeCutObject } from '../MpiStepCutout/MpiStepCutout.js';
 import { MpiStepPlace, composePlacedObject } from '../MpiStepPlace/MpiStepPlace.js';
 
 /**
@@ -38,13 +39,23 @@ export const STEP_KINDS = {
     // `param`, and like `crop` it mounts the History tool's own engine whole
     // (`PaintManager` + `brushDab.js`) rather than growing a second brush.
     paint: MpiStepPaint,
+    // `cutout` is the object-cleanup gizmo: ONE image on a stage of its own, a
+    // Remove Background switch and an erase/restore brush, reporting two mask
+    // layers. It mounts `MaskManager` + `UndoStack` + `brushDab` whole, exactly as
+    // `paint` mounts `PaintManager`. It is SKIPPABLE by construction rather than by
+    // a flag — untouched, its STEP_MEDIA adapter returns null and the frame leaves
+    // the media alone (MpiStepCutout.js § SKIPPABLE BY CONSTRUCTION).
+    cutout: MpiStepCutout,
     // `place` is the placement gizmo: the user says WHERE in one image a SECOND
-    // image goes, and cuts that second image down until only the object is left.
-    // It is the first kind to read two media roles — its own `role` is the scene it
-    // draws on, and `sourceRole` names the object it places. Like `crop` and `paint`
-    // it binds through STEP_MEDIA, and like them it mounts the History engines whole
-    // (`ShapeManager` in `'place'` mode, `MaskManager`'s add/subtract pair,
-    // `CompositeManager.drawPlaced`) rather than growing a second gizmo or brush.
+    // image goes. It is the first kind to read two media roles — its own `role` is
+    // the scene it draws on, and `sourceRole` names the object it places. Like
+    // `crop` and `paint` it binds through STEP_MEDIA, and like them it mounts the
+    // History engines whole (`ShapeManager` in `'place'` mode,
+    // `CompositeManager.drawPlaced`) rather than growing a second gizmo.
+    //
+    // PAIRS WITH `cutout`, and the pair is the flow's stage 2 + stage 3: the object
+    // is cleaned there and placed here. `place` reads what that stage produced
+    // through `sourceValue`, which the frame hands it beside `source`.
     place: MpiStepPlace,
     // mask, light, mood… as they are built.
 };
@@ -169,7 +180,7 @@ export function stepValueToParam(kind, value) {
  * was padded from. `paint` does: the graph wants the photo AND the drawing, so
  * swapping the photo out for the layer would throw the photo away.
  *
- * @type {Record<string, function(Object|null, Object|null): Promise<File|null>>}
+ * @type {Record<string, function(Object|null, Object|null, Object=, Object=): Promise<File|null>>}
  */
 const STEP_MEDIA = {
     crop: (value, media) => composePaddedImage(media, value),
@@ -190,12 +201,23 @@ const STEP_MEDIA = {
     paint: (value, media, step) => (step?.composite
         ? composePaintComposite(value, media)
         : composePaintLayer(value)),
-    // `place` needs NEITHER argument: the object's url, the cut-out's url, the two
-    // mask layers and the rect are all in the value, so the picture is rebuilt from
-    // the snapshot alone. That is what makes Reuse exact — a run restored months
-    // later re-derives the same file rather than depending on which media the frame
-    // happens to hand this role.
-    place: (value) => composePlacedObject(value),
+    // `cutout` derives the object wearing its composited alpha, at the object's own
+    // natural size. Returns NULL when nothing was cut and nothing was brushed, which
+    // is the whole of the step's skippability: the frame reads a null as "this kind
+    // changed nothing", so a PNG that arrived already cut out reaches the graph
+    // byte-identical instead of being re-encoded through a canvas for nothing.
+    cutout: (value, media) => composeCutObject(value, media),
+    // `place` takes the SOURCE media rather than its own role's: the picture it
+    // stamps is the object, and its own role is the scene it stamps into. That
+    // source is the cutout stage's output when that stage did anything and the
+    // user's own upload when it did not — `_deriveRunMedia` walks the steps in FLOW
+    // ORDER, so stage 2 has already swapped its file in by the time stage 3 runs.
+    //
+    // Returns null in MANUAL, which uses the region and not the pixels: the clean
+    // object it wants is already sitting in `sourceRole`, so deriving here would
+    // hand the run a second copy of a picture it has. Manual contributes the region
+    // rect through STEP_PARAMS instead.
+    place: (value, media, step, source) => composePlacedObject(value, source),
 };
 
 /**
@@ -205,10 +227,15 @@ const STEP_MEDIA = {
  *   step CREATES its picture rather than deriving one (a blank-canvas paint step).
  * @param {Object|null} [step] - the step declaration, for kinds whose output shape the
  *   flow chooses (`paint`'s `composite`).
+ * @param {Object|null} [source] - the media for the step's `sourceRole`, for a kind
+ *   that derives its picture from a SECOND role (`place` stamps the object it was
+ *   pointed at, not the scene it draws on). Resolved from the run's media list, so
+ *   an earlier step's derived file is what arrives.
  * @returns {Promise<File|null>} a replacement file for that role, or null when
- *   the kind derives no media (every kind but `crop` and `paint`) or there is
- *   nothing to change (a rect identical to the source, an unpainted layer).
+ *   the kind derives no media (`box` and `preview`) or nothing changed (a rect
+ *   identical to the source, an unpainted layer, an untouched cutout, a `place`
+ *   in Manual).
  */
-export function stepValueToMedia(kind, value, media, step) {
-    return STEP_MEDIA[kind]?.(value, media, step) ?? Promise.resolve(null);
+export function stepValueToMedia(kind, value, media, step, source) {
+    return STEP_MEDIA[kind]?.(value, media, step, source) ?? Promise.resolve(null);
 }

@@ -1206,17 +1206,65 @@
  */
 
 /**
+ * @typedef {Object} MpiStepCutoutProps (Organism — js/components/Organisms/MpiStepCutout)
+ * @property {Object}   media      - The OBJECT being cleaned ({url, …}). This step's own
+ *                                   role; there is no second one.
+ * @property {Object}   step       - The FlowStep declaration.
+ * @property {Object|null} [value] - Restored value ({removeBg, sourceUrl, bgUrl,
+ *                                   objectSize, userMask:{manual,subtract}, brushSize}).
+ * @property {Function} onChange   - (value) => void; on stroke end and any control change.
+ *
+ * The `cutout` STEP KIND (MPI-596) — the object alone on a stage of its own: a Remove
+ * Background switch, then an erase/restore brush for whatever the cut missed or ate.
+ *
+ * 🔴 SKIPPABLE BY CONSTRUCTION, WITH NO FLAG. `composeCutObject` returns null when no
+ * cut ran and no stroke was made, and the frame reads a null as "this kind changed
+ * nothing" — so a PNG that arrived already cut out reaches the graph byte-identical.
+ * The emptiness test is exact rather than a heuristic: MaskManager._layerToURL already
+ * returns null for a layer with no painted pixels.
+ *
+ * 🔴 TWO MASK LAYERS, COMPOSITED ONLY AT DISPATCH. `bgMask` is the Remove Background
+ * cut-out's alpha, `userMask` is MaskManager's manual/subtract pair, and they are never
+ * flattened — flatten them and toggling the switch off destroys every erasure the user
+ * made. So the brush works with the toggle OFF (the base alpha is the object's own
+ * rectangle), toggling off and back on costs no second dispatch, and the composite
+ * `(bgMask OR manual) AND NOT subtract` runs against the ORIGINAL RGB so Restore
+ * reveals real pixels rather than a hole.
+ *
+ * Every mask mutation records into its own `UndoStack` — a stroke as a gesture, Reset
+ * as MaskManager's layer-wide one-shot (docs/masking-undo.md § The contract). The
+ * background toggle records nothing and must not; it mutates neither layer.
+ *
+ * TWO tools, not three: with no gizmo, nothing competes with the brush for the pointer,
+ * so Erase/Restore is a plain pair — the shape MpiStepPaint has. Brush SIZE is the
+ * wheel and Space pans/zooms, matching MpiStepPaint and InputController. The stage
+ * paints a token-built CHECKER behind the canvas, and that is load-bearing rather than
+ * decoration: the canvas is cleared where alpha is 0, so without it a white object is
+ * indistinguishable from a removed background.
+ *
+ * Exports `composeObjectAlpha`, the shared composite law — MpiStepPlace runs the SAME
+ * function to preview what this stage produced, so the two canvases cannot disagree.
+ *
+ * Instance methods (on instance.el):
+ *   getValue() — the reported value above.
+ *   destroy()  — disconnects the ResizeObserver, destroys the UndoStack, the
+ *                MaskManager and every control.
+ */
+
+/**
  * @typedef {Object} MpiStepPlaceProps (Organism — js/components/Organisms/MpiStepPlace)
  * @property {Object}   media      - The SCENE the placement is made in ({url, …}).
  * @property {Object|null} [source] - The OBJECT being placed ({url, …}), resolved by the
  *                                   frame from the step's `sourceRole`. Null renders the
  *                                   scene with every control disabled and says why.
+ * @property {Object|null} [sourceValue] - The VALUE the source role's own step reported —
+ *                                   for Object Stamp, the `cutout` stage's two mask
+ *                                   layers and cut-out url. Null when that stage was
+ *                                   skipped, which previews the object's own rectangle.
  * @property {Object}   step       - The FlowStep declaration.
- * @property {Object|null} [value] - Restored value ({mode, removeBg, sourceUrl, bgUrl,
- *                                   place:{cx,cy,halfW,halfH,rot}, size, objectSize,
- *                                   userMask:{manual,subtract}, brushSize}).
- * @property {Function} onChange   - (value) => void; on stroke end, drag end, and any
- *                                   control change.
+ * @property {Object|null} [value] - Restored value ({mode, sourceUrl,
+ *                                   place:{cx,cy,halfW,halfH,rot}, size, objectSize}).
+ * @property {Function} onChange   - (value) => void; on drag end and any control change.
  *
  * The `place` STEP KIND (MPI-596) — the PLACEMENT gizmo, and the first kind to read
  * TWO media roles: it draws on `step.role` and places `step.sourceRole`.
@@ -1225,41 +1273,37 @@
  * the canvas shows it under the gizmo at the gizmo's aspect and the run receives it
  * stamped into the scene frame. `manual` uses only the REGION, so the canvas shows an
  * empty SQUARE box with no rotation — the box is where the model looks, and a rotation
- * handle would be a lie — and the run receives the clean object at its own full frame.
+ * handle would be a lie — and the run receives the clean object at its own full frame,
+ * which is simply `sourceRole`'s media, so this kind derives NO file in Manual.
  *
- * Mounts three History engines whole, the relationship MpiStepPaint has with
+ * Mounts two History engines whole, the relationship MpiStepPaint has with
  * PaintManager: `ShapeManager` armed `'place'` (MPI-454's gizmo — handles, shape-local
- * hit-testing, Shift's aspect lock, Alt-rotate), `MaskManager` (its
- * manual/subtract pair IS the add/subtract brush) and `CompositeManager.drawPlaced`
- * (the rotated-rect stamp, fed the composited object canvas through `placeImage`).
+ * hit-testing, Shift's aspect lock, Alt-rotate) and `CompositeManager.drawPlaced` (the
+ * rotated-rect stamp, fed the composited object canvas through `placeImage`).
  *
- * 🔴 TWO MASK LAYERS, COMPOSITED ONLY AT DISPATCH. `bgMask` is the Remove Background
- * cut-out's alpha, `userMask` is MaskManager's pair, and they are never flattened —
- * flatten them and toggling the switch off destroys every erasure the user made. So
- * the brush works with the toggle OFF (the base alpha is the object's own rectangle),
- * toggling off and back on costs no second dispatch, and the composite
- * `(bgMask OR manual) AND NOT subtract` runs against the ORIGINAL RGB so Restore
- * reveals real pixels rather than a hole.
+ * 🔴 THE CLEANUP IS NOT HERE. Remove Background, the brush and the UndoStack live in
+ * MpiStepCutout, one stage earlier (plan.md § Plan Drift 2026-08-27) — cleaning the
+ * object is work on the OBJECT, placing it is work on the SCENE. That split is what
+ * lets the brush serve BOTH modes, gives the object a whole stage, and deletes the
+ * three-tool pointer router: with no brush, the gizmo owns the pointer outright.
  *
- * Every mask mutation records into its own `UndoStack` — a stroke as a gesture, Reset
- * as MaskManager's layer-wide one-shot (docs/masking-undo.md § The contract). The
- * background toggle records nothing and must not; it mutates neither layer.
+ * 🔴 `sourceValue` IS THE SEAM AND IT HAS TO BE. `source` resolves from _mediaGroups —
+ * the user's own inputs — so it is always the object as UPLOADED; the cut object is
+ * derived at Run and never enters that map. So the preview is composed here through
+ * `composeObjectAlpha`, the cutout stage's own function. The masks are NOT copied into
+ * this step's value: they belong to the cutout step, are persisted once in its
+ * snapshot, and re-derive from there on Reuse.
  *
- * THREE TOOLS, one owning the pointer: `move` drags the gizmo, `erase`/`restore` paint.
- * Erase and Restore are aria-disabled in Manual, which draws no object to brush; the
- * mask layers survive the mode switch, so cleaning a cut is flip to Auto, brush, flip
- * back. Brush SIZE is the wheel and Space pans/zooms, matching MpiStepPaint and
- * InputController. Its control row is the gizmo's own (mode, tool, background, Undo,
- * Reset, restore-size) rather than declared `fields`, because those are intrinsic to
- * any place step — the Manual PROMPT is not, and is declared on the step.
+ * Space pans/zooms, matching MpiStepPaint and InputController. Its control row is the
+ * gizmo's own (mode, restore-size) rather than declared `fields`, because those are
+ * intrinsic to any place step — the Manual PROMPT is not, and is declared on the step.
  *
- * Binds through STEP_MEDIA (returning ONE composited RGBA) and carries a STEP_PARAMS
+ * Binds through STEP_MEDIA (the Auto stamp; null in Manual) and carries a STEP_PARAMS
  * adapter for the region rect, which only Manual consumes.
  *
  * Instance methods (on instance.el):
  *   getValue() — the reported value above.
- *   destroy()  — disconnects the ResizeObserver, destroys the UndoStack, the
- *                MaskManager and every control.
+ *   destroy()  — disconnects the ResizeObserver and destroys every control.
  */
 
 /**

@@ -30,16 +30,16 @@
     line-height: 0;
 }
 
-/* The cursor is set in JS per tool — the gizmo's resize/grab map while Move is
-   armed, and `none` under a brush, where the ring drawn on the canvas IS the
-   cursor and a second arrow beside it reads as two pointers. */
+/* The cursor is set in JS: the gizmo's own resize/grab map, unconditionally —
+   with the brush gone there is no second tool to yield the pointer to. */
 .mpi-step-place__canvas {
     display: block;
     width: 100%;
     height: 100%;
 }
 
-/* The gizmo's own row: mode, tool, background, then the actions. */
+/* The gizmo's own row: the mode toggle, then the actions. The tool radio and the
+   Remove Background switch moved to MpiStepCutout with the brush they served. */
 .mpi-step-place__bar {
     display: flex;
     align-items: center;

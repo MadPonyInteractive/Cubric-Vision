@@ -26,17 +26,24 @@ with `mask_expand_pixels` at **~30% of the box side**. Canvas == region written 
 larger than the box cannot be sliced and its shadow has room. App-side that 30% comes off
 `MpiMaskSquareBbox.size` through an `MpiMath` (it is an INT input).
 
-**The placement step kind is BUILT and probed** (2026-08-27). `js/components/Organisms/MpiStepPlace/`
-is the `place` kind, registered in `stepKinds.js` with both adapters; `sourceRole` landed with it.
-Every claim in `validation.md` was measured live and still holds.
+**BOTH step kinds are BUILT, SPLIT and probed** (2026-08-27). `MpiStepCutout/` is the `cutout`
+kind (stage 2, on `image2`: Remove Background + Erase/Restore + `UndoStack`, skippable) and
+`MpiStepPlace/` is the `place` kind (stage 3, on `image1`: the gizmo + Auto/Manual). Both are
+registered in `stepKinds.js`; `sourceRole` and `sourceValue` both land in `_buildStepSlide`, and
+`_deriveRunMedia` now resolves `sourceRole` too. Every claim in `validation.md` was measured live.
 
-**Then Fabio split the stage** (same day, § Plan Drift): the object cleanup — Remove Background,
-brush, eraser — becomes its OWN stage 2 on a large canvas, skippable, and the placement moves to
-stage 3. So the next action is **split `MpiStepPlace` into a `cutout` kind and a `place` kind**
-per the drift table, not the flow wiring. It is a move of proven code plus one new frame line
-(`sourceValue`); nothing measured needs re-deriving.
+**NEXT: wire the flow** — `FlowDef` + the op in its 4 files, then the graph. It needs MPI-607's
+stale Gate-2 claim resolved first (heartbeat 2026-08-23, far past the 120-minute timeout).
 
-The flow wiring is the step after, and it needs MPI-607's stale Gate-2 claim resolved first.
+**Two wiring facts the split decided, and the flow must honour them:**
+
+1. **Step ORDER is the contract.** `_deriveRunMedia` walks `flow.steps` in declaration order, and
+   `place` stamps whatever sits in `sourceRole` at that moment. Declare `cutout` (on `image2`)
+   BEFORE `place` (on `image1`) or stage 3 stamps the UNCUT object.
+2. **`place` declares `mediaRole: 'image2'`.** In Auto it derives the stamped composite, which is
+   slot 2; slot 1 stays the clean scene. In Manual it derives NOTHING — the clean object is
+   already `image2`, put there by `cutout` — and contributes only the region rect through
+   `STEP_PARAMS`. That is the shape brief.md § Auto / § Manual describes, with no third file.
 
 The bench stays stopped — restart it (`G:/ComfyUi/run_nvidia_gpu.bat`, port 8188) only if more
 graph work comes up.
@@ -103,13 +110,20 @@ one.
       `place` carries the object's url in its own reported value, so the derivation rebuilds the
       picture from the snapshot alone and never looks the second role up. That is also what makes
       Reuse exact months later. Only `_buildStepSlide` resolves `sourceRole`, into `props.source`.
-- [ ] **Split the built kind in two** per § Plan Drift 2026-08-27: a `cutout` kind on `image2`
+- [x] **Split the built kind in two** per § Plan Drift 2026-08-27: a `cutout` kind on `image2`
       (large canvas, Remove Background, Erase/Restore, `UndoStack` — no gizmo, so no `move` tool)
       and `place` on `image1` keeping the gizmo and Auto/Manual. Add `sourceValue` beside the
       `sourceRole` prop so stage 3 can show what stage 2 produced.
       **Verify:** re-run the two probes in `validation.md` against the split pair — they are
       written against `composeObjectAlpha` and the reported value, both of which survive; plus
       skipping stage 2 must leave `image2` untouched at the run.
+      **DONE 2026-08-27**, probed live. Every measurement from the pre-split build reproduced
+      unchanged (composite law pixel-exact; toggle off→on preserves erasures at 2074px; undo is
+      per-gesture, 4148 → 2074 → 0). New this pass: an untouched mounted `cutout` derives NULL
+      and reports NOTHING on mount, so `image2` reaches the run as supplied, and Reset returns it
+      to that state; `place` in Manual derives null; and the `sourceValue` seam was measured
+      end-to-end — erasing one quadrant in stage 2 leaves stage 3's canvas with **ratio 0.750**
+      of its object pixels. Full table in `validation.md`.
 - [ ] **Wire the flow.** `FlowDef` in `flowsRegistry.js` + the op in its 4 files per
       `01-descriptor-and-ops.md`. Copy Draw It In's `requiredModels` **slot** shape
       (`{ label: 'Edit model', models: ['klein-9b'], loras: true }`) and its `modelParams` —
@@ -187,6 +201,21 @@ Three things fall out, and they are the whole design of the split:
 
 `composePlacedObject` keeps its current job (rebuild from the value alone) — it just reads the
 masks out of the `cutout` step's value rather than its own.
+
+> **EXECUTED 2026-08-27, with ONE deliberate departure from the paragraph above — approved by
+> Fabio before the work started.** Point 3 is right about the CANVAS and was built exactly as
+> written: `place` composes its preview from `sourceValue` through `composeObjectAlpha`, the
+> cutout stage's own function, so the two canvases cannot disagree.
+>
+> At DISPATCH it is not. "Rebuild from the value alone" would mean copying both base64 mask
+> layers into `place`'s value as well — two copies in every persisted run, and two copies that can
+> disagree. Instead `_deriveRunMedia` now resolves `sourceRole` (the one thread the earlier drift
+> note deliberately left out) and hands `place` the object AS THE RUN WILL SEE IT, which is the
+> `cutout` step's derived file whenever that step did anything. One copy of the masks, in the step
+> that owns them; Reuse stays exact because `cutout` re-derives from its own snapshot.
+>
+> Two things fall out, both verified: `place` in **Manual derives nothing at all** (the clean
+> object is already `image2`), and **step order becomes load-bearing** — see § Current State.
 
 ### 2026-08-27 — three things the step kind decided that the plan did not
 
