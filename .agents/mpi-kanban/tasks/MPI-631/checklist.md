@@ -1,0 +1,21 @@
+# MPI-631 — checklist
+
+- [x] `_mediaSuspended` flag added to `MpiGalleryGrid` setup scope; `_promoteVideo` bails on it
+- [x] `_releaseMedia()` sweeps `_cardMap` and calls each card's demote (the existing `_removeHoverVideo` path)
+- [x] `_resumeMedia()` clears the flag and re-promotes what is currently in view
+- [x] Cards expose a demote hook the grid can call (mirror of `cardEl.promoteVideo`)
+- [x] `_ioPromoted` / observer bookkeeping reconciled so a released card can promote again
+- [x] Trigger 1: wired into the existing `Overlays.onDepthChange` handler (release on depth > 0, resume on depth 0)
+- [x] Trigger 2: release on `generation:started`, resume when the queue drains (`generation:complete` + `state.generationQueueCount === 0`)
+- [x] Trigger 3 (C): a second observer at `DEMOTE_MARGIN_PX` demotes a card scrolled far off-screen; scrolling back re-promotes
+- [x] Carve-out: explicit hover still promotes a single card while suspended
+- [x] Carve-out: the live-preview path (`updatePreview` / `resetPreviewClip`) is untouched by suspension
+- [x] `el.destroy()` still cleans up every listener added here (`_unsubs`)
+- [x] Desktop spec `tests/desktop/gallery-media-release.spec.js` — promoted `<video>` count goes to 0 on overlay open and returns on close
+- [x] `npm test` green
+- [x] `npm run test:desktop` green
+- [x] `docs/gallery.md` documents the release/suspend contract
+- [x] `js/components/types.js` documents the new grid methods
+- [x] `docs/releases/UNRELEASED.md` entry
+- [ ] Re-measure: same tour with `gpuwatch.ps1`, compare resting MB against the 1858.2 baseline
+- [ ] Re-measure: Vision's dedicated VRAM at the moment a real generation is dispatched

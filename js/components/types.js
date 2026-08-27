@@ -1580,6 +1580,20 @@
  *   setGeneratingCard(wrapper, w, h)  — mount an external generating card in the grid's top slot
  *   clearGeneratingCard()             — remove the external generating card
  *
+ * Media suspension (MPI-631) — internal, no public method by design:
+ *   Each promoted hover <video> holds a decoder and decode surfaces for as long as it
+ *   exists, so the grid hands them ALL back while it is not the visible surface (any
+ *   overlay open) and while a generation is in flight, then re-promotes what is on
+ *   screen when the last hold drops. Holds are keyed ('overlay' / 'generation') so the
+ *   common overlapping case — a Flow is an overlay AND it dispatches — resumes only
+ *   once both are gone. Driven from inside the grid off `Overlays.onDepthChange`,
+ *   `generation:started` and `generation:complete`; there is no caller outside, so no
+ *   method is exposed. An explicit hover still promotes ONE card while suspended.
+ *   Separately, a card scrolled past DEMOTE_MARGIN_PX out of view demotes itself via a
+ *   second observer — that is what bounds the resting cost; the two holds above do
+ *   nothing for a user sitting in the gallery after scrolling to the bottom.
+ *   See docs/gallery.md § Media suspension.
+ *
  * Emits:
  *   'open-group'  { group }       — user clicked a card (navigate to group history)
  *   'select'      { group, selected }  — checkbox toggled; selection mode managed by parent

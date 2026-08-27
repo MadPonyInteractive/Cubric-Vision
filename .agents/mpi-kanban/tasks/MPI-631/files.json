@@ -1,0 +1,10 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+    "js/components/types.js",
+    "tests/desktop/gallery-media-release.spec.js",
+    "docs/gallery.md",
+    "docs/releases/UNRELEASED.md"
+  ]
+}

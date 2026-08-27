@@ -43,6 +43,19 @@ function _flowModelLabel(item) {
     return `${model.name}${tier ? ` ${tier}` : ''}`;
 }
 
+// How far outside the scroll viewport a video card still counts as "in view" for
+// promotion. Shared by the IntersectionObserver's rootMargin and the manual sweep
+// that re-promotes after a media suspension lifts (MPI-631) — they must agree, or
+// resume paints a different band than scrolling does.
+const PROMOTE_MARGIN_PX = 200;
+
+// How far a card must travel OUTSIDE the viewport before its decoder is handed back
+// (MPI-631). Deliberately wider than PROMOTE_MARGIN_PX: with one shared boundary a
+// card parked on the edge would promote and demote on every few pixels of scroll, so
+// the gap between the two is hysteresis, not slack. Anything scrolled further than
+// this is unreachable by hover, and re-promotes on the way back.
+const DEMOTE_MARGIN_PX = 600;
+
 // One-card-at-a-time: stop every OTHER playing media element in the gallery —
 // audio cards (<audio data-src>) AND unmuted hover videos — so a hover/click
 // never overlaps another card's sound. Pass the element that should keep
@@ -215,6 +228,21 @@ export const MpiGalleryGrid = ComponentFactory.create({
         // browser's hit-test pass, which can land after the overlay has pushed. A
         // stop alone would miss exactly that ordering.
         let _overlayOpen = false;
+
+        // ── Media suspension (MPI-631) ────────────────────────────────────────
+        // A promoted hover <video> is not free: `preload="auto"` keeps a decoder and
+        // its decode surfaces resident, and the grid promotes every video card that
+        // scrolls past. Measured on a 161-asset project: 410 MB of dedicated VRAM on
+        // landing became 1858 MB and stayed there, byte-identical, for 13 idle
+        // minutes. That is a gigabyte and a half the user does not get to generate
+        // with, on a card where an LTX video job wants all of it.
+        //
+        // So promotion is SUSPENDABLE. `_mediaHolds` is a set of reasons rather than
+        // a boolean because the two suspenders overlap constantly — a Flow is an
+        // overlay AND it dispatches generations, so a boolean would resume on the
+        // flow closing while the generation it started was still running.
+        const _mediaHolds = new Set();
+        let _queueIdleTimer = null;
 
         // ── Selection state ───────────────────────────────────────────────────
         const _selectedIds = new Set();
@@ -914,6 +942,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
             function _onCardEnter() {
                 if (_isScrolling) return; // scroll-past never plays (MPI-321)
                 if (_overlayOpen) return; // gallery is not the visible surface (MPI-570)
+                // Suspended → this card was demoted and has no <video> to play, so
+                // promote it on the hover itself (MPI-631). No-op when it is already
+                // promoted, which is the normal, unsuspended path.
+                _promoteVideo({ userHover: true });
                 cardEl._hoverPlay();
             }
 
@@ -939,12 +971,22 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 _videoThumb.pause();
                 _videoThumb.muted = true; // re-mute so it never plays sound off-hover
                 try { _videoThumb.currentTime = 0; } catch (_) {}
+                // While suspended the hover was a one-card loan — give the decoder
+                // back on the way out, or browsing card by card during a generation
+                // slowly re-accumulates exactly what the suspension freed (MPI-631).
+                if (_mediaHolds.size) _removeHoverVideo();
             }
 
             // Promote the card from poster <img> to a paused <video> showing frame 0.
             // Called by the grid IntersectionObserver when the card scrolls into view.
-            function _promoteVideo() {
+            //
+            // `userHover` is the one-card exception to suspension (MPI-631): while the
+            // gallery is holding its VRAM back, an explicit hover is a direct request
+            // for THIS card, so it promotes alone — one decoder instead of 161 — and
+            // `_onCardLeave` gives it straight back.
+            function _promoteVideo(opts) {
                 if (_videoPromoted || !_videoSrc) return;
+                if (_mediaHolds.size && !opts?.userHover) return;
                 const sel = group?.history?.[group.selectedIndex];
                 const isVideo = sel?.type === 'video'
                     || (group?.type === 'video' && sel?.type !== 'image');
@@ -982,6 +1024,10 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
             // Expose for grid-level IntersectionObserver.
             cardEl.promoteVideo = _promoteVideo;
+            // The inverse, for the grid's media suspension (MPI-631). Only ever
+            // removes the promoted OVERLAY — the class guard inside leaves a
+            // no-poster base thumb (the `preload=metadata` fallback) alone.
+            cardEl.demoteVideo = _removeHoverVideo;
 
             function _removeHoverVideo() {
                 if (!_videoThumb) return;
@@ -1719,9 +1765,13 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
                         rowEl.appendChild(wrapper);
 
-                        // Observe for lazy video promotion (no-op for image cards).
-                        if (group.type === 'video' && !_ioPromoted.has(wrapper)) {
+                        // Observe for lazy video promotion AND for scroll-away demotion
+                        // (both no-ops for image cards). `observe` on an already-observed
+                        // target is a spec no-op, so re-running this on every render
+                        // costs nothing (MPI-631).
+                        if (group.type === 'video') {
                             promoteObserver.observe(wrapper);
+                            demoteObserver.observe(wrapper);
                         }
 
                         if (group.isGenerating) {
@@ -1762,25 +1812,74 @@ export const MpiGalleryGrid = ComponentFactory.create({
         // Cards initially render with a 256px JPG poster (instant paint). When
         // the wrapper scrolls into view (or starts in view), promote to a
         // paused <video> showing frame 0 — high-res still without decode storm.
-        const _ioPromoted = new WeakSet();
+        //
+        // MPI-631: this used to `unobserve` each wrapper the moment it promoted, which
+        // made promotion a ONE-WAY RATCHET — a promoted card could never be
+        // reconsidered, so the <video> it created lived for the life of the grid and
+        // nothing but navigating away ever gave the memory back. Cards now stay
+        // observed. `_promoteVideo` self-guards on `_videoPromoted`, so a repeat
+        // notification is a cheap no-op, and a card demoted by a suspension can
+        // promote again when it next scrolls into view.
         const promoteObserver = new IntersectionObserver((entries) => {
             for (const entry of entries) {
                 if (!entry.isIntersecting) continue;
-                if (_ioPromoted.has(entry.target)) continue;
                 const groupId = entry.target.dataset.groupId;
-                const cardElForGroup = _cardMap.get(groupId)?.card?.el;
-                if (cardElForGroup?.promoteVideo) {
-                    cardElForGroup.promoteVideo();
-                    _ioPromoted.add(entry.target);
-                    promoteObserver.unobserve(entry.target);
-                }
+                _cardMap.get(groupId)?.card?.el?.promoteVideo?.();
             }
         }, {
             root: grid,
-            rootMargin: '200px 0px',
+            rootMargin: `${PROMOTE_MARGIN_PX}px 0px`,
             threshold: 0.01,
         });
         _unsubs.push(() => promoteObserver.disconnect());
+
+        // The other half of the ratchet fix: a card that scrolls far enough away hands
+        // its decoder back on its own, so the resident set is the band you can actually
+        // see rather than everything you have ever scrolled past. Without this, one
+        // deliberate scroll to the bottom of a 161-asset project still parks ~1.9 GB in
+        // decoders for as long as you sit in the gallery — measured 2026-08-27, after
+        // the overlay and generation holds were already working.
+        //
+        // Separate observer rather than an `else` on the promote one: they need
+        // DIFFERENT margins (see DEMOTE_MARGIN_PX), and a single boundary thrashes.
+        const demoteObserver = new IntersectionObserver((entries) => {
+            for (const entry of entries) {
+                if (entry.isIntersecting) continue;
+                const groupId = entry.target.dataset.groupId;
+                _cardMap.get(groupId)?.card?.el?.demoteVideo?.();
+            }
+        }, {
+            root: grid,
+            rootMargin: `${DEMOTE_MARGIN_PX}px 0px`,
+            threshold: 0,
+        });
+        _unsubs.push(() => demoteObserver.disconnect());
+
+        // Hand every promoted decoder back and keep promotion off until `reason` is
+        // dropped. Idempotent: `demoteVideo` no-ops on a card that holds no promoted
+        // overlay, so re-releasing under a second hold costs nothing.
+        function _releaseMedia(reason) {
+            _mediaHolds.add(reason);
+            _stopOtherGalleryMedia(null);
+            _cardMap.forEach(({ card }) => card.el.demoteVideo?.());
+        }
+
+        // Drop one hold. Promotion resumes only when the LAST one goes.
+        function _resumeMedia(reason) {
+            if (!_mediaHolds.delete(reason)) return;
+            if (_mediaHolds.size) return;
+            // The observer reports intersection CHANGES, and nothing moved while we
+            // were suspended — so re-observing fires nothing and the visible band
+            // would sit unpromoted until the next scroll. Promote what is on screen
+            // by hand, using the same margin the observer does.
+            const gr = grid.getBoundingClientRect();
+            const top = gr.top - PROMOTE_MARGIN_PX;
+            const bottom = gr.bottom + PROMOTE_MARGIN_PX;
+            _cardMap.forEach(({ card, el: wrapper }) => {
+                const r = wrapper.getBoundingClientRect();
+                if (r.bottom >= top && r.top <= bottom) card.el.promoteVideo?.();
+            });
+        }
 
         const resizeObserver = new ResizeObserver((entries) => {
             const width = Math.round(entries[0]?.contentRect?.width || grid.clientWidth || 0);
@@ -1826,10 +1925,35 @@ export const MpiGalleryGrid = ComponentFactory.create({
         // Library, History), which notifies AFTER instance.show(). So this is the one
         // choke point, not a per-caller patch. Minimise and focus loss are the same
         // stop: the cursor stays parked on a card and no mouseleave ever arrives.
+        //
+        // MPI-631 rides the same choke point for memory, not just for sound: a
+        // gallery nobody can see is holding decoders nobody can watch, so it hands
+        // them back for as long as something covers it. `_releaseMedia` stops media
+        // too, which is what the MPI-570 line above did on its own.
         _unsubs.push(Overlays.onDepthChange((depth) => {
             _overlayOpen = depth > 0;
-            if (_overlayOpen) _stopOtherGalleryMedia(null);
+            if (_overlayOpen) _releaseMedia('overlay');
+            else _resumeMedia('overlay');
         }));
+
+        // MPI-631 — a generation wants every megabyte the card has, and a scrolled
+        // gallery can be sitting on well over a gigabyte of it. Hand it back at
+        // dispatch, take it again once the queue is fully drained.
+        _unsubs.push(Events.on('generation:started', () => _releaseMedia('generation')));
+        _unsubs.push(Events.on('generation:complete', () => {
+            // The last `generation:complete` and the count reaching 0 arrive from
+            // decoupled paths in either order (the race `shell/notificationService.js`
+            // defers for), and pressing Cue again briefly re-derives the count. Settle
+            // a beat, then re-check — resuming under a queue that is still running
+            // would re-promote the whole visible band mid-generation.
+            if (_queueIdleTimer) clearTimeout(_queueIdleTimer);
+            _queueIdleTimer = setTimeout(() => {
+                _queueIdleTimer = null;
+                if ((Number(state.generationQueueCount) || 0) !== 0) return;
+                _resumeMedia('generation');
+            }, 150);
+        }));
+        _unsubs.push(() => { if (_queueIdleTimer) clearTimeout(_queueIdleTimer); });
         _unsubs.push(on(window, 'blur', () => _stopOtherGalleryMedia(null)));
         _unsubs.push(on(document, 'visibilitychange', () => {
             if (document.hidden) _stopOtherGalleryMedia(null);

@@ -302,3 +302,12 @@
   workspace showed nothing at all on a video run, and the minimised preview window sat
   on a single still frame. All four surfaces now share one player and pace the clip at
   the rate it announces.
+
+- The gallery gives your graphics memory back. Scrolling through a project of videos left
+  the app holding well over a gigabyte of video memory for the rest of the session — on a
+  161-clip project, a single pass took it from 410 MB to 1.86 GB, and nothing released it
+  until you switched workspaces. That is memory your next generation needed. The gallery
+  now hands it back whenever it is not the surface you are looking at, and again the moment
+  a generation starts, taking it back when the queue is empty. Clips you have scrolled well
+  past also let go on their own, so a long project costs what is on screen instead of
+  everything you have looked at. Hovering a card still plays it, exactly as before.

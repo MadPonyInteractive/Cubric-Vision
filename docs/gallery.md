@@ -13,6 +13,41 @@ Three-stage pattern in `MpiGalleryGrid.js`: (1) Poster paint — `<img src=thumb
 
 **WebP, because JPG has no alpha — and the symptom is NOT a white backdrop (MPI-627).** Background removal writes its mask into the ALPHA channel and leaves the source RGB untouched, so flattening that PNG into a JPG thumb restored the **original image whole**, backdrop and drop-shadow included: the card looked like the pre-removal import while the viewer (full-res `filePath`) showed the cut-out. WebP keeps alpha, so the cut-out composites over `.mpi-group-card__media`'s `--surface-3`, and it is also *smaller* than the JPG it replaced (512px measured: 30 KB vs 44 KB photo). The backfill above therefore **replaces** a legacy `.thumb.jpg` whose source is `.png/.webp/.avif/.gif` (a JPG source can never carry alpha, so it keeps its thumb) and deletes the stale jpg — which is why `_backfillImageThumbs` patches on `item.thumbPath !== thumbs[id]` rather than on a missing thumbPath; an item left holding the deleted URL would 404 its card until the next project load. Test: `tests/image-thumb-alpha.test.cjs` (asserts a transparent pixel survives the downscale — the extension is not the thing that matters).
 
+## Media suspension — the gallery hands its VRAM back (MPI-631)
+
+A promoted hover `<video>` is `preload="auto"`, so it holds a decoder and its decode surfaces for as long as the element exists. Promotion used to be a **one-way ratchet** — the promote `IntersectionObserver` called `unobserve` the moment a card promoted — so every video card that ever scrolled past kept its decoder for the life of the grid. Measured on a 161-asset project (RTX 4060 Ti, engine not running): Vision held **410 MB** of dedicated VRAM idle on landing and **1858 MB** after one scroll through the gallery, byte-identical for 13 idle minutes with zero decay. Entering the History workspace dropped it to **404 MB** — navigating away destroys the grid, which was the only thing that ever released it.
+
+The point is not idle tidiness. It is that 1.5 GB of gallery on a 16 GB card is VRAM the user does not get to generate with.
+
+So promotion is **suspendable**. `_mediaHolds` is a Set of reasons, not a boolean, because the two suspenders overlap constantly — a Flow is an overlay AND it dispatches generations, so a boolean would resume on the flow closing while its generation still ran. `_releaseMedia(reason)` adds a hold, stops playback and demotes every promoted card via the pre-existing `_removeHoverVideo`; `_resumeMedia(reason)` drops one hold and, only when the last one goes, re-promotes what is on screen.
+
+Two whole-grid holds, both driven from inside the grid:
+
+| hold | released on | resumed on |
+|---|---|---|
+| `'overlay'` | `Overlays.onDepthChange` depth > 0 — the same MPI-570 choke point every overlay already routes through | depth back to 0 |
+| `'generation'` | `generation:started` | `generation:complete` **and** `state.generationQueueCount === 0`, re-checked after 150 ms |
+
+Plus a per-card one that needs no hold: **a card scrolled further than `DEMOTE_MARGIN_PX` out of view demotes itself**, via a SECOND observer. That is what bounds the resting cost to the band you can see rather than everything you have ever scrolled past — the two holds above do nothing for a user sitting in the gallery after a deliberate scroll to the bottom, measured at 1976 MB with both of them already working.
+
+The two observers exist because they need **different margins**: promote at `PROMOTE_MARGIN_PX` (200), demote at `DEMOTE_MARGIN_PX` (600). The gap is hysteresis, not slack — one shared boundary makes a card parked on the edge promote and demote on every few pixels of scroll.
+
+That 150 ms defer is not cosmetic: the last `generation:complete` and the count reaching 0 arrive from decoupled paths in either order (the same race `shell/notificationService.js` defers for), so resuming on the event alone re-promotes the whole visible band mid-generation.
+
+Three things that are easy to get wrong here:
+
+- **Tearing down once is not enough.** `IntersectionObserver.observe()` fires immediately for anything already intersecting, and the observer is still watching every card, so a release with no suspension flag re-promotes the visible band on the next notification and frees nothing. `_promoteVideo` must check the flag.
+- **Resume needs a manual sweep.** The observer reports intersection *changes*, and nothing moved while suspended, so re-observing fires nothing. `_resumeMedia` walks `_cardMap` and promotes what is inside the viewport, using `PROMOTE_MARGIN_PX` — the same constant feeding the observer's `rootMargin`. If those two ever disagree, resume paints a different band than scrolling does.
+- **Cards must stay observed.** The old `unobserve` is what made this permanent; `_promoteVideo` self-guards on `_videoPromoted`, so leaving cards observed makes a repeat notification a cheap no-op and lets a demoted card promote again on its next scroll-in.
+
+Carve-outs: an explicit hover still promotes ONE card while suspended (`_promoteVideo({ userHover: true })`), and `_onCardLeave` demotes it again so a slow browse during a long generation cannot re-accumulate what the suspension freed. The generating card's live preview is a different path (`updatePreview` / `resetPreviewClip`, see [preview-bus.md](preview-bus.md)) and is untouched.
+
+Regression spec: `tests/desktop/gallery-media-release.spec.js`. Its fixture uses REAL shipped media (the Flow hero clips + stills under `comfy_workflows/display/`) — a made-up src 404s into the missing-media path, which empties `.mpi-group-card__media` so there is nothing to promote, and the spec then reads as a broken fix when the fix is fine.
+
+**Grid virtualisation was considered and deliberately not done.** Images already ship 512px WebP thumbs (~1 MB of texture each), so card count is not the cost — per-video decoder retention is — and windowing would still have ratcheted inside its own band while costing a rewrite of justified layout, selection, drag-out and scroll anchoring.
+
+**A fixture must overflow by more than `DEMOTE_MARGIN_PX`** or the scroll-out demote can never fire and the spec passes green against a broken build. The trigger-C case sizes itself for that deliberately and asserts the overflow before asserting anything else.
+
 ## Slider sizing — items-per-row bands
 
 Drive seed from desired items-per-row, not pixel: `target = ((containerWidth - (N-1)*gap) / (N * aspectRef)) * 0.92`. `aspectRef` 1.6. Justified-layout per-row rescaling collapses any two seed pairs that land in the same items-per-row band → two adjacent pixel targets produce identical visual output. Current map: `ITEMS_PER_ROW_TARGET { 1:6, 2:4, 3:3, 4:2 }`. Recompute on BOTH slider input AND ResizeObserver.

@@ -1,0 +1,74 @@
+{
+  "schema": "mpi-kanban/handoff/v1",
+  "id": "95bd9759-4bd8-40db-9563-9e1f63d778da",
+  "generated_at": "2026-08-27T18:21:03Z",
+  "status": "open",
+  "session": {
+    "name": "Gallery VRAM: diagnose the app's idle GPU usage, build the release primitive (MPI-631), raise renditions (MPI-633)",
+    "branch": "master"
+  },
+  "goal": {
+    "original": "Fabio saw Cubric Vision holding ~2 GB of VRAM while idle and asked why, and whether it could drop to near nothing - or at least only be held when actually needed.",
+    "status": "in_progress",
+    "summary": "MPI-631 is CLOSED and measured: the gallery's resting VRAM went 1858.2 MB -> 738.2 MB (-60%) on the real 161-asset project, peak 2111 -> 961 MB. What remains is MPI-633, raised from it and not started: the gallery still renders ONE 512px image thumb at every card size (visibly upscaled on a big card) and still promotes video to the FULL-RESOLUTION master."
+  },
+  "plan": {
+    "file": null,
+    "completed": [
+      "Diagnosed the idle 2 GB by measurement, not inspection: ~1170 MB was the desktop baseline (dwm/edge/explorer/a separate bench ComfyUI on G:), ~390 MB the Vision app, ~200 MB the engine's CUDA context, ~480 MB a model ComfyUI left resident after the last generation",
+      "MPI-631: media suspension in MpiGalleryGrid - _mediaHolds (a Set, not a boolean), _releaseMedia/_resumeMedia, released on overlay depth > 0 and on generation:started, resumed on a drained queue",
+      "MPI-631 trigger C: a second IntersectionObserver at DEMOTE_MARGIN_PX (600) demotes a card scrolled far off-screen, against the promote observer's 200 - the gap is hysteresis",
+      "tests/desktop/gallery-media-release.spec.js, two cases, mutation-tested three ways (three reds, all reverted)",
+      "751/751 unit, 31/31 desktop, eslint clean, board validates",
+      "Measured the fix end to end on the real project and recorded it in tasks/MPI-631/validation.md",
+      "MPI-633 raised with a full brief"
+    ],
+    "pending": [
+      "MPI-633: size-matched image renditions picked by RENDERED BOX (not items-per-row), never generated above the source",
+      "MPI-633: a small video proxy (720p or 480p) for gallery hover playback; full-res stays in the viewer",
+      "MPI-633: measure per-video decode cost against resolution, and gallery VRAM at the largest card size vs the smallest, BEFORE building",
+      "Optional, deliberately left open on MPI-631: sample Vision's VRAM at the instant a real generation dispatches (needs the engine up)"
+    ]
+  },
+  "task_card": {
+    "id": "MPI-633",
+    "title": "Gallery renditions - size-matched image thumbs and a video proxy",
+    "column": "todo",
+    "workspace": ".agents/mpi-kanban/tasks/MPI-633/",
+    "links": {
+      "brief": "brief.md",
+      "events": "events.jsonl"
+    }
+  },
+  "next_action": {
+    "description": "Read .agents/mpi-kanban/tasks/MPI-633/brief.md, move MPI-633 todo -> doing (writing checklist.md and files.json), and START WITH THE TWO MEASUREMENTS the brief asks for before writing any rendition code - per-video decode cost against resolution, and gallery VRAM at the largest card size vs the smallest. Everything in that brief about video decode cost is reasoned from the mechanism, not sampled.",
+    "command": "mpi-continue"
+  },
+  "context": {
+    "key_decisions": [
+      "Grid virtualisation was considered and REJECTED for MPI-631: images already ship 512px thumbs (~1 MB of texture each), so card count is not the cost - per-video decoder retention is - and windowing would still ratchet inside its own band while costing a rewrite of justified layout, selection, drag-out and scroll anchoring.",
+      "Capping the max gallery card size was proposed by Fabio and rejected in MPI-633's brief: the screen's pixel count is fixed, so size-matched renditions keep memory roughly flat AND fix quality, whereas a cap removes a feature to work around a fixable derivative and forces MORE cards resident.",
+      "releaseMedia/resumeMedia are INTERNAL, not on instance.el - both callers live inside the grid, so a public method would be API with no consumer. Recorded as a deviation on MPI-631 rather than quietly satisfied.",
+      "MPI-631 closed WITHOUT sampling VRAM at generation dispatch. Trigger B is proven by spec + mutation + sharing the measured overlay trigger's release path, but the live number needs the engine up. Recorded in validation.md under 'Not measured'."
+    ],
+    "constraints": [
+      "MEASURE PER-VIDEO COST FIRST. The claim that a 3000x1280 clip in a ~300px card decodes ~100x the pixels it shows is reasoned from how browsers decode video (native resolution regardless of display size), NOT sampled. The proxy resolution should be chosen on evidence.",
+      "Rendition tiers must key off the RENDERED PIXEL BOX, not items-per-row: with justified rows, three PORTRAIT cards per row are narrow but TALL, so a column count does not tell you how many pixels a card paints. This was Fabio's own objection to a simpler 'three per row' fix.",
+      "Never generate a rendition larger than its source. Most assets in the test project are 1280x800, so at a large card size the ORIGINAL is the right file - an upscaled derivative costs disk and quality for nothing.",
+      "WebP, never JPG, for any image rendition (MPI-627): JPG has no alpha, so flattening a background-removed PNG hands back the ORIGINAL image whole, backdrop included, and the card then silently disagrees with the viewer. The symptom is NOT a white background, which is what makes it hard to recognise.",
+      "A desktop-spec fixture needs REAL shipped media (the Flow hero clips under comfy_workflows/display/). A made-up src 404s into the missing-media path, which empties .mpi-group-card__media, so nothing promotes and the spec reads as a broken fix when the fix is fine. This cost several debug cycles.",
+      "Any fixture testing scroll-out demotion must ASSERT ITS OWN OVERFLOW first. The trigger-C case initially passed against a fixture overflowing by only 361px - less than DEMOTE_MARGIN_PX (600) - so the demote could never fire and it was green for the wrong reason.",
+      "Allocate a card id BEFORE writing any file under tasks/<id>/. Writing brief.md first CREATES the directory, which consumes the id the createTask mkdir-lock was about to claim - that is how MPI-632 was skipped and this card became MPI-633.",
+      "Measurement method that worked: Get-Counter '\\GPU Process Memory(*)\\Dedicated Usage' summed over the Vision PIDs, 3s interval, with the ComfyUI engine OFF so the app is measured alone. nvidia-smi cannot attribute per-process VRAM under WDDM here. Scripts: scratchpad gpuwatch.ps1 / gpusnap.ps1; curves gpuwatch-prefix.csv, gpuwatch-triggersAB.csv, gpuwatch2.csv.",
+      "SEPARATE, NOT IN EITHER CARD: the ComfyUI engine keeps ~480 MB of model resident after a generation, reclaimable by POST /comfy/unload, which today only fires from the F5 / Ctrl+F5 hotkey in js/shell/memoryOps.js and never automatically. That wants an idle-unload - the OPPOSITE trigger to the gallery's, since freeing models before a generation forces a reload of the model about to be used."
+    ],
+    "files_to_read_first": [
+      ".agents/mpi-kanban/tasks/MPI-633/brief.md",
+      ".agents/mpi-kanban/tasks/MPI-631/validation.md",
+      "docs/gallery.md",
+      "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+      "services/ffmpegThumb.js"
+    ]
+  },
+  "resume_prompt": "Read .agents/mpi-kanban/state/handoffs/95bd9759-4bd8-40db-9563-9e1f63d778da.json and use mpi-continue to pick up MPI-633, 'Gallery renditions - size-matched image thumbs and a video proxy'. Context: the previous session closed MPI-631, which stopped the gallery holding every video decoder it had ever created - measured on Fabio's real 161-asset project, resting VRAM fell from 1858.2 MB to 738.2 MB and peak from 2111 to 961 MB with the ComfyUI engine off. MPI-633 is the follow-up and is NOT started: the gallery still renders one 512px image thumb at every card size, which is visibly upscaled once cards are large (the grid targets 2 cards per row at the biggest slider level, so a card paints at ~950-1250px from a 512px source), and it still promotes video to the full-resolution master rather than a proxy. Read tasks/MPI-633/brief.md first, move the card todo -> doing with a checklist.md and files.json, and do the two measurements the brief asks for BEFORE writing rendition code - the per-video decode cost is reasoned from the mechanism, not sampled."
+}

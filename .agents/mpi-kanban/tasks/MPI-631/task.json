@@ -1,0 +1,35 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-631",
+  "title": "Gallery holds ~1.5 GB of VRAM until you navigate away",
+  "description": "Scrolling a 161-asset gallery takes Vision from 410 MB to 1858 MB of dedicated VRAM and never releases it - measured, flat for 13 minutes. Every video card promoted by the grid IntersectionObserver gets a permanent <video preload=auto>; the observer unobserves after promoting, so a card can never be demoted. Add a releaseMedia/resumeMedia primitive on MpiGalleryGrid and call it when the gallery stops being visible and when a generation is dispatched, so the UI is not holding VRAM the model needs.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "completed",
+  "created_at": "2026-08-27T17:24:41Z",
+  "updated_at": "2026-08-27T18:18:23Z",
+  "labels": [
+    "bug",
+    "performance",
+    "gallery",
+    "vram"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl",
+    "checklist": "checklist.md",
+    "files": "files.json",
+    "validation": "validation.md"
+  },
+  "acceptance": [
+    "MpiGalleryGrid suspends and restores hover-video promotion internally - _releaseMedia(reason) tears down every promoted <video> via the existing _removeHoverVideo path, _resumeMedia(reason) re-promotes what is on screen once the LAST hold drops. Deliberately NOT exposed on instance.el: both callers live inside the grid, so a public method would be unused API",
+    "Promotion stays SUSPENDED while released - a _mediaSuspended flag checked inside _promoteVideo - because IntersectionObserver.observe() fires immediately for already-intersecting targets and would re-promote the visible band on the next tick, freeing nothing",
+    "Release fires when the gallery stops being visible (a Flow opens over it), and resume fires when it is visible again",
+    "Release fires when a generation is dispatched, and resume fires when the queue drains - so the GPU is free for the model at the moment it is needed",
+    "While suspended, an explicit hover on a single card may still promote it (one decoder, not 161) so the gallery stays usable during a long generation",
+    "The generating card's live preview path (updatePreview / resetPreviewClip, preview-bus) is NOT affected by suspension",
+    "A card scrolled further than DEMOTE_MARGIN_PX out of view demotes itself, via a SECOND IntersectionObserver at a wider margin than the promote one - the gap is hysteresis, since a single shared boundary thrashes a card parked on the edge. Scrolling back re-promotes it",
+    "Measured: the same tour (open a big project, scroll the gallery end to end, open a flow) no longer leaves Vision resting near 1858 MB, and Vision's dedicated VRAM at generation dispatch is materially lower than it is today",
+    "docs/gallery.md documents the release/suspend contract, and js/components/types.js documents the new grid methods"
+  ]
+}
