@@ -2049,3 +2049,42 @@ no multilingual node ships.
 - The whole library staged as wav: `input/mpi607_voices/<REGISTER>_<id>.wav` (56) and
   `input/mpi607_perf/<REGISTER>_<emotion>.wav` (30), register-prefixed so pairing a voice to
   its grid needs no manifest lookup. Index at `input/mpi607_index.json`.
+
+### 🔴 THE LANGUAGE LABELS ARE UPSTREAM'S AND AT LEAST ONE OF THEM IS A LIE
+
+Fabio, 2026-08-27, from his own bench testing: the node's dropdown offers **`Portuguese (pt)`**,
+which reads as European Portuguese -- and what the model actually produces is **Brazilian
+Portuguese (pt-BR)**. His words: *"it's actually PTBR ... which is very different. It's
+different only because of the accent, by the way."*
+
+Same written language, different accent -- which is precisely the axis a listener judges on,
+and precisely the thing a Portuguese user would notice in the first sentence.
+
+**THIS IS THE SAME RULE MPI-622 ALREADY SET FOR THE `accent` FIELD, one layer up: a wrong
+label is worse than a missing one.** There it was a voice prompted "refined British" that a
+listener heard cold as a 1930s New York gangster, and the resolution was to ship the field
+EMPTY rather than wrong. The picker exists so a user need not audition everything, and a wrong
+label spends exactly the trust that makes it useful.
+
+**IT IS NOT A PORTUGUESE FOOTNOTE.** The list is upstream's, it is bare ISO 639-1 codes, and a
+2-letter code carries NO variant information at all. Every entry with a major regional split is
+suspect on identical grounds and NONE has been verified:
+
+| entry | the unanswered question |
+|---|---|
+| `Portuguese (pt)` | **ANSWERED: it is pt-BR, not pt-PT.** Label it Brazilian |
+| `Spanish (es)` | Castilian, or Latin American? |
+| `Chinese (zh)` | Mandarin or Cantonese; and which script |
+| `Norwegian (no)` | Bokmal or Nynorsk |
+| `English (en)` | which English -- and it is the DEFAULT, so it is the one nobody checks |
+
+**THE OBLIGATION ON THE SHIPPED LIST:** every language Flow B offers gets its actual variant
+confirmed BY EAR before it is labelled, and the label names the variant that was heard --
+"Portuguese (Brazil)", not "Portuguese". A language whose variant has not been confirmed either
+does not ship or ships under a label that claims no variant. Do not infer the variant from the
+ISO code, and do not infer it from the language's name in the node's own dropdown: that
+dropdown is the thing that was wrong here.
+
+This costs nothing to honour while the shipped list is curated anyway (the `language` combo
+refuses a link, so each language is a hand-added graph arm regardless).
+

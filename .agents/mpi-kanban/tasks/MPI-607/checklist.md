@@ -52,6 +52,14 @@
         tokenizer dep (pykakasi / dicta_onnx / russian_text_stresser / spacy_pkuseg), none in the lock.
         TWO THINGS STILL NEED FABIO: which languages ship, and whether the 3.2GB multilingual set is
         bundled or an optional install (his own parked question - `requiredDeps` cannot express optional).
+  - [ ] 🔴 Gate 2 FLOW B - **the node's language labels are upstream's and at least one LIES.**
+        `Portuguese (pt)` reads as European Portuguese and delivers **Brazilian** (Fabio, by ear:
+        "very different ... only because of the accent"). Bare ISO 639-1 codes carry no variant, so
+        `Spanish (es)`, `Chinese (zh)`, `Norwegian (no)` and even the default `English (en)` are
+        unverified on the same grounds. EVERY shipped language gets its variant confirmed BY EAR and
+        the label names what was heard ("Portuguese (Brazil)"). Unconfirmed = does not ship, or ships
+        claiming no variant. Same rule MPI-622 set for `accent`: a wrong label is worse than a missing
+        one. Costs nothing - the combo refuses a link, so each language is a hand-added arm anyway
   - [ ] 🔴 Gate 2 FLOW B - **the emotion recipe is NOT validated on the multilingual model.** exag 1.2 /
         cfg 0.3 is a BASE-model finding; only `repetition_penalty` 1.5 was measured on multilingual, and
         min_p/top_p/temperature are node defaults held fixed. Warning sign already logged: q4 ran
