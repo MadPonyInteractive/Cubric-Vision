@@ -1,0 +1,1358 @@
+{
+  "id": "231f127f-fa15-47a2-93d6-18ca15b9a950",
+  "revision": 0,
+  "last_node_id": 23,
+  "last_link_id": 27,
+  "nodes": [
+    {
+      "id": 2,
+      "type": "DramaBoxAudioVAELoader",
+      "pos": [
+        -780.0460794879166,
+        89.9992179765683
+      ],
+      "size": [
+        328.9702710140167,
+        84.235204303557
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "components_name",
+          "name": "components_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "components_name"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "dtype",
+          "name": "dtype",
+          "type": "COMBO",
+          "widget": {
+            "name": "dtype"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "audio_vae",
+          "name": "audio_vae",
+          "type": "DRAMABOX_AUDIO_VAE",
+          "slot_index": 0,
+          "links": [
+            5,
+            19
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DramaBoxAudioVAELoader"
+      },
+      "widgets_values": [
+        "dramabox-audio-components.safetensors",
+        "bf16"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "DramaBoxTextEncoderLoader",
+      "pos": [
+        -841.162554263995,
+        242.8998402524466
+      ],
+      "size": [
+        404.14048699079444,
+        121.4433072054398
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "text_encoder",
+          "name": "text_encoder",
+          "type": "COMBO",
+          "widget": {
+            "name": "text_encoder"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "components_name",
+          "name": "components_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "components_name"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "keep_loaded",
+          "name": "keep_loaded",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "keep_loaded"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "text_encoder",
+          "name": "text_encoder",
+          "type": "DRAMABOX_TEXTENC",
+          "slot_index": 0,
+          "links": [
+            1
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DramaBoxTextEncoderLoader"
+      },
+      "widgets_values": [
+        "gemma-3-12b-it 4-bit (~8 GB, recommended)",
+        "dramabox-audio-components.safetensors",
+        false
+      ]
+    },
+    {
+      "id": 4,
+      "type": "DramaBoxTextEncode",
+      "pos": [
+        -261.95221436466016,
+        210.55090415778275
+      ],
+      "size": [
+        330,
+        180
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "text_encoder",
+          "name": "text_encoder",
+          "type": "DRAMABOX_TEXTENC",
+          "link": 1
+        },
+        {
+          "localized_name": "prompt",
+          "name": "prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "prompt"
+          },
+          "link": 2
+        },
+        {
+          "localized_name": "negative_prompt",
+          "name": "negative_prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "negative_prompt"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "conditioning",
+          "name": "conditioning",
+          "type": "DRAMABOX_CONDITIONING",
+          "slot_index": 0,
+          "links": [
+            4
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DramaBoxTextEncode"
+      },
+      "widgets_values": [
+        "A middle-aged woman says in a angry voice, \"I'm not sure that you want to find out what's going to happen to you after this.\"",
+        "worst quality, inconsistent, robotic, distorted, noise, static, muffled, unclear, unnatural, monotone"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "MpiClearVram",
+      "pos": [
+        109.51721511158782,
+        210.91600118714464
+      ],
+      "size": [
+        186.9140625,
+        26
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "passthrough",
+          "name": "passthrough",
+          "shape": 7,
+          "type": "*",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "passthrough",
+          "name": "passthrough",
+          "type": "*",
+          "links": [
+            8,
+            12
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
+        "Node name for S&R": "MpiClearVram"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 6,
+      "type": "MpiText",
+      "pos": [
+        -830.1734830544884,
+        419.3457573077293
+      ],
+      "size": [
+        402.74113856068743,
+        106.80128893662743
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string",
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "Text",
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            2
+          ]
+        }
+      ],
+      "title": "Input_Positive",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
+        "Node name for S&R": "MpiText"
+      },
+      "widgets_values": [
+        "A British woman says, \"Hello and welcome to Cubric Studio\""
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 11,
+      "type": "MpiLoadAudio",
+      "pos": [
+        -694.9805035918289,
+        722.0774332097537
+      ],
+      "size": [
+        270,
+        82
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string",
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": 14
+        },
+        {
+          "localized_name": "block_if_empty",
+          "name": "block_if_empty",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "block_if_empty"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "audio",
+          "name": "audio",
+          "type": "AUDIO",
+          "links": [
+            6
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
+        "Node name for S&R": "MpiLoadAudio"
+      },
+      "widgets_values": [
+        "",
+        true
+      ]
+    },
+    {
+      "id": 12,
+      "type": "MpiInt",
+      "pos": [
+        -159.21592533042866,
+        745.3575551108917
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "int",
+          "name": "int",
+          "type": "INT",
+          "widget": {
+            "name": "int"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "int",
+          "name": "int",
+          "type": "INT",
+          "links": [
+            10,
+            13
+          ]
+        }
+      ],
+      "title": "Input_Seed",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
+        "Node name for S&R": "MpiInt"
+      },
+      "widgets_values": [
+        0
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 13,
+      "type": "MpiString",
+      "pos": [
+        -1235.861990036228,
+        777.0643394774393
+      ],
+      "size": [
+        270,
+        82
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string",
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "string",
+          "name": "string",
+          "type": "STRING",
+          "links": [
+            15
+          ]
+        }
+      ],
+      "title": "Input_Audio",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
+        "Node name for S&R": "MpiString"
+      },
+      "widgets_values": [
+        ""
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 14,
+      "type": "MpiAnyChecker",
+      "pos": [
+        -917.7488291376318,
+        778.5357409055366
+      ],
+      "size": [
+        153.444921875,
+        46
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "any",
+          "name": "any",
+          "type": "*",
+          "link": 15
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "any",
+          "name": "any",
+          "type": "*",
+          "links": [
+            14
+          ]
+        },
+        {
+          "localized_name": "has_value",
+          "name": "has_value",
+          "type": "BOOLEAN",
+          "links": [
+            18
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
+        "Node name for S&R": "MpiAnyChecker"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 15,
+      "type": "MpiIfElse",
+      "pos": [
+        974.2448695138231,
+        743.9869858305477
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "true",
+          "name": "true",
+          "type": "*",
+          "link": 16
+        },
+        {
+          "localized_name": "false",
+          "name": "false",
+          "type": "*",
+          "link": 17
+        },
+        {
+          "localized_name": "boolean",
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "boolean"
+          },
+          "link": 18
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "output",
+          "name": "output",
+          "type": "*",
+          "links": [
+            20
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
+        "Node name for S&R": "MpiIfElse"
+      },
+      "widgets_values": [
+        true
+      ]
+    },
+    {
+      "id": 18,
+      "type": "MpiClearVram",
+      "pos": [
+        1851.354053908163,
+        703.0483738166889
+      ],
+      "size": [
+        186.9140625,
+        26
+      ],
+      "flags": {},
+      "order": 18,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "passthrough",
+          "name": "passthrough",
+          "shape": 7,
+          "type": "*",
+          "link": 21
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "passthrough",
+          "name": "passthrough",
+          "type": "*",
+          "links": [
+            22
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
+        "Node name for S&R": "MpiClearVram"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 19,
+      "type": "SaveAudioAdvanced",
+      "pos": [
+        2111.1310134450805,
+        610.6357505996139
+      ],
+      "size": [
+        329.5679802826885,
+        136
+      ],
+      "flags": {},
+      "order": 19,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "audio",
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 22
+        },
+        {
+          "localized_name": "filename_prefix",
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "format",
+          "name": "format",
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "widget": {
+            "name": "format"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "audioUI",
+          "name": "audioUI",
+          "type": "AUDIO_UI",
+          "widget": {
+            "name": "audioUI"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "audio",
+          "name": "audio",
+          "type": "AUDIO",
+          "links": null
+        }
+      ],
+      "title": "Output_Audio",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.31.0"
+      },
+      "widgets_values": [
+        "audio/DramaBox",
+        "flac"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 1,
+      "type": "DramaBoxDiTLoader",
+      "pos": [
+        -791.3730983337324,
+        -48.81162258410146
+      ],
+      "size": [
+        332.0594579719665,
+        82
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model_name",
+          "name": "model_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "model_name"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "dtype",
+          "name": "dtype",
+          "type": "COMBO",
+          "widget": {
+            "name": "dtype"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "dit",
+          "name": "dit",
+          "type": "DRAMABOX_DIT",
+          "slot_index": 0,
+          "links": [
+            7,
+            11
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DramaBoxDiTLoader"
+      },
+      "widgets_values": [
+        "dramabox-dit-v1.safetensors",
+        "bf16"
+      ]
+    },
+    {
+      "id": 22,
+      "type": "MpiFloat",
+      "pos": [
+        -163.03432228483393,
+        884.9886682887818
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "float",
+          "name": "float",
+          "type": "FLOAT",
+          "widget": {
+            "name": "float"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "float",
+          "name": "float",
+          "type": "FLOAT",
+          "links": [
+            24,
+            26
+          ]
+        }
+      ],
+      "title": "Input_Duration",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
+        "Node name for S&R": "MpiFloat"
+      },
+      "widgets_values": [
+        5
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 7,
+      "type": "DramaBoxVoiceReferenceLoader",
+      "pos": [
+        -255.70115578550843,
+        473.0818004658495
+      ],
+      "size": [
+        328.6729811541841,
+        194.69192461673674
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "audio_vae",
+          "name": "audio_vae",
+          "type": "DRAMABOX_AUDIO_VAE",
+          "link": 5
+        },
+        {
+          "localized_name": "audio",
+          "name": "audio",
+          "shape": 7,
+          "type": "AUDIO",
+          "link": 6
+        },
+        {
+          "localized_name": "extra_ref",
+          "name": "extra_ref",
+          "shape": 7,
+          "type": "DRAMABOX_VOICE_REF",
+          "link": null
+        },
+        {
+          "localized_name": "trim_silence",
+          "name": "trim_silence",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "trim_silence"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "max_duration_sec",
+          "name": "max_duration_sec",
+          "type": "FLOAT",
+          "widget": {
+            "name": "max_duration_sec"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "denoise",
+          "name": "denoise",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "denoise"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "strength",
+          "name": "strength",
+          "type": "FLOAT",
+          "widget": {
+            "name": "strength"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "file_path",
+          "name": "file_path",
+          "shape": 7,
+          "type": "STRING",
+          "widget": {
+            "name": "file_path"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "voice_ref",
+          "name": "voice_ref",
+          "type": "DRAMABOX_VOICE_REF",
+          "slot_index": 0,
+          "links": [
+            9
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DramaBoxVoiceReferenceLoader"
+      },
+      "widgets_values": [
+        true,
+        30,
+        false,
+        1,
+        ""
+      ]
+    },
+    {
+      "id": 16,
+      "type": "DramaBoxVAEDecode",
+      "pos": [
+        1481.6525472442015,
+        703.3334271713375
+      ],
+      "size": [
+        326.9108130420502,
+        78.94869996715522
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "audio_vae",
+          "name": "audio_vae",
+          "type": "DRAMABOX_AUDIO_VAE",
+          "link": 19
+        },
+        {
+          "localized_name": "audio_latent",
+          "name": "audio_latent",
+          "type": "DRAMABOX_AUDIO_LATENT",
+          "link": 20
+        },
+        {
+          "localized_name": "crossfade_ms",
+          "name": "crossfade_ms",
+          "type": "INT",
+          "widget": {
+            "name": "crossfade_ms"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "audio",
+          "name": "audio",
+          "type": "AUDIO",
+          "slot_index": 0,
+          "links": [
+            21
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DramaBoxVAEDecode"
+      },
+      "widgets_values": [
+        50
+      ]
+    },
+    {
+      "id": 9,
+      "type": "DramaBoxSampler",
+      "pos": [
+        374.3442410596148,
+        97.45530802459258
+      ],
+      "size": [
+        330,
+        360
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "dit",
+          "name": "dit",
+          "type": "DRAMABOX_DIT",
+          "link": 7
+        },
+        {
+          "localized_name": "conditioning",
+          "name": "conditioning",
+          "type": "DRAMABOX_CONDITIONING",
+          "link": 8
+        },
+        {
+          "localized_name": "voice_ref",
+          "name": "voice_ref",
+          "shape": 7,
+          "type": "DRAMABOX_VOICE_REF",
+          "link": 9
+        },
+        {
+          "localized_name": "quality_preset",
+          "name": "quality_preset",
+          "type": "COMBO",
+          "widget": {
+            "name": "quality_preset"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "steps",
+          "name": "steps",
+          "type": "INT",
+          "widget": {
+            "name": "steps"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "cfg_scale",
+          "name": "cfg_scale",
+          "type": "FLOAT",
+          "widget": {
+            "name": "cfg_scale"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "stg_scale",
+          "name": "stg_scale",
+          "type": "FLOAT",
+          "widget": {
+            "name": "stg_scale"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "seed",
+          "name": "seed",
+          "type": "INT",
+          "widget": {
+            "name": "seed"
+          },
+          "link": 10
+        },
+        {
+          "localized_name": "duration_seconds",
+          "name": "duration_seconds",
+          "type": "FLOAT",
+          "widget": {
+            "name": "duration_seconds"
+          },
+          "link": 26
+        },
+        {
+          "localized_name": "duration_multiplier",
+          "name": "duration_multiplier",
+          "type": "FLOAT",
+          "widget": {
+            "name": "duration_multiplier"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "cfg_rescale",
+          "name": "cfg_rescale",
+          "type": "FLOAT",
+          "widget": {
+            "name": "cfg_rescale"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "audio_latent",
+          "name": "audio_latent",
+          "type": "DRAMABOX_AUDIO_LATENT",
+          "slot_index": 0,
+          "links": [
+            16
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DramaBoxSampler"
+      },
+      "widgets_values": [
+        "default",
+        30,
+        2.5,
+        1.5,
+        988071999650555,
+        "fixed",
+        2,
+        1.1,
+        -1
+      ]
+    },
+    {
+      "id": 10,
+      "type": "DramaBoxSampler",
+      "pos": [
+        365.0257502871858,
+        528.4015937789909
+      ],
+      "size": [
+        330,
+        360
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "dit",
+          "name": "dit",
+          "type": "DRAMABOX_DIT",
+          "link": 11
+        },
+        {
+          "localized_name": "conditioning",
+          "name": "conditioning",
+          "type": "DRAMABOX_CONDITIONING",
+          "link": 12
+        },
+        {
+          "localized_name": "voice_ref",
+          "name": "voice_ref",
+          "shape": 7,
+          "type": "DRAMABOX_VOICE_REF",
+          "link": null
+        },
+        {
+          "localized_name": "quality_preset",
+          "name": "quality_preset",
+          "type": "COMBO",
+          "widget": {
+            "name": "quality_preset"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "steps",
+          "name": "steps",
+          "type": "INT",
+          "widget": {
+            "name": "steps"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "cfg_scale",
+          "name": "cfg_scale",
+          "type": "FLOAT",
+          "widget": {
+            "name": "cfg_scale"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "stg_scale",
+          "name": "stg_scale",
+          "type": "FLOAT",
+          "widget": {
+            "name": "stg_scale"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "seed",
+          "name": "seed",
+          "type": "INT",
+          "widget": {
+            "name": "seed"
+          },
+          "link": 13
+        },
+        {
+          "localized_name": "duration_seconds",
+          "name": "duration_seconds",
+          "type": "FLOAT",
+          "widget": {
+            "name": "duration_seconds"
+          },
+          "link": 24
+        },
+        {
+          "localized_name": "duration_multiplier",
+          "name": "duration_multiplier",
+          "type": "FLOAT",
+          "widget": {
+            "name": "duration_multiplier"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "cfg_rescale",
+          "name": "cfg_rescale",
+          "type": "FLOAT",
+          "widget": {
+            "name": "cfg_rescale"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "audio_latent",
+          "name": "audio_latent",
+          "type": "DRAMABOX_AUDIO_LATENT",
+          "slot_index": 0,
+          "links": [
+            17
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DramaBoxSampler"
+      },
+      "widgets_values": [
+        "default",
+        30,
+        2.5,
+        1.5,
+        988071999650555,
+        "fixed",
+        2,
+        1.1,
+        -1
+      ]
+    }
+  ],
+  "links": [
+    [
+      1,
+      3,
+      0,
+      4,
+      0,
+      "DRAMABOX_TEXTENC"
+    ],
+    [
+      2,
+      6,
+      0,
+      4,
+      1,
+      "STRING"
+    ],
+    [
+      4,
+      4,
+      0,
+      5,
+      0,
+      "DRAMABOX_CONDITIONING"
+    ],
+    [
+      5,
+      2,
+      0,
+      7,
+      0,
+      "DRAMABOX_AUDIO_VAE"
+    ],
+    [
+      6,
+      11,
+      0,
+      7,
+      1,
+      "AUDIO"
+    ],
+    [
+      7,
+      1,
+      0,
+      9,
+      0,
+      "DRAMABOX_DIT"
+    ],
+    [
+      8,
+      5,
+      0,
+      9,
+      1,
+      "DRAMABOX_CONDITIONING"
+    ],
+    [
+      9,
+      7,
+      0,
+      9,
+      2,
+      "DRAMABOX_VOICE_REF"
+    ],
+    [
+      10,
+      12,
+      0,
+      9,
+      7,
+      "INT"
+    ],
+    [
+      11,
+      1,
+      0,
+      10,
+      0,
+      "DRAMABOX_DIT"
+    ],
+    [
+      12,
+      5,
+      0,
+      10,
+      1,
+      "DRAMABOX_CONDITIONING"
+    ],
+    [
+      13,
+      12,
+      0,
+      10,
+      7,
+      "INT"
+    ],
+    [
+      14,
+      14,
+      0,
+      11,
+      0,
+      "STRING"
+    ],
+    [
+      15,
+      13,
+      0,
+      14,
+      0,
+      "STRING"
+    ],
+    [
+      16,
+      9,
+      0,
+      15,
+      0,
+      "DRAMABOX_AUDIO_LATENT"
+    ],
+    [
+      17,
+      10,
+      0,
+      15,
+      1,
+      "DRAMABOX_AUDIO_LATENT"
+    ],
+    [
+      18,
+      14,
+      1,
+      15,
+      2,
+      "BOOLEAN"
+    ],
+    [
+      19,
+      2,
+      0,
+      16,
+      0,
+      "DRAMABOX_AUDIO_VAE"
+    ],
+    [
+      20,
+      15,
+      0,
+      16,
+      1,
+      "DRAMABOX_AUDIO_LATENT"
+    ],
+    [
+      21,
+      16,
+      0,
+      18,
+      0,
+      "AUDIO"
+    ],
+    [
+      22,
+      18,
+      0,
+      19,
+      0,
+      "AUDIO"
+    ],
+    [
+      24,
+      22,
+      0,
+      10,
+      8,
+      "FLOAT"
+    ],
+    [
+      26,
+      22,
+      0,
+      9,
+      8,
+      "FLOAT"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.6632943858649206,
+      "offset": [
+        1154.6238456730196,
+        117.35246485437787
+      ]
+    }
+  },
+  "version": 0.4
+}

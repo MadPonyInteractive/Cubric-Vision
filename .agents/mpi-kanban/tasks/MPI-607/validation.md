@@ -2782,3 +2782,155 @@ and an ONNX path, it is a far smaller wrapping job than anything else evaluated 
 **Not verified and worth checking before any decision:** whether "Preview" weights carry a
 stability commitment, real GPU VRAM (only an ONNX-on-M2 ~1 GiB figure is published), and quality
 by ear against Chatterbox multilingual on the same text.
+
+## 2026-08-27 (session 28) -- DRAMABOX IS A YES. Both flow graphs staged into `raw/`.
+
+**Fabio's verdict, after his own ear testing: DramaBox ships as a Flow.** The reason is
+identity, not expressiveness: *"it sticks to the reference a lot better than Chatterbox,
+especially when we add our performances to Chatterbox. Chatterbox just deviates a lot from
+the original voice, and DramaBox doesn't."* Two flows, both audio-only, both `mediaType:
+'audio'` -- `DramaBox` (new voices or replicate a reference) and `Chatterbox`.
+
+### His test conclusions that CORRECT earlier sessions
+
+- **GIVING AN EXPLICIT DURATION IS THE SINGLE BIGGEST QUALITY WIN.** It stops the model
+  READING the prompt aloud (he asked for *"a middle-aged woman whispers"* and got whispers
+  before the line), and it stops over-long clips where the performance should be fast --
+  *"an angry man speaking fast"* only lands once the duration is short enough to force it.
+- **ACCENTS: only accents the model was trained on work, and that is the USER's problem,
+  not ours.** British and Australian confirmed; German/Italian untested and not worth
+  testing -- it is prompt-side.
+- **THE CHATTERBOX CHAIN ORDER WAS WRONG IN THE EARLIER SESSIONS. TTS -> VC is correct,
+  not VC -> TTS**, and `cfg_weight` goes back to **0.5** (the 0.3 was a compensation for
+  the wrong order, so it is void). Multilingual TTS replaces the English TTS when a
+  non-English language is selected.
+
+### 🔴 THE NEGATIVE PROMPT IS LIVE, AND A NODE NAMED FOR IT WOULD HAVE BEEN WIPED
+
+Two separate facts, both verified from source:
+
+1. **It does something.** `text_encoder.encode([prompt, negative_prompt])`
+   (`generate.py:55`) puts BOTH through Gemma; `use_cfg = cfg_scale > 1.0 and negative is
+   not None` (`sampling.py:121`); the guider computes
+   `pred = cond + (cfg_scale-1)*(cond - uncond_text) + ...` where `uncond_text` is a REAL
+   second forward pass with the negative context (`denoisers.py:94-100`). Every preset has
+   cfg > 1.0 (draft 2.0 / default 2.5 / high 3.0), so it has been on in every test ever run
+   -- **at roughly 2x the sampler cost**. **Emptying the string does NOT disable it**; it
+   swaps one unconditional for another. Only `cfg_scale = 1.0` skips the pass.
+2. **`Input_Negative` as a node TITLE is a trap.** `_buildParams`
+   (`js/services/commandExecutor.js:611`) emits `Input_Negative: negative || ''` on EVERY
+   run, so a two-control Flow with no negative box would have wiped the baked
+   `worst quality, inconsistent, robotic, ...` on run one. Same class as the outpaint trap
+   already recorded for `Input_Positive` (`flowsRegistry.js:274`). **Baked into
+   `DramaBoxTextEncode.negative_prompt`, node deleted.**
+
+### 🔴 `.opus` IS A TRAP FOR ANY AUDIO FLOW -- EXPORT FLAC
+
+Both graphs originally saved `opus` @128k. `opus` is missing from **four of the five**
+extension lists that classify a file as audio: `js/utils/file.js` AUDIO_EXTS, and three
+lists in `routes/projects.js` (1008, 2765, 2843); only line 90 has it, and the gallery's
+`_EXPORT_MIME` map does not. This is the same trap that forced `toWavFile` on the voice
+library (`MpiMediaPicker.js:374`).
+
+**Core ComfyUI has NO WAV saver at all** -- `SaveAudioAdvanced` offers flac / mp3 / opus,
+and that is the whole choice. FLAC is lossless, so an MPI save-audio node buys nothing
+until a downstream consumer genuinely demands `.wav`; not built. Note core `SaveAudio`
+(what shipped Voice Changer uses) is now `display_name="Save Audio (FLAC) (DEPRECATED)"`
+upstream -- `SaveAudioAdvanced` + flac is the same bytes on the live node.
+
+### THE TWO INJECTION RECIPES FOR THE CHATTERBOX FLOW
+
+- **`Input_Is_Multilingual`** on the `MpiIfElse` works with a PLAIN key: `boolean` is in
+  the injector's spray list (`comfyController.js:1388`) and the `true`/`false` inputs are
+  wired, so `_isLink` skips them. Inject `Input_Is_Multilingual: false` for English.
+- **Language needs the DOTTED form.** `language` is NOT in the spray list, so a plain title
+  reaches nothing. Title the `FL_ChatterboxMultilingualTTS` node `Input_Language` and inject
+  **`Input_Language.language`** (MPI-359 widget addressing, `comfyController.js:1426`). The
+  value must be the exact combo label -- `"English (en)"`, `"Portuguese (pt)"` -- so the app
+  owns a code->label map. No extra node needed, and the spray-collision risk was checked:
+  none of the spray names (`text`, `seed`, `audio`, `string`, `float`, ...) match an
+  UNLINKED input on that node.
+
+### EXPLICIT DURATION IS USED RAW -- `duration_multiplier` IS NOW DEAD
+
+```python
+if len(chunks) == 1 and duration_seconds > 0:
+    duration = duration_seconds                                   # raw
+else:
+    duration = sampling.estimate_duration(chunk["text"], duration_multiplier)
+```
+
+`generate.py:179`. So the slider is honest -- 5.0 means 5.0 s, no hidden x1.10 -- and the
+estimator's flat `+2.0 s` then `x1.10`, which was the source of the trailing silence, is
+bypassed entirely. **This is WHY his duration fix worked.**
+
+### TRIMMING SILENCE: THE NODE DOES NOT EXIST, AND IS NO LONGER NEEDED
+
+`TrimAudioDuration` (core, `nodes_audio.py:425`) is a **fixed time window** --
+`start_index` + `duration` in seconds, no silence detection -- so it cannot find where
+speech starts. Swept the whole bench: the only `trim_silence` anywhere is MelodramaBox's
+own, on the voice-reference loader, which is INPUT side. Nothing trims an output.
+**Moot now** -- an explicit duration removes the head/tail silence at the source.
+
+### THE FIVE GRAPH BUGS FIXED WHILE STAGING (beyond naming)
+
+Both bench graphs are now in `comfy_workflows/raw/` as `flow_drama_box.json` and
+`flow_chatter_box.json`.
+
+1. **`Input_Negative` node** (DramaBox) -- see above. Baked and deleted.
+2. **AUDIO fed into a file-PATH input** (DramaBox node 13). It was an `MpiLoadAudio` whose
+   `audio` output ran into `MpiAnyChecker -> MpiLoadAudio.string`, and that input is a path
+   (`video.py:259`: *"Named 'string' so it matches MpiString / MpiAnyChecker outputs"*).
+   Swapped to `MpiString`, which is the shape his own Chatterbox graph already used.
+3. **TWO nodes titled `Input_Reference_Voice`** (Chatterbox: node 54 `MpiLoadAudio` and
+   bypassed node 30 core `LoadAudio`). The injector writes to EVERY matching title and
+   `audio` is in the spray list, so an un-bypass would have pushed a project path into a
+   file combo -> `Value not in list` 400. Deleted, with bench leftovers 41/38 and DramaBox's
+   node 20 `PreviewAudio` (which was ACTIVE, not bypassed).
+4. **`block_if_empty: false`** on the gated loaders -> `true`. `false` emits SILENT audio
+   instead of blocking, so an empty path would have run the branch on silence. The raw shape
+   is `["", true]` per `docs/workflow-authoring/media-inputs.md`.
+5. **No injection target for the duration control** -- Fabio added an `MpiFloat` himself
+   (5.0 s) fanning into both samplers, which is the right shape; retitled `Input_Duration`.
+
+Naming normalised to the shipped convention: `Input_Seed` (what `_buildParams` emits),
+`Input_Audio` / `Input_Audio_2` (the `audio1`/`audio2` role titles at
+`commandRegistry.js:1152`), `Output_Audio`, and `audio/DramaBox` / `audio/Chatterbox`
+filename prefixes (Voice Changer owns `audio/VoiceChanger`).
+
+**Left as he set them, flagged not changed:** `strength: 1.0` on the voice reference (he
+raised it from 0.9 -- 1.0 IS the anchor ceiling, correct); `max_duration_sec: 30`, which is
+INERT because `VOICE_REF_ENCODE_SECONDS = 10.0` truncates and shorter clips are tiled; and
+`quality_preset: default` on both samplers, which he changed back from `custom` -- no
+behaviour difference today (default IS 30/2.5/1.5) but **the steps/cfg/stg widgets are now
+ignored**, so a future cfg control would silently do nothing until it returns to `custom`.
+
+### CONVERSION STATE -- CHATTERBOX IS READY, DRAMABOX IS BLOCKED ON A DEP
+
+Both raw files convert cleanly through `scripts/workflow-to-api.mjs`. The API twins are NOT
+generated yet, because `converters.md` requires converting against the APP ENGINE (48188),
+not the bench (8188).
+
+- **Chatterbox is effectively unblocked, and the schema risk was checked rather than
+  assumed.** The app engine has `ComfyUI_Fill-ChatterBox`, and its `chatterbox_node.py`
+  (which defines all three `FL_Chatterbox*` classes) is **byte-identical** to the bench's;
+  `comfy_extras/nodes_audio.py` is identical too, so `SaveAudioAdvanced` matches; and the
+  MpiNodes pin (`38b3a27`) is only a docs commit and a version bump behind the bench
+  (`3e455e8`), with no schema change.
+- **DramaBox cannot convert against 48188 yet**: `ComfyUI-MelodramaBox` is not installed on
+  the app engine and is not a declared dep. That is add-flow work, not converter work.
+
+**The sync script COMMITS raw itself and is git-driven**, so committing raw by hand first
+means `sync-raw-workflows.mjs` no longer sees it and `--all` is then required:
+
+```sh
+COMFY_URL=http://127.0.0.1:48188 node scripts/sync-raw-workflows.mjs --all
+```
+
+It handles the already-committed case explicitly (*"Raw already committed -- re-baking
+generated files only"*). For a single file, `workflow-to-api.mjs` writes to STDOUT and must
+be redirected via a temp file -- **never run it bare**, which converts and overwrites every
+raw file in the tree against port 8188.
+
+**Nothing is wired into the app yet** -- no FlowDef, no op, no dep entries, no registry
+edit. The graphs are the only artifact.
