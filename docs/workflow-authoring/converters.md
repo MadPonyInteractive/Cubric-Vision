@@ -13,7 +13,9 @@ contract.
 
 ## `scripts/sync-raw-workflows.mjs` — the one you almost always want
 
-Batch: converts changed `raw/*.json` (by mtime), routes `_template.json` →
+Batch: converts changed `raw/*.json` (**git-driven** — raw files differing from HEAD,
+modified/staged/untracked; NOT mtime, which is not deterministic across checkouts and clones.
+`--all` forces every raw file), routes `_template.json` →
 `scripts/workflow_generation/` (then runs `orchestrate.py`), plain files → `comfy_workflows/`,
 and commits by pathspec. Hard-refuses any write **inside** `raw/`.
 

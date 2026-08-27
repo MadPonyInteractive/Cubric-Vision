@@ -124,17 +124,13 @@
   and shows it to you — edit it freely, whatever is in that box is what runs. Four styles
   (Photoreal, 3D animation, Anime, Cartoon), 1K or 2K, and a Turbo speed toggle.
 
-  It is the one flow that uses two models, and you pick both. A **Render model** draws the sheet
-  and a **Blend model** removes the head from the front body — two dropdowns in the Flows panel
-  when you select the flow, each with its own cogwheel opening that model's LoRA rack, so your own
-  LoRAs ride along on either stage. The same pair of cogwheels also sits on the last step beside
-  the result, so you can try a different LoRA and run again without leaving the picture you are
-  judging. Someone who has already trained a character can load it on the render side and describe
-  only the wardrobe on top. The Render model is Krea 2 or Krea 2 NSFW and the Blend model is
-  FLUX.2 Klein 4B or 9B; both dropdowns appear whether or not anything is installed, so you choose
-  which one downloads rather than getting whichever came first, and owning one candidate per slot
-  is enough to run the flow. Krea 2 is the stronger choice for stylised work; the NSFW model is
-  trained mostly on photographic source and is weaker at Anime and Cartoon.
+  Your own LoRAs ride along: a cogwheel beside the model dropdown opens that model's LoRA rack,
+  and the same cogwheel sits on the last step beside the result, so you can try a different LoRA
+  and run again without leaving the picture you are judging. Someone who has already trained a
+  character can load it and describe only the wardrobe on top. It runs on Krea 2 or Krea 2 NSFW —
+  either one is enough, and the flow downloads no weights of its own. Krea 2 is the stronger
+  choice for stylised work; the NSFW model is trained mostly on photographic source and is weaker
+  at Anime and Cartoon.
 
 - **Outpaint** extends a picture past its edges. Drop an image, pick the shape you want — or
   drag the frame freely — and pull it out over the sides you want filled; the new area shows as
