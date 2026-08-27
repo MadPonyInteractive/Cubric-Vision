@@ -69,7 +69,6 @@
       "MPI-259"
     ],
     "doing": [
-      "MPI-629",
       "MPI-622",
       "MPI-603",
       "MPI-607",
@@ -77,6 +76,7 @@
       "MPI-596"
     ],
     "done": [
+      "MPI-629",
       "MPI-628",
       "MPI-627",
       "MPI-626",
@@ -125,8 +125,17 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-27T15:02:00Z",
+  "updated_at": "2026-08-27T15:31:00Z",
   "events": [
+    {
+      "at": "2026-08-27T15:31:00Z",
+      "type": "task.moved",
+      "task": "MPI-629",
+      "actor": "implementer:a755a5b9-b745-4e2f-aad2-9415de7ac5b9",
+      "from": "doing",
+      "to": "done",
+      "note": "Shipped and verified live. Popup offers every boot until an explicit Don't ask again tick; Settings carries the Update section as its first section, present only while an update is due, and it ignores the mute. Commits 0b8fbd33 + 5d1c8f1a, pushed. Fabio confirmed the UX 2026-08-27."
+    },
     {
       "at": "2026-08-27T15:02:00Z",
       "type": "task.moved",
