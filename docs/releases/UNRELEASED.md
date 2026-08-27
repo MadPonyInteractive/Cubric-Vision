@@ -206,6 +206,14 @@
   you already run LTX there is nothing to install. Video only, and a long or large clip can
   still exhaust graphics memory — a short clip is the safe first try.
 
+- **You can now go and get an update instead of waiting to be asked.** When a new version is
+  out, Settings shows it at the very top with a button to install it — and that row is only
+  there when there is actually something to install. The prompt you get on startup is no
+  longer the only way in: it now says so, and it carries a **Don't ask again** checkbox, so it
+  keeps offering until you tell it to stop rather than quietly giving up on its own. Tick the
+  box and the startup prompt goes quiet for that version; Settings still has the update
+  whenever you want it.
+
 ## Fixes
 
 > **A fix to a FLOW does not belong in this section for this release.** Flows debut here, so
