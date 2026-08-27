@@ -2485,3 +2485,143 @@ silently defeats `guard-gpu` at the same time. The lease was taken for the final
 - Whether prompt-only performance is good enough to drop the VC stage for English entirely --
   the actual product question this re-opening exists to answer.
 - DramaBox remains **English-tagged**; the multilingual arm is untouched by any of this.
+
+## 2026-08-27 (session 27, third) -- "CAN WE CIRCUMVENT THE MEMORY?" YES, AND THE ANSWER IS A CACHING BUG
+
+Fabio: *"is there any way to circumvent it, the issue of the TTS server keeping memory
+for itself?"* Answered by measurement. **The single-unload workflow committed earlier today was
+WRONG -- it only ever worked on the FIRST generation after a restart.** Corrected below.
+
+### 🔴 FIRST, A CORRECTION TO THE ENTRY ABOVE: "~15 s per generation" WAS A CACHED NUMBER
+
+Runs A, B and the workflow run all reported 15.0 s. Only run A was real. B and the workflow run
+reused the SAME prompt, so ComfyUI served `DramaBoxTextEncode` from cache
+(`execution_cached`) and **Gemma was never loaded**. The honest figure with a fresh prompt is
+**~26-30 s**.
+
+**Every VRAM and timing measurement in this investigation had to vary the prompt per run.** An
+identical prompt silently removes the expensive half of the graph and the run still reports
+`success`. Same trap as the bench cache note already in memory -- it just cost two confident
+wrong numbers in one session.
+
+### 🔴 "PINNED BY BITSANDBYTES" DOES NOT MEAN UNFREEABLE -- I IMPLIED IT DID
+
+It means comfy's `model_management` holds no `ModelPatcher` handle for the 4-bit Gemma, so
+AUTOMATIC eviction cannot see it. An explicit `free()` + `gc.collect()` + `soft_empty_cache()`
+releases it fine. That is exactly what `DramaBoxUnloadModels` does:
+
+```python
+def unload(self, trigger, text_encoder=None):
+    if text_encoder is not None:
+        text_encoder.free()
+    mm.unload_all_models()      # frees the DiT and VAE patchers too
+    gc.collect(); mm.soft_empty_cache()
+    return (trigger,)
+```
+
+**kat3ri has no equivalent.** `nodes.py` holds `_tts_server = None` at module level and contains
+**no `free`, no `del`, no `empty_cache`** anywhere in 612 lines. Once `_get_server()` runs, ~17 GB
+lives in a Python global for the life of the process and `POST /free` returns 200 having released
+nothing. Same shape as the Chatterbox `_MODEL_CACHE` already recorded in memory. Fixable in ~10
+lines, but see the verdict at the end.
+
+### 🔴🔴 THE REAL BUG: A SIDE-EFFECT NODE WITH NO `IS_CHANGED` IS CACHED, AND THEN IT DOES NOTHING
+
+Generation 2 always died, generation 1 never did. Cause:
+
+1. On gen 2 the **DiT loader node is cached**, so the DiT's 6.27 GB is STILL RESIDENT.
+2. `DramaBoxTextEncode` then tries to load the ~8 GB Gemma on top -> `14.04 GiB allocated`,
+   `Requested: 367.50 MiB`, `Device limit: 16.00 GiB` -> **OOM in the ENCODE**.
+3. The single unload node cannot help: it consumes the CONDITIONING, so it runs **after** the
+   encode. It frees Gemma before the sampler; nothing frees the DiT before the encode.
+
+Adding a second unload BEFORE the encode did not work either -- and the reason is the finding:
+
+```
+gen2   status: error   cached=[['1', '2', '3', '90', '5']]
+```
+
+**Node 90 -- the unload -- is in the cached list.** Its inputs (a constant text-encoder handle)
+never change, so ComfyUI cached it and **the unload never executed**. A node whose entire purpose
+is a side effect must never be cached, and `DramaBoxUnloadModels` **defines no `IS_CHANGED`**.
+
+It appears to work only when its trigger happens to vary -- the post-encode one takes the
+conditioning, which changes with the prompt. That is luck, not design, and it is why the single
+unload passed on gen 1 and on every same-prompt repeat.
+
+**FIX (3 lines, `dramabox_nodes/model_management.py`):**
+
+```python
+@classmethod
+def IS_CHANGED(cls, *args, **kwargs):
+    return float("NaN")     # NaN != NaN -> never cached, always re-executes
+```
+
+### ✅ MEASURED: FOUR CONFIGURATIONS, FRESH BENCH EACH, UNIQUE PROMPT EACH RUN
+
+RTX 4060 Ti, 16380 MiB. Peak sampled from `nvidia-smi` twice a second.
+
+| config | gen 1 | gen 2 | gen 3 | verdict |
+|---|---|---|---|---|
+| bf16, one unload (as committed earlier) | 30.9 s / 12733 MiB | **OOM in TextEncode** | -- | ❌ broken on repeat |
+| Q8_0 GGUF, no unload, both resident | 30.6 s / 14099 MiB | 24.0 s / **15985 MiB (97.6%)** | -- | ⚠️ works, 2.4% headroom |
+| bf16, double unload, **no** `IS_CHANGED` | 28.9 s / 12543 MiB | **OOM in TextEncode** | 18.3 s / 12643 MiB | ❌ unload cached out |
+| **bf16, double unload + `IS_CHANGED`** | **29.4 s / 12681 MiB** | **26.3 s / 12579 MiB** | **26.9 s / 12568 MiB** | ✅ **flat at 77%** |
+
+**The obvious fix is the worse one.** Quantising so everything fits at once (Q8_0 resident) runs
+at **97.6% of VRAM** and is **SLOWER** (24 s vs 26 s is not the point -- it dequantises per step
+and buys nothing here, because Gemma stays resident either way). Managing the memory beats
+shrinking it.
+
+**Q8_0's value is elsewhere**, and the pack's own table was right about the number: Q8_0 +
+4-bit Gemma co-resident measured **15985 MiB ≈ their published ~13.5 GB** of model weight.
+Keep it for a card SMALLER than 16 GB, not for this one.
+
+### 🔴 A THIRD SHIPPED BUG: THE PACK'S GGUF PATH CANNOT WORK AS DOCUMENTED
+
+`Advanced.md` says *"Drop the `.gguf` in `models/diffusion_models` and pick it in the DiT
+Loader."* It cannot be picked. `loaders.py` filters the dropdown for `.gguf` and can LOAD one
+(`load_dit_gguf`), but the pack never registers the extension, and ComfyUI's
+`supported_pt_extensions` is `{'.ckpt','.pt','.pt2','.bin','.pth','.safetensors','.pkl','.sft'}`
+-- **no `.gguf`** -- so `get_filename_list("diffusion_models")` can never return one.
+
+Patched by scanning the registered roots for `.gguf` inside `_folder_choices`, **not** by adding
+`.gguf` to `supported_pt_extensions`: that set is global and this bench runs 25 packs, so
+mutating it would put `.gguf` entries in every other pack's dropdowns. `get_full_path` does not
+filter by extension, so resolution already worked once the name is offered.
+
+**Conversion trap:** `python -m dramabox_nodes.gguf.convert` fails with `No module named
+'dramabox_nodes'` under `python_embeded`, and **`PYTHONPATH` does not fix it** -- the embedded
+build's `._pth` ignores both cwd and PYTHONPATH. Use the shipped standalone
+`conversion_scripts/dit_to_gguf.py`, which does its own `sys.path.insert`. Output:
+`dramabox-dit-v1-Q8_0.gguf`, **3.49 GB** from 6.58 GB, matching the pack's claim.
+
+### THE DELIVERED WORKFLOW, CORRECTED AND RE-VERIFIED
+
+`G:/ComfyUi/ComfyUI/user/default/workflows/MPI607_DramaBox_16GB.json` now carries **two** unload
+nodes:
+
+- **90 (pre-encode)** `trigger` <- the text-encoder handle, output -> the encode's `text_encoder`
+  input. Evicts a DiT left resident by the previous generation. Its `text_encoder` input is
+  deliberately NOT connected -- Gemma is about to be needed.
+- **9 (post-encode)** `trigger` <- the conditioning, `text_encoder` connected. Frees Gemma before
+  the sampler asks for the DiT.
+
+Verified by running the delivered file itself three times, prompt varied, nothing else:
+**26.3 / 27.0 / 26.7 s, peak 12603 / 12602 / 12665 MiB.** Flat. No drift.
+
+**Running a workflow ONCE proves nothing on this model.** Every failure found today appeared on
+generation 2 and never on generation 1.
+
+### VERDICT ON THE TWO PACKS
+
+MelodramaBox needed three patches to work correctly on this machine (shared text-encoder root,
+`.gguf` listing, `IS_CHANGED` on the unload) and one graph correction the pack does not ship.
+That is a real maintenance burden and there is no upstream repo to push it to.
+
+**kat3ri is still worse.** It would need the same class of fix with none of the machinery: no
+`ModelPatcher`s, no unload node, no GGUF, a module-level global holding ~17 GB, and its models
+loaded inside an upstream `TTSServer` cloned at runtime. Every lever MelodramaBox exposes would
+have to be written from scratch.
+
+**Still not heard by ear.** None of this touches whether DramaBox SOUNDS good.

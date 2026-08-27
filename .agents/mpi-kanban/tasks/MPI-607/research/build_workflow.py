@@ -61,6 +61,32 @@ for inp in by_id[6]["inputs"]:
     if inp["name"] == "conditioning":
         inp["link"] = 41
 
+# ---- 90: PRE-encode unload --------------------------------------------
+# Generation 2 OOMs without this: node 1 is cached, so the DiT is STILL resident
+# when the text encode asks for the ~8 GB Gemma. The post-unload cannot help --
+# it consumes the conditioning, so it runs after the encode.
+w["nodes"].append({
+    "id": 90, "type": "DramaBoxUnloadModels", "pos": [420, 300], "size": [300, 60],
+    "flags": {}, "order": 10, "mode": 0,
+    "inputs": [
+        {"name": "trigger", "type": "*", "link": 30},
+        {"name": "text_encoder", "type": "DRAMABOX_TEXTENC", "link": None},
+    ],
+    "outputs": [{"name": "*", "type": "*", "links": [32], "slot_index": 0}],
+    "properties": {"Node name for S&R": "DramaBoxUnloadModels"},
+    "widgets_values": [],
+    "title": "Evict last run's DiT BEFORE the encode (gen-2 fix)",
+})
+# link 30 was 3 -> 4; retarget to 3 -> 90, then 90 -> 4 carries it on.
+for l in w["links"]:
+    if l[0] == 30:
+        l[3], l[4] = 90, 0
+w["links"].append([32, 90, 0, 4, 0, "DRAMABOX_TEXTENC"])
+by_id[3]["outputs"][0]["links"] = [30, 31]
+for inp in by_id[4]["inputs"]:
+    if inp["name"] == "text_encoder":
+        inp["link"] = 32
+
 # ---- 10: LoadAudio + 5: voice reference -------------------------------
 w["nodes"].append({
     "id": 10, "type": "LoadAudio", "pos": [40, 620], "size": [340, 130],
@@ -92,7 +118,7 @@ for inp in by_id[6]["inputs"]:
     if inp["name"] == "voice_ref":
         inp["link"] = 50
 
-w["last_node_id"] = 10
+w["last_node_id"] = 90
 w["last_link_id"] = 71
 
 io.open(DST, "w", encoding="utf-8").write(json.dumps(w, indent=1))
