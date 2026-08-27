@@ -149,6 +149,64 @@ test('a card with no large rendition uses the ORIGINAL, never an upscaled thumb'
   }
 });
 
+test('a promoted video card mounts the PROXY, and the item keeps its master', async ({}, testInfo) => {
+  // Phase 2. A decoder works at the clip's native resolution however small the card is —
+  // measured, the same 3000x1280 clip costs 81.2 MB per promoted card in a 64x80 box and
+  // 82.4 MB in a 134x167 one — so the file is the only lever. What must not drift is that
+  // ONLY the gallery element takes the proxy: the viewer, drag-out and reveal all read the
+  // item's `filePath`, and a proxy leaking into those would silently downgrade an export.
+  const { app, window } = await launchApp(testInfo);
+
+  try {
+    await window.waitForTimeout(6000);
+
+    await window.evaluate(async () => {
+      const { MpiGalleryGrid } = await import('/js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js');
+      const host = document.createElement('div');
+      host.id = 'mpi633e-host';
+      host.style.cssText = 'position:fixed;top:0;left:0;width:1200px;height:900px;z-index:0;';
+      document.body.appendChild(host);
+
+      // Two DIFFERENT real clips standing in for master and proxy, so the assertion can
+      // tell them apart. A made-up src 404s into the missing-media path (MPI-631).
+      const groups = [{
+        id: 'mpi633e-0',
+        type: 'video',
+        selectedIndex: 0,
+        history: [{
+          id: 'mpi633e-item-0',
+          type: 'video',
+          filePath:  '/comfy_workflows/display/flow-head-swap.mp4',
+          proxyPath: '/comfy_workflows/display/flow-scribble.mp4',
+          thumbPath: '/comfy_workflows/display/flow-head-swap.webp',
+        }],
+      }];
+
+      window.__mpi633e = { grid: MpiGalleryGrid.mount(host, { groups }), host };
+    });
+
+    const promotedSrc = () => window.evaluate(() =>
+      document.querySelector('#mpi633e-host video.mpi-group-card__thumb--hover-video')
+        ?.getAttribute('src') || '');
+
+    await expect.poll(promotedSrc).toContain('flow-scribble.mp4');
+
+    // And the master appears NOWHERE in the card — the gallery only ever holds the proxy.
+    // `filePath` still lives on the item, which is what the viewer and the export paths
+    // read; a master leaking into a card element would mean the decoder is back.
+    const cardHtml = await window.evaluate(() =>
+      document.querySelector('#mpi633e-host .mpi-group-card')?.innerHTML || '');
+    expect(cardHtml).not.toContain('flow-head-swap.mp4');
+  } finally {
+    await window.evaluate(() => {
+      window.__mpi633e?.grid?.el?.destroy?.();
+      window.__mpi633e?.host?.remove();
+      delete window.__mpi633e;
+    }).catch(() => {});
+    await closeApp(app);
+  }
+});
+
 test('flinging past 40 cards does not decode 40 large renditions', async ({}, testInfo) => {
   // The half that actually bounds VRAM. A decoded image is retained by Chromium's GPU
   // image cache keyed by URL, so once a card has PAINTED its large rendition the

@@ -62,8 +62,11 @@ evicts it. See `validation.md` § "The reversal".
       concat, crop, reverse) rather than each repeating the poster extraction.
 - [x] Clamped: no proxy for a clip at or under 720p — the master IS the proxy. Verified at
       the boundary (480 skip, 720 skip, 721 encode, unknown encode).
-- [ ] Not measured end to end: a rig run over a gallery of PROXIED clips. The mechanism is
-      confirmed and M1 predicts the saving, but no sample exists.
+- [x] The app wiring is covered: a desktop case asserts a promoted card mounts the PROXY
+      and that the master appears NOWHERE in the card. Mutation (proxy unwired) RED.
+- [ ] Not measured end to end: a rig run over a gallery of PROXIED clips. M1 measured the
+      resolution curve directly, so the saving is known per card, but no run has sampled a
+      whole gallery of them.
 
 ## Phase 3 — lifecycle
 

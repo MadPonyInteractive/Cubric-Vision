@@ -180,6 +180,10 @@ the default 250-entry buffer, and a FULL buffer drops new entries silently, whic
 master's 3006 KB**. The clamp is exact — `sourceHeight` 480 and 720 skip, 721 encodes, and an
 unknown height (0/undefined) encodes, since ffmpeg's `min` can only downscale.
 
+The app wiring is covered by a desktop case: a promoted card mounts the PROXY and the master
+appears NOWHERE in the card, so a proxy can neither fail to mount nor leak into the paths the
+viewer and every export read. Mutation (proxy unwired) RED.
+
 Not yet measured end to end: the VRAM saving from the proxy on a real gallery. M1 predicts
 ~6x per promoted card (65-81 MB → 11-21) and the mechanism is confirmed, but no rig run has
 sampled a gallery of PROXIED clips.
