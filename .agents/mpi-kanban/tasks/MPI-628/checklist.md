@@ -21,6 +21,6 @@
 - [x] `docs/playbooks/add-flow/ui/lora-rack.md` + `any-of-models.md`
 - [x] `npm test` 747/747, `eslint js/ tests/` exit 0
 
-## Judgement gate (Fabio) - OPEN
-- [ ] Hair matte at 100% on the portrait panel - BiRefNet's edge is where this shows
-- [ ] The neck cut: `GrowMask` 6 hard-edged, where the old branch grew 32 with a 16px blur
+## Judgement gate (Fabio) - PASSED 2026-08-27
+- [x] Hair matte at 100% on the portrait panel - BiRefNet's edge is where this shows
+- [x] The neck cut: `GrowMask` 6 hard-edged, where the old branch grew 32 with a 16px blur

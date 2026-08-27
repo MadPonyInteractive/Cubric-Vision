@@ -83,13 +83,15 @@ chain and asserts the property that actually matters (all six in one unbroken pa
 originating at the render loader). The old test never checked phase 1's chain at all, so
 this is newly covered rather than newly broken.
 
-## OPEN - needs Fabio's eye, nothing an agent can settle
+## Visual gates - ANSWERED, both yes (Fabio, 2026-08-27)
 
-1. **Hair matte at 100% on the portrait panel.** BiRefNet's edge is where this shows, and
-   the whole sheet's backdrop is replaced now, not just the head region.
-2. **The neck cut.** `GrowMask` expand 6, hard-edged, where the removed branch grew 32 with
-   a 16px blur because an inpaint needed the slack. A subtraction may want less, or may
-   want a blur back.
+1. **Hair matte at 100% on the portrait panel.** PASS. BiRefNet's edge holds against the
+   replaced backdrop across the whole sheet, not only the head region.
+2. **The neck cut.** PASS at `GrowMask` expand 6, hard-edged. The removed branch grew 32
+   with a 16px blur because an inpaint needed the slack; a subtraction does not, and the
+   harder edge is not visible on the plate. Nothing to feather back.
 
-Fabio ran the graph on the bench before exporting, so both are "does it look right",
-not "does it run".
+Fabio ran the graph on the bench before exporting, so both were "does it look right", not
+"does it run".
+
+**Card closed on this evidence.** Nothing outstanding.
