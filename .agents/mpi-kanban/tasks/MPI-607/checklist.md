@@ -41,13 +41,23 @@
         Performance clips are NOT a blocker any more: 30 shipped by MPI-622.
         STILL TO DO: op in 4 files, FlowDef, the app-side perf-clip resolver, the raw/ LiteGraph file,
         and the multilingual dep entries.
-  - [~] Gate 2 FLOW B - accent routing WORKS end to end (q3/q4 above). **`language` is a COMBO and
-        REFUSES a link** - measured: `received_type(STRING) mismatch input_type([...23])`. So the accent
-        literal is BAKED one arm per shipped accent and the app injects only the selector INT. That makes
-        the accent list a CURATED product list, not all 23 - which also dodges ja/he/ru/zh, whose
-        tokenizer deps (pykakasi, dicta_onnx, russian_text_stresser, spacy_pkuseg) are not in the lock.
-        TWO THINGS STILL NEED FABIO: which accents ship, and whether the 3.2GB multilingual set is
+  - [~] Gate 2 FLOW B - **the axis is LANGUAGE, not accent** (Fabio, 2026-08-27). Multilingual runs for
+        any language that is NOT English and is NOT an accent creator: Portuguese text through the BASE
+        model is unusable ("an English person trying to speak Portuguese very badly"), through
+        multilingual-with-Portuguese it is real Brazilian Portuguese. Accent-on-English was measured and
+        does NOT dependably work - true, but it was the wrong question and nearly deleted a model the
+        product needs. **`language` is a COMBO and REFUSES a link** (`received_type(STRING) mismatch
+        input_type([...23])`), so the literal is BAKED one arm per SHIPPED language and the app injects
+        only the selector INT. Latin-script languages need no extra deps; ja/he/ru/zh each need their
+        tokenizer dep (pykakasi / dicta_onnx / russian_text_stresser / spacy_pkuseg), none in the lock.
+        TWO THINGS STILL NEED FABIO: which languages ship, and whether the 3.2GB multilingual set is
         bundled or an optional install (his own parked question - `requiredDeps` cannot express optional).
+  - [ ] 🔴 Gate 2 FLOW B - **the emotion recipe is NOT validated on the multilingual model.** exag 1.2 /
+        cfg 0.3 is a BASE-model finding; only `repetition_penalty` 1.5 was measured on multilingual, and
+        min_p/top_p/temperature are node defaults held fixed. Warning sign already logged: q4 ran
+        multilingual + an angry clip at 1.2/0.3 and Fabio heard no emotion. Sweep exag x cfg on a real
+        non-English line before wiring the op - do NOT carry the base numbers across, that is the exact
+        error that produced q3's missing accent
   - [x] Perth marking APPLIED - proven on this flow's own output: watermark 1.0 vs 0.0 on the source control
 - [x] Turbo - NOT SHIPPED. Reason is REDUNDANCY, not weakness: VC passes laughs/coughs/shushes through natively, so the tags win nothing, and a tuned baseline would need a node patch. NOT measured fairly - the node hides exaggeration + cfg_weight and runs both at 0.0
 - [x] VC passes NON-VERBAL sound through (cough, shush) - Flow A exclusive, Flow B structurally cannot

@@ -1984,6 +1984,61 @@ solved earlier today but no longer load-bearing); the combo-injection constraint
 curated accent list; and the four tokenizer deps (ja/he/ru/zh) missing from the python lock.
 Flow B becomes base TTS + VC -- **3.19 GB**, one model, one switch bank.
 
+### 2026-08-27 CORRECTION -- THE AXIS IS **LANGUAGE**, NOT ACCENT. MULTILINGUAL SHIPS.
+
+**The recommendation above is SUPERSEDED. Its measurements stand; its conclusion was wrong,
+because it was answering the wrong question.** Everything above tested "can multilingual
+impose a foreign ACCENT on ENGLISH text". The answer is still no in any dependable way. But
+that was never the feature that justifies the model.
+
+Fabio, 2026-08-27, from his own bench testing:
+
+- **Portuguese text through the BASE model is unusable** -- *"you get an English person trying
+  to speak Portuguese very badly, and it sounds like crap."*
+- **Portuguese text through MULTILINGUAL with Portuguese selected gives real Brazilian
+  Portuguese.** That is the feature.
+- Cross-language accent DOES work -- Portuguese text with Italian selected gave *"a Portuguese
+  person with an Italian accent"* -- but it is *"very rare to land it correctly as an accent on
+  a separate language"*, which is exactly what the probe above measured.
+
+**HIS RULE: multilingual runs for any language that is NOT English. It is not an accent
+creator.** The base model stays the fast default for English, unchanged.
+
+So the selector is **Language**, not Accent, and everything the recommendation above proposed
+dropping comes BACK and is load-bearing:
+
+- `chatterbox_multilingual`, ~3.2 GB -- it buys non-English support, not an accent trick.
+  The bundled-vs-optional question is REOPENED and still needs deciding.
+- The `repetition_penalty` 1.5 finding, which now gates a shipping path.
+- The combo-injection constraint: `language` refuses a link, so one baked arm per SHIPPED
+  language, and the shipped list is a curated product decision.
+- The four tokenizer deps missing from the python lock -- `pykakasi` (ja), `dicta_onnx` (he),
+  `russian_text_stresser` (ru), `spacy_pkuseg` (zh). Shipping any of those four languages
+  means adding its dep; the Latin-script languages need nothing extra.
+
+**THE LESSON, and it is the second time today:** a negative result is only as good as the
+question it answered. "Accent on English does not work" is TRUE and was measured properly --
+and it very nearly deleted the multilingual model, which the product needs for a completely
+different reason nobody had put in front of me. Ask what a model is FOR before recommending
+its removal.
+
+### 🔴 STILL OPEN: the emotion recipe is NOT validated on the multilingual model
+
+`exaggeration` 1.2 / `cfg_weight` 0.3 is a BASE-model finding. Only `repetition_penalty` 1.5
+has been measured on multilingual; `min_p` 0.05, `top_p` 1.0 and `temperature` 0.8 are node
+defaults held fixed so the sweep had one moving part, and exaggeration/cfg were never swept
+on it at all.
+
+**There is already a warning sign.** Quadrant q4 ran multilingual + an angry performance clip
+at exactly 1.2 / 0.3 and Fabio heard no emotion in it. So the recipe may not cross models,
+and a performed read in a non-English language may need its own pair of values.
+
+Do not carry the base numbers over -- that is precisely the error that produced q3's missing
+accent (0.5 was locked for the base model's dictation read and was reused on the accent arm
+without being re-derived). Sweep `exaggeration` x `cfg_weight` on multilingual with a real
+non-English line before the op is wired.
+
+
 The `repetition_penalty` finding stays recorded and stays true; it is simply not needed while
 no multilingual node ships.
 
