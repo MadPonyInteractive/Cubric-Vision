@@ -58,7 +58,10 @@ test('every input surface reports a change', () => {
     assert.match(src, /_buildSlot\(entry, i, \(\) => \{\s*\n\s*_persistInputs\(\);/,
         'media changes persist immediately: losing a dropped photo to navigation is the bug');
     // Gizmo reports and field edits trail, because they fire per pointer-move/keystroke.
-    assert.match(src, /_stepValues\[step\.role\] = \{ \.\.\.prev, \.\.\.val \};\s*\n\s*_touchInputs\(\);/,
+    // The mode-keyed hint repaint (MPI-596) now sits between the write and the touch,
+    // so the two are no longer adjacent lines. What this guards is that a gizmo report
+    // still REACHES _touchInputs, not how many statements separate them.
+    assert.match(src, /_stepValues\[step\.role\] = \{ \.\.\.prev, \.\.\.val \};[\s\S]{0,500}?_touchInputs\(\);/,
         'a gizmo report is a change');
     assert.match(src, /function _writeDeclaredField\(id, val\) \{[\s\S]*?_touchInputs\(\);\s*\n\s*\}/,
         'a declared field edit is a change, on either surface');

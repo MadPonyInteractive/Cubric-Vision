@@ -148,3 +148,129 @@ distance; what is being asserted is that B leaves A intact and one Undo returns 
 > **Item 5 of the pre-split list is ANSWERED and needs no call from you.** It asked whether
 > Erase/Restore being disabled in Manual was right. The split removes the question: the brush has
 > its own stage and serves both modes, and the disabled state is gone along with the third tool.
+
+## User-UX gate — Fabio, 2026-08-27 (in the app, after the wiring landed)
+
+**Both routes run.** Fabio drove the flow end to end in the app and reported "I've tested the
+two different routes, and they both worked" — so Auto and Manual both dispatch, both reach the
+graph with the right wiring, and `Input_Mode` is arriving. This is the first time any of this
+card's work has been seen through the app rather than on the bench.
+
+**Stage 2 (`cutout`) confirmed by hand:** remove background, delete pixels, bring pixels back,
+and the undo system. All four are the behaviours `validation.md` measured on a mounted
+component earlier in the card; this is the human confirmation of the same surface.
+
+### Two findings from that session, both actioned
+
+1. **ALT-rotate was undiscoverable.** The gesture is ALT + drag a HANDLE (`MpiStepPlace`
+   mousedown needs a `shape.hitTest` hit, so a bare ALT-drag on the canvas does nothing), and
+   it is AUTO-ONLY — Manual's box is a region and swinging it would say the model reads it at
+   an angle. Nothing in the UI named it. The place step's hint now does, along with Shift to
+   keep proportions, and it says why Manual has neither. An undiscoverable gesture is the same
+   failure as an inert control: the user never finds it, and the flow looks like it cannot do
+   the thing it can.
+
+2. **The prompt field shows in Auto, and `prompts.md` had specified Manual-only.** That was a
+   deliberate deviation when the FlowDef was written, and it is NOT inert: node 18
+   concatenates `Input_Positive` onto whichever instruction the switch picked, so the words
+   reach the model in both modes. What was wrong was the COPY — the placeholder led with a
+   pose example, and a pose only buys anything in Manual (in Auto the stamp already pins the
+   viewpoint, so asking for another fights it). Placeholder now leads with scene lighting,
+   which is the half that works in both modes and the one thing a baked prompt can never name;
+   the pose example is kept and marked Manual.
+
+   **Still open for Fabio:** whether to hide the field in Auto outright, matching
+   `prompts.md`. Not free — the field row is built by the frame at slide render while the
+   mode radio lives inside `MpiStepPlace` and changes without re-rendering that row, so
+   mode-conditional visibility needs a new seam between gizmo and frame. Recommendation is to
+   keep it: it is live rather than inert, and lighting is genuinely useful in Auto.
+
+### Hint readability + the escaping bug behind it (Fabio, 2026-08-27, on screen)
+
+Fabio's screenshot: the place step's guidance rendered as one centred monospace wall with
+no breaks, and it explained Manual's redraw trade-off while he was sitting in **Auto**,
+where none of it applies. The same screenshot showed the prompt placeholder rendering as
+just `e.g.` — which turned out to be a separate, older bug.
+
+**1. `MpiInput` did not escape its markup (root cause, shared primitive).**
+`placeholder="${props.placeholder || ''}"` interpolated raw into an HTML attribute, so a
+double quote CLOSED the attribute and everything after it vanished — no error, no warning.
+The Object Stamp placeholder contains a quoted example, hence `e.g.` and nothing else.
+`value="${displayValue}"` had the identical hole, so **any user typing a quote into any
+text input broke their own field**, and the textarea's body needed it too (element content,
+so `<` matters). All three now go through one `esc()`. Fixed in the primitive rather than
+by removing the quotes from the copy — the symptom fix would have left the bug for the next
+caller. `MpiTreePicker` already had its own `escapeHtml`; no other primitive interpolates
+a placeholder.
+
+**2. `hint` is now structured, and mode-aware.** It was a single `<p>` fed by
+`textContent`, so a step with more than a sentence to say had no way to break it up. It
+now accepts three shapes, the first two unchanged for every existing flow:
+
+| shape | renders |
+|---|---|
+| string | one paragraph, exactly as before |
+| array | one paragraph per entry |
+| object | `{ base, <variant> }` — `base` always, plus the entry matching the gizmo's reported `mode` |
+
+The object form needed a seam that did not exist: the Auto/Manual radio lives **inside**
+`MpiStepPlace`, not in the frame's declared fields, so the frame never knew the mode
+changed. The gizmo's `onChange` now repaints the hint block in place — guarded on an actual
+mode CHANGE, because that callback fires on every drag frame, and a full `_renderSlide`
+would tear down the live canvas mid-gesture.
+
+CSS: a flex column of paragraphs, **left-aligned** (centred prose gives the eye no
+consistent edge to return to past two lines), 68ch, with the first line carrying `--ink-2`
+so the block has somewhere to start.
+
+**3. The copy was split per mode.** Auto gets the ALT-rotate and Shift gestures plus what
+Auto is for; Manual gets why it has no rotation, what the redraw buys, and what it costs.
+Both share two `base` lines. Regression test asserts Auto never carries Manual's redraw
+language and Manual never mentions ALT — the two halves of exactly what was on screen.
+
+**Verified:** 751/751 unit (3 new), 29/29 desktop, lint clean.
+
+### The slide could not be scrolled to its top, and the hints were still too long
+
+Second screenshot round from Fabio, and both complaints were right.
+
+**1. The copy was wrong, not just long.** Two specific errors, both mine:
+
+- Manual said *"drag the object where it should sit"* — **there is no object in Manual.**
+  The gizmo draws the object only in Auto (`MpiStepPlace._draw`: `if (_mode === 'auto' && comp.placeImage)`);
+  Manual shows a bare region box. The line described a gesture the user cannot perform.
+- Auto said to *"include room on the ground for its shadow"* — **self-defeating in Auto**,
+  because Auto's box IS the object and growing it just makes the object bigger. The
+  shadow margin was never the user's job: the graph grows the write-back ~30% off the
+  box side automatically (law 8, node `225`).
+
+Rewritten to two short lines per mode, no shared `base` — the modes share almost nothing
+on screen. Manual's wording is Fabio's own. The mode radio already carries a tooltip
+explaining what each mode does, so the hint no longer repeats it.
+
+**2. The slide could not be scrolled to its top — a real CSS trap.**
+`.mpi-base-flow__slide` was `align-items: center` **and** `overflow-y: auto`. Once the
+content is taller than the stage, centring pushes the overflow ABOVE the scroll origin,
+where `scrollTop: 0` already sits — so the top is unreachable and only the bottom half
+scrolls. Measured in the real renderer at a 420px stage: content 788px, `maxScroll` 406,
+and the work block's top edge at **-406px** relative to the viewport with no way to bring
+it down. That is why Fabio lost the step title and the top of the image.
+
+Fixed with `align-items: safe center`, which falls back to flex-start exactly when
+overflow would occur. Regression spec: `tests/desktop/flow-slide-scroll-reaches-top.spec.js`.
+
+**THE MUTATION TEST EARNED ITS KEEP, and the first two runs were false greens.** The spec
+passed with the fix removed, twice, because the first attempt shipped TWO fixes —
+`safe center` plus `margin: auto` on the work block — and **each independently defeats the
+trap, so each masked the other.** An auto margin OVERRIDES `align-items` on a flex item
+and resolves to 0 under overflow, which is flex-start by another name. Only removing both
+went red. `margin: auto` was then deleted so the one remaining fix is load-bearing and a
+future mutation cannot be hidden; a comment in the stylesheet says why not to re-add it.
+
+Sweep: one other stylesheet pairs `align-items: center` with a vertical scroll
+(`MpiGroupHistoryBlock__left`) but it is `flex-direction: column`, so centring is the
+CROSS axis and the scroll axis is governed by `justify-content` — not the same trap, left
+alone.
+
+**Verified:** 751/751 unit, 30/30 desktop (one new), lint clean, and the new spec proven
+to fail without the fix.

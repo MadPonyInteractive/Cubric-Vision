@@ -40,6 +40,18 @@ export const MpiInput = ComponentFactory.create({
         // For number inputs we use type="text" + inputmode="decimal" to fully own
         // parsing, clamping, stepping, and formatting — avoiding all browser quirks
         // with type="number" (NaN on out-of-range, float precision from step, etc.)
+        // EVERYTHING interpolated into the markup below goes through this. A double
+        // quote closes an attribute early and the rest of the string vanishes with no
+        // error and no warning: an Object Stamp placeholder holding a quoted example
+        // rendered as "e.g." and nothing else (MPI-596, caught on screen). `value` had
+        // the identical hole, so a user typing a quote broke their own field, and the
+        // textarea body needs it too because that is element content, not an attribute.
+        const esc = (v) => String(v ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+
         const inputType = type === 'number' ? 'text' : type;
         const inputMode = type === 'number' ? 'inputmode="decimal"' : '';
 
@@ -51,16 +63,16 @@ export const MpiInput = ComponentFactory.create({
         const field = type === 'textarea'
             ? `<textarea id="${id}"
                          class="mpi-input__field mpi-input__field--textarea${props.autoHeight ? ' mpi-input__field--auto-height' : ''}"
-                         placeholder="${props.placeholder || ''}"
+                         placeholder="${esc(props.placeholder)}"
                          ${disabled}
                          ${readonly}
                          ${info}
-                         ${autoHeight}>${props.value || ''}</textarea>`
+                         ${autoHeight}>${esc(props.value)}</textarea>`
             : `<input id="${id}"
                       type="${inputType}"
                       class="mpi-input__field"
-                      placeholder="${props.placeholder || ''}"
-                      value="${displayValue}"
+                      placeholder="${esc(props.placeholder)}"
+                      value="${esc(displayValue)}"
                       ${inputMode}
                       ${disabled}
                       ${readonly}

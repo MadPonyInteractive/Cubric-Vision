@@ -1299,7 +1299,10 @@
  * intrinsic to any place step — the Manual PROMPT is not, and is declared on the step.
  *
  * Binds through STEP_MEDIA (the Auto stamp; null in Manual) and carries a STEP_PARAMS
- * adapter for the region rect, which only Manual consumes.
+ * adapter that reports a MAP, not a bare value: { region, mode }. The region rect is
+ * only consumed in Manual, but the MODE is consumed in BOTH - it is the MpiAnySwitch
+ * selector (1 = Auto, 2 = Manual) that picks which arm of the graph runs, so a flow
+ * binding this kind must use the OBJECT form of `param` (MPI-596).
  *
  * Instance methods (on instance.el):
  *   getValue() — the reported value above.

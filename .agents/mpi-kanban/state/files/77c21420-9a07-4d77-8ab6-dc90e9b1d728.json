@@ -1,0 +1,61 @@
+{
+  "schema": "mpi-kanban/file-claim/v1",
+  "id": "77c21420-9a07-4d77-8ab6-dc90e9b1d728",
+  "task_card": "MPI-596",
+  "task": ".agents/mpi-kanban/state/tasks/3889611c-f635-419f-a82d-43886026bb69.json",
+  "owner_session": ".agents/mpi-kanban/state/sessions/ee477fd6-3679-4e7d-afe4-367c203ea576.json",
+  "owner_role": "implementer",
+  "status": "claimed",
+  "claim_kind": "write",
+  "paths": [
+    "js/data/flowsRegistry.js",
+    "js/data/commandRegistry.js",
+    "js/core/operationRegistry.js",
+    "operation_registry.json",
+    "js/data/modelConstants/universal_workflows.js",
+    "tests/inject-params-titles.test.cjs",
+    "comfy_workflows/raw/flow_object_stamp.json",
+    "comfy_workflows/flow_object_stamp.json",
+    ".agents/mpi-kanban/tasks/MPI-596/",
+    "js/components/Organisms/MpiBaseFlow/stepKinds.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/components/types.js",
+    "docs/playbooks/add-flow/existing-flows/object-stamp.md",
+    "docs/releases/UNRELEASED.md",
+    "js/components/Primitives/MpiInput/MpiInput.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.css",
+    "tests/flow-frame.test.cjs",
+    "tests/desktop/flow-slide-scroll-reaches-top.spec.js"
+  ],
+  "claimed_at": "2026-08-27T14:13:54Z",
+  "heartbeat_at": "2026-08-27T15:53:44Z",
+  "note": "Object Stamp Flow wiring (FlowDef + the universal op in its 4 files + the graph). Registry edits are APPEND-ONLY - no existing entry touched. Released three orphaned claims to get here: MPI-599 and MPI-608 (both cards done/complete) and MPI-607 Gate 2 Flow A (voice-changer shipped and committed, owner session closed, successor Flow B session ef22e97a also closed holding no claim). MPI-607 notified by message. The two graph files are NEW names - grep confirmed object-stamp/objectStamp/flow_object_stamp free repo-wide.",
+  "recent_events": [
+    {
+      "at": "2026-08-27T14:13:54Z",
+      "event": "files_claimed",
+      "note": "Wiring set claimed after releasing three orphaned claims on the same registries."
+    },
+    {
+      "at": "2026-08-27T14:39:28Z",
+      "event": "heartbeat_renewed",
+      "note": "raw/flow_object_stamp.json authored; API twin deferred until 48188 is up."
+    },
+    {
+      "at": "2026-08-27T14:59:10Z",
+      "event": "files_claimed",
+      "note": "Added stepKinds.js + MpiBaseFlow.js: the place step must emit Input_Mode alongside its region rect, so step.param gains an object form. Both sat in MPI-596 claim 90b577a5 (needs_verification, same card, owner session f6246e35 closed)."
+    },
+    {
+      "at": "2026-08-27T15:06:22Z",
+      "event": "files_completed",
+      "note": "Wiring shipped and self-verified; user-ux gate open."
+    },
+    {
+      "at": "2026-08-27T15:25:54Z",
+      "event": "files_claimed",
+      "note": "Re-opened: Fabio flagged the ALT-rotate gesture as undiscoverable in the hint copy."
+    }
+  ],
+  "outcome": "Object Stamp wired end to end and bench-proven. Both modes ran green; 750/750 unit, 29/29 desktop, lint clean. Open: the user-ux gate (never run through the app) and the flow graphics."
+}

@@ -53,7 +53,7 @@
   finished result — no workspace to assemble, no settings to know. Open the Flow Library from
   the Flows button at the top of the gallery, from the landing page, or with Tab, which cycles
   the gallery, your last card and the flow you have open, so you can step out to check a
-  picture and land back where you left off. Nine to start with:
+  picture and land back where you left off. Ten to start with:
 
   - **Head Swap** — put one picture's head on another
   - **Extend Video** — carry on past the last frame
@@ -64,6 +64,7 @@
   - **Character Sheet** — turn a description into a reference sheet
   - **Outpaint** — extend a picture past its edges
   - **Voice Changer** — say a line and have it come back in someone else's voice
+  - **Object Stamp** — take an object out of one photo and put it into another
 
   Each flow tells you which models it needs and installs them for you, and most of them run on a
   model the Library already offers — so once you own the model, the flow costs you nothing extra.
@@ -113,6 +114,21 @@
   — the lines are a guide, not part of the picture. Ask for an anime illustration and you get
   one; load a style LoRA and it drives the whole look without you typing a word about style. 9B
   is the recommended model and 4B runs the same flow on a smaller card.
+
+- **Object Stamp** takes an object out of one photo and puts it into another — a mug on your
+  desk, a lamp in the corner of your living room, a bag on a chair. Bring the scene and a
+  picture of the object, tidy the object up with a background remove and an eraser, then drag
+  it to where it should sit. FLUX.2 Klein re-renders just that patch: the object keeps its own
+  shape and markings, and it comes back lit by the scene it landed in, resting on the surface
+  it touches with a shadow that matches the ones already there. Only the box you drew is
+  touched, so the rest of the photo is untouched pixel for pixel.
+
+  Two ways to run it, and the difference is worth knowing. **Auto** keeps the object's own
+  pixels, so it comes back as itself — use it whenever the angle it was photographed at already
+  suits the scene, which is most of the time. **Manual** lets the model draw the object afresh
+  from an angle its source photo never had, which is the only way to change the viewpoint; the
+  trade is that a redraw is a redraw, so fine detail can shift. Say the pose you want in your
+  own words and it will follow.
 
 - **Character Sheet** turns a description into a reference sheet for a character. Describe who
   they are — wardrobe, age, hair, scars — and you get back one picture holding a large

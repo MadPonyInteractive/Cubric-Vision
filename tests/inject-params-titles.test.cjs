@@ -706,3 +706,73 @@ test('a Flow step that declares fields declares a role its media schema supplies
         }
     }
 });
+
+test('the Object Stamp Flow carries its I/O, its model arm, its box and its mode (MPI-596)', () => {
+    // flowObjectStamp runs flow_object_stamp.json. Every injection point here fails
+    // SILENTLY: the injector skips a title with no node, so a typo is a control that
+    // moves, a run that succeeds, and a graph still on its baked value.
+    const file = 'flow_object_stamp.json';
+    const have = titlesOf(file);
+    for (const title of [
+        // Two images. `input_paint` carries `image2` and the GRAPH fans it out — it
+        // feeds both the composite (Auto) and the clean-object reference arm (Manual).
+        // There is deliberately no third image title: `commandExecutor._buildParams`
+        // keys its `assigned` Map by `slot.key`, so one role can never fill two titles.
+        'input_image', 'input_paint',
+        // The region that may change, and the only region stitched back. Goes through
+        // the `headSwap` injector because an MpiBox carries four widgets the generic
+        // title injector would match and silently not write.
+        'input_box',
+        // THE MODE, and it is the one this flow cannot lose. Three MpiAnySwitch nodes
+        // read it to pick the crop source, reference 2 and the baked instruction. Drop
+        // the title and every run silently takes Auto's wiring — including a Manual one,
+        // which then stamps the object it was supposed to re-draw and still succeeds.
+        'input_mode',
+        'input_seed',
+        // The one model slot, and BOTH nodes swap together. Without `input_edit_clip` a
+        // 9B pick would keep 4B's text encoder and die with a shape error that reads as
+        // a sampler bug (MPI-600).
+        'input_edit_model', 'input_edit_clip',
+    ]) {
+        assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
+    }
+    assert.ok(have.has('output_image'), `${file} must carry a capture node titled "output_image"`);
+
+    // The prompt IS declared (an optional field on the place step), so unlike Outpaint
+    // and Head Swap this graph SHOULD carry `input_positive` — the baked instruction
+    // lives in its own MpiText nodes and is joined to the user's words downstream, so
+    // an empty injection here wipes nothing.
+    assert.ok(have.has('input_positive'),
+        `${file} declares an optional prompt field, so it must carry Input_Positive`);
+
+    const graph = JSON.parse(fs.readFileSync(path.join(WORKFLOWS, file), 'utf8'));
+
+    // THE MODE MUST REACH ALL THREE SWITCHES. Two of them wired and one left on a
+    // constant is the silent half-fork: Manual would take its own reference but Auto's
+    // crop source, and the run would still finish.
+    const [modeId] = Object.entries(graph)
+        .find(([, n]) => (n?._meta?.title || '').toLowerCase() === 'input_mode') || [];
+    const driven = Object.values(graph).filter(n =>
+        n?.class_type === 'MpiAnySwitch' && Array.isArray(n.inputs?.select) && n.inputs.select[0] === modeId);
+    assert.strictEqual(driven.length, 3,
+        `${file}: Input_Mode must drive all 3 MpiAnySwitch nodes, found ${driven.length}`);
+
+    // BOTH CROPS MUST SHARE ONE REGION. Law 7: the two references are only comparable
+    // because they are framed identically, and a run with mismatched framing returns a
+    // doll's-house composite rather than an error.
+    const crops = Object.entries(graph).filter(([, n]) => n?.class_type === 'InpaintCropImproved');
+    assert.strictEqual(crops.length, 2, `${file} must carry exactly 2 InpaintCropImproved nodes`);
+    const [maskA, maskB] = crops.map(([, n]) => JSON.stringify(n.inputs.mask));
+    assert.strictEqual(maskA, maskB, `${file}: both crops must read the same box mask (law 7)`);
+    const [facA, facB] = crops.map(([, n]) => JSON.stringify(n.inputs.context_from_mask_extend_factor));
+    assert.strictEqual(facA, facB, `${file}: both crops must share one context factor (law 7)`);
+
+    // THE WRITE-BACK GROWTH IS DERIVED, NEVER A CONSTANT. Law 8: the canvas must equal
+    // the region written back, or an object larger than the box is sliced by the stitch
+    // and no prompt can reach it. A hard-coded pixel count is right for exactly one box
+    // size — the bench's 276 — and silently wrong for every other.
+    for (const [id, n] of crops) {
+        assert.ok(Array.isArray(n.inputs.mask_expand_pixels),
+            `${file}: crop ${id} must derive mask_expand_pixels from the box size, not hard-code it (law 8)`);
+    }
+});

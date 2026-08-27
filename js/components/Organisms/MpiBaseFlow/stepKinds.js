@@ -134,14 +134,28 @@ const STEP_PARAMS = {
     // angle to lose. In Auto the region comes off the placed object's own ALPHA
     // instead, the same read Draw It In does, so a rotated placement never reaches
     // here. A future flow that wants a rotated region needs a node that takes one.
-    place: (v) => (v?.place?.halfW > 0
-        ? {
-            x: Math.round(v.place.cx - v.place.halfW),
-            y: Math.round(v.place.cy - v.place.halfH),
-            width: Math.round(v.place.halfW * 2),
-            height: Math.round(v.place.halfH * 2),
-        }
-        : null),
+    //
+    // TWO PARAMS, so this kind returns a NAMED MAP rather than a bare value: the
+    // region AND the mode. Both modes run one graph, and the mode is what an
+    // `MpiAnySwitch` reads to pick the crop source, reference 2 and the baked
+    // instruction — so a flow that cannot inject it silently gets Auto's wiring for a
+    // Manual run, which still produces a picture (MPI-596). A kind that returns a map
+    // is declared with an object `param`; see the adapter note above `stepValueToParam`.
+    place: (v) => {
+        const region = v?.place?.halfW > 0
+            ? {
+                x: Math.round(v.place.cx - v.place.halfW),
+                y: Math.round(v.place.cy - v.place.halfH),
+                width: Math.round(v.place.halfW * 2),
+                height: Math.round(v.place.halfH * 2),
+            }
+            : null;
+        // 1 = Auto, 2 = Manual — the MpiAnySwitch `select` convention (1-based, as
+        // Head Swap's Input_Tier and Character Sheet's Input_Recipe use it). Emitted
+        // even when the gizmo has no shape yet, because the mode still decides which
+        // arm of the graph runs.
+        return { region, mode: v?.mode === 'manual' ? 2 : 1 };
+    },
 };
 
 /**

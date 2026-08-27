@@ -82,6 +82,7 @@ export const OPERATION_REGISTRY = {
     // the bump is the record of the removal, not a gate.
     flowScribObj: { latestVersion: '1.1', appVersionIntroduced: '1.5.0' },
     flowScribble: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
+    flowObjectStamp: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
     // MPI-607 — the Voice Changer flow, the first op that OUTPUTS audio. Same
     // stamping reason as the four above.
     flowVoiceChanger: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },

@@ -414,6 +414,9 @@ export const MpiBaseFlow = ComponentFactory.create({
 
         /** Live step-kind instances, keyed by step index — destroyed on rebuild. */
         const _stepInstances = new Map();
+        // stepIdx -> { el, step } for hints that depend on the gizmo's mode, so the
+        // Auto/Manual switch can repaint guidance without rebuilding the slide.
+        const _stepHints = new Map();
 
         /** Per-slide listener unsubs, keyed by slide index. */
         const _slideUnsubs = new Map();
@@ -1307,6 +1310,53 @@ export const MpiBaseFlow = ComponentFactory.create({
         }
 
         /**
+         * A step's guidance, as LINES rather than one block of prose.
+         *
+         * `hint` accepts three shapes, and the first two are what every existing flow
+         * already uses:
+         *   - a string        → one paragraph, exactly as before
+         *   - an array        → one paragraph each, so guidance can BREATHE
+         *   - an object       → `{ base, <variant> }`, where the variant key is the
+         *                       gizmo's reported `mode`. `base` always shows; the
+         *                       matching variant is appended.
+         *
+         * The object form exists because a two-mode gizmo was telling the user about
+         * both modes at once: Object Stamp's place step explained Manual's redraw
+         * trade-off while sitting in Auto, where none of it applies (Fabio,
+         * 2026-08-27). One centred wall of text that half-contradicts what is on
+         * screen is worse than no hint.
+         *
+         * @param {Object} step
+         * @param {Object|null} value the step's reported value, for the variant key
+         * @returns {string[]}
+         */
+        function _hintLines(step, value) {
+            const h = step?.hint;
+            if (!h) return [];
+            if (typeof h === 'string') return [h];
+            if (Array.isArray(h)) return h.filter(Boolean);
+            const asLines = (v) => (Array.isArray(v) ? v : v ? [v] : []);
+            // An unknown/absent mode still renders `base`, so a gizmo that reports no
+            // mode yet is never left with a blank panel.
+            return [...asLines(h.base), ...asLines(h[value?.mode])].filter(Boolean);
+        }
+
+        /**
+         * Repaint a hint block in place. `textContent` per paragraph — the lines are
+         * flow-authored copy, never markup.
+         * @param {HTMLElement} el
+         * @param {Object} step
+         * @param {Object|null} value
+         */
+        function _paintHint(el, step, value) {
+            el.innerHTML = '';
+            _hintLines(step, value).forEach((line) => {
+                const para = ce('p', { className: 'mpi-base-flow__work-hint-line' });
+                para.textContent = line;
+                el.appendChild(para);
+            });
+        }
+        /**
          * MIDDLE STEP — bounded centred canvas, title above, optional fields row,
          * guidance below. NO divider, NO annotation column: undivided = working.
          */
@@ -1328,8 +1378,8 @@ export const MpiBaseFlow = ComponentFactory.create({
                 stack.classList.add('mpi-base-flow__fields--work');
                 work.appendChild(stack);
                 if (step.hint) {
-                    const hint = ce('p', { className: 'mpi-base-flow__work-hint' });
-                    hint.textContent = step.hint;
+                    const hint = ce('div', { className: 'mpi-base-flow__work-hint' });
+                    _paintHint(hint, step, _stepValues[step.role]);
                     work.appendChild(hint);
                 }
                 _paintEnhance();
@@ -1390,6 +1440,12 @@ export const MpiBaseFlow = ComponentFactory.create({
                         // Preserve frame-owned fields across gizmo reports.
                         const prev = _stepValues[step.role] || {};
                         _stepValues[step.role] = { ...prev, ...val };
+                        // A mode-keyed hint follows the gizmo's mode. Guarded on an
+                        // actual CHANGE because this fires on every drag frame.
+                        if (prev.mode !== _stepValues[step.role].mode) {
+                            const h = _stepHints.get(stepIdx);
+                            if (h) _paintHint(h.el, h.step, _stepValues[step.role]);
+                        }
                         _touchInputs();
                     },
                 });
@@ -1440,9 +1496,15 @@ export const MpiBaseFlow = ComponentFactory.create({
                 if (fieldsRow) work.appendChild(fieldsRow);
             }
 
+            // A MODE-DEPENDENT hint has to repaint when the gizmo's mode changes, and
+            // the gizmo owns that control (Object Stamp's Auto/Manual radio lives inside
+            // MpiStepPlace, not in the frame's declared fields). So the block is kept on
+            // the slide and the onChange above repaints it — a full `_renderSlide` would
+            // tear down the live canvas mid-gesture.
             if (step.hint) {
-                const hint = ce('p', { className: 'mpi-base-flow__work-hint' });
-                hint.textContent = step.hint;
+                const hint = ce('div', { className: 'mpi-base-flow__work-hint' });
+                _paintHint(hint, step, _stepValues[step.role]);
+                _stepHints.set(stepIdx, { el: hint, step });
                 work.appendChild(hint);
             }
             return work;
@@ -2249,10 +2311,27 @@ export const MpiBaseFlow = ComponentFactory.create({
             // could do that a FlowDef could not say: `getInputs({ stepValues })`.
             // A null is OMITTED, so an unmarked step leaves the node on its baked
             // default, exactly as the old translation did.
+            //
+            // `param` is EITHER a string (one value, the common case) OR a map of the
+            // kind's named outputs to param names, for a kind that feeds more than one
+            // node — `place` returns `{ region, mode }` and Object Stamp declares
+            // `param: { region: 'box1', mode: 'Input_Mode' }` (MPI-596). A null entry
+            // is omitted either way, so an unmarked step leaves the node on its baked
+            // default. A map naming a key the kind does not return is a no-op rather
+            // than an error: the kind owns its shape, the flow owns the node names, and
+            // neither can be validated against the other from here.
             (flow.steps || []).forEach((step) => {
                 if (!step?.param || !step.role) return;
                 const v = stepValueToParam(step.kind, _stepValues[step.role]);
-                if (v !== null) declaredParams[step.param] = v;
+                if (v === null || v === undefined) return;
+                if (typeof step.param === 'string') {
+                    declaredParams[step.param] = v;
+                    return;
+                }
+                for (const [key, name] of Object.entries(step.param)) {
+                    if (v[key] === null || v[key] === undefined) continue;
+                    declaredParams[name] = v[key];
+                }
             });
 
             // No Enhance pressed → the RAW prompt is what runs. There is no silent

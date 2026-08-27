@@ -1134,6 +1134,47 @@ export const commands = {
         universal: true,
     },
 
+    // MPI-596 — "Object Stamp". Take an object out of one photo and put it into
+    // another. Draw It In's topology with the scribble swapped for a real object: the
+    // object is composited onto the user's scene, a crop is taken around it, Klein 9B
+    // edits that crop, and the boxed region is stitched back.
+    //
+    // TWO IMAGE SLOTS, and the second is never uploaded — stage 2 (`cutout`) derives the
+    // clean object into `image2`, and stage 3 (`place`) overwrites it with the stamped
+    // layer in Auto. Same shape as Draw It In's `Input_Paint`.
+    //
+    // THE GRAPH FANS `Input_Paint` OUT ITSELF rather than the app filling a second
+    // title, and that is not a style choice: `commandExecutor._buildParams` keys its
+    // `assigned` Map by `slot.key`, so a SECOND slot declared with the same key hits
+    // `assigned.has(slot.key)` and is skipped — one role can never fill two titles. The
+    // MPI-292 dedup enforces the same thing from the other side. So `Input_Paint` feeds
+    // both the composite (Auto) and the clean-object reference arm (Manual), and an
+    // `MpiAnySwitch` on `Input_Mode` picks which one the run actually uses.
+    flowObjectStamp: {
+        label: 'Flow: Object Stamp',
+        progressLabel: 'Placing the object',
+        mediaType: MEDIA_TYPE.IMAGE,        // OUTPUT type
+        requiresImages: 0,                  // media is never a hard requirement at the op layer
+        mediaInputs: [
+            { key: 'image1', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: false },
+            { key: 'image2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Paint', required: false },
+        ],
+        // FALSE, unlike Draw It In's `true`, and the difference is real rather than an
+        // oversight: there the drawing is a silhouette and the words are the only thing
+        // naming the subject, so a run without them is meaningless. Here the object
+        // arrives as actual pixels and names itself. The prompt is baked per mode
+        // (`prompts.md`), and the user's own words are OPTIONAL and Manual-only — they
+        // carry pose and scene-specific lighting, which is exactly what the flow cannot
+        // know and the user can see.
+        promptRequired: false,
+        universal: true,
+        // ONE box, the region the edit may re-render and the only region stitched back.
+        // Same reason as Head Swap and Draw It In: an MpiBox carries four widgets that
+        // the generic title injector would match and silently not write. The name is
+        // historical; the mapping is generic.
+        injector: 'headSwap',
+    },
+
     // MPI-607. The FIRST audio-only op: two clips in, one clip out, nothing visual
     // anywhere in the run. `mediaType: AUDIO` is what promotes the graph's
     // `Output_Audio` SaveAudio from the video mux's side-channel to the primary

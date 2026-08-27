@@ -3,7 +3,7 @@
   "id": "a1f4c2d8-7b36-4e91-9c05-3d2e6f8a4b71",
   "task_card": "MPI-599",
   "task": ".agents/mpi-kanban/tasks/MPI-599/",
-  "status": "claimed",
+  "status": "released",
   "claim_kind": "write",
   "owner_session": ".agents/mpi-kanban/state/sessions/0b9af612-fe6d-49e8-9abf-486247115a48.json",
   "owner_role": "implementer",
@@ -23,6 +23,14 @@
     {
       "at": "2026-08-22T04:12:40Z",
       "event": "files_claimed"
+    },
+    {
+      "at": "2026-08-27T14:13:37Z",
+      "event": "files_released",
+      "note": "Orphaned claim released by MPI-596 (owner session closed, covered work shipped)."
     }
-  ]
+  ],
+  "released_at": "2026-08-27T14:13:37Z",
+  "released_by": ".agents/mpi-kanban/state/sessions/ee477fd6-3679-4e7d-afe4-367c203ea576.json",
+  "outcome": "MPI-599 is done/complete and owner session 0b9af612 is closed; the flowsRegistry/types/MpiDropdown work shipped. Orphaned record released by MPI-596 so the Object Stamp wiring can proceed."
 }

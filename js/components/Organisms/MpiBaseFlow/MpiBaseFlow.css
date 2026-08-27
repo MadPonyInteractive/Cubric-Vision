@@ -167,6 +167,19 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    /* SAFE centring, and it is a bug fix rather than polish. A flex container that
+       centres its child AND scrolls puts the overflow ABOVE the scroll origin: once the
+       content is taller than the stage, the top is pushed out of reach and no amount of
+       scrolling brings it back. Fabio hit it by making the UI slightly bigger — the
+       image lost its top edge (2026-08-27). `safe` falls back to flex-start the moment
+       overflow would happen, so it centres while it fits and scrolls properly when it
+       does not. The plain `center` above stays as the fallback for engines without the
+       keyword. */
+    /* Do NOT "also" add `margin: auto` here as a belt-and-braces second fix. It works,
+       but an auto margin OVERRIDES align-items and resolves to 0 under overflow, so the
+       two mask each other: with both present, deleting either one leaves the bug hidden
+       and the regression spec green. Proven by mutation, 2026-08-27. One fix, load-bearing. */
+    align-items: safe center;
     overflow-y: auto;
     opacity: 0;
     transition: opacity var(--t-base) var(--ease);
@@ -489,13 +502,30 @@
     color: var(--ink-4);
     text-align: center;
 }
+/* Guidance is a STACK OF PARAGRAPHS, not one block. It used to be a single centred
+   <p>, and a step with anything to say rendered as a wall with no way in (Fabio,
+   2026-08-27). Left-aligned because centred prose has no consistent edge for the eye
+   to return to once it runs past two lines. */
 .mpi-base-flow__work-hint {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-2);
     font-size: var(--t-sm);
     line-height: 1.6;
     color: var(--ink-3);
-    text-align: center;
-    max-width: 60ch;
+    text-align: left;
+    max-width: 68ch;
     margin: 0;
+}
+
+.mpi-base-flow__work-hint-line {
+    margin: 0;
+}
+
+/* The FIRST line is the instruction and the rest is context, so it carries the
+   emphasis — that is what gives the block somewhere to start. */
+.mpi-base-flow__work-hint-line:first-child {
+    color: var(--ink-2);
 }
 
 /* ── Declared fields — ONE row, between canvas and hint ─────────────────── */

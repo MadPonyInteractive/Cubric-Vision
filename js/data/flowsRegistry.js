@@ -1382,6 +1382,196 @@ export const FLOWS = [
         // and 3 only look contradictory — distance in TIMBRE is what makes the
         // conversion audible, distance in PITCH is what you compensate for.
     },
+    // MPI-596 — "Object Stamp". Take an object out of one photo and put it into
+    // another. Draw It In's architecture with the scribble swapped for a real object:
+    // the object is composited onto the user's scene, a crop is taken around it, Klein
+    // 9B edits that crop, and the boxed region is stitched back.
+    //
+    // ONE GRAPH, TWO MODES, and the mode is a real fork in the wiring rather than a
+    // prompt change. Three `MpiAnySwitch` nodes read `Input_Mode`:
+    //   Auto   — reference 1 is the clean scene cropped to the region, reference 2 is
+    //            the STAMPED COMPOSITE. The object keeps its own pixels, so identity is
+    //            free and the model spends no words on it.
+    //   Manual — reference 2 is the CLEAN OBJECT at full frame and nothing is stamped.
+    //            Buys a viewpoint the object's source photo cannot give, and pays for it
+    //            in exact identity: the model has no 3D model of that object and
+    //            synthesises a generic one. A live run returned a beautifully lit pistol
+    //            that was not the user's. Auto is the default for exactly this reason.
+    //
+    // TWO REFERENCES, NEVER THREE — the documented identity-mixing limit, and three is
+    // what made the model draw two guns. Both baked prompts say "image two into the
+    // scene of image one", so REFERENCE ORDER IS SEMANTIC: reference 1 is always the
+    // scene, reference 2 always whatever carries the object.
+    //
+    // Both modes proven end to end on the bench 2026-08-27 (26.1s each on a 4060 Ti),
+    // and the unified graph is pixel-identical to the two separate graphs it replaced.
+    {
+        id: 'object-stamp',
+        title: 'Object Stamp',
+        // NO `preview` / `video` — the art does not exist yet, and ABSENT is the correct
+        // state while it is missing. Both fields are optional and every consumer guards
+        // them (`MpiFlowLibrary.js` ~333, `MpiTileSheet.js` ~137). Draw It In declared
+        // this pair before the files were made, the tile 404'd, and because
+        // `tests/desktop/flows-tab-ring.spec.js` asserts `consoleErrors` is empty in
+        // three places that held master's CI RED for a day and eight pushes. Run
+        // `/mpi-flow-graphics` first, then add the names.
+        description: 'Take an object out of one photo and put it into another — a mug on your desk, a lamp in your living room, a bag on a chair. The object keeps its own shape and markings, and the flow lights it with the scene it lands in, resting it on the surface it touches and giving it a shadow that matches the ones already there. You clean the object up first, then say where it goes.',
+        // ONE slot, 9B only. 4B was tested and FAILED (Fabio, 2026-08-26) — the same
+        // call Draw It In made, for the same reason: under load 4B follows the source
+        // shape more closely and integrates worse.
+        //
+        // `loras: true` rides on the slot, so the rack follows the card the user picked.
+        // The Draw It In hazard applies here in full: a style LoRA restyles the WHOLE
+        // photograph, not just the inserted object. Opt-in, so it is the user's to
+        // choose rather than one the flow forbids on their behalf.
+        requiredModels: [
+            { label: 'Edit model', models: ['klein-9b'], loras: true },
+        ],
+        // THE CLIP ARM IS NOT OPTIONAL TRIM. Klein 9B needs `qwen_3_8b_int8_convrot`;
+        // pairing it with 4B's encoder dies with a shape error that reads as a sampler
+        // bug and is not one (MPI-600). The text encoder moves WITH the checkpoint.
+        //
+        // `Input_Edit_Clip.clip_name` uses the dotted `Title.widget` form (MPI-359)
+        // while `Input_Edit_Model` stays plain, and that asymmetry is load-bearing:
+        // `unet_name` is on `comfyController._inject`'s spray list and `clip_name` is
+        // NOT, so a plain `Input_Edit_Clip` would match the node and write nothing.
+        modelParams: {
+            'klein-9b': {
+                'Input_Edit_Model': 'flux-2-klein-9b-int8-convrot.safetensors',
+                'Input_Edit_Clip.clip_name': 'qwen_3_8b_int8_convrot.safetensors',
+            },
+        },
+        operation: 'flowObjectStamp',
+        workflow: 'flow_object_stamp.json',
+        mediaType: 'image',
+        inputSchema: {
+            // TWO user slots, unlike Draw It In where `image2` is derived and never
+            // offered. Here the object IS an upload — it is the whole point — and the
+            // labels carry which image plays which part, because the frame otherwise
+            // falls back to "Image 1 / Image 2".
+            //
+            // `image2` is then REWRITTEN twice on the way to the run: the `cutout` step
+            // replaces it with the cleaned object, and in Auto the `place` step
+            // overwrites that with the stamped layer via `mediaRole`.
+            media: [
+                {
+                    type: 'image', mode: 'upto', max: 2,
+                    roles: ['image1', 'image2'],
+                    labels: ['Scene', 'Object'],
+                },
+            ],
+        },
+        // The BEFORE is the user's own scene, and the flow's whole claim is that only
+        // the boxed region changed — so the reveal bar crosses a steady picture.
+        result: { compare: 'image1' },
+        // STEP ORDER IS LOAD-BEARING AND IT FAILS SILENTLY. `_deriveRunMedia` walks
+        // these in DECLARATION order, and `place` stamps whatever sits in `sourceRole`
+        // at the moment it runs. Declare `cutout` second and stage 3 stamps the UNCUT
+        // object — background and all — and the run still completes and still returns a
+        // picture. There is no error to catch this; only the order.
+        steps: [
+            {
+                // Stage 2, on the OBJECT. No gizmo, so no `param` and no `mediaRole` —
+                // it replaces its own role's file.
+                //
+                // SKIPPABLE BY CONSTRUCTION, with no flag: untouched, `composeCutObject`
+                // returns null, the frame reads a null as "this kind changed nothing",
+                // and `image2` reaches the run byte-identical instead of being
+                // re-encoded through a canvas for nothing. So a PNG that arrived already
+                // cut out costs nothing here.
+                kind: 'cutout', role: 'image2',
+                tickerLabel: 'Cut it out',
+                title: 'Clean up the object',
+                // The brush works with Remove Background OFF, which is not a detail: for
+                // sources BiRefNet whiffs entirely it is the only way to cut. The two
+                // mask layers are never flattened, so toggling the background off and on
+                // preserves erasures.
+                hint: [
+                    'Remove the background, then erase whatever it left behind. Restore paints pixels back.',
+                    'Already cut out on transparency? Skip this step.',
+                ],
+            },
+            {
+                // Stage 3, on the SCENE, placing the OBJECT — the one kind that reads two
+                // roles. `sourceRole` names what it stamps; `mediaRole` sends the result
+                // to `image2` rather than replacing the scene.
+                //
+                // In MANUAL this derives NOTHING: the clean object is already `image2`,
+                // put there by the cutout stage, so deriving would hand the run a second
+                // copy of a picture it has. Manual contributes only the region and the
+                // mode.
+                kind: 'place', role: 'image1', sourceRole: 'image2', mediaRole: 'image2',
+                // An OBJECT `param`, not a string — this kind feeds two nodes. `region`
+                // goes to `Input_Box` through the box injector (an MpiBox carries four
+                // widgets the generic title injector would match and silently not
+                // write), and `mode` to `Input_Mode`, the `MpiAnySwitch` selector that
+                // picks the crop source, reference 2 and the baked instruction. Lose
+                // `mode` and a Manual run silently gets Auto's wiring and still renders.
+                param: { region: 'box1', mode: 'Input_Mode' },
+                tickerLabel: 'Place it',
+                title: 'Put it where you want it',
+                // DECLARED HERE AND NOWHERE ELSE. Restating it in the flow's own `fields`
+                // so it is also editable on the run slide SILENTLY DROPS EDITS from the
+                // second run onward: a gizmo step's fields are role-keyed in
+                // `_stepValues[role].fields` while flow fields live in `_fieldValues`,
+                // and `_collectInputs` applies the flow store LAST (MPI-620).
+                //
+                // Optional and empty by default — unlike Draw It In, where the drawing is
+                // a silhouette and the words are the only thing naming the subject. Here
+                // the object names itself. This is the escape hatch for what the flow
+                // cannot know and the user can see: pose in Manual, and scene-specific
+                // lighting in either mode.
+                fields: [
+                    {
+                        id: 'positive', type: 'text', rows: 2, label: 'Anything to add?',
+                        // PLACEHOLDER COPY IS LOAD-BEARING — it is where the user learns
+                        // the Manual move. Describing a pose is what buys the viewpoint.
+                        // LIGHTING FIRST, because that is the half that works in BOTH modes:
+                        // the field is live in Auto too (node 18 concatenates Input_Positive onto
+                        // whichever instruction the switch picked), and scene-specific light is
+                        // the one thing a baked prompt can never name. The POSE example is second
+                        // and marked, because a pose only buys anything in Manual - in Auto the
+                        // stamp already pins the viewpoint and asking for another fights it.
+                        placeholder: 'e.g. "warm sunlight from the left window" - or, in Manual, "lying flat on its side, seen from above"',
+                    },
+                ],
+                // Says what each mode COSTS, because the trade is not visible until the
+                // result comes back. Auto is default; Manual is the escape hatch.
+                // ALT-DRAG IS NAMED HERE BECAUSE NOTHING ELSE NAMES IT (Fabio, 2026-08-27).
+                // The gesture is ALT + drag a HANDLE (`MpiStepPlace` mousedown: it needs a
+                // `shape.hitTest` hit, so a bare ALT-drag on the canvas does nothing), and it
+                // is AUTO-ONLY — Manual's box is a region, and swinging it would say the model
+                // reads it at an angle, so ALT is ignored there. An undiscoverable gesture is
+                // the same failure as an inert control: the user never finds it and the flow
+                // looks like it cannot do the thing it can.
+                // MODE-KEYED, because half of this used to be wrong wherever it was read:
+                // the Manual redraw trade-off showed while the user sat in Auto, where
+                // none of it applies, and ALT-rotate showed in Manual, which has no
+                // rotation at all (Fabio, 2026-08-27). `base` is what is true in both.
+                // NO `base`, because the two modes share almost nothing on screen: Auto
+                // shows the OBJECT and Manual shows only a REGION. The old shared lines said
+                // "drag the object where it should sit" in Manual, where there is no object
+                // to drag, and told Auto to leave room on the ground for a shadow — which is
+                // self-defeating, since Auto's box IS the object and growing it just makes
+                // the object bigger. The shadow margin is not the user's job at all: the
+                // graph grows the write-back ~30% off the box side (law 8, node 225).
+                //
+                // Kept SHORT on purpose. The mode radio already carries a tooltip explaining
+                // what each mode does, so repeating it here is a wall the user scrolls past
+                // (Fabio, 2026-08-27, twice).
+                hint: {
+                    auto: [
+                        'Drag and scale the object to where it should sit.',
+                        'ALT + drag a corner rotates it. Shift keeps its proportions.',
+                    ],
+                    manual: [
+                        'The model only sees what is inside the box. Put it where the object should go, with a little room around it.',
+                        'Describe the object and the angle you want in the box above.',
+                    ],
+                },
+            },
+        ],
+    },
 ];
 
 /** @returns {FlowDef[]} All flow descriptors. */

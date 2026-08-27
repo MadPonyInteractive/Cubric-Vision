@@ -75,6 +75,15 @@ export const UNIVERSAL_WORKFLOWS = {
     flowScribble: {
         workflow: 'flow_scribble.json',
     },
+    // MPI-596 - Object Stamp. Draw It In's graph with the scribble swapped for a real
+    // object, plus a second reference arm and a second crop of the CLEAN scene to the
+    // same region (law 7 - matched framing is what stops the doll's-house failure).
+    // ONE file serves both modes: three MpiAnySwitch nodes on Input_Mode pick the crop
+    // source, reference 2 and the baked instruction. The model is a declared slot, so
+    // this op adds no download of its own.
+    flowObjectStamp: {
+        workflow: 'flow_object_stamp.json',
+    },
     // MPI-607 — Chatterbox voice conversion. Five nodes, no model loader: two
     // MpiLoadAudio paths into FL_ChatterboxVC, out through a native SaveAudio.
     flowVoiceChanger: {

@@ -13,7 +13,7 @@
     "js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.css",
     "tests/flow-lora-rack.test.cjs"
   ],
-  "status": "claimed",
+  "status": "released",
   "claim_kind": "write",
   "owner_session": ".agents/mpi-kanban/state/sessions/68a9910e-2358-41c7-b4e9-584d48656912.json",
   "owner_role": "implementer",
@@ -24,6 +24,14 @@
     {
       "at": "2026-08-23T09:34:00Z",
       "event": "files_claimed"
+    },
+    {
+      "at": "2026-08-27T14:13:37Z",
+      "event": "files_released",
+      "note": "Orphaned claim released by MPI-596 (owner session closed, covered work shipped)."
     }
-  ]
+  ],
+  "released_at": "2026-08-27T14:13:37Z",
+  "released_by": ".agents/mpi-kanban/state/sessions/ee477fd6-3679-4e7d-afe4-367c203ea576.json",
+  "outcome": "MPI-608 is done/complete and its owner session record is absent. Orphaned record released by MPI-596 so the Object Stamp wiring can proceed."
 }
