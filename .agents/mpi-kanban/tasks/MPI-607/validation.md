@@ -1927,3 +1927,70 @@ graph build. **Fabio's ear is still owed** on the three overshooting clips -- th
 **The bench holds ~4GB** from the `--warm` run: `keep_model_loaded` parks models in the pack's
 module-level `_MODEL_CACHE`, which `model_management` never sees, so `POST /free` returns 200
 having released nothing. It clears on restart.
+
+## 2026-08-27 (session 26, later) -- CHAIN ORDER SETTLED, and the ACCENT AXIS should be DROPPED
+
+### Order A wins. `TTS(perf clip) -> VC(voice)` stays.
+
+Fabio challenged the order: *"User picks a voice. The voice goes through TTS ... comes out
+normal, neutral. Only then do you add the performance."* Identity first. It is a fair
+challenge -- this card's own text says order A lands on "a consistent OTHER voice" -- so it
+was built and measured rather than argued. `research/chain_order_ab.py`.
+
+    A  TTS(text, ref = perf clip)  ->  VC(input = A1, target = voice)
+    B  VC(input = perf, target = voice)  ->  TTS(text, ref = B1)
+
+| | cosine vs c0 (the voice) | f0 delta vs c0 | cosine vs c2 (performer) |
+|---|---|---|---|
+| c1 neutral TTS on the voice (calibration) | 0.811 | -1.15 st | 0.452 |
+| **A  TTS -> VC** | **0.897** | **-1.20 st** | 0.507 |
+| B  VC -> TTS | 0.827 | **+5.35 st** | 0.451 |
+
+**B's failure is pitch, and only the f0 column sees it: +5.35 semitones, 135 -> 184 Hz** --
+straight out of R2 and into R3. Its cosine stays respectable (0.827) because CAMPPlus
+x-vectors are pitch-invariant by construction. That is the third time on this card that the
+cosine alone would have passed something a listener rejects; the combined gate earned its
+place again. Fabio's ear agreed with the numbers unprompted.
+
+**A scored ABOVE the neutral-TTS calibration (0.897 vs 0.811), so the "lands on a consistent
+OTHER voice" concern did not reproduce on this pair.** That claim came from the audition
+work, where the TTS half was shared across every voice in a register -- a different setup.
+ONE voice and ONE clip is not a refutation of the earlier finding and must not be recorded
+as one; it is enough to say order A is not the thing to fix. Re-test on a second pair before
+generalising either way.
+
+**A constraint worth stating once so nobody re-proposes the naive version:** VC preserves its
+SOURCE's linguistic content. `VC(input = perf clip, target = TTS output)` therefore speaks the
+PERFORMANCE CLIP's sentence in the user's voice, not the user's text. Order B is the only
+coherent "identity first" chain, because it uses the VC output purely as a TTS REFERENCE.
+
+### The accent axis: only Hindi ever read, and not against a library voice
+
+`research/accent_strength_probe.py`, five clips, judged by ear. Fabio: *"The only accent that
+I actually noticed was the Indian accent. Every other accent just read neutral"* -- and on
+this probe *"None of these have any accent"*, Hindi included.
+
+**The card's own note is superseded for this purpose.** 2026-08-23 recorded *"`exaggeration`
+0.8 gives a more pronounced accent than 0.5; both work."* 0.8 did not rescue French, German
+or Italian here. The difference from the original test is the REFERENCE: that listening used
+Fabio's own voice and a synthetic, this used a shipped LIBRARY voice. So the honest statement
+is narrow -- **accent does not survive a library voice**, which is the only reference Flow B
+has. Whether it survives a user's own recording is untested and belongs to a later card.
+
+**RECOMMENDATION: drop the accent axis from Flow B v1.** One working accent out of 23 is not
+a feature, and dropping it removes, in one move: the 3.2 GB `chatterbox_multilingual` set and
+the bundled-vs-optional question with it; the `repetition_penalty` defect (multilingual-only,
+solved earlier today but no longer load-bearing); the combo-injection constraint that forced a
+curated accent list; and the four tokenizer deps (ja/he/ru/zh) missing from the python lock.
+Flow B becomes base TTS + VC -- **3.19 GB**, one model, one switch bank.
+
+The `repetition_penalty` finding stays recorded and stays true; it is simply not needed while
+no multilingual node ships.
+
+### Bench artifacts left for Fabio's own testing
+
+- `G:\ComfyUi\ComfyUI\user\default\workflows\MPI607_FlowB_OrderA.json` (13 nodes, shipped
+  shape) and `..._OrderB.json` (12 nodes), so the two can be driven directly.
+- The whole library staged as wav: `input/mpi607_voices/<REGISTER>_<id>.wav` (56) and
+  `input/mpi607_perf/<REGISTER>_<emotion>.wav` (30), register-prefixed so pairing a voice to
+  its grid needs no manifest lookup. Index at `input/mpi607_index.json`.
