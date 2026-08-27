@@ -100,6 +100,101 @@ Playwright spawns Electron through a `cmd.exe` shim. Take the pid list from
 Raw: `scratchpad/m1-decode-cost.json`, `scratchpad/m2-gallery-vram.json`, logs `m1e.log`,
 `m2b.log`, `m2c.log`.
 
-## Phases 1-4
+## Phases 1, 1b, 2 — built, and one measured design reversal
 
-Not started — the build follows from the numbers above.
+### The reversal: the image demote returns NO VRAM
+
+Phase 1b existed because M2's no-scroll control was cheap (23.7 MB) while the same config
+after a scroll cost 238, so the 214 MB difference was read as the GPU image cache RETAINING
+every card the scroll passed — and therefore as something a scroll-out demote would give
+back. **It does not.** Re-measured on the shipped build, same rig, same session:
+
+| config | resting delta | cards still on the large src at rest |
+|---|---|---|
+| `L4_ladder` — the ladder with the demote firing | **236.5** | 6 |
+| `L4_master` — the same tour, no demote possible | **234.5** | 120 |
+
+Every off-screen card genuinely had swapped back to its 512 thumb (`onLarge 6`, and
+`natural 512x320` on the first card) and the number did not move. Chromium's GPU image
+cache keys a decoded image by **URL** and holds it whether or not anything still points at
+it; no page API evicts it. The demote addressed a symptom — live element references — that
+was never the cause.
+
+### What actually bounds it: the scroll gate
+
+If the cost is per decoded URL, the only lever is **how many distinct large renditions ever
+get PAINTED**. So `promoteImage` refuses while `_isScrolling`, and the existing 150 ms
+scroll-idle timer (MPI-321) sweeps the band you came to rest on. Same session, 120 cards,
+level 4, 1600x900 host:
+
+| tour | ladder + gate | no gate possible (`master`) |
+|---|---|---|
+| **fling** — one gesture, ~16 ms steps | **73.8** | 241.5 |
+| dwell tour — 44 stops of 450 ms | 221.9 | 234.5 |
+| no scroll at all (the floor) | — | 72.9 |
+
+**The gate takes a full fling to the no-scroll floor** (73.8 against 72.9). The dwell tour is
+the honest ceiling and it is the design working: a user who stops 44 times down a 120-card
+gallery has looked at every card, and pays for what they looked at.
+
+`L1_ladder` = **14.3 MB**, against 34-42 for today's build at the same size — the ladder
+picks the 512 thumb at a 253px box, so the smallest card size gets cheaper, not dearer.
+
+**Absolute numbers drift between sessions.** `L4_master_noscroll` read 23.7 MB in Phase 0
+and 72.9 MB here, unchanged config. Only compare configs measured in ONE run; every table
+above is single-session.
+
+### The demote is kept anyway
+
+It bounds the working set and leaves off-screen entries unreferenced, hence discardable under
+real memory pressure — which a GPU counter cannot distinguish but ComfyUI competing for VRAM
+would. Its comment in `MpiGalleryGrid.js` states exactly what it does and does not buy, so
+nobody re-derives the original expectation from it.
+
+## Tests
+
+- `tests/gallery-renditions.test.cjs` — 8 cases over `pickImageRendition` (boundary, box 0,
+  clamp-to-source, no-renditions fallback, null item) **and the seam**: the names
+  `imageThumbPath` writes are the names the picker looks for, and both survive the GC's
+  prefix match. Mutations: boundary `>` → `>=` RED, `filePath` fallback dropped RED, large
+  rendition writing over the small name RED.
+- `tests/desktop/gallery-renditions.spec.js` — 4 cases: big card takes the large rendition
+  and a small one does not (with the box asserted against the boundary, so a fixture that
+  proves nothing fails loudly); no large rendition ⇒ the ORIGINAL, never an upscaled thumb;
+  a fling past 40 cards does not fetch 40 large renditions; scroll-out demote and return.
+  Mutations: `setRenderBox` unwired RED, promote unwired RED, demote unwired RED, scroll
+  gate removed RED, idle sweep removed RED, sweep ignoring the band RED.
+- `npm test` 759/759, `npx playwright test --config=playwright.desktop.config.js` 35/35,
+  eslint clean.
+
+**Two fixture traps, both of which read as a working feature.** The first fixture gave its
+items no `pixelDimensions`, so the packer used ratio 1.0, fitted four cards per row and
+produced a 354px card — correctly BELOW the boundary, so the spec failed while the code was
+right. And the fling case counts `performance` resource entries: the shell's own boot fills
+the default 250-entry buffer, and a FULL buffer drops new entries silently, which reads as
+"the gate let nothing through" — `clearResourceTimings()` first.
+
+## Video proxy — verified at the encoder
+
+`extractVideoProxy` against a shipped clip: 3000x1280 → **1688x720, 267 KB against the
+master's 3006 KB**. The clamp is exact — `sourceHeight` 480 and 720 skip, 721 encodes, and an
+unknown height (0/undefined) encodes, since ffmpeg's `min` can only downscale.
+
+Not yet measured end to end: the VRAM saving from the proxy on a real gallery. M1 predicts
+~6x per promoted card (65-81 MB → 11-21) and the mechanism is confirmed, but no rig run has
+sampled a gallery of PROXIED clips.
+
+## Phases 3-4 — what remains
+
+- Phase 3 landed alongside Phase 1: `POST /backfill-media-derivatives` (renamed from
+  `/backfill-image-thumbs`, which had stopped being true) backfills the large rendition AND
+  the video proxy, and the GC/delete paths now match `<id>.thumb.*` / `<id>.proxy.*` by
+  prefix. The map is `{ itemId: { thumbPath, thumbPathLg, proxyPath } }` — a string value
+  could not express the common case, an item whose `thumbPath` is already right and whose
+  large rendition is the only new thing.
+- Not done: a rig run over a project of PROXIED videos, and the harness facts still want a
+  home in `docs/testing-harnesses.md`. Neither the rigs nor `tasks/MPI-633/rig/` should
+  survive the card — delete both at close-out.
+
+Raw: `scratchpad/m2phase4.log`, `scratchpad/m2fling.log` (and Phase 0's
+`m1-decode-cost.json` / `m2-gallery-vram.json`).

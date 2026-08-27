@@ -32,7 +32,7 @@ const { v4: uuidv4 } = require('uuid');
 const logger = require('./logger');
 const { ffmpegPath } = require('../services/ffmpegBinary');
 const { probeVideo } = require('../services/ffprobeVideo');
-const { extractVideoThumb } = require('../services/ffmpegThumb');
+const { writeVideoDerivatives } = require('../services/ffmpegThumb');
 const { nextSequence } = require('./projects');
 
 const execFileP = promisify(execFile);
@@ -148,9 +148,10 @@ router.post('/api/video/reverse', async (req, res) => {
             sourceItemId: itemId  || null,
             sourceGroupId: groupId || null,
         };
-        const thumbAbs = path.join(metaDir, `${newId}.thumb.jpg`);
-        const thumbed = await extractVideoThumb(outputPath, thumbAbs);
-        if (thumbed) sidecar.thumbPath = `/project-file?path=${encodeURIComponent(thumbAbs)}`;
+        // Poster + 720p hover proxy (MPI-633).
+        const { thumbPath, proxyPath } = await writeVideoDerivatives(outputPath, metaDir, newId, { sourceHeight: outMeta.height });
+        if (thumbPath) sidecar.thumbPath = thumbPath;
+        if (proxyPath) sidecar.proxyPath = proxyPath;
 
         await fs.writeJson(path.join(metaDir, `${newId}.json`), sidecar, { spaces: 2 });
 

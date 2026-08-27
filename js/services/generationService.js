@@ -1162,9 +1162,14 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 // instead of reopening the Flow. Reload worked; the fresh session didn't.
                 flowId: config.flowId ?? null,
                 flowInputs: config.flowInputs ?? null,
-                // Gallery thumb (MPI-319): both images and videos now get one so
-                // the grid renders a small JPG, not the full-res output.
+                // Gallery renditions (MPI-319, ladder MPI-633): both images and videos
+                // get the small one so the grid renders a thumb, not the full-res
+                // output. `thumbPathLg` is written only for an image WIDER than the
+                // large tier — below it the original is that tier — so null here is
+                // the normal case, not a miss.
                 thumbPath: savedData?.thumbPath ?? null,
+                thumbPathLg: savedData?.thumbPathLg ?? null,
+                proxyPath: savedData?.proxyPath ?? null,
             };
             if (isVideo) {
                 Object.assign(baseProps, {

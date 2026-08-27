@@ -6,8 +6,10 @@
  *
  * Uses bundled ffmpeg (see ffmpegBinary.js). Video thumbs are 256-wide JPGs
  * (height auto, preserves aspect) at the given timestamp (default 0s). Image
- * thumbs are 512-wide (sharp enough at the biggest gallery card, ~50x cheaper
- * to decode than a raw 4K PNG — the whole point of MPI-319).
+ * thumbs come in TWO sizes (MPI-633) — see IMAGE_RENDITION_PX below. 512 was the
+ * only one until then, and its claim to be "sharp enough at the biggest gallery
+ * card" was measured in some window and is false on a wide one: at slider level 4
+ * a card paints ~775-1250px from that 512px source.
  *
  * Image thumbs are WebP, NOT JPG (MPI-627): JPG carries no alpha, and a
  * background-removed PNG keeps its ORIGINAL RGB under the transparent pixels
@@ -24,6 +26,7 @@
  * return value, not the path they passed. null on failure (logs warning).
  */
 
+const path = require('path');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
 const { ffmpegPath } = require('./ffmpegBinary');
@@ -50,13 +53,37 @@ async function extractVideoThumb(inputPath, outPath, { atSeconds = 0 } = {}) {
     }
 }
 
-/** `<id>.thumb.jpg` → `<id>.thumb.webp`. The one place the swap is spelled. */
-function imageThumbPath(outPath) {
-    return String(outPath).replace(/\.jpe?g$/i, '.webp');
+/**
+ * The two image renditions a gallery card can mount (MPI-633). A card picks the
+ * smallest one whose pixels cover its RENDERED BOX and falls back to the original
+ * `filePath` when neither does — srcset behaviour, keyed off the box the justified
+ * packer already computes rather than off items-per-row (three PORTRAIT cards per
+ * row are narrow but tall, so a column count does not say how many pixels a card
+ * paints).
+ *
+ * `large` is the top of the ladder and nothing sits above it: a card wider than
+ * 1280 upscales this rendition rather than mounting a 4K original, because the
+ * viewer is where full resolution belongs. Measured at the largest slider level
+ * (MPI-633 validation.md, M2): four visible 1280px cards rest at 23.7 MB of VRAM
+ * against 12 MB for today's 512px source — and at 238 MB for the same ladder
+ * WITHOUT the scroll-out demote MpiGalleryGrid pairs with it.
+ */
+const IMAGE_RENDITION_PX = { small: 512, large: 1280 };
+
+/**
+ * `<id>.thumb.jpg` → `<id>.thumb.webp` (small) or `<id>.thumb.1280.webp` (large).
+ * The one place the swap is spelled. Both keep the `.thumb.` infix, which is what
+ * the sidecar delete/GC paths match on.
+ */
+function imageThumbPath(outPath, { width = IMAGE_RENDITION_PX.small } = {}) {
+    const webp = String(outPath).replace(/\.jpe?g$/i, '.webp');
+    return width === IMAGE_RENDITION_PX.small
+        ? webp
+        : webp.replace(/\.webp$/i, `.${width}.webp`);
 }
 
-async function extractImageThumb(inputPath, outPath, { width = 512 } = {}) {
-    const webpPath = imageThumbPath(outPath);
+async function extractImageThumb(inputPath, outPath, { width = IMAGE_RENDITION_PX.small } = {}) {
+    const webpPath = imageThumbPath(outPath, { width });
     try {
         const args = [
             '-y',
@@ -78,4 +105,87 @@ async function extractImageThumb(inputPath, outPath, { width = 512 } = {}) {
     }
 }
 
-module.exports = { extractVideoThumb, extractImageThumb, imageThumbPath };
+/**
+ * Gallery hover playback height (MPI-633). A `<video>` decoder works at the clip's
+ * NATIVE resolution however small the card is — measured: the same 3000x1280 clip
+ * costs 81.2 MB per promoted card in a 64x80 box and 82.4 MB in a 134x167 one, across
+ * 4.4x the painted area. So the only lever is the file, and cost tracks pixels at
+ * ~20 MB per megapixel per promoted card: 65-81 MB for 3000x1280 against 11-21 MB at
+ * 720p, a 6x cut. 480p buys perhaps 10 MB/video more and is visibly soft on a 775px
+ * card. The viewer still opens the full-res master.
+ */
+const VIDEO_PROXY_HEIGHT = 720;
+
+/** `<id>.thumb.jpg` → `<id>.proxy.mp4`. */
+function videoProxyPath(outPath) {
+    return String(outPath).replace(/\.thumb\.[^.]+$/i, '.proxy.mp4');
+}
+
+/**
+ * Downscale a video to the gallery hover proxy. Returns the path written, or null —
+ * including when the source is already at or under the proxy height, because then the
+ * master IS the proxy and a re-encode would cost disk and quality for nothing. Pass
+ * the probed `sourceHeight`; an unknown height encodes (ffmpeg's `min` can only ever
+ * downscale, so the worst case is a same-size copy, never an upscale).
+ *
+ * ponytail: awaited inline where the poster is extracted, like every other derivative
+ * here. A minutes-long 4K import therefore waits on its proxy encode; if that shows up
+ * as an import-latency complaint, the fix is to run this after the response and patch
+ * the sidecar through a queued writer — not to skip long clips, which are exactly the
+ * ones whose decoders cost the most.
+ */
+async function extractVideoProxy(inputPath, outPath, { sourceHeight } = {}) {
+    if (sourceHeight > 0 && sourceHeight <= VIDEO_PROXY_HEIGHT) return null;
+    const proxyPath = videoProxyPath(outPath);
+    try {
+        const args = [
+            '-y',
+            '-i', inputPath,
+            '-vf', `scale=-2:'min(${VIDEO_PROXY_HEIGHT},ih)'`,
+            '-c:v', 'libx264',
+            '-preset', 'veryfast',
+            '-crf', '26',
+            '-pix_fmt', 'yuv420p',
+            // Hovering a gallery card plays sound (MPI-132), so the proxy carries the
+            // audio too — a silent proxy would make the volume slider a lie.
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-movflags', '+faststart',
+            proxyPath,
+        ];
+        await execFileP(ffmpegPath, args, { maxBuffer: 4 * 1024 * 1024 });
+        return proxyPath;
+    } catch (err) {
+        logger.warn('ffmpegThumb', `video proxy failed for ${inputPath}: ${err.message}`);
+        return null;
+    }
+}
+
+/**
+ * Write both of a video's gallery derivatives — the poster and the hover proxy — and
+ * hand back the `/project-file?path=` URLs a sidecar stores. Five routes (import,
+ * save-generation, concat, crop, reverse) had grown the same three lines around
+ * `extractVideoThumb`; the proxy would have made it five copies of six, and a route
+ * that missed the update would quietly keep costing 6x the VRAM per card.
+ *
+ * `proxyPath` is null when the source is already at or under the proxy height — the
+ * master IS the proxy then — so null here is the normal case for a 720p clip.
+ */
+async function writeVideoDerivatives(inputPath, metaDir, id, { sourceHeight } = {}) {
+    const base = path.join(metaDir, `${id}.thumb.jpg`);
+    const url = (p) => `/project-file?path=${encodeURIComponent(p)}`;
+    const thumb = await extractVideoThumb(inputPath, base);
+    const proxy = await extractVideoProxy(inputPath, base, { sourceHeight });
+    return { thumbPath: thumb ? url(thumb) : null, proxyPath: proxy ? url(proxy) : null };
+}
+
+module.exports = {
+    extractVideoThumb,
+    extractImageThumb,
+    extractVideoProxy,
+    writeVideoDerivatives,
+    imageThumbPath,
+    videoProxyPath,
+    IMAGE_RENDITION_PX,
+    VIDEO_PROXY_HEIGHT,
+};

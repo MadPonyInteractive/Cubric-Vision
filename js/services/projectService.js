@@ -298,16 +298,16 @@ export async function openProject(project) {
 
     Events.emit('project:changed', { project: reconciled });
 
-    // MPI-319: backfill gallery thumbs for pre-existing images (projects made
-    // before image thumbs existed). Fire-and-forget — until it lands, cards fall
-    // back to full-res. When it returns, patch live items and re-emit so the
-    // grid swaps to the cheap thumbs without a reload.
-    _backfillImageThumbs(reconciled.folderPath);
+    // MPI-319/MPI-633: backfill gallery derivatives for pre-existing media — the
+    // image thumb, the large image rendition and the 720p video hover proxy.
+    // Fire-and-forget: until it lands, cards fall back to full-res. When it returns,
+    // patch live items and re-emit so the grid swaps without a reload.
+    _backfillMediaDerivatives(reconciled.folderPath);
 }
 
-async function _backfillImageThumbs(folderPath) {
+async function _backfillMediaDerivatives(folderPath) {
     try {
-        const result = await post('/backfill-image-thumbs', { folderPath });
+        const result = await post('/backfill-media-derivatives', { folderPath });
         const thumbs = result?.thumbs;
         if (!result?.success || !thumbs || !Object.keys(thumbs).length) return;
         // Only patch if we're still on the same project (user may have navigated).
@@ -322,9 +322,15 @@ async function _backfillImageThumbs(folderPath) {
                 // REPLACES a legacy `.thumb.jpg` that flattened away a cut-out,
                 // and it deletes that jpg — an item left holding the old URL
                 // would 404 its card until the next project load.
-                if (item?.id && thumbs[item.id] && item.thumbPath !== thumbs[item.id]) {
+                // MPI-633: `thumbs[id]` is `{ thumbPath, thumbPathLg }`, and the
+                // large rendition is compared on its own — the common backfill
+                // case is an item whose thumbPath was already right.
+                const next = item?.id ? thumbs[item.id] : null;
+                const differs = next && ['thumbPath', 'thumbPathLg', 'proxyPath']
+                    .some(k => (item[k] ?? null) !== next[k]);
+                if (differs) {
                     changed = true;
-                    return { ...item, thumbPath: thumbs[item.id] };
+                    return { ...item, ...next };
                 }
                 return item;
             }),
@@ -336,7 +342,7 @@ async function _backfillImageThumbs(folderPath) {
         // path a new group uses — pure rebuild from state.currentProject).
         Events.emit('project:group-added', {});
     } catch (err) {
-        clientLogger.warn('projectService', `image-thumb backfill failed: ${err.message}`);
+        clientLogger.warn('projectService', `media-derivative backfill failed: ${err.message}`);
     }
 }
 

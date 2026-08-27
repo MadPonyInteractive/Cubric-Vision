@@ -1727,6 +1727,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     id: uploaded.itemId,
                     filePath: uploaded.filePath,
                     thumbPath: uploaded.thumbPath,
+                    thumbPathLg: uploaded.thumbPathLg,
                     uploaded: true,
                     operation: 'snapshot',
                     pixelDimensions: uploaded.pixelDimensions,
@@ -1740,6 +1741,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     filename: uploaded.filename,
                     itemId: uploaded.itemId,
                     thumbPath: uploaded.thumbPath,
+                    thumbPathLg: uploaded.thumbPathLg,
                     pixelDimensions: uploaded.pixelDimensions,
                     mediaType: 'image',
                 });
@@ -2090,6 +2092,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     displayName:     truncateCardName(data.displayName || 'composite'),
                     pixelDimensions: data.pixelDimensions || { w: 0, h: 0 },
                     ...(data.thumbPath ? { thumbPath: data.thumbPath } : {}),
+                    ...(data.thumbPathLg ? { thumbPathLg: data.thumbPathLg } : {}),
                 });
                 _group = appendToHistory(_group, item);
                 _currentIdx = _group.selectedIndex;

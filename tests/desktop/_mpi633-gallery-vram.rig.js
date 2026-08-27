@@ -35,7 +35,7 @@ const SNAP = path.join(RIG, 'gpusnap.ps1');
 const M2 = path.join(SCRATCH, 'm2');
 const COUNT = 120;
 
-const CONFIGS = [
+const ALL_CONFIGS = [
   { key: 'L1_thumb512', sizeLevel: 1, render: 'thumb' },
   { key: 'L4_thumb512', sizeLevel: 4, render: 'thumb' },
   { key: 'L4_master', sizeLevel: 4, render: 'master' },
@@ -44,7 +44,23 @@ const CONFIGS = [
   // the GPU image cache RETAINS for every card the scroll ever passed.
   { key: 'L4_master_noscroll', sizeLevel: 4, render: 'master', scroll: false },
   { key: 'L4_thumb512_noscroll', sizeLevel: 4, render: 'thumb', scroll: false },
+  // Phase 4: the SHIPPED build. The card gets both renditions and the ladder + the
+  // scroll-out demote decide, instead of the rig pinning one source. L4_ladder is the
+  // number the card has to land: near L4_master_noscroll (23.7), not near L4_master (238).
+  { key: 'L4_ladder', sizeLevel: 4, render: 'ladder' },
+  { key: 'L1_ladder', sizeLevel: 1, render: 'ladder' },
+  // A FLING, not a dwell tour: one continuous scroll to the bottom, no rests. The
+  // stepped tour above pauses 450 ms every 0.8 viewport, which is 44 dwell points and
+  // therefore asks the gallery to decode every card -- a real 'scroll to the bottom' is
+  // one gesture that stops once. This is the config the scroll gate is FOR.
+  { key: 'L4_ladder_fling', sizeLevel: 4, render: 'ladder', fling: true },
+  { key: 'L4_master_fling', sizeLevel: 4, render: 'master', fling: true },
 ];
+
+// Each config is its own app process and its own ~90 s, so re-measuring two of them
+// after a code change should not re-run all eight: MPI633_CONFIGS=L4_ladder,L4_master
+const ONLY = (process.env.MPI633_CONFIGS || '').split(',').filter(Boolean);
+const CONFIGS = ONLY.length ? ALL_CONFIGS.filter((c) => ONLY.includes(c.key)) : ALL_CONFIGS;
 
 test.setTimeout(1800000);
 
@@ -100,8 +116,15 @@ test('MPI-633 M2 — gallery VRAM across card sizes and rendition sizes', async 
               type: 'image',
               filePath: url(master),
               // 'master' models a rendition as large as the source: the card renders
-              // the full 1280x800 rather than the 512px thumb.
-              thumbPath: render === 'thumb' ? url(thumb) : url(master),
+              // the full 1280x800 rather than the 512px thumb. 'ladder' hands the card
+              // BOTH and lets the shipped rule choose — which is the only config that
+              // measures the code rather than a hypothesis about it.
+              thumbPath: render === 'master' ? url(master) : url(thumb),
+              thumbPathLg: render === 'ladder' ? url(master) : null,
+              // Wide, so the justified packer really does put two cards on a row at
+              // level 4 — with no dimensions the ratio defaults to 1.0, the packer
+              // fits four, and the card lands UNDER the ladder's boundary.
+              pixelDimensions: { w: 1280, h: 800 },
             }],
           };
         });
@@ -118,7 +141,21 @@ test('MPI-633 M2 — gallery VRAM across card sizes and rendition sizes', async 
       await window.waitForTimeout(4000);
       const scroller = window.locator('#mpi633-host .mpi-gallery-grid__grid');
       let steps = 0;
-      if (cfg.scroll !== false) {
+      if (cfg.fling) {
+        // One gesture, no dwell: ~16 ms apart, which is what a wheel fling or a
+        // scrollbar drag looks like to the page. The scroll gate is supposed to keep
+        // the cards it flies past off the large rendition entirely.
+        for (;;) {
+          const more = await scroller.evaluate((el) => {
+            const before = el.scrollTop;
+            el.scrollTop = Math.min(before + el.clientHeight * 0.8, el.scrollHeight);
+            return el.scrollTop > before + 1;
+          });
+          steps++;
+          await window.waitForTimeout(16);
+          if (!more || steps > 300) break;
+        }
+      } else if (cfg.scroll !== false) {
         for (;;) {
           const more = await scroller.evaluate((el) => {
             const before = el.scrollTop;
@@ -147,6 +184,9 @@ test('MPI-633 M2 — gallery VRAM across card sizes and rendition sizes', async 
           visible: visible.length,
           box: box ? { w: Math.round(box.width), h: Math.round(box.height) } : null,
           decodedImgs: imgs.length,
+          // The claim the demote rests on: if every off-screen card really did swap
+          // back and the VRAM did not move, the retention is not reference-based.
+          onLarge: imgs.filter((i) => i.naturalWidth > 512).length,
           natural: imgs[0] ? { w: imgs[0].naturalWidth, h: imgs[0].naturalHeight } : null,
         };
       });
@@ -160,7 +200,7 @@ test('MPI-633 M2 — gallery VRAM across card sizes and rendition sizes', async 
         samples: { baseline: baseline.all, resting: resting.all },
       };
       results.runs.push(run);
-      console.log(`[M2] ${cfg.key} box ${stats.box?.w}x${stats.box?.h} visible ${stats.visible}/${stats.cards} ` +
+      console.log(`[M2] ${cfg.key} box ${stats.box?.w}x${stats.box?.h} visible ${stats.visible}/${stats.cards} onLarge ${stats.onLarge} ` +
         `natural ${stats.natural?.w}x${stats.natural?.h} steps ${steps} | base ${run.baselineMB} resting ${run.restingMB} ` +
         `delta ${run.deltaMB}`);
       fs.writeFileSync(path.join(SCRATCH, 'm2-gallery-vram.json'), JSON.stringify(results, null, 2));

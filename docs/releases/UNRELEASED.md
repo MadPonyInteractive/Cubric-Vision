@@ -311,3 +311,18 @@
   a generation starts, taking it back when the queue is empty. Clips you have scrolled well
   past also let go on their own, so a long project costs what is on screen instead of
   everything you have looked at. Hovering a card still plays it, exactly as before.
+
+- Big gallery cards are sharp. At the largest card size the gallery was still drawing the
+  same small thumbnail it uses for the smallest one, so on a wide window a card painted at
+  roughly twice the detail it actually had — soft enough that checking your own work meant
+  opening the History workspace. Cards now pick a thumbnail that matches the size they are
+  drawn at, and fall back to the original file when the picture is smaller than the card.
+  The small sizes are unchanged, and nothing decodes a big version just because you scrolled
+  past it.
+
+- Hovering a video card costs a fraction of what it did. A clip preview used to play the
+  full-resolution master, so a 3000-pixel-wide video decoded every one of those pixels into
+  a card a few hundred pixels across. The gallery now keeps a 720p copy for hover playback —
+  about six times less graphics memory per card on a large clip — while the viewer, drag-out
+  and everything you export still use the original untouched. Existing projects build their
+  copies the first time you open them after updating.

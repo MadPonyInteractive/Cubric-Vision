@@ -1481,6 +1481,7 @@ export const MpiCanvasViewer = ComponentFactory.create({
                     displayName:     data.displayName || data.filename.replace(/\.[^.]+$/, ''),
                     pixelDimensions: data.pixelDimensions || { w: 0, h: 0 },
                     ...(data.thumbPath ? { thumbPath: data.thumbPath } : {}),
+                    ...(data.thumbPathLg ? { thumbPathLg: data.thumbPathLg } : {}),
                 });
 
                 emit(o.event, { item: newItem });

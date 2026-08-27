@@ -33,7 +33,7 @@ const { v4: uuidv4 } = require('uuid');
 const { getProjectsRoot, COMFYUI_PORT, streamDownload, stripImageMetadata, readProjectPathsRegistry, addProjectPathToRegistry, removeProjectPathFromRegistry } = require('./shared');
 const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const { probeVideo, probeAudio } = require('../services/ffprobeVideo');
-const { extractVideoThumb, extractImageThumb, imageThumbPath } = require('../services/ffmpegThumb');
+const { extractImageThumb, extractVideoProxy, writeVideoDerivatives, imageThumbPath, videoProxyPath, IMAGE_RENDITION_PX, VIDEO_PROXY_HEIGHT } = require('../services/ffmpegThumb');
 const { ffmpegPath, ffprobePath, quote } = require('../services/ffmpegBinary');
 const { muxAudioIntoVideo } = require('../services/ffmpegMux');
 const { SCHEMA_VERSION } = require('../js/migrations/projectMigrations');
@@ -83,6 +83,48 @@ function pathFromProjectFileUrl(value) {
     const match = raw.match(/[?&]path=([^&]+)/);
     if (match) return decodeURIComponent(match[1]);
     return path.isAbsolute(raw) ? raw : null;
+}
+
+/**
+ * Every derivative an item id owns, as a filename test: `<id>.thumb.jpg` (video
+ * poster, and the legacy image thumb), `<id>.thumb.webp` (the 512 rendition),
+ * `<id>.thumb.1280.webp` and `<id>.proxy.mp4` (MPI-633). Matched by PREFIX, not by an
+ * extension list — three separate lists had to be edited in lock-step every time a
+ * derivative was added, and a missed one leaks a file per asset forever.
+ */
+const DERIVATIVE_RE = /^(.*)\.(?:thumb|proxy)\..+$/;
+
+function removeItemThumbs(metaDir, id) {
+    let entries;
+    try { entries = fs.readdirSync(metaDir); } catch (_) { return; }
+    for (const f of entries) {
+        if (DERIVATIVE_RE.exec(f)?.[1] !== id) continue;
+        try { fs.removeSync(path.join(metaDir, f)); }
+        catch (e) { logger.warn('project', 'thumb remove failed', e.message); }
+    }
+}
+
+/**
+ * Write an image's gallery renditions and stamp the sidecar (MPI-319 + MPI-633).
+ *
+ * Five routes had grown the same three lines around `extractImageThumb`; the second
+ * rendition would have made that five copies of six. `sourceWidth` is the clamp the
+ * ladder needs: a "1280" rendition of an image that is already 1280 or narrower is
+ * the ORIGINAL, so it is never written and the card mounts `filePath` for that tier.
+ * Unknown width (0/undefined) writes it — ffmpeg's `min(w,iw)` can only ever
+ * downscale, so the worst case is a same-size WebP, never an upscaled derivative.
+ *
+ * Uses the path each call RETURNS, never the one it was passed (MPI-627).
+ */
+async function writeImageRenditions(inputPath, metaDir, id, metaContent, sourceWidth) {
+    const base = path.join(metaDir, `${id}.thumb.jpg`);
+    const small = await extractImageThumb(inputPath, base);
+    if (small) metaContent.thumbPath = `/project-file?path=${encodeURIComponent(small)}`;
+    if (!(sourceWidth > 0) || sourceWidth > IMAGE_RENDITION_PX.large) {
+        const large = await extractImageThumb(inputPath, base, { width: IMAGE_RENDITION_PX.large });
+        if (large) metaContent.thumbPathLg = `/project-file?path=${encodeURIComponent(large)}`;
+    }
+    return metaContent;
 }
 
 function mediaTypeFromExt(ext) {
@@ -1067,40 +1109,26 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
         const filePath = path.join(mediaDir, filename);
         let sidecarFilePath = null; // itemId's own filePath, for the delete guard below
 
-        // Delete the UUID-based .meta/<uuid>.json if itemId is provided.
-        // Also remove any companion video first-frame thumb referenced by the
-        // sidecar (thumbPath) before unlinking the sidecar itself. Fallback to
-        // the conventional `<itemId>.thumb.jpg` path when sidecar is missing
-        // or lacks thumbPath (covers older sidecars + crash-recovery cases).
+        // Delete the UUID-based .meta/<uuid>.json if itemId is provided, and every
+        // companion derivative the id owns (video poster + image renditions) with
+        // it. `removeItemThumbs` sweeps by prefix, so it covers a sidecar that is
+        // missing or lacks thumbPath (older sidecars + crash recovery) without a
+        // separate fallback list.
         if (itemId) {
             const metaDir = path.join(mediaDir, '.meta');
             const uuidMetaPath = path.join(metaDir, `${itemId}.json`);
-            let thumbAbsPath = null;
             let hasSupportAssets = false;
             if (await fs.pathExists(uuidMetaPath)) {
                 try {
                     const sidecar = await fs.readJson(uuidMetaPath);
                     sidecarFilePath = sidecar?.filePath || null;
-                    if (sidecar?.thumbPath) {
-                        const m = sidecar.thumbPath.match(/path=(.+)$/);
-                        if (m) thumbAbsPath = decodeURIComponent(m[1]);
-                    }
                     hasSupportAssets = sidecar?.stage === 'preview'
                         || Array.isArray(sidecar?.previewAssets?.snapshots)
                         || Array.isArray(sidecar?.generationSettings?.mediaItems);
                 } catch (_) { /* non-fatal */ }
                 await fs.remove(uuidMetaPath);
             }
-            if (!thumbAbsPath) {
-                for (const ext of ['.jpg', '.webp']) {
-                    const fallback = path.join(metaDir, `${itemId}.thumb${ext}`);
-                    if (await fs.pathExists(fallback)) { thumbAbsPath = fallback; break; }
-                }
-            }
-            if (thumbAbsPath && await fs.pathExists(thumbAbsPath)) {
-                try { await fs.remove(thumbAbsPath); }
-                catch (e) { logger.warn('project', 'thumb remove failed', e.message); }
-            }
+            removeItemThumbs(metaDir, itemId);
 
             // Support-asset cleanup: drop any saved stage-1 latent owned by this
             // item. Latents stay per-item (STAGE-2 support, not reuse media,
@@ -1419,12 +1447,9 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
                 if (!metaContent.pixelDimensions.w && v.width)  metaContent.pixelDimensions.w = v.width;
                 if (!metaContent.pixelDimensions.h && v.height) metaContent.pixelDimensions.h = v.height;
             }
-            // Extract first-frame thumbnail → .meta/<id>.thumb.jpg
-            const thumbPath = path.join(metaDir, `${id}.thumb.jpg`);
-            const thumbed = await extractVideoThumb(filePath, thumbPath);
-            if (thumbed) {
-                metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbPath)}`;
-            }
+            // First-frame poster + 720p hover proxy → .meta/<id>.thumb.jpg / .proxy.mp4
+            Object.assign(metaContent, await writeVideoDerivatives(
+                filePath, metaDir, id, { sourceHeight: metaContent.pixelDimensions?.h }));
         } else if (mediaType === 'audio') {
             // Audio: no frames/dimensions/thumb — render an icon card. Duration is
             // the one thing the card CAN show, and it comes from probeAudio rather
@@ -1434,14 +1459,9 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
             if (a) metaContent.duration = a.duration;
             metaContent.thumbPath = null;
         } else {
-            // Image: downscale to a gallery thumb so scrolling 100+ 4K cards
-            // doesn't decode full-res per card (MPI-319).
-            const thumbPath = path.join(metaDir, `${id}.thumb.jpg`);
-            const thumbed = await extractImageThumb(filePath, thumbPath);
-            if (thumbed) {
-                // `thumbed`, not `thumbPath` — image thumbs land at .webp (MPI-627).
-                metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbed)}`;
-            }
+            // Image: downscale to gallery renditions so scrolling 100+ 4K cards
+            // doesn't decode full-res per card (MPI-319, ladder MPI-633).
+            await writeImageRenditions(filePath, metaDir, id, metaContent, metaContent.pixelDimensions?.w);
         }
         await fs.writeJson(metaPath, metaContent, { spaces: 2 });
         res.json({
@@ -1450,6 +1470,8 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
             filename: finalFileName,
             itemId: id,
             thumbPath: metaContent.thumbPath || null,
+            thumbPathLg: metaContent.thumbPathLg || null,
+            proxyPath: metaContent.proxyPath || null,
             // Video probe results so the client shows fps/duration immediately
             // without waiting for a reload + sidecar reconcile (MPI-83 Bug 2).
             fps:        metaContent.fps        ?? null,
@@ -1529,15 +1551,25 @@ router.post('/project-media/:projectId/probe-videos', async (req, res) => {
 });
 
 /**
- * POST /backfill-image-thumbs
+ * POST /backfill-media-derivatives
  * Body: { folderPath }
  * MPI-319: generate a gallery thumb for any IMAGE sidecar that lacks one
- * (projects created before image thumbs existed). Patches the sidecar with
- * thumbPath and returns a { itemId: thumbPathUrl } map so the client can patch
- * live in-memory items without a reload. Fire-and-forget on project load —
- * missing thumbs just fall back to full-res in the gallery meanwhile.
+ * (projects created before image thumbs existed). Patches the sidecar and returns
+ * a `{ itemId: { thumbPath, thumbPathLg, proxyPath } }` map so the client can patch
+ * live in-memory items without a reload. Fire-and-forget on project load — a missing
+ * derivative just falls back to full-res in the gallery meanwhile.
+ *
+ * MPI-633: it now also backfills the LARGE image rendition and the 720p VIDEO hover
+ * proxy — hence the rename from `/backfill-image-thumbs`, which had stopped being
+ * true. The map carries every field because of the case a string value could not
+ * express: an item whose `thumbPath` is already correct and whose `thumbPathLg` is
+ * the only new thing compares equal and would never reach the card.
+ *
+ * A video proxy is a real transcode, so an existing project's FIRST load after
+ * updating pays for one per oversized clip. It converges — a clip at or under the
+ * proxy height is never owed one, and `proxyPath` is written once.
  */
-router.post('/backfill-image-thumbs', async (req, res) => {
+router.post('/backfill-media-derivatives', async (req, res) => {
     try {
         const { folderPath } = req.body;
         const mediaDir = path.join(folderPath, 'Media');
@@ -1552,10 +1584,31 @@ router.post('/backfill-image-thumbs', async (req, res) => {
             const p = path.join(metaDir, f);
             let meta;
             try { meta = await fs.readJson(p); } catch { continue; }
-            if (meta.type !== 'image') continue;
+            if (meta.type !== 'image' && meta.type !== 'video') continue;
 
             const inputPath = pathFromProjectFileUrl(meta.filePath);
             if (!inputPath || !(await fs.pathExists(inputPath))) continue;
+
+            const id = meta.id || f.replace(/\.json$/, '');
+            const thumbAbs = path.join(metaDir, `${id}.thumb.jpg`);
+
+            if (meta.type === 'video') {
+                // Only OWED by a clip taller than the proxy height — below it the
+                // master IS the proxy, so a 720p project converges after one pass.
+                const srcH = meta.pixelDimensions?.h;
+                if (meta.proxyPath || (srcH > 0 && srcH <= VIDEO_PROXY_HEIGHT)) continue;
+                const proxy = await extractVideoProxy(inputPath, thumbAbs, { sourceHeight: srcH });
+                if (!proxy) continue;
+                meta.proxyPath = `/project-file?path=${encodeURIComponent(proxy)}`;
+                await fs.writeJson(p, meta, { spaces: 2 });
+                thumbs[id] = {
+                    thumbPath: meta.thumbPath || null,
+                    thumbPathLg: meta.thumbPathLg || null,
+                    proxyPath: meta.proxyPath,
+                };
+                patched++;
+                continue;
+            }
 
             // MPI-627: a pre-existing `.thumb.jpg` off an alpha-capable source is
             // WRONG, not merely missing — the flatten restored the original RGB
@@ -1563,23 +1616,38 @@ router.post('/backfill-image-thumbs', async (req, res) => {
             // can never carry alpha, so it keeps the thumb it already has.
             const staleJpg = /\.thumb\.jpe?g(&|$)/i.test(meta.thumbPath || '')
                 && /\.(png|webp|avif|gif)$/i.test(inputPath);
-            if (meta.thumbPath && !staleJpg) continue;
+            // The large rendition is only OWED by a source wider than the tier —
+            // at or below it the original IS that tier and the card mounts
+            // `filePath`, so a project of 1280px assets converges after one pass
+            // and never re-encodes on later loads (MPI-633).
+            const srcW = meta.pixelDimensions?.w;
+            const needsLarge = !meta.thumbPathLg
+                && (!(srcW > 0) || srcW > IMAGE_RENDITION_PX.large);
+            if (meta.thumbPath && !staleJpg && !needsLarge) continue;
 
-            const id = meta.id || f.replace(/\.json$/, '');
-            const thumbAbs = path.join(metaDir, `${id}.thumb.jpg`);
-            const thumbed = await extractImageThumb(inputPath, thumbAbs);
-            if (!thumbed) continue;
-            if (staleJpg) { try { await fs.remove(thumbAbs); } catch (_) {} }
+            if (!meta.thumbPath || staleJpg) {
+                const thumbed = await extractImageThumb(inputPath, thumbAbs);
+                if (!thumbed) continue;
+                if (staleJpg) { try { await fs.remove(thumbAbs); } catch (_) {} }
+                meta.thumbPath = `/project-file?path=${encodeURIComponent(thumbed)}`;
+            }
+            if (needsLarge) {
+                const large = await extractImageThumb(inputPath, thumbAbs, { width: IMAGE_RENDITION_PX.large });
+                if (large) meta.thumbPathLg = `/project-file?path=${encodeURIComponent(large)}`;
+            }
 
-            meta.thumbPath = `/project-file?path=${encodeURIComponent(thumbed)}`;
             await fs.writeJson(p, meta, { spaces: 2 });
-            thumbs[id] = meta.thumbPath;
+            thumbs[id] = {
+                thumbPath: meta.thumbPath,
+                thumbPathLg: meta.thumbPathLg || null,
+                proxyPath: meta.proxyPath || null,
+            };
             patched++;
         }
 
         res.json({ success: true, patched, thumbs });
     } catch (err) {
-        logger.error('project', 'backfill-image-thumbs failed', err);
+        logger.error('project', 'backfill-media-derivatives failed', err);
         res.status(500).json({ success: false, error: err.message });
     }
 });
@@ -1963,24 +2031,16 @@ router.post('/project/save-generation', async (req, res) => {
                 metaContent.frameCount = videoInfo.frameCount;
                 metaContent.hasAudio   = videoInfo.hasAudio;
             }
-            const thumbPath = path.join(metaDir, `${id}.thumb.jpg`);
-            const thumbed = await extractVideoThumb(filePath, thumbPath);
-            if (thumbed) {
-                metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbPath)}`;
-            }
+            Object.assign(metaContent, await writeVideoDerivatives(
+                filePath, metaDir, id, { sourceHeight: videoInfo?.height ?? metaContent.pixelDimensions?.h }));
         } else if (isAudio) {
             // No thumb — the gallery renders an icon card for audio (MPI-132).
             if (audioInfo) metaContent.duration = audioInfo.duration;
             metaContent.thumbPath = null;
         } else {
-            // Image gens get a gallery thumb too (MPI-319) so the gallery grid
-            // renders a small JPG, not the full-res output.
-            const thumbPath = path.join(metaDir, `${id}.thumb.jpg`);
-            const thumbed = await extractImageThumb(filePath, thumbPath);
-            if (thumbed) {
-                // `thumbed`, not `thumbPath` — image thumbs land at .webp (MPI-627).
-                metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbed)}`;
-            }
+            // Image gens get gallery renditions too (MPI-319) so the grid renders
+            // a small WebP, not the full-res output.
+            await writeImageRenditions(filePath, metaDir, id, metaContent, metaContent.pixelDimensions?.w);
         }
         if (replaceItemId) {
             // Final pass: stamp stage='final', drop preview-only metadata.
@@ -2039,7 +2099,6 @@ router.post('/project/save-generation', async (req, res) => {
 
                 const metaFilePath = path.join(metaDir, sc);
                 let mediaPath = null;
-                let thumbPath = null;
 
                 // Try to read the meta file to get the actual media file path.
                 // Use pathFromProjectFileUrl (stops at `&`) NOT a greedy
@@ -2050,7 +2109,6 @@ router.post('/project/save-generation', async (req, res) => {
                 try {
                     const metaContent = await fs.readJson(metaFilePath);
                     if (metaContent.filePath) mediaPath = pathFromProjectFileUrl(metaContent.filePath);
-                    if (metaContent.thumbPath) thumbPath = pathFromProjectFileUrl(metaContent.thumbPath);
                 } catch (_) {
                     // If we can't read the meta file, treat it as orphaned
                 }
@@ -2063,22 +2121,17 @@ router.post('/project/save-generation', async (req, res) => {
                 // Only delete if the referenced media file doesn't exist
                 if (!(await fs.pathExists(mediaPath))) {
                     await fs.remove(metaFilePath);
-                    const thumbCandidates = thumbPath
-                        ? [thumbPath]
-                        : ['.jpg', '.webp'].map(e => path.join(metaDir, `${baseName}.thumb${e}`));
-                    for (const t of thumbCandidates) {
-                        if (await fs.pathExists(t)) {
-                            try { await fs.remove(t); } catch (_) {}
-                        }
-                    }
+                    removeItemThumbs(metaDir, baseName);
                 } else {
                     survivingIds.add(baseName);
                 }
             }
 
-            // Pass 2: orphan thumbs with no surviving sidecar
+            // Pass 2: orphan derivatives with no surviving sidecar. One shared regex,
+            // not `(jpg|webp)` — `<id>.thumb.1280.webp` and `<id>.proxy.mp4` both fail
+            // that alternation and would outlive their asset (MPI-633).
             for (const f of entries) {
-                const m = f.match(/^(.*)\.thumb\.(jpg|webp)$/);
+                const m = f.match(DERIVATIVE_RE);
                 if (!m) continue;
                 if (survivingIds.has(m[1])) continue;
                 try { await fs.remove(path.join(metaDir, f)); } catch (_) {}
@@ -2095,6 +2148,8 @@ router.post('/project/save-generation', async (req, res) => {
             displayName: metaContent.displayName,
             pixelDimensions: metaContent.pixelDimensions,
             thumbPath: metaContent.thumbPath || null,
+            thumbPathLg: metaContent.thumbPathLg || null,
+            proxyPath: metaContent.proxyPath || null,
             fps: metaContent.fps || 0,
             duration: metaContent.duration || 0,
             frameCount: metaContent.frameCount || 0,
@@ -2170,7 +2225,9 @@ router.post('/project-media/:projectId/add-from-cards', async (req, res) => {
             if (!meta.type) meta.type = card.type || 'image';
             if (!meta.displayName) meta.displayName = card.name || stem;
 
-            // Copy companion thumb if the source had one.
+            // Copy companion renditions if the source had them. The large one keeps
+            // its own `.1280.webp` tail so the copy lands on the same names the
+            // ladder and the GC both look for (MPI-633).
             const srcThumb = pathFromProjectFileUrl(item?.thumbPath) || pathFromProjectFileUrl(meta.thumbPath);
             if (srcThumb && await fs.pathExists(srcThumb)) {
                 const destThumb = path.join(metaDir, `${id}.thumb${path.extname(srcThumb)}`);
@@ -2178,6 +2235,22 @@ router.post('/project-media/:projectId/add-from-cards', async (req, res) => {
                 meta.thumbPath = `/project-file?path=${encodeURIComponent(destThumb)}`;
             } else {
                 delete meta.thumbPath;
+            }
+            const srcLarge = pathFromProjectFileUrl(item?.thumbPathLg) || pathFromProjectFileUrl(meta.thumbPathLg);
+            if (srcLarge && await fs.pathExists(srcLarge)) {
+                const destLarge = imageThumbPath(path.join(metaDir, `${id}.thumb.jpg`), { width: IMAGE_RENDITION_PX.large });
+                await fs.copy(srcLarge, destLarge);
+                meta.thumbPathLg = `/project-file?path=${encodeURIComponent(destLarge)}`;
+            } else {
+                delete meta.thumbPathLg;
+            }
+            const srcProxy = pathFromProjectFileUrl(item?.proxyPath) || pathFromProjectFileUrl(meta.proxyPath);
+            if (srcProxy && await fs.pathExists(srcProxy)) {
+                const destProxy = videoProxyPath(path.join(metaDir, `${id}.thumb.jpg`));
+                await fs.copy(srcProxy, destProxy);
+                meta.proxyPath = `/project-file?path=${encodeURIComponent(destProxy)}`;
+            } else {
+                delete meta.proxyPath;
             }
 
             await fs.writeJson(path.join(metaDir, `${id}.json`), meta, { spaces: 2 });
@@ -2402,13 +2475,9 @@ router.post('/project/composite-media', async (req, res) => {
             sourceFile: baseAbs,
         };
 
-        // Gallery thumb (MPI-319) — crop-media predates it, but a composite of a
-        // 4K upscale is exactly the card that made full-res decode the scroll cost.
-        const thumbPath = path.join(metaDir, `${id}.thumb.jpg`);
-        const thumbed = await extractImageThumb(filePath, thumbPath);
-        if (thumbed) {
-            metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbed)}`;
-        }
+        // Gallery renditions (MPI-319) — crop-media predates them, but a composite
+        // of a 4K upscale is exactly the card that made full-res decode the scroll cost.
+        await writeImageRenditions(filePath, metaDir, id, metaContent, width);
 
         await fs.writeJson(path.join(metaDir, `${id}.json`), metaContent, { spaces: 2 });
 
@@ -2420,6 +2489,7 @@ router.post('/project/composite-media', async (req, res) => {
             displayName: metaContent.displayName,
             pixelDimensions: metaContent.pixelDimensions,
             thumbPath: metaContent.thumbPath || null,
+            thumbPathLg: metaContent.thumbPathLg || null,
         });
     } catch (err) {
         logger.error('project', 'composite-media error', err);
@@ -2513,11 +2583,7 @@ router.post('/project/apply-paint', async (req, res) => {
             sourceFile: baseAbs,
         };
 
-        const thumbPath = path.join(metaDir, `${id}.thumb.jpg`);
-        const thumbed = await extractImageThumb(filePath, thumbPath);
-        if (thumbed) {
-            metaContent.thumbPath = `/project-file?path=${encodeURIComponent(thumbed)}`;
-        }
+        await writeImageRenditions(filePath, metaDir, id, metaContent, width);
 
         await fs.writeJson(path.join(metaDir, `${id}.json`), metaContent, { spaces: 2 });
 
@@ -2529,6 +2595,7 @@ router.post('/project/apply-paint', async (req, res) => {
             displayName: metaContent.displayName,
             pixelDimensions: metaContent.pixelDimensions,
             thumbPath: metaContent.thumbPath || null,
+            thumbPathLg: metaContent.thumbPathLg || null,
         });
     } catch (err) {
         logger.error('project', 'apply-paint error', err);
@@ -2590,27 +2657,8 @@ router.delete('/delete-meta', (req, res) => {
     // Remove companion video first-frame thumb referenced by the sidecar
     // (thumbPath) before unlinking the sidecar. Fallback to the conventional
     // `<id>.thumb.jpg` path for older sidecars / missing thumbPath.
-    let thumbAbsPath = null;
-    if (fs.existsSync(metaPath)) {
-        try {
-            const sidecar = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
-            if (sidecar?.thumbPath) {
-                const m = sidecar.thumbPath.match(/path=(.+)$/);
-                if (m) thumbAbsPath = decodeURIComponent(m[1]);
-            }
-        } catch (_) { /* non-fatal */ }
-        fs.removeSync(metaPath);
-    }
-    if (!thumbAbsPath) {
-        for (const ext of ['.jpg', '.webp']) {
-            const fallback = path.join(metaDir, `${id}.thumb${ext}`);
-            if (fs.existsSync(fallback)) { thumbAbsPath = fallback; break; }
-        }
-    }
-    if (thumbAbsPath && fs.existsSync(thumbAbsPath)) {
-        try { fs.removeSync(thumbAbsPath); }
-        catch (e) { logger.warn('project', 'thumb remove failed', e.message); }
-    }
+    if (fs.existsSync(metaPath)) fs.removeSync(metaPath);
+    removeItemThumbs(metaDir, id);
     res.json({ success: true });
 });
 

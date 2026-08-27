@@ -200,6 +200,8 @@ export const MpiGalleryBlock = ComponentFactory.create({
                         filename: uploaded.filename,
                         itemId: uploaded.itemId,
                         thumbPath: uploaded.thumbPath,
+                        thumbPathLg: uploaded.thumbPathLg,
+                        proxyPath: uploaded.proxyPath,
                         pixelDimensions: uploaded.pixelDimensions,
                         fps: uploaded.fps,
                         duration: uploaded.duration,
@@ -1636,7 +1638,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // ── media:imported listener — registered unconditionally.
         // Must not be gated by promptBox presence; PromptBox may be remounted
         // later (post-install) and drops need to create cards regardless.
-        _unsubs.push(Events.on('media:imported', ({ url, filename, itemId, thumbPath, mediaType, pixelDimensions, fps, duration, frameCount, hasAudio }) => {
+        _unsubs.push(Events.on('media:imported', ({ url, filename, itemId, thumbPath, thumbPathLg, proxyPath, mediaType, pixelDimensions, fps, duration, frameCount, hasAudio }) => {
             if (!state.currentProject) return;
 
             const isVideo = mediaType === 'video';
@@ -1654,6 +1656,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     id,
                     filePath: url,
                     thumbPath,
+                    proxyPath,
                     uploaded: true,
                     operation: 'imported',
                     pixelDimensions: dims || { w: 0, h: 0 },
@@ -1676,6 +1679,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                     id,
                     filePath: url,
                     thumbPath,
+                    thumbPathLg,
                     uploaded: true,
                     operation: 'imported',
                     pixelDimensions: dims || { w: 0, h: 0 },

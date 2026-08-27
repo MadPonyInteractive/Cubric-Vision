@@ -27,7 +27,7 @@ const { v4: uuidv4 } = require('uuid');
 const logger = require('./logger');
 const { concatVideos } = require('../services/videoConcat');
 const { probeVideo }   = require('../services/ffprobeVideo');
-const { extractVideoThumb } = require('../services/ffmpegThumb');
+const { writeVideoDerivatives } = require('../services/ffmpegThumb');
 const { materializeGenerationFrameSnapshots, nextSequence } = require('./projects');
 
 // ── SSE channel ──────────────────────────────────────────────────────────────
@@ -121,9 +121,11 @@ async function _writeOutputSidecar({ mediaDir, metaDir, outputPath, finalName, o
         hasAudio:   !!outMeta.hasAudio,
         ...extraFields,
     };
-    const thumbAbs = path.join(metaDir, `${newId}.thumb.jpg`);
-    const thumbed = await extractVideoThumb(outputPath, thumbAbs);
-    if (thumbed) sidecar.thumbPath = `/project-file?path=${encodeURIComponent(thumbAbs)}`;
+    // Poster + 720p hover proxy (MPI-633). Null proxyPath just means the output is
+    // already at or under 720p, in which case the master IS the proxy.
+    const { thumbPath, proxyPath } = await writeVideoDerivatives(outputPath, metaDir, newId, { sourceHeight: outMeta.height });
+    if (thumbPath) sidecar.thumbPath = thumbPath;
+    if (proxyPath) sidecar.proxyPath = proxyPath;
     await fs.writeJson(path.join(metaDir, `${newId}.json`), sidecar, { spaces: 2 });
     return sidecar;
 }

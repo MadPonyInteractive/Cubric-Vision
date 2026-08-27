@@ -15,6 +15,7 @@ import { Events } from '../../../events.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { Overlays } from '../../../managers/overlayManager.js';
 import { buildJustifiedRows } from '../../../utils/justifiedLayout.js';
+import { pickImageRendition } from '../../../utils/galleryRenditions.js';
 import { extractAbsPath, extractFilenameFromPath } from '../../../utils/mediaActions.js';
 import { clientLogger } from '../../../services/clientLogger.js';
 import { buildGalleryPromptReusePayloads, itemHasReusablePrompt, findOriginalReusableItem } from '../../../utils/promptReuse.js';
@@ -927,6 +928,82 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 probe.src = src;
             }
 
+            // ── Image rendition ladder (MPI-633) ─────────────────────────────
+            // An image card mounts the 512 thumb until it is on screen, then swaps up
+            // to the large rendition if its box needs one — and swaps back DOWN when
+            // it scrolls far enough away, on the same demote observer that hands a
+            // video decoder back. That second half is not tidiness: measured on 120
+            // cards at the largest slider level, the ladder alone rests at 238 MB of
+            // VRAM after a scroll to the bottom while the four cards actually visible
+            // account for 23.7 of it. The other 214 are Chromium's GPU image cache
+            // holding every card the scroll passed, and dropping the reference is what
+            // lets it evict them.
+            let _boxPx = 0;          // longest edge of the rendered card box, device px
+            let _imgPromoted = false;
+
+            function _isImageCard() {
+                const sel = group?.history?.[group.selectedIndex];
+                if (!sel || sel.inputPreview) return false;
+                const isVideo = sel.type === 'video' || (group?.type === 'video' && sel.type !== 'image');
+                const isAudio = sel.type === 'audio' || group?.type === 'audio';
+                return !isVideo && !isAudio;
+            }
+
+            // A card that is not promoted asks with a box of 0 — the rule then returns
+            // the cheap rendition, which is both the first paint and what the
+            // scroll-out demote swaps back down to.
+            function _imageSrcFor(selected) {
+                return pickImageRendition(selected, _imgPromoted ? _boxPx : 0);
+            }
+
+            function _applyImageRendition() {
+                if (!_isImageCard()) return;
+                const selected = group?.history?.[group.selectedIndex];
+                if (!selected) return;
+                _swapThumbToImage(_imageSrcFor(selected), selected);
+            }
+
+            // Called by the grid on every justified render, so a slider move or a
+            // window resize re-picks the tier for a card already on screen. DEVICE
+            // pixels, not CSS pixels: at 150% Windows scaling a 775px card rasterises
+            // at 1163, and picking off the CSS box would leave exactly the users on
+            // scaled displays looking at the upscale this card exists to remove.
+            cardEl.setRenderBox = (w, h) => {
+                const next = Math.round(Math.max(w, h) * (window.devicePixelRatio || 1));
+                if (next === _boxPx) return;
+                _boxPx = next;
+                if (_imgPromoted) _applyImageRendition();
+            };
+
+            // Never while scrolling. This is the load-bearing half, and it is NOT the
+            // same mechanism as the video gate above: a decoded image is retained by
+            // Chromium's GPU image cache keyed by URL, so once a card has decoded its
+            // large rendition the memory is gone whether or not anything still points
+            // at it — measured, see the demote below. The only lever left is how many
+            // DISTINCT large renditions ever get decoded, so a fling past 120 cards
+            // must decode the band you stop on, not all 120. Same 150 ms idle timer
+            // the hover-audio gate uses (MPI-321), same reason: scroll-past is not a
+            // request for the card.
+            cardEl.promoteImage = () => {
+                if (_imgPromoted || _isScrolling) return;
+                _imgPromoted = true;
+                _applyImageRendition();
+            };
+
+            // Drops the card back to the cheap rendition. Worth being precise about
+            // what this buys, because the first design of MPI-633 expected more of it:
+            // it shrinks the WORKING set — what is being painted right now — and it
+            // returns nothing to the GPU image cache. Measured on the 120-card rig at
+            // the largest slider level, demoting every off-screen card back to 512
+            // left the resting cost at 236.5 MB against 234.5 for the same tour with
+            // no demote at all. Retention is per decoded URL and the page cannot evict
+            // it; `promoteImage`'s scroll gate is what actually bounds the cost.
+            cardEl.demoteImage = () => {
+                if (!_imgPromoted) return;
+                _imgPromoted = false;
+                _applyImageRendition();
+            };
+
             let _videoSrc = null;
             let _videoHoverBound = false;
             let _videoPromoted = false;
@@ -1109,14 +1186,25 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     } else if (selected?.inputPreview) {
                         _swapThumbToBackgroundImage(src);
                     } else if (isVideo) {
-                        _swapThumbToVideo(src, selected);
+                        // The 720p hover proxy, not the master (MPI-633). A decoder
+                        // works at the clip's NATIVE resolution however small the card
+                        // is — measured identical for the same clip across 4.4x the
+                        // painted area — so a 3000x1280 master costs ~65-81 MB per
+                        // promoted card against ~11-21 MB for its proxy. The viewer
+                        // still opens `filePath`, and so do drag-out and reveal, which
+                        // read the item rather than this element. `proxyPath` is absent
+                        // for a clip already at or under 720p: the master IS the proxy.
+                        _swapThumbToVideo(selected?.proxyPath || src, selected);
                     } else {
-                        // MPI-319: render the small gallery thumb (a 512px JPG)
-                        // when present, not the full-res original — decoding 100+
-                        // 4K PNGs is what jammed scrolling. Full-res still opens in
-                        // the viewer (which reads filePath). Older items without a
-                        // thumb fall back to filePath.
-                        _swapThumbToImage(selected?.thumbPath || src, selected);
+                        // MPI-319: render a gallery rendition, not the full-res
+                        // original — decoding 100+ 4K PNGs is what jammed scrolling.
+                        // Full-res still opens in the viewer (which reads filePath).
+                        // MPI-633: WHICH rendition depends on the card's box and on
+                        // whether it is on screen; off-screen and un-measured cards
+                        // both land on the 512 thumb, which is the cheap first paint
+                        // this path always did. Older items without one fall back to
+                        // filePath.
+                        _swapThumbToImage(_imageSrcFor(selected), selected);
                     }
                 } else {
                     _swapThumbToEmpty();
@@ -1639,6 +1727,11 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 sel?.id || '',
                 sel?.filePath || '',
                 sel?.thumbPath || '',
+                // The backfill's usual patch is a thumbPathLg landing on an item whose
+                // thumbPath was already right — without this the card would never
+                // repaint and the ladder would look broken on existing projects.
+                sel?.thumbPathLg || '',
+                sel?.proxyPath || '',
                 sel?.type || '',
                 sel?.stage || '',
                 sel?.operation || '',
@@ -1765,14 +1858,18 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
                         rowEl.appendChild(wrapper);
 
-                        // Observe for lazy video promotion AND for scroll-away demotion
-                        // (both no-ops for image cards). `observe` on an already-observed
-                        // target is a spec no-op, so re-running this on every render
-                        // costs nothing (MPI-631).
-                        if (group.type === 'video') {
-                            promoteObserver.observe(wrapper);
-                            demoteObserver.observe(wrapper);
-                        }
+                        // The card's rendition tier is chosen from the box the packer
+                        // just handed it, so this must run on EVERY justified render —
+                        // a slider move or a resize changes the box without changing
+                        // anything the render key covers (MPI-633).
+                        card.el.setRenderBox?.(width, height);
+
+                        // Observe for lazy promotion AND scroll-away demotion — a video
+                        // card's decoder, an image card's large rendition. `observe` on
+                        // an already-observed target is a spec no-op, so re-running this
+                        // on every render costs nothing (MPI-631).
+                        promoteObserver.observe(wrapper);
+                        demoteObserver.observe(wrapper);
 
                         if (group.isGenerating) {
                             card.el.setGenerating(group.latestPreviewUrl ?? null);
@@ -1820,11 +1917,19 @@ export const MpiGalleryGrid = ComponentFactory.create({
         // observed. `_promoteVideo` self-guards on `_videoPromoted`, so a repeat
         // notification is a cheap no-op, and a card demoted by a suspension can
         // promote again when it next scrolls into view.
+        //
+        // MPI-633: IMAGE cards ride the same pair. A video card promotes a decoder, an
+        // image card promotes a bigger rendition — different resources, identical
+        // question ("is this card worth paying for right now?"), so a second pair of
+        // observers with the same two margins would only be a way for the two answers
+        // to drift apart.
         const promoteObserver = new IntersectionObserver((entries) => {
             for (const entry of entries) {
                 if (!entry.isIntersecting) continue;
                 const groupId = entry.target.dataset.groupId;
-                _cardMap.get(groupId)?.card?.el?.promoteVideo?.();
+                const cardEl = _cardMap.get(groupId)?.card?.el;
+                cardEl?.promoteVideo?.();
+                cardEl?.promoteImage?.();
             }
         }, {
             root: grid,
@@ -1846,7 +1951,9 @@ export const MpiGalleryGrid = ComponentFactory.create({
             for (const entry of entries) {
                 if (entry.isIntersecting) continue;
                 const groupId = entry.target.dataset.groupId;
-                _cardMap.get(groupId)?.card?.el?.demoteVideo?.();
+                const cardEl = _cardMap.get(groupId)?.card?.el;
+                cardEl?.demoteVideo?.();
+                cardEl?.demoteImage?.();
             }
         }, {
             root: grid,
@@ -1864,6 +1971,23 @@ export const MpiGalleryGrid = ComponentFactory.create({
             _cardMap.forEach(({ card }) => card.el.demoteVideo?.());
         }
 
+        // Every card whose wrapper is inside the promote band, by the same margin the
+        // observer uses — if the two ever disagree, a manual sweep paints a different
+        // band than scrolling does.
+        function _forEachCardInBand(fn) {
+            const gr = grid.getBoundingClientRect();
+            const top = gr.top - PROMOTE_MARGIN_PX;
+            const bottom = gr.bottom + PROMOTE_MARGIN_PX;
+            _cardMap.forEach(({ card, el: wrapper }) => {
+                const r = wrapper.getBoundingClientRect();
+                if (r.bottom >= top && r.top <= bottom) fn(card.el);
+            });
+        }
+
+        function _promoteVisibleImages() {
+            _forEachCardInBand((el) => el.promoteImage?.());
+        }
+
         // Drop one hold. Promotion resumes only when the LAST one goes.
         function _resumeMedia(reason) {
             if (!_mediaHolds.delete(reason)) return;
@@ -1872,13 +1996,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
             // were suspended — so re-observing fires nothing and the visible band
             // would sit unpromoted until the next scroll. Promote what is on screen
             // by hand, using the same margin the observer does.
-            const gr = grid.getBoundingClientRect();
-            const top = gr.top - PROMOTE_MARGIN_PX;
-            const bottom = gr.bottom + PROMOTE_MARGIN_PX;
-            _cardMap.forEach(({ card, el: wrapper }) => {
-                const r = wrapper.getBoundingClientRect();
-                if (r.bottom >= top && r.top <= bottom) card.el.promoteVideo?.();
-            });
+            _forEachCardInBand((el) => el.promoteVideo?.());
         }
 
         const resizeObserver = new ResizeObserver((entries) => {
@@ -1916,6 +2034,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 // re-fire — the pointer didn't move, the scroll did).
                 if (_overlayOpen) return; // an overlay opened mid-scroll (MPI-570)
                 qs('.mpi-group-card:hover', grid)?._hoverPlay?.();
+                // The band you came to rest on gets its large renditions now. The
+                // observer only reports intersection CHANGES and nothing moves once
+                // the scroll stops, so a card the gate refused mid-scroll would sit
+                // on the 512 thumb until the next scroll without this sweep — the
+                // same reason `_resumeMedia` sweeps by hand (MPI-631).
+                _promoteVisibleImages();
             }, 150);
         }, { passive: true }));
         _unsubs.push(() => { if (_scrollIdleTimer) clearTimeout(_scrollIdleTimer); });
