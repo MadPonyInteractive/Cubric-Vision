@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-634",
+  "title": "Flow Library: Image / Video / Audio section headers",
+  "description": "The Flow Library grid was one undifferentiated sheet, so nothing said whether a flow produced an image, a video or audio. Split it into labelled output-type sections, matching the Model Library and the model picker.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-08-28T07:27:22+01:00",
+  "updated_at": "2026-08-28T07:32:07+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

@@ -14,6 +14,20 @@ import { downloadService } from '../../../../services/downloadService.js';
 import { sizeToGb } from '../../../../data/modelConstants/footprint.js';
 import { PAGE_GALLERY } from '../../../../router.js';
 import { qs, ce, on } from '../../../../utils/dom.js';
+import { renderIcon } from '../../../../utils/icons.js';
+
+/**
+ * Output-type sections, in render order (MPI-634). A flow's tile is the same 4/5
+ * still whatever it produces, so — unlike the Model Library, where the media split
+ * is also an aspect-ratio split — nothing on the grid said whether a flow made an
+ * image, a video or audio. These headers are the same ones the Model Library and
+ * the model picker already draw, so the three pickers read alike.
+ */
+const MEDIA_SECTIONS = [
+    { media: 'image', label: 'Image' },
+    { media: 'video', label: 'Video' },
+    { media: 'audio', label: 'Audio' },
+];
 
 /**
  * MpiFlowLibrary — the Flow Library overlay (MPI-256).
@@ -74,10 +88,11 @@ export const MpiFlowLibrary = ComponentFactory.create({
 
         const _unsubs = [];
 
-        // The shared tile grid (MPI-356). Patching a single tile's badge in place
-        // instead of re-rendering the whole grid (MPI-235) now goes through
-        // sheet.el.patchState(id, html).
-        let _sheet = null;
+        // One shared tile grid (MPI-356) PER output-type section (MPI-634). Patching a
+        // single tile's badge in place instead of re-rendering the whole grid (MPI-235)
+        // goes through sheet.el.patchState(id, html) — a flow lives in exactly one sheet,
+        // so the patch is a blind fan-out and the sheets that don't hold it no-op.
+        const _sheets = [];
         // Footer MpiButton instances in the OPEN detail panel — torn down on
         // close/reopen (they own their own DOM listeners).
         let _detailBtns = [];
@@ -411,8 +426,25 @@ export const MpiFlowLibrary = ComponentFactory.create({
 
         // ── Render the contact sheet ────────────────────────────────────────
         function _destroyAllTiles() {
-            _sheet?.el?.destroy?.();
-            _sheet = null;
+            _sheets.forEach(s => s?.el?.destroy?.());
+            _sheets.length = 0;
+        }
+
+        // One labelled section: header (icon + name + count) then its contact sheet.
+        // Empty section = no header, so a build with no audio flows looks exactly as it
+        // does today.
+        function _block(items, label, icon) {
+            if (!items.length) return;
+            const head = ce('div', {
+                className: `mpi-flow-library__media-head mpi-flow-library__media-head--${icon}`,
+            });
+            head.innerHTML = `${renderIcon(icon, 'sm')}<span>${label}</span><span class="mpi-flow-library__media-head-n">${items.length}</span>`;
+            bodySlot.appendChild(head);
+
+            const sheet = MpiTileSheet.mount(ce('div'), { items: items.map(_tileItem) });
+            sheet.on('select', ({ item }) => openDetail(item.source));
+            _sheets.push(sheet);
+            bodySlot.appendChild(sheet.el);
         }
 
         function renderList() {
@@ -433,9 +465,16 @@ export const MpiFlowLibrary = ComponentFactory.create({
                 return;
             }
 
-            _sheet = MpiTileSheet.mount(ce('div'), { items: flows.map(_tileItem) });
-            _sheet.on('select', ({ item }) => openDetail(item.source));
-            bodySlot.appendChild(_sheet.el);
+            for (const { media, label } of MEDIA_SECTIONS) {
+                _block(flows.filter(f => f.mediaType === media), label, media);
+            }
+            // A flow whose mediaType matches no section still gets a grid rather than
+            // silently vanishing from the library — the sections are a VIEW over the
+            // registry, not a filter on it.
+            _block(
+                flows.filter(f => !MEDIA_SECTIONS.some(s => s.media === f.mediaType)),
+                'Other', 'info',
+            );
         }
 
         // ── Re-derive a single flow's badge (+ its open detail footer) in place ──
@@ -444,7 +483,7 @@ export const MpiFlowLibrary = ComponentFactory.create({
         function _patchTile(flowId) {
             const flow = listFlows().find(a => a.id === flowId);
             if (!flow) return;
-            _sheet?.el?.patchState(flowId, _badgeHtml(flow));
+            _sheets.forEach(s => s?.el?.patchState(flowId, _badgeHtml(flow)));
             if (_activeDetail && _activeDetail.id === flowId) openDetail(flow);
         }
 

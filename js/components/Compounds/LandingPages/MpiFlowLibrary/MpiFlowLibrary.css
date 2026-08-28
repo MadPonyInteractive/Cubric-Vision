@@ -74,6 +74,25 @@
 .mpi-flow-library__body::-webkit-scrollbar-thumb { background: var(--line); }
 .mpi-flow-library__body::-webkit-scrollbar-track { background: transparent; }
 
+/* Output-type section headers (MPI-634) — the twin of the Model Library's and the
+   model picker's `__media-head`, so the three pickers read alike. Video keeps the
+   frost those two already use; audio takes warn because ok/green is spoken for by
+   the Ready chip right below it in the same grid (MpiTileSheet.css). */
+.mpi-flow-library__media-head {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    font-size: var(--t-2xs);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-4);
+    margin: var(--s-4) 0 var(--s-3);
+}
+.mpi-flow-library__media-head--video { color: var(--accent-frost); }
+.mpi-flow-library__media-head--audio { color: var(--accent-warn); }
+.mpi-flow-library__media-head .mpi-icon { width: 12px; height: 12px; }
+.mpi-flow-library__media-head-n { color: var(--ink-3); }
+
 .mpi-flow-library__empty {
     padding: var(--s-6) 0;
     color: var(--ink-4);

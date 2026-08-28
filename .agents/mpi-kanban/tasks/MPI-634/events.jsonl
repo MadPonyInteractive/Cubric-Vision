@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-634", "at": "2026-08-28T07:27:22+01:00", "actor": "claude", "column": "doing", "title": "Flow Library: Image / Video / Audio section headers"}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-634", "at": "2026-08-28T07:32:07+01:00", "actor": "claude", "from": "doing", "to": "done", "reason": "Section headers shipped and verified live: 3 sheets, 12 tiles, correct counts/colours; lint clean, 761 tests pass."}
