@@ -428,20 +428,49 @@ test('the Character Sheet fills its ONE LoRA rack, and no flat or phase-2 rack s
         n.class_type === 'RemoveBackground' || n.class_type === 'LoadBackgroundRemovalModel'),
     'the subject matte must not come from a background-removal model — that is what dropped the staffs');
 
-    const bgVocab = Object.values(sheet)
-        .filter(n => n.class_type === 'SAM3_Detect')
-        .map(n => sheet[n.inputs?.conditioning?.[0]]?.inputs?.text)
-        .find(text => typeof text === 'string' && text.includes('background'));
-    assert.ok(bgVocab, 'the sheet needs a SAM3_Detect prompted with "background" to build the matte');
+    // THE WHOLE-SHEET MATTE IS GONE, DELIBERATELY (2026-08-28). This block used to pin a
+    // SAM3_Detect prompted "background:3" and its `:N` cap. That matte was only ever there
+    // to repaint the backdrop flat, and repainting is what made every defect visible: the
+    // plate is a fixed 0x808080 while the model generates its card at RGB ~176 under turbo
+    // and ~137 at 25 steps, so a mismatch of up to 114 levels lit up every pixel the matte
+    // missed. Measured, not guessed. The card the model produces is already flat (std 2.8),
+    // so the repaint bought nothing and cost the entire artefact class.
+    //
+    // The sheet now composites ONLY the head hole, and only when Remove Head is on. Three
+    // things have to hold for that to stay true, and each has a way of silently regressing.
 
-    // `max_detections` DEFAULTS TO 1 (comfy/text_encoders/sam3_clip.py `_parse_prompts`),
-    // and the cap is applied AFTER thresholding — `order = scores.argsort(...)[:max_det]`
-    // in comfy_extras/nodes_sam3.py. The sheet has three panels, so a bare "background"
-    // mattes ONE of them and greys the other two. It fails silently: a plausible image
-    // comes back and only a careful look at the sheet shows it. The `:N` suffix is the
-    // only thing preventing that, which is why it is pinned here and not merely commented.
-    assert.match(bgVocab, /background\s*:\s*[2-9]/,
-        'the background vocabulary must carry an explicit ":N" — max_detections defaults to 1 and would matte one panel of three');
+    // 1. The composite is masked by the HEAD mask, not a full-sheet matte. If this ever
+    //    widens back to a sheet-sized mask, the backdrop is being repainted again.
+    const composite = Object.entries(sheet).find(([, n]) => n.class_type === 'ImageCompositeMasked');
+    assert.ok(composite, 'the sheet still needs its ImageCompositeMasked to fill the head hole');
+    const maskSrc = sheet[composite[1].inputs?.mask?.[0]];
+    assert.equal(maskSrc?.class_type, 'GrowMask',
+        'the composite must be masked by the grown HEAD mask — a sheet-sized matte means the backdrop is being repainted again');
+
+    // 2. The fill colour is SAMPLED FROM THE SHEET, never a constant. An EmptyImage here is
+    //    the exact bug this replaced: a fixed grey cannot match a backdrop the model picks
+    //    per run, and the head hole reads as a grey blob. Walk the source chain to a crop.
+    assert.ok(!Object.values(sheet).some(n => n.class_type === 'EmptyImage'),
+        'the head fill must be sampled from the sheet — an EmptyImage constant is the grey-blob bug');
+    let src = sheet[composite[1].inputs?.source?.[0]];
+    let srcHops = 0;
+    while (src && srcHops < 4 && !/Crop/i.test(src.class_type)) {
+        src = sheet[src.inputs?.image?.[0]];
+        srcHops += 1;
+    }
+    assert.ok(src && /Crop/i.test(src.class_type),
+        'the composite source must trace back to a crop of the sheet — that crop IS the colour sample');
+
+    // 3. Remove Head OFF must return the sheet UNTOUCHED. This is what guarantees no
+    //    backdrop artefact can exist on the common path; without the gate, the composite
+    //    runs on every generation exactly as the old matte did.
+    const gate = Object.values(sheet).find(n =>
+        n.class_type === 'MpiIfElse' && String(n.inputs?.true?.[0]) === composite[0]);
+    assert.ok(gate, 'the composite must sit behind an MpiIfElse — it may not run when Remove Head is off');
+    assert.equal(sheet[gate.inputs?.boolean?.[0]]?._meta?.title, 'Input_Remove_Head',
+        'the composite gate must be driven by Input_Remove_Head');
+    assert.equal(sheet[gate.inputs?.false?.[0]]?._meta?.title, 'Character Sheet Generation Image Output',
+        'with Remove Head off the flow must emit the untouched sheet');
 });
 
 test('the Outpaint arms match the weights and the twin graph (MPI-594)', async () => {

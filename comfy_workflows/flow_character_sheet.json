@@ -108,7 +108,7 @@
   },
   "112": {
     "inputs": {
-      "string": "An eighty-year-old wizard with a long beard a pointy hat and fully white eyes with no iris, holding a large staff with a blue jewel on its handle "
+      "string": "An eighty-year-old wizard with a long beard a pointy hat and fully white eyes with no iris, holding a large staff with a blue jewel on its handle. "
     },
     "class_type": "MpiText",
     "_meta": {
@@ -463,18 +463,6 @@
       "title": "Mpi Clear Vram"
     }
   },
-  "494": {
-    "inputs": {
-      "images": [
-        "851",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Output_Image"
-    }
-  },
   "503": {
     "inputs": {
       "int": 976866873950
@@ -503,7 +491,7 @@
   },
   "617": {
     "inputs": {
-      "boolean": true
+      "boolean": false
     },
     "class_type": "MpiSimpleBoolean",
     "_meta": {
@@ -570,7 +558,7 @@
   },
   "668": {
     "inputs": {
-      "value": "Anime character reference sheet of [CHARACTER PROMPT], drawn as a key character for an animated feature. A single continuous cel-shaded illustration containing three views of the same character arranged side by side in one unbroken frame, the grey background flowing continuously behind all three, the same character in every view with identical face, hair and wardrobe. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, a gentle three-quarter angle close to frontal, the whole nose clearly visible with both nostrils and the tip of the nose sitting well inside the outline of the face, both cheeks visible, both eyes visible and looking at the viewer, neutral expression, mouth closed, face sharp and clear, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms hanging loose and relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Plain smooth eighteen percent grey card seamless studio background, flat neutral grey. Extremely even flat frontal illumination, soft open shadows, uniform brightness from edge to edge. Crisp line art with flat cel-shaded colour fills, clean anime eyes with a small bright highlight in each pupil, model-sheet clarity."
+      "value": "Anime character reference sheet of [CHARACTER PROMPT], drawn as a key character for an animated feature, one continuous cel-shaded illustration containing three views of the same character arranged side by side in a single unbroken frame, the same character in every view with identical face, hair and wardrobe. The character is drawn with crisp line art and cel-shaded colour fills with clear soft shading that gives the figure depth and form, its colours and values kept distinctly deeper and richer than the background so the silhouette reads cleanly against it, clean anime eyes with a small bright highlight in each pupil. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, the whole nose clearly visible with both nostrils, both cheeks visible, both eyes visible and looking at the viewer, neutral expression, mouth closed, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Behind all three views the background is a plain seamless mid grey studio card, smooth and evenly lit with no gradient, no vignette and no shadow falling on it. Model-sheet clarity."
     },
     "class_type": "PrimitiveStringMultiline",
     "_meta": {
@@ -579,7 +567,7 @@
   },
   "669": {
     "inputs": {
-      "value": "2D cartoon character reference sheet of [CHARACTER PROMPT], drawn as a hero character for an animated series. A single continuous flat-colour illustration containing three views of the same character arranged side by side in one unbroken frame, the grey background flowing continuously behind all three, the same character in every view with identical face, hair and wardrobe. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, a gentle three-quarter angle close to frontal, the whole nose clearly visible with both nostrils and the tip of the nose sitting well inside the outline of the face, both cheeks visible, both eyes visible and looking at the viewer, neutral expression, mouth closed, face sharp and clear, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms hanging loose and relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Plain smooth eighteen percent grey card seamless studio background, flat neutral grey. Extremely even flat frontal illumination, soft open shadows, uniform brightness from edge to edge. Bold clean outlines with flat colour fills and simple soft shading, expressive eyes with a small bright highlight in each pupil, model-sheet clarity."
+      "value": "2D cartoon character reference sheet of [CHARACTER PROMPT], drawn as a hero character for an animated series, one continuous illustration containing three views of the same character arranged side by side in a single unbroken frame, the same character in every view with identical face, hair and wardrobe. The character is drawn with bold clean outlines and solid colour fills with clear soft shading that gives the figure depth and form, its colours and values kept distinctly deeper and richer than the background so the silhouette reads cleanly against it. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, the whole nose clearly visible with both nostrils, both cheeks visible, both eyes visible and looking at the viewer, neutral expression, mouth closed, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Behind all three views the background is a plain seamless light grey studio card, smooth and evenly lit with no gradient, no vignette and no shadow falling on it. Model-sheet clarity."
     },
     "class_type": "PrimitiveStringMultiline",
     "_meta": {
@@ -616,7 +604,7 @@
   },
   "671": {
     "inputs": {
-      "int": 1
+      "int": 3
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -684,7 +672,7 @@
   },
   "737": {
     "inputs": {
-      "boolean": false
+      "boolean": true
     },
     "class_type": "MpiSimpleBoolean",
     "_meta": {
@@ -694,11 +682,11 @@
   "742": {
     "inputs": {
       "true": [
-        "858",
+        "883",
         0
       ],
       "false": [
-        "874",
+        "730",
         0
       ],
       "boolean": [
@@ -923,41 +911,6 @@
       "title": "left 25% of the sheet width"
     }
   },
-  "851": {
-    "inputs": {
-      "x": 0,
-      "y": 0,
-      "resize_source": true,
-      "destination": [
-        "730",
-        0
-      ],
-      "source": [
-        "852",
-        0
-      ],
-      "mask": [
-        "859",
-        0
-      ]
-    },
-    "class_type": "ImageCompositeMasked",
-    "_meta": {
-      "title": "Image Composite Masked"
-    }
-  },
-  "852": {
-    "inputs": {
-      "width": 512,
-      "height": 512,
-      "batch_size": 1,
-      "color": 8421504
-    },
-    "class_type": "EmptyImage",
-    "_meta": {
-      "title": "Empty Image"
-    }
-  },
   "854": {
     "inputs": {
       "expand": 6,
@@ -972,95 +925,66 @@
       "title": "Grow Mask"
     }
   },
-  "858": {
+  "882": {
     "inputs": {
-      "x": 0,
-      "y": 0,
-      "operation": "subtract",
-      "destination": [
-        "874",
-        0
-      ],
-      "source": [
-        "854",
-        0
-      ]
-    },
-    "class_type": "MaskComposite",
-    "_meta": {
-      "title": "Combine Masks"
-    }
-  },
-  "859": {
-    "inputs": {
-      "mask": [
+      "images": [
         "742",
         0
       ]
     },
-    "class_type": "InvertMask",
+    "class_type": "PreviewImage",
     "_meta": {
-      "title": "Invert Mask"
+      "title": "Output_Image"
     }
   },
-  "864": {
-    "inputs": {
-      "threshold": 0.5,
-      "refine_iterations": 2,
-      "individual_masks": false,
-      "model": [
-        "753",
-        0
-      ],
-      "image": [
-        "730",
-        0
-      ],
-      "conditioning": [
-        "866",
-        0
-      ]
-    },
-    "class_type": "SAM3_Detect",
-    "_meta": {
-      "title": "char"
-    }
-  },
-  "866": {
-    "inputs": {
-      "text": "background:3",
-      "clip": [
-        "753",
-        1
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "SAM3 vocabulary"
-    }
-  },
-  "868": {
+  "883": {
     "inputs": {
       "x": 0,
       "y": 0,
-      "operation": "add",
+      "resize_source": true,
       "destination": [
-        "870",
+        "730",
         0
       ],
       "source": [
-        "864",
+        "889",
+        0
+      ],
+      "mask": [
+        "854",
         0
       ]
     },
-    "class_type": "MaskComposite",
+    "class_type": "ImageCompositeMasked",
     "_meta": {
-      "title": "paste the head mask back at full size"
+      "title": "Image Composite Masked"
     }
   },
-  "870": {
+  "887": {
     "inputs": {
-      "value": 0,
+      "x": 0,
+      "y": 0,
+      "width": 32,
+      "height": 32,
+      "edge": "original",
+      "image": [
+        "730",
+        0
+      ]
+    },
+    "class_type": "Image Crop Location Exact",
+    "_meta": {
+      "title": "Image Crop Location Exact"
+    }
+  },
+  "889": {
+    "inputs": {
+      "upscale_method": "nearest-exact",
+      "crop": "disabled",
+      "image": [
+        "887",
+        0
+      ],
       "width": [
         "771",
         0
@@ -1070,41 +994,9 @@
         0
       ]
     },
-    "class_type": "SolidMask",
+    "class_type": "ImageScale",
     "_meta": {
-      "title": "empty sheet-sized canvas"
-    }
-  },
-  "874": {
-    "inputs": {
-      "mask": [
-        "875",
-        0
-      ]
-    },
-    "class_type": "InvertMask",
-    "_meta": {
-      "title": "Invert Mask"
-    }
-  },
-  "875": {
-    "inputs": {
-      "expand": 3,
-      "incremental_expandrate": 0,
-      "tapered_corners": true,
-      "flip_input": false,
-      "blur_radius": 1,
-      "lerp_alpha": 1,
-      "decay_factor": 1,
-      "fill_holes": false,
-      "mask": [
-        "868",
-        0
-      ]
-    },
-    "class_type": "GrowMaskWithBlur",
-    "_meta": {
-      "title": "Grow Mask With Blur"
+      "title": "Upscale Image"
     }
   }
 }
