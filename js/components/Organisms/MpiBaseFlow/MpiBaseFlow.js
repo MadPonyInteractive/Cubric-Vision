@@ -198,8 +198,12 @@ export const MpiBaseFlow = ComponentFactory.create({
         const _unsubs = [];
 
         // ── main-area overlay frame (spares the status bar; queue rides above) ──
+        // No X: the topbar's FLOWS button is the only exit, and it returns to the
+        // Library. The overlay's X dropped the user into the gallery instead, which
+        // read as a bug every time (MPI-638 follow-up). Escape still closes — that
+        // path runs through `ui:close-all-popups`, not the button.
         const overlay = MpiOverlay.mount(document.createElement('div'), {
-            closable: true, mountTarget: 'main-area',
+            closable: false, mountTarget: 'main-area',
         });
         overlay.el.appendToContainer(el);
         // Re-emit the overlay's close OUTWARD so the shell can destroy this instance

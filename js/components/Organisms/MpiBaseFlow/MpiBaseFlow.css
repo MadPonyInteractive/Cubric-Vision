@@ -31,11 +31,6 @@
     height: 100%;
     gap: 0;
 }
-/* The overlay's own X must sit above the flow chrome. */
-.mpi-overlay--main:has(.mpi-base-flow) .mpi-overlay__close {
-    z-index: 20;
-}
-
 .mpi-base-flow {
     /* --lib-bg is declared LOCALLY here, as it is in MpiFlowLibrary.css and
        MpiModelManager.css. Deliberate (2026-07-18): these are overlay-ground
