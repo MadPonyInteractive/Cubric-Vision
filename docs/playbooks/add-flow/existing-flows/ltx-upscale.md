@@ -51,7 +51,7 @@ An upscale improves footage the user already had, so the result pane declares a 
 (`result: { compare: 'inputVideo' }`) rather than painting a lone `<video>`: source left,
 upscaled right, draggable reveal bar, both clips frame-locked. The role names which INPUT is
 the "before" — one line, no flow code, and the same surface the History workspace uses on two
-selected entries. Contract: [04](../04-overlay-and-shell.md) § The result pane.
+selected entries. Contract: [ui/result-pane.md](../ui/result-pane.md).
 
 The 2x output and its 1x source are **different resolutions on purpose**, and that is handled:
 `MpiCanvas._drawComparisonLayer` cover-fits the after into the before's frame, so the reveal bar

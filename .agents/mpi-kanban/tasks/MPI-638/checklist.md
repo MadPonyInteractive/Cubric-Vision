@@ -52,4 +52,5 @@
 
 - [x] `docs/playbooks/add-flow/ui/lora-rack.md` — the cogwheel is one surface now, and carries no label.
 - [x] Healed in passing: `04` § Dev-gate said the gate was still on. MPI-589 lifted it.
-- [ ] OPEN: `.claude/rules/component-mounts.md:252` still describes the old mount — needs permission (CLAUDE.md rule 5).
+- [x] `.claude/rules/component-mounts.md` — permission given; four stale entries healed (two predate this card: MPI-572's per-flow component, MPI-589's dev-gate).
+- [x] `04-overlay-and-shell.md` split to meet the 200-line budget: the result-pane sections moved to `ui/result-pane.md` (213 -> 117), routed from every index.

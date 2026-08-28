@@ -3,11 +3,11 @@
   "id": "MPI-638",
   "title": "Installed Flows open straight into phase 1; the model picker moves to the run slide beside its cogwheel",
   "description": "Clicking a Ready Flow skips the detail slide-over and opens the frame, whose phase 1 already carries the same title, hero and description. The model picker follows to the run slide and pairs with the LoRA cogwheel, which drops its slot label - the dropdown names the model, so 'Render model' / 'Edit model' stop being invented per flow. Read brief.md.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "completed",
   "created_at": "2026-08-28T07:25:57Z",
-  "updated_at": "2026-08-28T07:59:53Z",
+  "updated_at": "2026-08-28T08:48:30Z",
   "labels": [
     "ux",
     "flow",
@@ -34,8 +34,8 @@
     "docs/playbooks/add-flow/any-of-models.md and 04-overlay-and-shell.md match what shipped - the latter's flow diagram still routes every open through the slide-over"
   ],
   "attention": {
-    "state": "required",
-    "reason": "Code shipped and verified (771 node + 38 desktop green, 3 mutants killed, live run on an isolated instance). Two leftovers are the user's call, not an agent's: (1) .claude/rules/component-mounts.md:252 now describes the old mount and CLAUDE.md rule 5 forbids editing .claude/rules/ without permission; (2) 04-overlay-and-shell.md is 213 lines against the 200-line budget - it was already at 196 before this card, and the documented remedy is a split it does not own.",
-    "updated_at": "2026-08-28T07:59:53Z"
+    "state": "cleared",
+    "reason": "Both permission-gated follow-ups done: the component-mounts map is healed and 04 is split under budget.",
+    "updated_at": "2026-08-28T08:48:30Z"
   }
 }

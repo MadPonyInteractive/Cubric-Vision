@@ -21,7 +21,8 @@ overlay / Flow Library. The procedure for wiring a flow is the numbered sections
 | [paint-gizmo.md](paint-gizmo.md) | **The user DRAWS** — the History paint tool's own `PaintManager` + `brushDab.js` in a step, the undo contract, and a kind returning the LAYER ALONE into its own media slot (`mediaRole`) | Scribble-to-object (MPI-567) |
 | [prompt-enhance.md](prompt-enhance.md) | **The prompt pair** — a user prompt, an `action: 'enhance'` button, an editable enhanced prompt; the media-less `fields` step that hosts them | Character Sheet (MPI-504) |
 | [switch-bank-fields.md](switch-bank-fields.md) | **One field, N graph values** — an `MpiInt` selecting `MpiAnySwitch` banks, for a preset (resolution, duration) one field cannot otherwise reach | Character Sheet (MPI-504) |
-| [lora-rack.md](lora-rack.md) | **The user's own LoRAs in a flow** — `loras: true` on a model SLOT gives that phase a rack and a cogwheel that reuses the app's Model Settings panel, plus the injection chain that makes them actually run. One rack per phase; `settingsModel` is retired | Character Sheet (MPI-504 -> MPI-608/610) |
+| [result-pane.md](result-pane.md) | **What the run slide shows once a run finishes** — the declared `result.compare` before/after, the real video player every single-video result gets, and the session snapshot that survives close -> reopen | Head Swap / LTX Upscale (MPI-585/587) |
+| [lora-rack.md](lora-rack.md) | **The user's own LoRAs in a flow** — `loras: true` on a model SLOT gives that phase a rack and a cogwheel that reuses the app's Model Settings panel, plus the injection chain that makes them actually run. One rack per phase, one cogwheel, beside that slot's model dropdown on the run slide | Character Sheet (MPI-504 -> MPI-608/610 -> MPI-638) |
 
 ## Baseline rules
 
@@ -45,8 +46,8 @@ Not yet decided — captured so the next session doesn't start cold:
   `<video>` / `<audio>` player. Open item on MPI-259 — and a hard requirement for the
   carousel's step 0 (dropped media REPLACES the slot's placeholder content) and for any box
   step (you cannot box what you cannot see).
-- **Result-pane polish.** Shape of the in-app result view (single, multi-output, latents) —
-  now specifically the carousel's last step, where Apply/Discard also live.
+- ~~**Result-pane polish.**~~ ANSWERED — [result-pane.md](result-pane.md). (Apply/Discard are
+  gone too: hold-until-Apply shipped as MPI-306 Phase 3 and was removed after the UX pass.)
 
 Answered by [carousel-frame.md](carousel-frame.md), kept here as pointers:
 

@@ -44,7 +44,7 @@ is outstanding, which does not block this flow.
   the head donor shares no framing with the output, so comparing against it would put two
   unrelated pictures either side of the bar. Outside the head the two plates are pixel-identical
   — the same property the hero's wipe is built on — so the reveal crosses one steady scene.
-  Contract: [../04-overlay-and-shell.md](../04-overlay-and-shell.md) § The result pane.
+  Contract: [../ui/result-pane.md](../ui/result-pane.md).
 - **No component (MPI-572).** The tier is a declared `radio` field (`Input_Tier`, 1/2/3) on the
   run slide; the boxes are carousel STEPS (`kind:'box'`) that declare `param: 'box1'` / `'box2'`.
   `MpiFlowHeadSwap` was deleted — those two declarations are all it ever was. See

@@ -86,15 +86,52 @@ nav, the gallery bar's Flows button and Tab are all user routes; only the Ctrl+T
 gated (`navigation.js:353`). The doc said the opposite of the code. The flow diagram carried the
 same stale "(dev-gated)" label and was corrected with it.
 
-## Open — needs the user
+## Follow-ups — CLEARED (Fabio gave permission 2026-08-28)
 
-1. **`.claude/rules/component-mounts.md:252` describes the old mount** (`.mpi-base-flow__loras`,
-   `flowLoraPhases`, `label: <slot label>` e.g. "Render model"). It is now wrong on all three.
-   CLAUDE.md § Cardinal Rule 5 forbids editing `.claude/rules/` without explicit permission, so it
-   was left alone — say the word and it is a two-line fix, or `/mpi-component-audit`'s map refresh
-   will take it.
-2. **`04-overlay-and-shell.md` is 213 lines against the 200-line budget** (`docs/README.md:11`).
-   It was already at 196 before this card — 4 lines of headroom — and this added ~17 of load-
-   bearing content after two compression passes. The documented remedy is a split, which is its
-   own piece of work on a file this card does not own. Flagging rather than silently breaching or
-   silently restructuring.
+### `.claude/rules/component-mounts.md`
+
+Permission was needed because CLAUDE.md § Cardinal Rule 5 forbids editing `.claude/rules/`
+unasked. Four entries were wrong, and only one of them was mine:
+
+| Entry | Was | Now |
+|---|---|---|
+| `MpiBaseFlow` internal mounts | `MpiButton` cogwheel with `label: <slot label>` in `.mpi-base-flow__loras`, from `flowLoraPhases` | the `[dropdown][cog]` row, from `flowModelSlots` + `flowModelIds`, no text label, `_destroyModelBtns` |
+| `MpiBaseFlow` internal mounts | `<per-Flow uiComponent>` (e.g. `MpiFlowHeadSwap`) mounted into the content slot | **stale since MPI-572** — no per-flow component exists; declared `fields` render through `buildField` |
+| `MpiBaseFlow` singleton entry | `props: { flow, uiComponent: Blueprint\|null }`, "maps `uiComponent` NAME -> blueprint" | `props: { flow, initialInputs? }` |
+| `MpiFlowLibrary` singleton entry | "**Dev-gated** — the only emitters of `flows:open` … are `APP_CONFIG.dev_mode`-gated" | **stale since MPI-589** — three user routes; only the Ctrl+Tab radial is gated. Plus the MPI-638 `_pick` branch |
+
+The `MpiFlowLibrary` internal-mounts section also gained the model dropdown (it was never
+listed) and a note that the cogwheel is gone from there.
+
+Two of the four predate this card by weeks. Verified against the code before rewriting
+(`grep MpiFlowHeadSwap\|_flowComponents\|uiComponent js/` returns only comments about their
+removal; `projectUI.js:79` and `navigation.js:73` carry the MPI-589 un-gating).
+
+### The 200-line budget on `04-overlay-and-shell.md`
+
+Split, which is what `docs/README.md:11` prescribes. The three **result pane** sections
+(`result.compare`, the video player, surviving close -> reopen) moved to
+`docs/playbooks/add-flow/ui/result-pane.md` — one subject, 103 lines, and the bulk of the file.
+
+- `04-overlay-and-shell.md`: 213 -> **117**
+- `ui/result-pane.md`: **109** (new)
+
+Routed from every index that pointed at the moved sections: `ui/README.md` (pattern table, and
+its "Result-pane polish" open item is now answered), `add-flow/README.md` (section table + two
+checklist rows), `docs/flows.md` (topic table), and the two existing-flow files that cited
+"§ The result pane" by name (`head-swap.md`, `ltx-upscale.md`). A relative-link sweep over
+`docs/` finds no dead links from this move; the two it does find are pre-existing and unrelated
+(`2026-06-14-v1.0.1.md -> patch-distribution.md`, and a `file://` absolute in `mpi-nodes.md`).
+
+`npm test` re-run after the moves: 771 pass, 0 fail.
+
+## Noted, NOT actioned
+
+- `docs/playbooks/add-flow/ui/carousel-frame.md` is **496 lines** against the same 200-line
+  budget and is not on the exempt list. Pre-existing, nothing to do with this card, and a split
+  of it is real work with real judgement in it. Flagging only.
+- While these docs were being written, a peer session had **uncommitted edits live in
+  `MpiBaseFlow.js`/`.css`** — one tagged as an MPI-638 follow-up (`closable: false`, dropping the
+  overlay X so the topbar's Flows button is the only exit) and one MPI-607 voice-library change.
+  Left untouched and not committed. The docs here deliberately do not describe the X change: it
+  is uncommitted and could still be revised.
