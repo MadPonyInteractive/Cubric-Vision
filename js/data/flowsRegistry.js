@@ -1559,10 +1559,22 @@ export const FLOWS = [
     {
         id: 'drama-box',
         title: 'DramaBox',
-        // No `preview`/`video` yet — the tile art is /mpi-flow-graphics' job and
-        // `object-stamp` already ships this way. Naming art that does not exist 404s
-        // the Library tile and reddens the desktop suite, so the key stays absent
-        // until the webp and the mp4 are actually made.
+        // Both drawn from ONE real run of this graph on the app engine (6.09s of audio,
+        // prompt-only route, no voice reference). The flow changes nothing you can see
+        // and the hero is muted, so a before/after would be two identical panels — the
+        // device animates the ADDED CHANNEL instead. What makes it DramaBox rather than
+        // Voice Changer is that the source is TEXT: the written line holds still while
+        // the voice it becomes draws itself underneath, in sync, with the playhead on
+        // the reveal edge in frost. The waveform then fades back to nothing, so the last
+        // frame and the first are the same picture and the loop point is invisible.
+        //
+        // The tile is NOT a crop of the hero. The hero's sentence is ~890px of a 1280
+        // frame, so a 4/5 cover crop takes a 640-wide slice and cuts it in half; and at
+        // the grid's 220px that 46px type lands at 11px and reads as texture. The tile
+        // re-sets the same line as three short rows at 95px — ~23px on the grid, still
+        // readable — over the same waveform, fully drawn.
+        preview: 'flow-drama-box.webp',
+        video: 'flow-drama-box.mp4',
         description: 'Write a line, pick a voice, and hear it performed. Hand DramaBox a sample of the voice you want and it holds onto that voice — the same person, saying something they never said.',
         requiredModels: [],
         requiredDeps: [
