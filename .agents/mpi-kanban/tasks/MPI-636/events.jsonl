@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-636", "at": "2026-08-28T07:42:33+01:00", "actor": "claude", "column": "doing", "title": "Knowledge heal: audio is a legal flow mediaType, and the isolated-launch lock signature has an orphan cause"}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-636", "at": "2026-08-28T07:43:21+01:00", "actor": "claude", "from": "doing", "to": "done", "reason": "Both approved doc heals applied and read back; claims verified against source first."}

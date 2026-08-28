@@ -217,8 +217,13 @@ prints `READY <url>`. Drive that URL, never 3000.
 - **Two agents both running it COLLIDE** on the `userData`-keyed single-instance lock (the profile
   path is fixed). The second dies at ~0.06s, exit 0, having logged only an `EPERM` mask-temp prune
   and `Splash failed to load: ERR_FAILED (-2)` — which reads as a corrupted profile and is not.
+  **The peer need not be alive**: an ORPHAN Electron from a dead session still holds the lock and
+  prints the identical signature, so a hunt for a live peer finds nothing and the failure keeps
+  looking like a broken app (2026-08-28). The `EPERM` prune on the profile directory is the tell
+  that SOMETHING still owns it.
   `CUBRIC_AGENT_PROFILE=<fresh dir>` gives you your own lock but an UNCONFIGURED profile (no models
-  root). **The cheap move is usually not to launch at all**: check for a peer
+  root) — which is the whole fix when you only need a UI check, and it beats killing a process you
+  have not identified. **The cheap move is usually not to launch at all**: check for a peer
   (`Get-CimInstance Win32_Process` filtered to `electron.exe .`) and drive the shared engine on
   48188 directly — every instance points at the same one.
 - **It has no RunPod API key**, deliberately. Anything that must rent a Pod has to run against an

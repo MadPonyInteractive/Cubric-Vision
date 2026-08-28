@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-636",
+  "title": "Knowledge heal: audio is a legal flow mediaType, and the isolated-launch lock signature has an orphan cause",
+  "description": "Two doc lines contradicting the code, found during MPI-634/635 close-out. add-flow/01 says mediaType is image|video while audio is legal and three audio flows ship; testing-harnesses frames the single-instance lock signature as a live-peer collision when a dead session's orphan prints the same thing.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-08-28T07:42:33+01:00",
+  "updated_at": "2026-08-28T07:43:21+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

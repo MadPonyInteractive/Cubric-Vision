@@ -83,7 +83,8 @@ cargo-cult install-sync machinery from modelRegistry).
   operation,      // the universal-op key from commandRegistry.js
   workflow,       // the workflow filename from universal_workflows.js
   fields,         // declared run-slide controls (MPI-531) — the SAME `fields` a step declares
-  mediaType,      // 'image' | 'video' — the OUTPUT type (always required)
+  mediaType,      // 'image' | 'video' | 'audio' — the OUTPUT type (always required).
+                  // Also picks the Flow Library section the flow lands under (MPI-634).
   inputSchema,    // { positive?: 'string', media?: [ ...slot groups ] }
 }
 ```
