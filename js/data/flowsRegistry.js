@@ -1408,8 +1408,10 @@ export const FLOWS = [
     {
         id: 'chatter-box',
         title: 'Text to Speech',
-        // No `preview`/`video` yet — /mpi-flow-graphics work, same as drama-box and
-        // object-stamp. A descriptor naming art that does not exist 404s the tile.
+        // No `preview`/`video` yet — the LAST flow without art, now that drama-box and
+        // object-stamp both have theirs. Absent rather than pointing at a file that does
+        // not exist: a descriptor naming missing art 404s the tile and reddens the
+        // desktop suite. Blocked on a real run — see the doc's "Not done yet".
         description: 'Type a line and hear it spoken. Give Chatterbox a sample of the voice you want it in, pick a language, and it reads your text in that voice — then optionally converts the result onto a second voice entirely.',
         requiredModels: [],
         requiredDeps: [
@@ -1575,7 +1577,14 @@ export const FLOWS = [
         // readable — over the same waveform, fully drawn.
         preview: 'flow-drama-box.webp',
         video: 'flow-drama-box.mp4',
-        description: 'Write a line, pick a voice, and hear it performed. Hand DramaBox a sample of the voice you want and it holds onto that voice — the same person, saying something they never said.',
+        // BOTH audio flows are text-to-speech; the description has to say what makes THIS
+        // one different or the pair reads as duplicates (Fabio, on the slide-over copy).
+        // The split is real and it is in the graph: Chatterbox NEEDS a voice supplied
+        // (MpiLoadAudio#54 carries `block_if_empty`), while this graph FORKS on the voice
+        // slot and its prompt-only arm invents a speaker from the words alone. So the
+        // claim is direction — emotion, accent and character written into the line — with
+        // a reference as the OPTION rather than the requirement.
+        description: 'Text to speech you direct in words. Describe the speaker and the performance in the line itself — an exhausted old man, a British woman, someone barely holding it together — and DramaBox builds a voice to match, from nothing. Or hand it a sample and it will hold onto that voice instead, saying something the person never said.',
         requiredModels: [],
         requiredDeps: [
             // The DiT + audio components, then the 4-bit Gemma-3-12B text encoder as
@@ -1677,13 +1686,13 @@ export const FLOWS = [
     {
         id: 'object-stamp',
         title: 'Object Stamp',
-        // NO `preview` / `video` — the art does not exist yet, and ABSENT is the correct
-        // state while it is missing. Both fields are optional and every consumer guards
-        // them (`MpiFlowLibrary.js` ~333, `MpiTileSheet.js` ~137). Draw It In declared
-        // this pair before the files were made, the tile 404'd, and because
-        // `tests/desktop/flows-tab-ring.spec.js` asserts `consoleErrors` is empty in
-        // three places that held master's CI RED for a day and eight pushes. Run
-        // `/mpi-flow-graphics` first, then add the names.
+        // Both cut from ONE real run — `t2i_003` -> `flowObjectStamp_003`, the cleanest
+        // pair in the test corpus at 1.09% of pixels changed. The hero is deliberately
+        // NOT full frame: the candlestick body is only 53px of 1280, so a full-width
+        // wipe would have crossed identical pixels for ~45% of its travel, which is the
+        // dead-air failure Outpaint's first hero was thrown away for.
+        preview: 'flow-object-stamp.webp',
+        video: 'flow-object-stamp.mp4',
         description: 'Take an object out of one photo and put it into another — a mug on your desk, a lamp in your living room, a bag on a chair. The object keeps its own shape and markings, and the flow lights it with the scene it lands in, resting it on the surface it touches and giving it a shadow that matches the ones already there. You clean the object up first, then say where it goes.',
         // ONE slot, 9B only. 4B was tested and FAILED (Fabio, 2026-08-26) — the same
         // call Draw It In made, for the same reason: under load 4B follows the source

@@ -25,10 +25,24 @@
 performances to Chatterbox. Chatterbox just deviates a lot from the original voice, and
 DramaBox doesn't."*
 
-Holding a supplied voice is therefore the whole product claim. **Being more expressive is
-not** — a single reference plus a prompted emotion delivered "not greatly, but that might
-be prompting", and promising expressiveness would be promising the thing that measured
-worst. The FlowDef's description is written to that line; do not widen it.
+So holding a supplied voice is a real claim, and **being more expressive than Chatterbox is
+not** — a single reference plus a prompted emotion delivered "not greatly, but that might be
+prompting". Do not promise expressiveness as a comparison.
+
+**But the description must lead with DIRECTION, not identity** (Fabio, 2026-08-28, reading
+the slide-over). Both audio flows are text-to-speech, so a description that only says "hear
+your line performed" makes the pair read as duplicates. The distinguishing thing is in the
+graph, not in the marketing:
+
+| | Text to Speech (Chatterbox) | DramaBox |
+|---|---|---|
+| voice source | **required** — `MpiLoadAudio#54` carries `block_if_empty` | **optional** — `MpiAnyChecker#14` forks to a sampler with no `voice_ref` |
+| with no sample | cannot run | invents a speaker from the words |
+| how you ask for a performance | you cannot | **write it into the line** |
+
+That is why the prompt-only arm is not a fallback but the pitch: *"an exhausted old man"*,
+*"a British woman"*, *"someone barely holding it together"* are the controls. Emotion goes in
+the text, never in a slider — which is also why this flow has no exaggeration knob.
 
 ## 🔴 The duration slider is the single biggest quality control
 

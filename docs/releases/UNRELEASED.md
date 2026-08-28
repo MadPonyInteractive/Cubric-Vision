@@ -179,16 +179,16 @@
   than a committed one. It runs on Chatterbox, which the flow brings itself — about a gigabyte,
   and no model from the Library is needed.
 
-- **DramaBox** writes the performance for you. Type the line, give it a sample of the voice you
-  want, set how long the delivery should take, and run. Where Voice Changer needs a recording of
-  you and keeps your delivery, this one starts from nothing but the words — so it is the one to
-  reach for when there is no take to work from, or the voice is not yours to perform.
+- **DramaBox** is text to speech you direct in words. Both audio flows read your writing aloud;
+  the difference is that Text to Speech needs a voice to copy, and this one lets you describe the
+  speaker instead — an exhausted old man, a British woman, someone barely holding it together —
+  and builds a voice to fit, from nothing. That is also how you ask for a performance: the
+  emotion goes in the line, not in a slider.
 
-  What it is unusually good at is staying on the voice you gave it. Hand it a sample and the
-  result keeps sounding like that person, line after line, which is the hard part of putting a
-  character in more than one scene. You can also skip the sample entirely and describe the
-  speaker in the line itself — "a British woman says…" — though only accents the model knows
-  will land, so treat that as a happy accident rather than a setting.
+  Give it a voice sample and it works the other way round, holding onto that voice line after
+  line, which is the hard part of putting one character in more than one scene. Accents work the
+  same way — write one in and it will often land, though only the ones the model already knows,
+  so treat it as something to try rather than a guarantee.
 
   Set the seconds deliberately: it is the control that matters most here. Left to guess, the
   model tends to pad the take out or read your instructions back at you, and telling it how long
