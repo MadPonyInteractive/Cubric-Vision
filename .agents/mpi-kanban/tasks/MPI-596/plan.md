@@ -11,7 +11,18 @@ this plan does not restate it. Graphics are a separate `/mpi-flow-graphics` pass
 
 ## Current State
 
-Project mode: `scalable-foundation`. Card is in `doing`.
+Project mode: `scalable-foundation`. Card is in `doing`, and **everything is shipped** —
+flow (`c7bfb93c`), art (`4938ce07`), FlowDef fields (`22486914`). Next action: close the card.
+
+**The graphics, 2026-08-28.** Tile `flow-object-stamp.webp` (896×1120, 45 KB, crop
+`{700,160,480,600}`) and hero `flow-object-stamp.mp4` (1280×800, 5.5 s, 151 KB, crop
+`{600,200,680,425}` at 1.88×, `xfade wiperight` 2.5 s from offset 1, 5 px `0xFF7EB6` seam).
+Both cut from `t2i_003` → `flowObjectStamp_003`. Verified 761/761 unit, 37/37 desktop, lint
+clean, and both assets serve **200 with byte counts matching disk exactly** off a standalone
+`server.js` on a spare port. Two traps added to `06-preview-image.md`: sizing a punch-in from
+the diff bbox (it includes the cast shadow — 301 px bbox vs a 53 px object body), and why a
+frozen-wipe tile cannot work on an ADD-an-object flow (the "before" side is empty, so the seam
+is decoration).
 
 **The graph is authored and proven on the bench** (2026-08-26, 18 runs on 8188). It is
 `flow_draw_it_in.json` **patched**, not rebuilt — crop/stitch, the six `Input_Lora_Phase1_*`
@@ -149,9 +160,17 @@ one.
 
 ## Remaining Work
 
-The flow wiring, the live run, the announcement. Graphics are a separate pass — and the ~25 runs already in the
-**Stamp Flow Tests** project are the plate material, so nothing needs re-generating for the
-tile or hero (`06-preview-image.md` § Plates).
+**None.** The graphics shipped 2026-08-28 (`4938ce07` art, `22486914` wiring), which was the
+last open unit. The card is ready to close.
+
+> The earlier note here said the ~25 runs in **Stamp Flow Tests** were the plate material and
+> nothing needed re-generating. That was wrong on inspection, and it is the one thing worth
+> carrying forward: **21 of those 25 stamp a handgun and the other 4 stamp a Google-logo mug**,
+> so neither was shippable as the face of a consumer app. Worse, the mug runs ate a 560² crop
+> and returned 1024², so the whole frame resamples — measured whole-frame diff bbox, 9–18%
+> changed — and they fail the "plates from ONE run" rule outright. Fabio ran a fresh one
+> (a candlestick into a dining room) and it is the cleanest pair in the corpus at **1.09%
+> changed, mean abs diff 0.88**. Counting runs is not surveying them.
 
 ## Verification
 

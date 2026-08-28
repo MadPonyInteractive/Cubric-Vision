@@ -274,3 +274,35 @@ alone.
 
 **Verified:** 751/751 unit, 30/30 desktop (one new), lint clean, and the new spec proven
 to fail without the fix.
+
+## The graphics — 2026-08-28, the last unit
+
+Tile `flow-object-stamp.webp` (896×1120, 91 KB) and hero `flow-object-stamp.mp4`
+(1280×800, 7.9 s, 314 KB), both cut from ONE real run: `t2i_003` → `flowObjectStamp_003`,
+**1.09 % of pixels changed, mean abs diff 0.88** — the cleanest pair in the project.
+
+**Verified:** 761/761 unit, 37/37 desktop, `flows-tab-ring` (the clean-console gate) 4/4
+green on the final assets, lint clean, and both assets serve **200 with byte counts
+matching disk exactly** (92,962 and 321,378) off a standalone `server.js` on a spare port.
+Fabio approved the final tile and hero in-session.
+
+**Three rounds, and the first two were wrong in ways no isolated check could catch.**
+
+1. The existing ~25 runs were NOT usable, contrary to the handoff. 21 stamp a handgun and
+   4 stamp a Google-logo mug; the mug runs ate a 560² crop and returned 1024², so the whole
+   frame resamples (measured whole-frame diff bbox) and they fail "plates from ONE run".
+   Fabio ran a fresh candlestick plate, which is what made the card closable.
+2. The first tile "just says a table with a candle on it". A tile must TEACH the flow.
+3. The second tile passed every checklist item and was still rejected on sight, because
+   `MpiTileSheet` is already a bordered card, so panels-on-`--surface-viewer` shipped as a
+   card inside a card. **Rendering it beside the nine shipped tiles is the check that
+   found it; isolation cannot show you that you have left the family.**
+
+All three lessons, plus the diff-bbox-vs-object-body trap and the strip-vs-column
+arithmetic, are healed into `docs/playbooks/add-flow/06-preview-image.md`, together with a
+standing instruction to run the `impeccable` skill for these assets — it loads
+`PRODUCT.md`/`DESIGN.md`, which carry the rules that `styles/01_base.css` only carries
+values for.
+
+Commits: `4938ce07` (first art), `22486914` (FlowDef fields + traps), `4876395a` (rebuild
+to teach the flow), `b1923657` (strip sized to the object, plus dropped).
