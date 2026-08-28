@@ -53,7 +53,6 @@
     "claude-code-setup@claude-plugins-official": false,
     "code-simplifier@claude-plugins-official": true,
     "context7@claude-plugins-official": false,
-    "caveman@caveman": true,
     "context-mode@context-mode": false,
     "codex@openai-codex": false,
     "skill-creator@claude-plugins-official": false,
