@@ -383,8 +383,14 @@ export const MpiMediaPicker = ComponentFactory.create({
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const file = await toWavFile(await res.blob(), `${voice.id}.wav`);
                 if (!file) throw new Error('decode returned null');
-                props.onImport([file]);
-                emit('import', { files: [file] });
+                // The voice's IDENTITY travels with the file (MPI-607). A library pick
+                // becomes an ordinary uploaded WAV two lines below, and until now that
+                // boundary threw away which voice it was — fine while a slot only needed
+                // a file, useless once something downstream has to know the voice's
+                // REGISTER (Text to Speech matches its emotion clip to it). Second arg,
+                // optional, ignored by every other caller of `onImport`.
+                props.onImport([file], { voiceId: voice.id, register: voice.register });
+                emit('import', { files: [file], voiceId: voice.id, register: voice.register });
                 el.hide();
             } catch (err) {
                 clientLogger.error('media-picker', `voice "${voice?.id}" could not be loaded: ${err?.message || err}`);

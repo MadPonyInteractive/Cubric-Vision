@@ -80,6 +80,63 @@
 
 Project mode: scalable-foundation.
 
+> ### 2026-08-28 (session 30) — 🔴 FABIO KILLED THE EMOTION/VC FEATURE. Next session STRIPS it.
+>
+> **THE DECISION, and it is final:** *"I had enough of this. Even if we do that, it's still
+> gonna be inconsistent, I'm pretty sure of it. Let's ship something that works, not
+> something that may work sometimes. Let's strip all emotions out. Let's strip VC. Let's
+> leave it as TTS normal or TTS multilingual only."*
+>
+> **Text to Speech's end state: a line, a voice, a language. No emotion, no VC, no second
+> audio role.** Do not re-propose the role swap — it was offered, considered and rejected
+> on the grounds that it would still be inconsistent. This is not an open question.
+>
+> **WHY it died, measured — keep this, it is the whole justification.** The emotion clip is
+> the VC `target_voice`, and VC takes TIMBRE from the target, so the OUTPUT IS THE CLIP'S
+> SPEAKER and the chosen voice is overwritten. The 30 clips carry **30 DISTINCT SEEDS**
+> (`qwen3-tts-voicedesign`) — 30 different people, not 6 emotions from 5 speakers. Young
+> Male (R3, 201-250 Hz) + `perf_R3_cheerful` (seed 2010, 272.5 Hz) came out a child, as it
+> must. Register matching bounds PITCH, never identity: a register is a band, not a person.
+>
+> ### NEXT SESSION — the strip list
+>
+> 1. **`flowsRegistry.js` chatter-box:** delete the `emotion` field, `voiceEmotion{}`, and
+>    the `libraryVoiceOnly`/`disabledNote` keys. KEEP `derived[]` (the language boolean)
+>    and the single `audio1` slot — both are good and unrelated.
+> 2. **`MpiBaseFlow.js`:** delete `_deriveVoiceEmotion`, `_libraryVoiceRegister`, its call
+>    in `_run`, the `libraryVoiceOnly` branch in `_buildFlowFields`, and the `toWavFile`
+>    import. **Keep** the `derived[]` block in `_collectInputs`.
+> 3. **`commandRegistry.js`:** drop the `audio2` mediaInput and rewrite its comment.
+> 4. **The graph:** `Input_Audio_2`, `MpiAnyChecker#57`, `MpiIfElse#53`, `#56` and
+>    `FL_ChatterboxVC#31` all become dead. **FABIO'S EDIT — `raw/` is his.**
+> 5. **`tests/flow-voice-emotion.test.cjs`:** delete the two emotion cases, KEEP the
+>    derived-language one (move it to a surviving test file).
+> 6. **`MpiMediaPicker.js` / `_handleFiles` register thread:** only the emotion needed it.
+>    Harmless to keep, but delete if nothing else claims it.
+> 7. **DramaBox `Input_Duration` step `0.5` -> `1`** (Fabio, this session): 0.5 is fiddly,
+>    and single- vs double-digit readouts resize the slider so it *"looks like it's buggy"*.
+>    A 1s granularity is enough. `flowsRegistry.js`, one number.
+> 8. **Still open from earlier:** `#54 MpiLoadAudio.block_if_empty` -> `false` if the
+>    optional voice is still wanted. Fabio's re-export.
+>
+> ### What SURVIVES from this session and must not be undone
+>
+> - **The "Other languages" toggle is gone**, the boolean DERIVED from the language select,
+>   so the one state a user could get wrong is unreachable. 21 dead hovers removed.
+> - **The Voice Library panel fix.** `grid.hidden = true` never hid anything —
+>   `.mpi-media-picker__grid { display: grid }` outranks the UA `[hidden]`. Latent since
+>   MPI-531, invisible until a project HAS media. **Third occurrence of this trap in the
+>   repo.** A global `[hidden] { display: none !important }` in `01_base.css` would end the
+>   class of bug — flagged, NOT taken, Fabio's call.
+> - **DramaBox:** `Voice to match (optional)`, `rows 3 -> 6`, and copy teaching the real
+>   prompt format — quotes = spoken, outside = performed. His `[He laughs]` was the wrong
+>   syntax; the pack wants bare prose.
+> - **`#56.block_if_empty` -> false**, his own edit, re-baked as `4e0dc50f`.
+> - Double-click on a voice card was tried and REMOVED at his request; `MpiVoicePicker.js`
+>   is a zero diff.
+>
+> `774/774` + lint clean at handoff. Detail: `validation.md` session 30.
+
 > **2026-08-28 (session 29) — BOTH AUDIO FLOWS ARE WIRED, ILLUSTRATED AND PUSHED. What is
 > left is Fabio's own smoke test through the Flow overlay.** Everything below was dispatched
 > straight to the engine, which exercises the graphs but NOT the flow's media routing,

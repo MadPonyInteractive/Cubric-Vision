@@ -1423,7 +1423,7 @@ export const FLOWS = [
         // its waveform IS beat 1's audio.
         preview: 'flow-chatter-box.webp',
         video: 'flow-chatter-box.mp4',
-        description: 'Type a line and hear it spoken. Give Chatterbox a sample of the voice you want it in, pick a language, and it reads your text in that voice — then optionally converts the result onto a second voice entirely.',
+        description: 'Type a line and hear it spoken. Give Chatterbox a sample of the voice you want it in, pick one of 23 languages, and it reads your text in that voice. Add an emotion — angry, sad, cheerful, a whisper — and it performs the line instead of just reading it.',
         requiredModels: [],
         requiredDeps: [
             // The English arm (3.19GB) — what every measurement on this card was made
@@ -1456,19 +1456,18 @@ export const FLOWS = [
         mediaType: 'audio',
         inputSchema: {
             media: [
-                // TWO roles with different jobs, so neither can fall back to the
-                // frame's "Audio 1 / Audio 2" labels. Slot 0 is the voice the line is
-                // SPOKEN IN and the graph blocks without it (MpiLoadAudio#54 carries
-                // `block_if_empty`); slot 1 is an OPTIONAL second voice that adds the
-                // VC stage.
+                // ONE slot. `audio2` still exists as a ROLE — it is what reaches
+                // `Input_Audio_2` and switches the graph onto the VC arm — but the user
+                // never fills it by hand. A second raw audio slot was tried and pulled
+                // (Fabio, 2026-08-28): read cold it says nothing, and "converts onto a
+                // second voice" describes a mechanism nobody asked for. The VC arm's
+                // real job is EMOTION, and it is now driven by the `emotion` field
+                // below, which derives that role's clip at run time.
                 {
-                    type: 'audio', mode: 'upto', max: 2,
-                    roles: ['audio1', 'audio2'],
-                    labels: ['Voice to speak in', 'Convert onto (optional)'],
-                    // The shipped library on BOTH slots — unlike Voice Changer, neither
-                    // slot has to be the user's own take, because nothing here passes a
-                    // real performance through.
-                    voiceLibrary: ['character', 'character'],
+                    type: 'audio', mode: 'upto', max: 1,
+                    roles: ['audio1'],
+                    labels: ['Voice to speak in'],
+                    voiceLibrary: ['character'],
                 },
             ],
         },
@@ -1477,18 +1476,19 @@ export const FLOWS = [
                 id: 'positive', type: 'text', rows: 3, label: 'The line',
                 placeholder: 'Hello and welcome to Cubric Studio.',
             },
-            {
-                // The ARM SELECTOR, declared before the language so it reads as the
-                // gate that it is. A plain key reaches MpiIfElse#52 because `boolean`
-                // is in the injector's spray list and the node's `true`/`false` inputs
-                // are links, which `_isLink` skips.
-                //
-                // Default FALSE, which is the English-only arm — every measurement on
-                // this card was made there, so the untouched default is the measured
-                // configuration rather than a second model's take on English.
-                id: 'Input_Is_Multilingual', type: 'toggle', label: 'Other languages',
-                icon: 'globe', default: false,
-            },
+            // THE ARM SELECTOR IS NO LONGER A CONTROL. It used to be an "Other
+            // languages" toggle sitting above this select, and the pair had exactly one
+            // state a user could get wrong: toggle OFF with a non-English language
+            // picked, which silently produced English. MPI-620 had rejected `showWhen`,
+            // so the mitigation was copy — the toggle declared first, and every
+            // non-English option carrying an info hover telling you to go turn it on.
+            //
+            // Fabio removed the whole class of error instead (2026-08-28): "we can't
+            // have other languages toggle. We only have the drop-down. If English is
+            // selected, then we ourselves inject false into the other languages
+            // boolean." The boolean is now DERIVED from this select — see `derived`
+            // below — so the broken state is unreachable rather than warned about, and
+            // the 21 hovers that only ever said "turn the toggle on" are gone with it.
             {
                 // DOTTED KEY, and it has to be. `language` is NOT in the injector's
                 // spray list, so a plain `Input_Language` would match the node by title
@@ -1503,54 +1503,94 @@ export const FLOWS = [
                 default: 'English (en)',
                 options: [
                     { v: 'English (en)', label: 'English',
-                      info: 'The default, and the one language both arms speak — it works with Other languages off.' },
-                    { v: 'Arabic (ar)', label: 'Arabic',
-                      info: 'Needs "Other languages" turned on.' },
-                    { v: 'Danish (da)', label: 'Danish',
-                      info: 'Needs "Other languages" turned on.' },
-                    { v: 'German (de)', label: 'German',
-                      info: 'Needs "Other languages" turned on.' },
-                    { v: 'Greek (el)', label: 'Greek',
-                      info: 'Needs "Other languages" turned on.' },
-                    { v: 'Spanish (es)', label: 'Spanish',
-                      info: 'Needs "Other languages" turned on.' },
-                    { v: 'Finnish (fi)', label: 'Finnish',
-                      info: 'Needs "Other languages" turned on.' },
-                    { v: 'French (fr)', label: 'French',
-                      info: 'Needs "Other languages" turned on.' },
-                    { v: 'Hebrew (he)', label: 'Hebrew',
-                      info: 'Needs "Other languages" turned on.' },
-                    { v: 'Hindi (hi)', label: 'Hindi',
-                      info: 'Needs "Other languages" turned on.' },
-                    { v: 'Italian (it)', label: 'Italian',
-                      info: 'Needs "Other languages" turned on.' },
-                    { v: 'Japanese (ja)', label: 'Japanese',
-                      info: 'Needs "Other languages" turned on.' },
-                    { v: 'Korean (ko)', label: 'Korean',
-                      info: 'Needs "Other languages" turned on.' },
-                    { v: 'Malay (ms)', label: 'Malay',
-                      info: 'Needs "Other languages" turned on.' },
-                    { v: 'Dutch (nl)', label: 'Dutch',
-                      info: 'Needs "Other languages" turned on.' },
-                    { v: 'Norwegian (no)', label: 'Norwegian',
-                      info: 'Needs "Other languages" turned on.' },
-                    { v: 'Polish (pl)', label: 'Polish',
-                      info: 'Needs "Other languages" turned on.' },
+                      info: 'The default. English is the one language both arms speak.' },
+                    { v: 'Arabic (ar)', label: 'Arabic' },
+                    { v: 'Danish (da)', label: 'Danish' },
+                    { v: 'German (de)', label: 'German' },
+                    { v: 'Greek (el)', label: 'Greek' },
+                    { v: 'Spanish (es)', label: 'Spanish' },
+                    { v: 'Finnish (fi)', label: 'Finnish' },
+                    { v: 'French (fr)', label: 'French' },
+                    { v: 'Hebrew (he)', label: 'Hebrew' },
+                    { v: 'Hindi (hi)', label: 'Hindi' },
+                    { v: 'Italian (it)', label: 'Italian' },
+                    { v: 'Japanese (ja)', label: 'Japanese' },
+                    { v: 'Korean (ko)', label: 'Korean' },
+                    { v: 'Malay (ms)', label: 'Malay' },
+                    { v: 'Dutch (nl)', label: 'Dutch' },
+                    { v: 'Norwegian (no)', label: 'Norwegian' },
+                    { v: 'Polish (pl)', label: 'Polish' },
                     { v: 'Portuguese (pt)', label: 'Portuguese',
-                      info: 'Needs "Other languages" turned on. Delivers BRAZILIAN Portuguese — confirmed by ear; the node label does not say so.' },
-                    { v: 'Russian (ru)', label: 'Russian',
-                      info: 'Needs "Other languages" turned on.' },
-                    { v: 'Swedish (sv)', label: 'Swedish',
-                      info: 'Needs "Other languages" turned on.' },
-                    { v: 'Swahili (sw)', label: 'Swahili',
-                      info: 'Needs "Other languages" turned on.' },
-                    { v: 'Turkish (tr)', label: 'Turkish',
-                      info: 'Needs "Other languages" turned on.' },
-                    { v: 'Chinese (zh)', label: 'Chinese',
-                      info: 'Needs "Other languages" turned on.' },
+                      info: 'Delivers BRAZILIAN Portuguese — confirmed by ear; the node label does not say so.' },
+                    { v: 'Russian (ru)', label: 'Russian' },
+                    { v: 'Swedish (sv)', label: 'Swedish' },
+                    { v: 'Swahili (sw)', label: 'Swahili' },
+                    { v: 'Turkish (tr)', label: 'Turkish' },
+                    { v: 'Chinese (zh)', label: 'Chinese' },
                 ],
             },
+            {
+                // WHAT THE VC ARM IS ACTUALLY FOR. Text cannot select emotion — MPI-622
+                // measured a neutral reference plus angry words as soulless at
+                // exaggeration 0.5 and the WRONG emotion at 1.0 — so emotion has to
+                // arrive as a performance clip. That clip is the VC target, and the
+                // library ships 30 of them: 5 registers x 6 emotions.
+                //
+                // `none` inserts nothing, which leaves `Input_Audio_2` empty, which is
+                // what `MpiAnyChecker#57` reads to send `MpiIfElse#53` down the false
+                // arm — straight off the TTS with no VC at all. The bypass is the
+                // graph's existing routing, not a new branch (Fabio, 2026-08-28: "If
+                // none is selected, nothing is inserted. It takes another route.").
+                //
+                // FIVE emotions ship, not the library's six: `flat` is held back
+                // because next to `neutral` it is a distinction a user cannot act on,
+                // and it is the row closest in meaning to None.
+                // ONLY FOR OUR OWN VOICES. `libraryVoiceOnly` disables this whenever the
+                // slot holds anything but a library pick — a user's own recording carries
+                // no register, so the clip could only be guessed, and a guessed register
+                // is what produced a female performance on a male voice and an output that
+                // was a different person entirely. Fabio: "Only our library is tested, not
+                // user voices, so might as well not have anything but a poor result."
+                //
+                // DISABLED, not hidden — MPI-620 rejected `showWhen`, and Fabio rejected a
+                // control that renders and does nothing, so the resolution there was a
+                // disabled control whose note reads as the REASON. Same call here.
+                id: 'emotion', type: 'select', label: 'Emotion', default: 'none',
+                libraryVoiceOnly: 'audio1',
+                disabledNote: 'Emotion needs one of our own voices — a recording of your own has no range to match a performance to.',
+                options: [
+                    { v: 'none', label: 'None',
+                      info: 'Straight from the voice, no performance pass — the fastest route.' },
+                    { v: 'neutral', label: 'Neutral',
+                      info: 'Performed, but level. Use it to match the other emotions’ texture without their mood.' },
+                    { v: 'angry', label: 'Angry' },
+                    { v: 'sad', label: 'Sad' },
+                    { v: 'cheerful', label: 'Cheerful' },
+                    { v: 'whisper', label: 'Whisper' },
+                ],
+            },
+            // THERE IS NO "VOICE RANGE" CONTROL, and asking the user to pick one was the
+            // wrong idea (Fabio, 2026-08-28). A hand-picked register crosses the voice
+            // regularly — "sometimes it's a male voice and gives me the emotion of a
+            // female voice, and not just that, it turns out to be a very different voice
+            // in the end". The register is not a preference, it is a FACT about the
+            // chosen voice, so it is read off the library entry and never asked for.
         ],
+        // The arm selector is computed, never shown. One shape, no predicate language:
+        // read `from`, compare to `equals`, send `then` or `else` to `id`.
+        derived: [
+            { id: 'Input_Is_Multilingual', from: 'Input_Language.language',
+              equals: 'English (en)', then: false, else: true },
+        ],
+        // The emotion clip is materialised at RUN time onto the `audio2` role — the
+        // role that still exists in `mediaInputs` and reaches `Input_Audio_2`, but no
+        // longer has a slot the user can see. Same path `_deriveRunMedia` uses for a
+        // step's derived picture: fetch, decode to WAV, place in `.preview-assets`.
+        voiceEmotion: {
+            role: 'audio2',
+            emotionField: 'emotion',
+            clip: 'performance/perf_{register}_{emotion}.opus',
+        },
         // No `result.compare` — two waveforms have nothing to reveal between them.
     },
     // MPI-607 — "DramaBox". Type a line, optionally hand it a voice to match, get a
@@ -1595,7 +1635,7 @@ export const FLOWS = [
         // slot and its prompt-only arm invents a speaker from the words alone. So the
         // claim is direction — emotion, accent and character written into the line — with
         // a reference as the OPTION rather than the requirement.
-        description: 'Text to speech you direct in words. Describe the speaker and the performance in the line itself — an exhausted old man, a British woman, someone barely holding it together — and DramaBox builds a voice to match, from nothing. Or hand it a sample and it will hold onto that voice instead, saying something the person never said.',
+        description: 'Text to speech you direct in words. Describe the speaker and the performance in the line itself — an exhausted old man, a British woman, someone barely holding it together — and DramaBox builds a voice to match, from nothing. Put the spoken words in quotes; anything outside them is performed rather than read aloud, so a laugh, a sigh, a cough or a pause goes in as plain writing. Or hand it a sample and it will hold onto that voice instead, saying something the person never said.',
         requiredModels: [],
         requiredDeps: [
             // The DiT + audio components, then the 4-bit Gemma-3-12B text encoder as
@@ -1637,7 +1677,7 @@ export const FLOWS = [
                 {
                     type: 'audio', mode: 'upto', max: 1,
                     roles: ['audio1'],
-                    labels: ['Voice to match'],
+                    labels: ['Voice to match (optional)'],
                     // The shipped library, same picker route as Voice Changer's target
                     // slot. There is no "your performance" slot here to keep clear of,
                     // so the one slot gets it.
@@ -1647,8 +1687,20 @@ export const FLOWS = [
         },
         fields: [
             {
-                id: 'positive', type: 'text', rows: 3, label: 'The line',
-                placeholder: 'A British woman says, "Hello and welcome to Cubric Studio"',
+                // The placeholder is the ONLY surface that teaches the prompt format, so
+                // it demonstrates rather than describes: a spoken part in quotes and a
+                // stage direction outside it, in one line. Every other TTS the user has
+                // met (Bark, ElevenLabs) takes `[laughs]`, and Fabio reached for brackets
+                // for exactly that reason on his first run — the model wants prose.
+                // Guide.md: "Text inside quotes is spoken; text outside quotes is a stage
+                // direction the model performs but doesn't read aloud."
+                //
+                // `rows` is what sets this box's HEIGHT on the run slide (the `--stacked`
+                // column), and 3 rows could not hold a line with its direction attached —
+                // which is the flow's entire pitch. 6 fits the placeholder plus a second
+                // beat. The row-layout twin is capped at 120px by CSS and unaffected.
+                id: 'positive', type: 'text', rows: 6, label: 'The line',
+                placeholder: 'A British woman says, "Hello and welcome to Cubric Studio." She laughs softly.',
             },
             {
                 // THE SINGLE BIGGEST QUALITY CONTROL, and the reason it is not left at

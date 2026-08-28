@@ -1222,10 +1222,19 @@ export const commands = {
     },
 
     // MPI-607 — Chatterbox text-to-speech, the TTS half that the Voice Changer flow
-    // deliberately left unowned. Two audio slots with different jobs: `audio1` is the
-    // voice the line is spoken IN (it feeds `audio_prompt` on both TTS nodes and the
-    // graph blocks without it), `audio2` is an OPTIONAL target that adds the VC stage
-    // on top — the TTS -> VC chain that is this card's settled architecture.
+    // deliberately left unowned. Two audio ROLES, but only ONE slot the user sees:
+    // `audio1` is the voice the line is spoken IN (it feeds `audio_prompt` on both TTS
+    // nodes and the graph blocks without it), and `audio2` is the VC target that adds
+    // the TTS -> VC stage — this card's settled architecture.
+    //
+    // `audio2` HAS NO UI SLOT (MPI-607, 2026-08-28). It used to be a second audio
+    // input labelled "Convert onto (optional)", which read cold as a mechanism nobody
+    // asked for. What the VC arm is actually for is EMOTION, so the role is now filled
+    // by `flow.voiceEmotion`: the Emotion select resolves one of the library's 30
+    // performance clips, register-matched to the chosen voice, and MpiBaseFlow
+    // materialises it onto this role at run time. `none` fills nothing, which is what
+    // MpiAnyChecker#57 reads to bypass the VC entirely. Keep the entry — it is what
+    // maps the derived item onto `Input_Audio_2`.
     flowChatterBox: {
         label: 'Flow: Text to Speech',
         progressLabel: 'Speaking the line',

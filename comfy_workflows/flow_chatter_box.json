@@ -133,7 +133,7 @@
   },
   "56": {
     "inputs": {
-      "block_if_empty": true,
+      "block_if_empty": false,
       "string": [
         "57",
         0

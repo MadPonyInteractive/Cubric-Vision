@@ -73,6 +73,26 @@
     padding-right: var(--s-2);
 }
 
+/* `_openVoiceLibrary` sets `.hidden = true` on both of these, and an explicit `display`
+   on a CLASS outranks the UA's `[hidden] { display: none }` — so without these two rules
+   neither actually hides and the library opens BELOW a still-visible grid, pushing its
+   "Select voice" footer off the bottom of the modal (Fabio, 2026-08-28).
+
+   It only ever showed up in a project that HAS media: an empty grid is invisible anyway,
+   which is why the flow's own smoke test on a fresh project could not catch it and why
+   this read as a fresh regression rather than a latent bug from MPI-531.
+
+   THIRD time this exact trap has bitten — `MpiMaskDetectRow` hit it on `.mpi-btn`
+   (2026-08-04), `docs/masking-adjust.md` records it for the inert slider row, and
+   `.mpi-voice-picker__emotion-row[hidden]` one file over is the same cure. A global
+   `[hidden] { display: none !important }` in `01_base.css` would end the whole class of
+   bug; that is a shared-file change with real blast radius, so it is Fabio's call and is
+   deliberately NOT made here. */
+.mpi-media-picker__grid[hidden],
+.mpi-media-picker__filters[hidden] {
+    display: none;
+}
+
 .mpi-media-picker__empty {
     grid-column: 1 / -1;
     padding: var(--s-6) var(--s-4);

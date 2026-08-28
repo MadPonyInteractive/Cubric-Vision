@@ -2934,3 +2934,247 @@ raw file in the tree against port 8188.
 
 **Nothing is wired into the app yet** -- no FlowDef, no op, no dep entries, no registry
 edit. The graphs are the only artifact.
+
+---
+
+## 2026-08-28 session 30 — SMOKE-TEST PREFLIGHT (agent side, before Fabio touches anything)
+
+Clock verified against GitHub before any timestamp was written: local `07:39:24Z` vs
+`Date: Fri, 28 Aug 2026 07:39:25 GMT` — 1s apart, no VPN skew.
+
+**Engine started and both packs registered.** `POST /comfy/start` on Fabio's :3000 returned
+`{"success":true}`; `48188/system_stats` answered ComfyUI 0.31.0 / torch 2.13.0+cu130 /
+python 3.13.14. `/object_info` carries **1919 classes**, including all **5** `FL_Chatterbox*`
+(`TTS`, `TurboTTS`, `MultilingualTTS`, `VC`, `DialogTTS`) and all **17** `DramaBox*`.
+
+**🟢 THE SILENCE BUG IS NOT LIVE ON THIS ENGINE.** Checked BEFORE running anything, because
+it is the one failure that reports success:
+
+```
+python_embeded/Lib/site-packages/  setuptools-80.10.2.dist-info/   pkg_resources/   perth/
+dev_configs/python_deps.txt:403:   setuptools==80.10.2
+```
+
+`pkg_resources` present, setuptools below the 81 that removed it. So a 16 kHz/one-sample
+placeholder today would be a NEW cause, not that one.
+
+**Both flows' weights are on disk and reachable — no download stands between Fabio and a
+run.** Verified by path, not by trusting a badge:
+
+| Flow | Where | Measured |
+|---|---|---|
+| Text to Speech | `engine/.../ComfyUI/models/chatterbox/` | `chatterbox/` 3.0G + `chatterbox_multilingual/` 3.0G + `chatterbox_vc/` 1009M = the FlowDef's 6.95GB |
+| DramaBox | `G:/CubricModels` (the `comfyui` base_path in the engine's `extra_model_paths.yaml`) | `diffusion_models/dramabox-dit-v1.safetensors` 6.58GB, `vae/dramabox-audio-components.safetensors` 1.94GB, `text_encoders/gemma-3-12b-it-bnb-4bit/` 7.4GB across all **14** files the deps name |
+
+**One thing this preflight also means: `05-verify`'s INSTALL row will not be exercised for
+DramaBox.** Its weights arrived by hand on the bench (2026-08-27), not through the app's
+Install button, and they resolve through `extra_model_paths.yaml`, so the tile will already
+read Ready. The Get-models → downloading → Ready badge transition for `drama-box` stays
+UNPROVEN and needs either a clean profile or a deliberate move-aside later. Not a blocker for
+the run-path smoke test, which is what this session is for.
+
+**Note on the empty `models/dramabox/` folder** — it is the node pack's own `tmp/` +
+`voice_refs/` scratch, NOT a weight location, and its being empty means nothing. The weights
+land in `diffusion_models/`, `vae/` and `text_encoders/` per their dep `filename`s.
+
+**Coordination:** MPI-607's claim record `055e76ab` was ORPHANED (owner session 354503f8,
+heartbeat 2026-08-23, five days past the 120-min timeout) and was re-pointed to this session
+rather than duplicated. Message `fdf14f05` (MPI-596 → MPI-607, Object Stamp appending to the
+same registries) RESOLVED: no conflict materialised, both flows appended after the Object
+Stamp entries and are committed on master.
+
+---
+
+## 2026-08-28 session 30 — THE TTS REWORK Fabio SPECIFIED, plus three DramaBox fixes
+
+### What changed and why
+
+Fabio drove both flows through the overlay and the design came back different. Recorded
+here because the shipped copy and the doc both described the OLD shape.
+
+**Text to Speech lost its second audio slot.** "Convert onto (optional)" read cold as a
+mechanism nobody asked for — Fabio, as the target user: *"I kind of understand what the
+voice to speak in is, but 'convert on to', I don't know what that is."* The VC arm's real
+job is **EMOTION**, which closes MPI-622's open finding that text cannot select emotion
+(neutral reference + angry words = soulless at 0.5, WRONG emotion at 1.0) and therefore
+needs performance clips. The library already ships them: **30 clips = 5 registers x 6
+emotions**, and the register exists precisely so the clip can be matched to the chosen
+voice — the VC only travels about halfway (MPI-622), so starting in the same range is the
+difference between landing on the voice and landing between two people.
+
+**THE GRAPH DID NOT CHANGE, and an early proposal to invert it was WRONG.** I argued the
+emotion clip had to feed the TTS `audio_prompt` (because Voice Changer measured envelope
+r = 0.867 source vs -0.004 target, i.e. the target contributes no timing). Fabio corrected
+it: the clip is the **VC target**, `MpiAnyChecker#57 -> MpiIfElse#53` already bypasses the
+VC when `Input_Audio_2` is empty, so `none` needs no boolean of its own. *"I built the
+workflow by hand exactly to test that there is nothing to test. There are only inputs to
+place in there."* The emotion's voice QUALITY transfers through the target side; the
+register match is what keeps the identity shift small. Do not re-litigate this.
+
+**The one graph edit was Fabio's own**: `#56 MpiLoadAudio.block_if_empty` true -> false,
+re-exported by him and re-baked here (`4e0dc50f`). The semantic diff of the API twin is
+exactly one line — verified against `HEAD~1`, nothing else moved; the 358-line raw delta
+was LiteGraph re-serialisation the converter normalises away. **`#54` is still `true`, so
+slot 0 is still REQUIRED** — Fabio's "the first stage should have an optional input voice"
+is NOT done and needs his re-export (`raw/` is his source of truth; the sync script
+refuses to write there).
+
+### The implementation
+
+| file | change |
+|---|---|
+| `flowsRegistry.js` | chatter-box: media `max 2 -> 1`; toggle deleted; `emotion` select (None + 5); `emotionRegister` radio (R1-R5); `derived[]`; `voiceEmotion{}`. DramaBox: `(optional)` label, `rows 3 -> 6`, stage-direction placeholder, description |
+| `MpiMediaPicker.js` | `_pickVoice` sends `{voiceId, register}` as `onImport`'s 2nd arg |
+| `MpiBaseFlow.js` | `_handleFiles` records it on the item; `autoFromVoice` seeds+locks+writes back; `_deriveVoiceEmotion` + `_resolveRegister`; `derived[]` in `_collectInputs` |
+| `declaredFields.js` | `disabled` widened from `select` to `radio` |
+| `commandRegistry.js` | `audio2` comment — a derived role, no UI slot |
+
+**No new injection plumbing.** `audio2` was already a `mediaInput` mapping to
+`Input_Audio_2`, and `_deriveRunMedia` was already the precedent for appending a run-time
+media item on a role no slot owns. The emotion clip rides both.
+
+**The language toggle is gone and the boolean is DERIVED** — `English (en) ? false : true`.
+MPI-620 rejected `showWhen`, so the old mitigation was copy: the toggle declared first plus
+21 hovers saying "turn the toggle on". Fabio removed the error class instead. Those 21
+hovers went with it; Portuguese keeps its BRAZILIAN warning.
+
+**The register radio is DISABLED, not hidden**, when the voice came from the library. That
+is `blankOnly`'s law (MPI-620) and Fabio's own live rejection of a control that renders and
+does nothing. It goes live for a user's own recording, the one case where they know the
+range and we do not.
+
+### Verified — in the real UI, on an isolated instance (`:62807`, own profile, killed after)
+
+Driven with playwright-cli against a scratch project. Fabio's `:3000` and the shared engine
+on `:48188` both answered 200 afterwards.
+
+- ONE slot, "Voice to speak in". "Convert onto (optional)" **gone**.
+- Fields render `The line / Language / Emotion / Voice range`; **no "Other languages"**.
+- Emotion defaults to `None`; all five ranges live with no voice picked.
+- Picked **Deep Male** (manifest `R1`, 83-115 Hz) from the library ->
+  - the media item carries `register: "R1"` (the picker -> import thread works),
+  - the radio auto-selects **Deepest** (`is-active` on button 0) and every option goes
+    `aria-disabled="true"`,
+  - the snapshot stores `emotionRegister: "R1"`.
+- **A real bug was caught and fixed by this probe**: the write-back was missing, so the
+  control SHOWED the voice's range while `s_flowInputs` still held the `R3` default. The
+  run was already correct (`_resolveRegister` prefers the voice), but a control that shows
+  one value and stores another is what `declaredFields.js` calls the worst outcome
+  available. One line, then re-verified: `reg: "R1"`.
+
+`774/774` tests pass (+3 new in `tests/flow-voice-emotion.test.cjs` — the emotion x
+register cross product against manifest AND disk, the role having no visible slot but still
+being mapped by the op, and the derived boolean over all 23 languages). `npm run lint`
+clean.
+
+### NOT verified — needs a real run, which is Fabio's
+
+The generation itself. Nothing has yet fetched a performance clip, placed it on `audio2`
+and taken the VC arm end to end. That is the run to do, plus `#54` if the optional voice
+is still wanted.
+
+### 2026-08-28 session 30 (cont) — the Voice Library panel, and why it was never another agent's fault
+
+**Symptom:** the library opened BELOW a still-visible media grid, so its "Select voice"
+footer was pushed off the bottom of the modal and the whole dialog scrolled.
+
+**Root cause, and it is NOT a regression from an overlay change.** `_openVoiceLibrary`
+does `grid.hidden = true` and the same on `#filters-slot`, but
+`.mpi-media-picker__grid { display: grid }` — a CLASS selector — outranks the UA's
+`[hidden] { display: none }`, and there is no global `[hidden]` rule in `styles/`. So
+`hidden` never hid anything. `display: grid` has been on that rule since **MPI-531**
+(`3843e8d5`), i.e. it predates the voice library entirely.
+
+**Why nobody caught it until now:** it only shows in a project that HAS media. An empty
+grid is invisible regardless, so the library looked correctly swapped. This session's own
+first UI smoke test used a fresh project and would have missed it for exactly that reason
+— the repro needs seeded audio, which is how it was finally reproduced.
+
+**THIRD occurrence of this trap in the repo**, which is what justifies fixing it rather
+than working around it: `MpiMaskDetectRow` hit it on `.mpi-btn { display: inline-flex }`
+(2026-08-04, documented in that file), `docs/masking-adjust.md` records it for the inert
+slider row, and `.mpi-voice-picker__emotion-row[hidden] { display: none }` one file over is
+already the same cure. Fix follows that precedent — scoped `[hidden]` rules on the two
+elements, specificity (0,2,0) over (0,1,0).
+
+**A global `[hidden] { display: none !important }` in `01_base.css` would end the whole
+class of bug and was deliberately NOT done**: it is a shared file with peer sessions live,
+and it would newly hide anything currently marked `hidden` while visible by accident.
+Fabio's call. Flagged, not taken.
+
+**Also shipped, Fabio's ask:** double-click a voice card commits it. DELEGATED on
+`#vp-list`, not bound per card — `_activate` ends in `_renderList()`, which rewrites
+`listEl.innerHTML`, so the card the first click landed on is GONE before the second
+arrives and a per-card `dblclick` fires unreliably or not at all. The list element survives
+every render. Bound once outside `_renderList` so renders cannot stack copies. Both entry
+points share one `_confirmSelection()` so the payload cannot drift.
+
+**Verified in the real UI** (isolated instance, project seeded with 6 audio files, killed
+and the project deleted afterwards; `:3000` and `:48188` both 200 after):
+
+- grid `display: none`, filters `display: none` once the library opens
+- footer bottom at 616px in a 720px viewport — **in view**, no page scroll
+- the LIST is the one scroller (`scrollHeight > clientHeight`), single scrollbar
+- double-click `deep_male_1` -> modal closed -> slot filled, item carries `register: "R1"`
+
+`774/774`, lint clean.
+
+**Open, not acted on:** the `diffusers` FutureWarning in the engine log
+(`LoRACompatibleLinear` removed in diffusers 1.0.0). `dev_configs/python_deps.txt` pins
+`diffusers==0.39.0` and that file is GENERATED and committed, so the warning cannot become
+a break without a deliberate bump. Not urgent; worth a note in `python_deps.in` beside the
+setuptools one when someone next regenerates.
+
+### 2026-08-28 session 30 (cont) — 🔴 THE EMOTION CLIP OVERWRITES THE CHOSEN VOICE. Register matching cannot fix it.
+
+**Fabio's report:** Young Male from the library + Cheerful came out as a young girl, a child.
+
+**Measured cause, from `voices/manifest.json`:**
+
+- **30 performance clips carry 30 DISTINCT SEEDS**, all `source: qwen3-tts-voicedesign`.
+  A different seed is a different synthetic SPEAKER, so the library is 30 different people
+  — not 6 emotions performed by 5 speakers. Within R3 alone the six emotions are six
+  different voices spanning 211-278 Hz.
+- Young Male is **R3, f0 201-250 Hz**. `perf_R3_cheerful` is **seed 2010, f0 272.5 Hz** —
+  a different person, pitched above every Young Male variation. That is the child.
+- `FL_ChatterboxVC` takes **timbre from `target_voice`**, and the emotion clip IS the
+  target. Voice Changer measured it: envelope Pearson r = **0.867** source -> result,
+  **-0.004** target -> result. The target supplies identity; the source supplies timing.
+
+**So the output is ALWAYS the emotion clip's speaker.** The chosen voice only conditions
+the TTS reading and is then overwritten by the VC. Register matching limits how far the
+PITCH travels; it cannot preserve identity, because a register is a pitch BAND, not a
+person. This is structural, not a tuning problem, and no clip re-pick fixes it.
+
+**Two ways out.**
+
+**A — swap the roles in the graph (recommended).** Emotion clip -> TTS `audio_prompt`
+(delivery), chosen voice -> VC `target_voice` (identity). The line is then read
+emotionally and converted ONTO the user's voice, which is the only wiring where the chosen
+voice survives — and it is what the Voice Changer measurement predicted all along. Cost: a
+real graph change. `Input_Audio` has to route two ways (audio_prompt when emotion is none,
+VC target when it is not), so it needs one more selector beside the existing
+`MpiAnyChecker#57`. **Consequence worth noting: under A a user's OWN recording works too**
+— identity comes from the target, so the library-only restriction added earlier today
+could be relaxed again.
+
+**B — regenerate the clips so all six emotions in a register share ONE seed.** Identity
+becomes stable across emotions, but it is still the CLIP's speaker, not the chosen voice.
+Young Male + Cheerful would stop being a child and start being a consistent stranger. It
+does not answer the actual complaint.
+
+**Not decided here — this is an architecture call and the graph is Fabio's.** Nothing was
+rewired.
+
+### Also this session, per Fabio's instruction
+
+- **Voice range control DELETED.** A hand-picked register crosses the voice; the register
+  is a fact about the chosen voice, read off the library entry, never asked for.
+  `_resolveRegister` -> `_libraryVoiceRegister`, with NO fallback: no library voice means
+  no register means the emotion is skipped rather than guessed.
+- **Emotion is `libraryVoiceOnly`** — disabled with a `disabledNote` reading as the reason
+  when the slot holds a user recording. Field-level `note` added to the `select` branch of
+  `declaredFields.js` (the radio already had a per-option twin, same `field-note` class).
+- **Double-click REMOVED.** `MpiVoicePicker.js` is back to a zero diff against HEAD.
+
+`774/774`, lint clean.
