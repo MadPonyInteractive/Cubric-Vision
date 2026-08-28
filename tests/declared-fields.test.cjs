@@ -38,6 +38,18 @@ const imp = (p) => import(pathToFileURL(path.resolve(p)).href);
     assert.strictEqual(mapDeclaredValue({ id: 'positive' }, 'a cat'), 'a cat');
     assert.strictEqual(mapDeclaredValue({ id: 'x', mapTo: [0, 1] }, 'not a number'), 'not a number');
 
+    // MPI-645 — an UNMAPPED numeric field is still clamped to its declared range,
+    // because the widget only clamps what the user drags. A value below the floor
+    // reaches here from a persisted card or a Reuse made before the floor moved
+    // (drama-box's `Input_Duration` went 1 -> 3), and the slider would render the new
+    // floor while the run sent the old number.
+    const dur = { id: 'Input_Duration', type: 'slider', min: 3, max: 30, step: 1, default: 5 };
+    assert.strictEqual(mapDeclaredValue(dur, 1), 3);
+    assert.strictEqual(mapDeclaredValue(dur, 99), 30);
+    assert.strictEqual(mapDeclaredValue(dur, 7), 7);
+    // A non-numeric field with a `min` is NOT a numeric field — no coercion.
+    assert.strictEqual(mapDeclaredValue({ id: 'positive', type: 'text', min: 3 }, 'hi'), 'hi');
+
     // The routing law.
     assert.ok(isInjectionParam('Input_Denoise'));
     assert.ok(isInjectionParam('input_denoise'));

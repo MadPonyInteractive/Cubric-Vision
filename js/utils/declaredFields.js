@@ -90,11 +90,21 @@ export function fieldNumber(raw, f) {
  * slider reading 0–1 over sigmas 0.50–0.85 is the plugin's business, not this
  * file's.
  *
+ * It is also where a numeric field's `min`/`max` are finally ENFORCED, mapped or
+ * not. The widget clamps what the user DRAGS, and that is not the same thing: an
+ * untouched field arrives here straight from a persisted card or a Reuse, having
+ * never met the control. So when a declared floor MOVES — drama-box's `Input_Duration`
+ * went 1 → 3 with MPI-645 — an old value below it would otherwise SHOW as the new
+ * floor (the slider clamps at render) and SEND the old number, which is the one
+ * failure worse than a rejected run. Both payload paths pass through here, so the
+ * flow frame and the upscale tool-options twin get it from one place.
+ *
  * @param {Object} f  the field declaration
  * @param {*} v       the UI value
- * @returns {*}       the graph value, or `v` untouched when no mapping is declared
+ * @returns {*}       the graph value, clamped for a numeric field, or `v` untouched
  */
 export function mapDeclaredValue(f, v) {
+    if (f?.type === 'number' || f?.type === 'slider') v = fieldNumber(v, f);
     if (!Array.isArray(f?.mapTo) || f.mapTo.length !== 2) return v;
     const n = Number(v);
     if (!Number.isFinite(n)) return v;
@@ -202,17 +212,6 @@ export function buildField(f, cur, onChange, unsubs, opts = {}) {
         });
         unsubs.push(() => inst?.el?.destroy?.());
         wrap.appendChild(host);
-        // A FIELD-level note, the always-visible twin of the radio's per-option one and
-        // reusing its class. It exists for the disabled case: a greyed-out control with
-        // no stated reason is the thing MPI-620 rejected, and the cure Fabio accepted
-        // there was a note that reads AS the reason rather than as fine print. Its live
-        // caller is that card's own `canvasSize`, whose `note` sat unrendered from
-        // f1880430 until this branch existed. Only rendered when a field asks for one.
-        if (f.note) {
-            const fieldNote = ce('span', { className: cls('field-note') });
-            fieldNote.textContent = f.note;
-            wrap.appendChild(fieldNote);
-        }
     } else if (f.type === 'radio') {
         // The only mounted Primitive among the field types, so it is the only one
         // needing a host and a destroy. Worth it: a tier choice read as a <select>
@@ -402,6 +401,23 @@ export function buildField(f, cur, onChange, unsubs, opts = {}) {
     } else {
         clientLogger.warn('declaredFields', `unknown field type "${f.type}" — skipping`);
         return null;
+    }
+
+    // A FIELD-level note, the always-visible twin of the radio's per-option one and
+    // reusing its class. It exists for the disabled case: a greyed-out control with
+    // no stated reason is the thing MPI-620 rejected, and the cure Fabio accepted
+    // there was a note that reads AS the reason rather than as fine print. Only
+    // rendered when a field asks for one.
+    //
+    // It lives HERE, past every branch, because a note is a property of the FIELD and
+    // not of one widget. Written inside the `select` branch it silently dropped every
+    // note a slider declared: `Input_Denoise` and `Input_Prompt_Strength` each carry
+    // one in BOTH registries (LTX Upscale's flow and its tool-options twin) and none
+    // of the four had ever reached the screen (MPI-645).
+    if (f.note) {
+        const fieldNote = ce('span', { className: cls('field-note') });
+        fieldNote.textContent = f.note;
+        wrap.appendChild(fieldNote);
     }
     return wrap;
 }

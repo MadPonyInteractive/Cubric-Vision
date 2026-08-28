@@ -50,9 +50,56 @@ the text, never in a slider — which is also why this flow has no exaggeration 
 the model **read the prompt aloud** and stretch a line that should be delivered fast.
 Fabio found this by ear and it corrected two earlier sessions of this card.
 
-So the slider **starts at 1 and never offers 0** — the estimator is not an option the user
-should be able to pick back up. The node's own ceiling is 300 s; the slider stops at 30,
-which is where a spoken *line* stops being one.
+So the slider **never offers 0** — the estimator is not an option the user should be able
+to pick back up. The node's own ceiling is 300 s; the slider stops at 30, which is where a
+spoken *line* stops being one.
+
+### The floor is 3 s, which is the model author's own — and the window is a HARD CUT
+
+Taking the duration raw skips `sampling.estimate_duration`, and that function is
+`max(3.0, round(estimate_speech_duration(text) * multiplier, 1))`. **Upstream never asks
+this model to speak in under three seconds, whatever the text.** The slider shipped with
+`min: 1`, offering a range below anything the model was ever asked to do, and the window
+is a hard cut: a line that runs past it is simply truncated. Fabio hit it at 3 s and read
+it as a broken model (MPI-645). `min` is now **3**, and the field carries a `note` saying
+the window is hard — the number is a budget the user spends, not a hint.
+
+🔴 **The ×1.1 pad is deliberately NOT copied over with the floor.** It is headroom over
+upstream's own *estimate of the text*; applied to a number the user typed it restores no
+protection at all — it makes the readout lie by 10 % and still cuts a line that needed
+five seconds. Do not add it as "the other half of the fix".
+
+`min` is enforced at payload time, not only by the widget: `mapDeclaredValue` clamps every
+numeric field, so a card Reused from before the floor moved cannot render 3 and send 1.
+
+### The delivered clip is never exactly the number, and that is not a bug
+
+`generate_audio_latent` sizes the latent from the duration and then snaps it to the
+patchifier's `8n+1` grid at `AUDIO_LATENT_FPS = 25`:
+
+```python
+n_frames = int(round(duration_s * fps)) + 1
+n_frames = ((n_frames - 1 + 4) // 8) * 8 + 1      # -> decoder returns n_frames / 25 s
+```
+
+So the window quantises in **0.32 s steps and rounds to nearest**, and the decode then
+loses a constant **0.03 s** on top (`delivered = n_frames / 25 − 0.03`). Measured with
+`ffprobe` over all nine DramaBox clips in Fabio's own `TTS` project, each read against the
+`Input_Duration` in its `.meta` sidecar:
+
+| asked | latent frames | delivered | gap |
+|---|---|---|---|
+| 3 s | 73 | **2.89 s** | −0.11 s |
+| 4 s | 105 | **4.17 s** | +0.17 s |
+| 4.5 s | 113 | 4.49 s | −0.01 s |
+| 5 s | 129 | 5.13 s | +0.13 s |
+| 10 s | 249 | 9.93 s | −0.07 s |
+
+The gap runs **−0.11 s to +0.17 s and is never a whole second** — it goes both ways, so it
+is not a trim. A "two-second" clip from a 3 s request is a 2.89 s file whose line needed
+longer: **the cut is the whole story, and there is no second bug to hunt.** Do not
+re-derive this — and note `ebur128` cannot help you here, it reports the −70 LUFS silence
+floor on anything under ~10 s (memory `tool_measure_generated_audio`).
 
 Two related widgets are dead in this graph and must not be resurrected as controls:
 

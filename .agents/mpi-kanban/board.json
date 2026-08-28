@@ -3,7 +3,6 @@
   "next_id": 646,
   "columns": {
     "todo": [
-      "MPI-645",
       "MPI-623",
       "MPI-616",
       "MPI-612",
@@ -71,7 +70,8 @@
     ],
     "doing": [
       "MPI-603",
-      "MPI-367"
+      "MPI-367",
+      "MPI-645"
     ],
     "done": [
       "MPI-630",
@@ -140,7 +140,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-28T17:46:24Z",
+  "updated_at": "2026-08-28T18:12:00Z",
   "events": [
     {
       "at": "2026-08-27T15:31:00Z",
@@ -3971,6 +3971,20 @@
       "task": "MPI-603",
       "actor": "claude",
       "note": "Character Sheet head-removal rework SYNCED and recorded (9400cc9b). Fabio replaced the BiRefNet subject matte with SAM3 'background:3' inverted, after the BiRefNet matte was proved to be what dropped a wizard's staff - a single-salient-subject segmenter handed a three-panel sheet, with the grey plate at the same 0x808080 as the backdrop so drops read as deliberate. API twin regenerated against 48188 (converter baseline proven byte-identical from the committed raw first), validated against live /object_info, all 15 Input_* titles intact. flow-model-choice.test.cjs no longer pins RemoveBackground by name; it now pins the properties, incl. the ':N' on the background vocabulary (max_detections defaults to 1 - a bare 'background' mattes one panel of three, silently). Mutation-checked. New docs/playbooks/add-flow/existing-flows/character-sheet.md carries the closed-world-vs-open-world lesson and the four-recipe history; validation.md and klein/9b.md no longer claim LanPaint is the current branch. 775/775, release:check green. MPI-603's own scope unchanged: steps 4-5 (ship, THEN delete from R2/HF) still open."
+    },
+    {
+      "at": "2026-08-28T17:54:05Z",
+      "type": "task.moved",
+      "task": "MPI-645",
+      "actor": "claude",
+      "note": "todo -> doing. Cause confirmed against the installed node pack and app.log: DramaBoxSampler takes the duration RAW, so the estimator's 3.0s floor never applies. The requested-vs-delivered gap is EXPLAINED and is not a second bug - generate_audio_latent rounds latent frames to the 8n+1 grid at 25 latent fps, so the window quantises in 0.32s steps: 3.0s -> 2.92s, 4.0s -> 4.20s, matching the 'Decoded 2.9s' / 'Decoded 4.2s' lines logged by Fabio's own 14:28 runs."
+    },
+    {
+      "at": "2026-08-28T18:12:00Z",
+      "type": "task.updated",
+      "task": "MPI-645",
+      "actor": "claude",
+      "note": "Shipped. drama-box Input_Duration min 1 -> 3 (upstream's own floor: estimate_duration is max(3.0, ...), and taking the duration raw skips it) plus a note saying the window is a HARD CUT - min:3 alone cannot help the reported case, which was a request of exactly 3. Root cause in one pass: buildField rendered f.note inside the `select` branch only, so FOUR already-declared slider notes had never reached the screen (Input_Denoise and Input_Prompt_Strength in both flowsRegistry and pluginsRegistry); the block moved past every branch. mapDeclaredValue now clamps every numeric field so a moved floor cannot render 3 and send a persisted 1. The x1.1 pad is deliberately NOT copied over - it is headroom over upstream's ESTIMATE, and over a typed number it only makes the readout lie. Requested-vs-delivered EXPLAINED and measured: ffprobe over all nine flowDramaBox clips against their sidecars gives -0.11s..+0.17s (3s->2.89, 4s->4.17, 5s->5.13, 10s->9.93) - the 8n+1 latent grid at 25fps minus a constant 0.03s, going both ways, never a whole second. No second bug. Verified live on an isolated instance: range input min=3 max=30 step=1, the note rendered under the slider (screenshot), and the upscale block's own field-note namespace proven through buildField. npm test 773/773; desktop 39 pass + 1 environmental that passes alone. VALIDATING on a judgement only Fabio can make: is 3s the right floor, and does the note read right."
     }
   ]
 }

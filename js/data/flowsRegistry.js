@@ -1662,19 +1662,41 @@ export const FLOWS = [
                 // ALOUD and stretch a line that should be delivered fast. Fabio found
                 // this by ear and it corrected two earlier sessions.
                 //
-                // The slider therefore starts at 1, never 0 — the estimator is not an
-                // option the user should be able to pick back up. The node's own
-                // ceiling is 300s; 30 is where a spoken LINE stops being one.
+                // The slider therefore never offers 0 — the estimator is not an option
+                // the user should be able to pick back up. The node's own ceiling is
+                // 300s; 30 is where a spoken LINE stops being one.
+                //
+                // MIN IS 3, WHICH IS THE MODEL AUTHOR'S OWN FLOOR (MPI-645). Taking the
+                // duration raw skips `sampling.estimate_duration`, and that function is
+                // `max(3.0, ...)`: upstream never asks this model to speak in less than
+                // three seconds, whatever the text. The slider offered 1 and 2, which is
+                // a range below anything the model was ever asked to do, and the window
+                // is a HARD CUT — a line that runs past it is simply truncated, which is
+                // what Fabio hit and reported as a broken model.
+                //
+                // The pad is deliberately NOT copied over with the floor. Upstream's
+                // x1.1 is headroom over ITS OWN ESTIMATE of the text; applied to a
+                // number the user typed it restores no protection at all, it only makes
+                // the readout lie by 10% and still cuts a line that needed longer. The
+                // note is the honest fix: say the window is hard and let the user spend
+                // seconds on it.
                 //
                 // `duration_multiplier` on the samplers is dead weight in this graph:
                 // generate.py:179 uses an explicit duration RAW, so the flat +2.0s then
                 // x1.10 that produced the trailing silence is bypassed entirely.
                 //
+                // The delivered clip is never exactly the number, and that is upstream's
+                // latent grid rather than a bug of ours: `generate_audio_latent` snaps
+                // frames to 8n+1 at 25 latent fps, so the window quantises in 0.32s
+                // steps and rounds to NEAREST — 3s lands on 2.92s, 4s on 4.20s. Sub-frame
+                // either way; do not chase it.
+                //
                 // WHOLE SECONDS, not halves (Fabio, 2026-08-28). A half-second is
                 // fiddly to land on, and a readout flipping between one and two
                 // digits resizes the slider mid-drag, which "looks like it's buggy".
                 id: 'Input_Duration', type: 'slider', label: 'Seconds',
-                min: 1, max: 30, step: 1, default: 5,
+                min: 3, max: 30, step: 1, default: 5,
+                note: 'A hard window — the line is cut off when it runs past this. Give a long line more seconds.',
             },
         ],
         // No `result.compare` — two waveforms have nothing to reveal between them, the
