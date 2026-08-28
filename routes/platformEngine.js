@@ -59,8 +59,13 @@ const PYTHON_BIN_PARTS_MAP = {
     linux: [COMFY_VENV_DIR, 'bin', 'python3'],
 };
 
-// Cached GPU detection result for the session
-let _gpuDetectionCache = null;
+// Cached GPU detection for the session — the in-flight PROMISE, not the resolved
+// result. Caching the result cached nothing on boot: it is assigned after the
+// await, and the two boot callers (GET /system/stats and GET /system/gpu-info,
+// both fired by the landing hero stat slots) arrive within ~30ms of each other,
+// so both saw null and ran a full detection. Memoizing the promise makes the
+// second caller await the first one's work (MPI-639).
+let _gpuDetectionPromise = null;
 
 function _resolveEnvPath(name) {
     const value = process.env[name];
@@ -228,62 +233,63 @@ function selectNvidiaBuild(gpuName, cudaVersion) {
 const { gpuArch } = require('module').createRequire(__filename)('../js/data/modelConstants/gpuArch.js');
 
 /**
- * Detect AMD GPU via WMI (Windows only).
- * @returns {Promise<boolean>}
+ * Detect AMD and Intel Arc GPUs via WMI (Windows only), in ONE probe.
+ *
+ * These used to be two functions issuing the SAME `wmic` command and testing the
+ * same stdout with two different regexes — so every detection paid for two
+ * processes to read one answer. `wmic` costs ~200ms a call (MPI-639).
+ *
+ * @returns {Promise<{hasAmd: boolean, hasIntel: boolean}>}
  */
-async function detectAmdGPU() {
-    if (process.platform !== 'win32') return false;
+async function detectWmiGPUs() {
+    if (process.platform !== 'win32') return { hasAmd: false, hasIntel: false };
 
     return new Promise((resolve) => {
         execFile('wmic', ['path', 'win32_videocontroller', 'get', 'name'], { timeout: 5000, windowsHide: true }, (error, stdout) => {
-            if (error) return resolve(false);
+            if (error) return resolve({ hasAmd: false, hasIntel: false });
             const hasAmd = /AMD|Radeon/i.test(stdout);
-            if (hasAmd) logger.info('gpu-detect', 'AMD GPU detected via WMI');
-            resolve(hasAmd);
-        });
-    });
-}
-
-/**
- * Detect Intel Arc GPU via WMI (Windows only).
- * @returns {Promise<boolean>}
- */
-async function detectIntelArcGPU() {
-    if (process.platform !== 'win32') return false;
-
-    return new Promise((resolve) => {
-        execFile('wmic', ['path', 'win32_videocontroller', 'get', 'name'], { timeout: 5000, windowsHide: true }, (error, stdout) => {
-            if (error) return resolve(false);
             const hasIntel = /Intel.*Arc|Intel.*Data\s+Center\s+GPU/i.test(stdout);
+            if (hasAmd) logger.info('gpu-detect', 'AMD GPU detected via WMI');
             if (hasIntel) logger.info('gpu-detect', 'Intel Arc GPU detected via WMI');
-            resolve(hasIntel);
+            resolve({ hasAmd, hasIntel });
         });
     });
 }
 
 /**
- * Resolve GPU-specific download configuration.
+ * Resolve GPU-specific download configuration, detecting at most once per session.
  * Returns the correct ComfyUI engine URL + filename for the detected GPU.
- * Result is cached for the session.
+ *
+ * No log on a cache hit: /system/stats calls this on every poll (~0.5 Hz), so
+ * logging each hit would flood app.log. The one real detection still logs.
  *
  * @returns {Promise<{comfy: {url: string, filename: string}}>}
  */
-async function resolveDownloadConfig() {
-    // Return cached result if available. No log here: /system/stats calls this on
-    // every poll (~0.5 Hz), so logging each cache hit floods app.log. The initial
-    // (uncached) detection below still logs once.
-    if (_gpuDetectionCache) {
-        return _gpuDetectionCache;
+function resolveDownloadConfig() {
+    if (!_gpuDetectionPromise) {
+        // Drop the memo if detection throws, so a later call can retry rather than
+        // replaying the failure for the rest of the session.
+        _gpuDetectionPromise = _detectDownloadConfig().catch((err) => {
+            _gpuDetectionPromise = null;
+            throw err;
+        });
     }
+    return _gpuDetectionPromise;
+}
 
+/** The actual probing. Call it through resolveDownloadConfig(), never directly. */
+async function _detectDownloadConfig() {
     logger.info('gpu-detect', 'Starting GPU detection...');
 
-    // Detect GPUs in parallel
-    const [nvidiaResult, hasAmd, hasIntel] = await Promise.all([
-        detectNvidiaGPU(),
-        detectAmdGPU(),
-        detectIntelArcGPU(),
-    ]);
+    // NVIDIA first, and the WMI probe ONLY if it found nothing. These used to run
+    // together in a Promise.all, which spent a `wmic` call (~200ms) on a machine
+    // that had already identified its card. Sequential costs nothing where it
+    // matters: a machine with no NVIDIA card has no `nvidia-smi` on PATH either, so
+    // that probe fails on the spawn, not on a timeout (MPI-639).
+    const nvidiaResult = await detectNvidiaGPU();
+    const { hasAmd, hasIntel } = nvidiaResult.hasGPU
+        ? { hasAmd: false, hasIntel: false }
+        : await detectWmiGPUs();
 
     // Apple Silicon has no nvidia-smi / AMD / Intel-Arc signal — the three probes
     // above all return empty on a Mac. Detect it from the platform/arch directly so
@@ -335,8 +341,6 @@ async function resolveDownloadConfig() {
         logger.info('gpu-detect', `Resolved config: uv-bootstrap (vendor ${gpu.vendor || 'none'}, CUDA ${nvidiaResult.cudaVersion || 'unknown'})`);
     }
 
-    // Cache for session
-    _gpuDetectionCache = result;
     return result;
 }
 

@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-639", "at": "2026-08-28T08:31:02+01:00", "actor": "claude", "column": "doing", "title": "GPU detection runs twice per boot and probes wmic it does not need"}
