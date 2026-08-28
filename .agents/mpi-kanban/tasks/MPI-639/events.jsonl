@@ -1,1 +1,2 @@
 {"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-639", "at": "2026-08-28T08:31:02+01:00", "actor": "claude", "column": "doing", "title": "GPU detection runs twice per boot and probes wmic it does not need"}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-639", "at": "2026-08-28T08:35:32+01:00", "actor": "claude", "from": "doing", "to": "done", "reason": "Measured on a console-less boot: one gpu-detect line (was two) and zero wmic spawns (was four). 4 spawn-counting tests green, eslint clean."}
