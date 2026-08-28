@@ -80,6 +80,24 @@ cd /g/ComfyUi && ./python_embeded/python.exe -s -m pip install -r ComfyUI/requir
 a newer bench proves nothing about what ships. Confirm with the user before picking a
 higher tag.
 
+### "Latest" means the newest RELEASE, not the newest tag
+
+`git tag --sort=-v:refname | head` runs ahead of the release page: ComfyUI tags the
+version-bump commit and publishes the GitHub Release later, so the top tag is routinely
+a version nobody has released. It carries no prerelease flag either — there is no
+release object at all to carry one. Ask GitHub, not the tag list:
+
+```bash
+gh api repos/comfyanonymous/ComfyUI/releases --jq '.[] | "\(.tag_name)  prerelease=\(.prerelease)"' | head -5
+git log --oneline <newest-release-tag>..<highest-tag>   # what you would be taking on trust
+```
+
+Take the newest published release. Go past it only for a commit in that range you
+actually want, and say which one — on 2026-08-28 the bench went to `v0.34.2` when the
+release was `v0.34.0`, and the whole delta was five cloud partner-node commits (Google
+Omni, WAN3-Prime, Recraft, Veo removals) we do not run plus one HEVC remux fix. Harmless
+that time, and entirely unexamined at checkout time.
+
 ## Step 3 — the node-floor pairing check
 
 Core bumps break version-sensitive custom nodes. **Before** bumping past a known-good
