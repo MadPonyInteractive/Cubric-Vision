@@ -69,7 +69,7 @@ steps: [
 
 Placement is the ONLY difference from declaring them flow-level like
 [extend](ltx-extend.md) does — same vocabulary, same renderer, same payload law
-(MPI-572, [../ui/carousel-frame.md](../ui/carousel-frame.md)). Both are top-level run
+(MPI-572, [../ui/carousel-frame/fields.md](../ui/carousel-frame/fields.md)). Both are top-level run
 inputs: `submitFlowGeneration` reads `inputs.positive` / `inputs.negative`. There is no
 `Input_*`-prefixed field here at all, so this flow's payload carries **no `injectionParams`**,
 which is the difference from extend.

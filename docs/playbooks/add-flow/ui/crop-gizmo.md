@@ -46,7 +46,7 @@ drawn whole, or the box you cannot grab is the box at the extreme the user most 
 ## The ratio bar belongs to the gizmo, not to `fields`
 
 A step's controls are normally DECLARED (`fields`, rendered by the frame — see
-[carousel-frame.md](carousel-frame.md)). This one is not, for one reason: **the ratio list is
+[carousel-frame/steps.md](carousel-frame/steps.md)). This one is not, for one reason: **the ratio list is
 orientation-dynamic.** Flipping portrait↔landscape rewrites all nine options, their labels and
 their icons, and a declared field's `options` are static. The bar is still nothing but
 components — two `MpiRadioGroup`s over the same `CROP_RATIOS` table

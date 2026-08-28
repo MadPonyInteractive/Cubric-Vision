@@ -48,7 +48,7 @@ is outstanding, which does not block this flow.
 - **No component (MPI-572).** The tier is a declared `radio` field (`Input_Tier`, 1/2/3) on the
   run slide; the boxes are carousel STEPS (`kind:'box'`) that declare `param: 'box1'` / `'box2'`.
   `MpiFlowHeadSwap` was deleted — those two declarations are all it ever was. See
-  [../ui/box-gizmo.md](../ui/box-gizmo.md) and [../ui/carousel-frame.md](../ui/carousel-frame.md).
+  [../ui/box-gizmo.md](../ui/box-gizmo.md) and [../ui/carousel-frame/](../ui/carousel-frame/README.md).
 
 ### The UI, as shipped (MPI-306 Phase 2)
 
@@ -69,7 +69,7 @@ pixels — with only the `w`/`h` → `width`/`height` rename the injector's widg
 that rename lives with the `box` KIND (`stepValueToParam`, `stepKinds.js`).
 
 Tier cost labels are the MEASURED relative ratios (`baseline` / `~25% of time` /
-`~13% of time`), never absolute seconds ([../ui/carousel-frame.md](../ui/carousel-frame.md)
+`~13% of time`), never absolute seconds ([../ui/carousel-frame/composition.md](../ui/carousel-frame/composition.md)
 § Tier cost is RELATIVE).
 
 ### Injection surface (`Input_*` / `Output_*`)

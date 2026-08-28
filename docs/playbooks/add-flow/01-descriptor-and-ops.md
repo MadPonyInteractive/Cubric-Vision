@@ -105,7 +105,7 @@ type — never a bare `<input>`, and never a Flow-owned Organism.** A Flow is mo
 it can carry all sorts of different components, but they are all components
 (`.claude/rules/components.md` § Every UI element is a component). Full contract + the
 id-routing table:
-[ui/carousel-frame.md](ui/carousel-frame.md) § `fields` is the ONE control surface. Worked
+[ui/carousel-frame/fields.md](ui/carousel-frame/fields.md). Worked
 examples: [existing-flows/ltx-extend.md](existing-flows/ltx-extend.md) (run slide),
 [existing-flows/head-swap.md](existing-flows/head-swap.md) (a `radio` + two step `param` binds).
 

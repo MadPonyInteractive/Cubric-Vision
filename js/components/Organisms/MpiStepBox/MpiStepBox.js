@@ -9,7 +9,7 @@ import { qs, on } from '../../../utils/dom.js';
  * A STEP KIND, not an app component. It knows three things: the media it was
  * handed, the value it holds, and how to report a change. It never learns which
  * app hosts it, never touches the workflow, never talks to an injector — that
- * is the whole contract that lets `steps` stay data (carousel-frame.md § Steps
+ * is the whole contract that lets `steps` stay data (carousel-frame/steps.md § Steps
  * are DATA).
  *
  * Contract (every step kind implements it):
@@ -271,7 +271,7 @@ export const MpiStepBox = ComponentFactory.create({
 
             // A step is NEVER invalid: with no restored value the box defaults to
             // the whole image (enable()'s maximal box), so the forward arrow is
-            // never blocked (carousel-frame.md § Steps are DATA).
+            // never blocked (carousel-frame/steps.md § Steps are DATA).
             const restored = _box ? _sourcePxToNorm(_box, _natural) : null;
 
             // A ratio is a UI lock only — the graph's width/height are independent.

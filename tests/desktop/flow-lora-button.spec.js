@@ -63,7 +63,7 @@ test('the run slide pairs a model dropdown with its cogwheel, and the cogwheel f
       flow.el.open();
     });
 
-    // The ticker NAVIGATES (carousel-frame.md), so the last tick is the run slide —
+    // The ticker NAVIGATES (carousel-frame/composition.md), so the last tick is the run slide —
     // reached the way a user reaches it rather than by poking a private index.
     //
     // Clicked IN PAGE rather than through Playwright, and every interaction below is the

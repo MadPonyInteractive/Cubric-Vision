@@ -6,7 +6,7 @@ import { resolveMediaUrl } from '../../../utils/mediaActions.js';
  *
  * A STEP KIND, not an app component: it knows the media it was handed and
  * nothing else. It never learns which flow hosts it, never touches the
- * workflow, never talks to an injector (carousel-frame.md § Steps are DATA).
+ * workflow, never talks to an injector (carousel-frame/steps.md § Steps are DATA).
  *
  * Contract (every step kind implements it):
  *   props  { media, value, onChange, step }

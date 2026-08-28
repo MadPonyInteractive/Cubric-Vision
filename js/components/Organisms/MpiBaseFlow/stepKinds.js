@@ -10,7 +10,7 @@ import { MpiStepPlace, composePlacedObject } from '../MpiStepPlace/MpiStepPlace.
  *
  * Mirrors the injector registry: `kind` in a flow's `steps[]` is a key here.
  * A NEW GIZMO IS ONE COMPONENT + ONE LINE IN THIS OBJECT — no frame change, no
- * per-flow layout code (carousel-frame.md § Steps are DATA).
+ * per-flow layout code (carousel-frame/steps.md § Steps are DATA).
  *
  * Every step kind implements the same contract:
  *   props        { media, value, onChange, step }
@@ -70,7 +70,7 @@ export const STEP_KINDS = {
  * `_buildStepSlide` would render "Add the image for this step on the first step."
  * on a flow that has no first-step slots to add it to.
  *
- * The one-row cap on a step's `fields` (carousel-frame.md) does NOT apply here:
+ * The one-row cap on a step's `fields` (carousel-frame/steps.md) does NOT apply here:
  * that cap exists because the row is a MODIFIER on a canvas. With no canvas there
  * is nothing to modify — so these stack, exactly like the run slide's column.
  *

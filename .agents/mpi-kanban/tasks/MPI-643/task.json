@@ -1,0 +1,27 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-643",
+  "title": "Split carousel-frame.md into its own folder, and heal the stale Apply section",
+  "description": "docs/playbooks/add-flow/ui/carousel-frame.md is 496 lines against the 200-line budget - flagged in two prior sessions' handoffs at 416 lines and never actioned. Split it into docs/playbooks/add-flow/ui/carousel-frame/ following the precedent set by result-pane.md (split out of 04-overlay-and-shell.md for the same reason, MPI-638). While mapping it, its section 'Results are not real until Apply' was found STALE: MpiBaseFlow no longer uses deferCommit, there is no _apply and no 'Not saved yet' note; hold-until-Apply was built as MPI-306 Phase 3 and REMOVED after the UX pass. The doc still presents it as shipped.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "completed",
+  "created_at": "2026-08-28T13:30:00Z",
+  "updated_at": "2026-08-28T13:45:00Z",
+  "labels": [
+    "docs",
+    "flows"
+  ],
+  "links": {
+    "files": "files.json",
+    "events": "events.jsonl"
+  },
+  "acceptance": [
+    "carousel-frame.md is replaced by carousel-frame/ - a README hub plus topic files, every file under the 200-line budget",
+    "The split is faithful: no durable fact is dropped, and each file keeps the MPI-number attributions the sections carry",
+    "The stale 'Results are not real until Apply' section is corrected to what the code actually does (results commit on completion; deferCommit survives as a generationService primitive used by MpiGroupHistoryBlock and MpiStepCutout, not by MpiBaseFlow), not carried forward as shipped behaviour",
+    "Every inbound link is repointed at the right split file, including section anchors: 9 markdown references and 11 JS/spec comment references",
+    "release-baselines/*.json are NOT touched - they are manifests of shipped artifacts, not references to the current tree (MPI-409)",
+    "ui/README.md's pattern table routes to the new folder"
+  ]
+}

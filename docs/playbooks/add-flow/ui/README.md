@@ -15,7 +15,7 @@ overlay / Flow Library. The procedure for wiring a flow is the numbered sections
 
 | File | Covers | Origin |
 |---|---|---|
-| [carousel-frame.md](carousel-frame.md) | **THE flow frame** — step carousel, steps-as-data, results-not-real-until-Apply | Head Swap (MPI-299) |
+| [carousel-frame/](carousel-frame/README.md) | **THE flow frame** — step carousel, steps-as-data, results save themselves (split into README/steps/fields/run-path/composition) | Head Swap (MPI-299) |
 | [box-gizmo.md](box-gizmo.md) | Ratio-locked box selector over an image; coord contract into the graph | Head Swap (MPI-299) |
 | [crop-gizmo.md](crop-gizmo.md) | **The FRAME the picture sits in** — the History crop tool's own `CropManager` in a step, contain-not-inscribe ratios, and a kind that returns a FILE instead of a param | Outpaint (MPI-594) |
 | [paint-gizmo.md](paint-gizmo.md) | **The user DRAWS** — the History paint tool's own `PaintManager` + `brushDab.js` in a step, the undo contract, and a kind returning the LAYER ALONE into its own media slot (`mediaRole`) | Scribble-to-object (MPI-567) |
@@ -49,7 +49,7 @@ Not yet decided — captured so the next session doesn't start cold:
 - ~~**Result-pane polish.**~~ ANSWERED — [result-pane.md](result-pane.md). (Apply/Discard are
   gone too: hold-until-Apply shipped as MPI-306 Phase 3 and was removed after the UX pass.)
 
-Answered by [carousel-frame.md](carousel-frame.md), kept here as pointers:
+Answered by [carousel-frame/](carousel-frame/README.md), kept here as pointers:
 
 - **Where per-flow controls sit** → the last step's left pane, opposite the result.
 - **Overall flow layout** → the carousel frame. Divider on first + last step only.

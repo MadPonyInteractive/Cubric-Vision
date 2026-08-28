@@ -37,7 +37,7 @@ import { buildField, mapDeclaredValue, isInjectionParam } from '../../../utils/d
  * Two zones split by a centre divider, but ONLY on the first and last step. That
  * absence is the signal: divided = you are supplying or reviewing; undivided =
  * you are working. Full design record + rationale:
- * docs/playbooks/add-flow/ui/carousel-frame.md § The approved composition.
+ * docs/playbooks/add-flow/ui/carousel-frame/composition.md.
  *
  *   STEP 0 (implicit)   media slots (left)  │  what this flow does (right)
  *   STEPS 1..N          declared middle steps — bounded centred canvas, no divider
@@ -81,7 +81,7 @@ import { buildField, mapDeclaredValue, isInjectionParam } from '../../../utils/d
  *
  * It is what lets a Flow ship with no JS component at all — a component being
  * precisely the thing a third-party Flow can never have
- * (docs/playbooks/add-flow/ui/carousel-frame.md).
+ * (docs/playbooks/add-flow/ui/carousel-frame/fields.md).
  *
  * ── Results save themselves ──────────────────────────────────────────────────
  * A finished result is committed by the run path and the pane simply SAYS SO
@@ -590,7 +590,7 @@ export const MpiBaseFlow = ComponentFactory.create({
                 btn.appendChild(num);
                 btn.appendChild(text);
                 // The ticker NAVIGATES. A row that indicates but refuses clicks reads
-                // as disabled, not informational (carousel-frame.md).
+                // as disabled, not informational (carousel-frame/composition.md).
                 _unsubs.push(on(btn, 'click', () => _goTo(i)));
                 _killSpace(btn);
                 tickerEl.appendChild(btn);

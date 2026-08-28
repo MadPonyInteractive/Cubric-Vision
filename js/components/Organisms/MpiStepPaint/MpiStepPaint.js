@@ -54,7 +54,7 @@ import { qs, on } from '../../../utils/dom.js';
  * needs a brush/eraser pair, a shape, a colour and an undo. Making a flow declare
  * them would be error-prone boilerplate a manifest author could silently omit,
  * leaving a canvas the user cannot erase on. It is still one row and still
- * nothing but Primitives (carousel-frame.md § the one-row cap).
+ * nothing but Primitives (carousel-frame/steps.md § the one-row cap).
  *
  * BRUSH SHAPE IS THE SAME TEN `BRUSH_PRESETS` THE MASK BRUSH HAS (MPI-435), and
  * it is a CONTROL, not new paint code: `PaintManager.brushPreset` already exists

@@ -1075,7 +1075,7 @@
  * at mount when its file is gone. Back =
  * el.close() then Events.emit('flows:open'). Mid-run navigation is allowed; closing
  * with an unapplied result does NOT prompt (there is no Discard — see
- * docs/playbooks/add-flow/ui/carousel-frame.md).
+ * docs/playbooks/add-flow/ui/carousel-frame/run-path.md).
  *
  * The run path COMMITS ON COMPLETION (scope:'gallery') — there is no Apply step.
  * MPI-306 Phase 3 built a hold-until-Apply flow and it was REVERTED after the UX

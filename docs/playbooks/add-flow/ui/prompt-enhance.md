@@ -97,7 +97,7 @@ It exists because a prompt-only flow has **no media at all**, so every gizmo kin
 for this step on the first step"* on a flow with no first-step slots to add it to.
 
 **The one-row cap does not apply to it, and that is not a loophole.** The cap
-([carousel-frame.md](carousel-frame.md) § A step may declare FIELDS) exists because that row is
+([carousel-frame/steps.md](carousel-frame/steps.md) § A step may declare FIELDS) exists because that row is
 a *modifier on a canvas* — a gizmo wanting two rows is a gizmo that should split. Here there is
 no canvas to modify; the fields are the step's whole content, exactly as they are the run
 slide's whole control column. What still holds is the reason behind the cap: **if a `fields`
