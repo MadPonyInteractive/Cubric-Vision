@@ -15,10 +15,16 @@ The two probes share one code path and land on opposite outcomes: outpaint stays
 slide 0, scribble reaches slide 1. So the Next button is found and navigation works —
 a silently-missing button would have pinned both at 0.
 
-The asserted message string `You need to add inputs to this flow.` appears in exactly
-two places in the repo (`grep`): the gate that emits it and the spec that asserts it.
-Nothing else can produce it, so the refusal is the gate's and not a fallthrough to the
-dispatch guard, whose copy names the media type.
+The asserted message string `You need to add inputs to this flow.` appears in exactly two
+places in the CODE (`grep`): `MpiBaseFlow.js:1785`, the only thing that emits it, and
+`flow-step-gate.spec.js:95`, the assertion. Nothing else can produce it, so the refusal is
+the gate's and not a fallthrough to the dispatch guard, whose copy names the media type.
+
+> Corrected after the claim auditor (2026-08-28). This first read "exactly two places in
+> the repo", which was true when the grep ran and false by the time it was committed — the
+> same session then quoted the string into `docs/toasts.md` (twice) and
+> `docs/playbooks/add-flow/02-media-io.md`, making it five. A repo-wide count is a claim
+> with a shelf life; scope it to the code, or re-run it last.
 
 ## Still open
 
