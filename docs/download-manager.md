@@ -591,7 +591,7 @@ watching the test fail.
 The local engine installs **one** file, `dev_configs/python_deps.txt`, in a single
 `--no-deps` pass — `ensureCuratedPythonDeps()` in `routes/shared.js`, gated on a
 content-hash marker at `<ENGINE_ROOT>/.cubric_python_deps`. It runs **no** node's
-`requirements.txt` and no `installRequirementsCommand`. All custom_nodes are
+`requirements.txt` and no per-node install command. All custom_nodes are
 universal (MPI-222), so the whole set is always the right set, and the marker makes every
 start after the first a no-op and an engine that predates the file self-heal.
 
@@ -673,10 +673,14 @@ The two platform-unresolvable lines that `requirementsDrop` used to strip are ha
 the curated file itself: `onnxruntime-gpu` (CUDA-only, no macOS wheel ever — it bricked
 every Mac first-install of a depth model, MPI-370) carries a PEP 508 marker, and
 `git+…/facebookresearch/sam2` (needs `git` on PATH, which no portable engine ships,
-MPI-387) is omitted outright. `installRequirementsCommand` survives as data in
-`nodesDeps.js` but nothing executes it on either engine. `pipPins` is **GONE** (MPI-630):
-it corrected a pip run that no longer happens anywhere, and the invariant test demanding
-one per baked node was propagating dead data onto every new pack.
+MPI-387) is omitted outright. Both per-node pip fields are now **GONE**: `pipPins`
+(MPI-630) and `installRequirementsCommand` (MPI-646, also dropped from
+`dev_configs/node_lock.json`). Each corrected or replaced a pip run that no longer happens
+anywhere, and each was kept alive by a test asserting its shape — the invariant demanding
+`pipPins` per baked node was already propagating dead data onto every new pack. The one
+thing `installRequirementsCommand` still named, Frame-Interpolation's
+`requirements-no-cupy.txt`, is named by `scripts/compile-node-deps.mjs` itself
+(`REQUIREMENTS_FILE`), so the drift check is unaffected.
 
 ## The universal dep set spans TWO HOSTS — install it half-by-half (MPI-427)
 

@@ -66,8 +66,7 @@
       "repo": "Fannovel16/ComfyUI-Frame-Interpolation",
       "commit": "26545cc2dd95bc3d27f056016300673bdeee78f5",
       "filename": "comfyui-frame-interpolation",
-      "installRequirements": true,
-      "installRequirementsCommand": "python install.py"
+      "installRequirements": true
     },
     "ComfyUI-Impact-Subpack": {
       "source": "git-commit",

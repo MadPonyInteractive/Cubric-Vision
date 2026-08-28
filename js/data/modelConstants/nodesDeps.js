@@ -114,22 +114,17 @@ export const nodesDeps = {
         filename: 'comfyui-frame-interpolation',
         url: lockUrl('ComfyUI-Frame-Interpolation'),
         installRequirements: true,
-        installRequirementsCommand: 'python install.py',
-        // install.py resolves requirements-*.txt (numpy, kornia, scipy, Pillow, opencv-
-        // contrib, torch-family). torch/torchvision/einops/tqdm are engine-managed/baked
-        // and opencv-contrib is redundant with the headless build already present — the
-        // curated dev_configs/python_deps.in set carries the shared libs it needs.
+        // This entry carried `installRequirementsCommand: 'python install.py'` until
+        // MPI-646 deleted it as dead data — since MPI-413 neither engine resolves a
+        // pack's requirements, so nothing ever ran it. install.py was also the thing
+        // that NAMED requirements-no-cupy.txt; `scripts/compile-node-deps.mjs` names
+        // that file itself now (its REQUIREMENTS_FILE map), so the drift check still
+        // reads this pack's declared deps.
         //
-        // MPI-387 F3 — EXPECTED NOISE, not a failure. install.py tries to build
-        // `cupy-wheel`, which dies with `ModuleNotFoundError: No module named
-        // 'pkg_resources'` (setuptools 83 dropped it), and then install.py exits 0
-        // anyway. So app.log shows `Failed to build 'cupy-wheel'` immediately followed
-        // by `Custom install command succeeded`. That is the NODE lying about its own
-        // exit code, not a bug here: `runCustomCommand` (routes/shared.js) checks the
-        // exit code correctly and is right to resolve. cupy only accelerates the CUDA
-        // path; RIFE falls back to torch without it, which is what every machine that
-        // hits this is already doing. Do NOT "fix" this by dropping the exit-code check
-        // or by adding a cupy pin — cupy has no wheel for the embedded Python here.
+        // The shared libs it declares — numpy, kornia, scipy, Pillow, opencv-contrib —
+        // are pinned in the curated dev_configs/python_deps.in set, opencv as the single
+        // contrib+headless build. torch/torchvision/einops/tqdm are engine-managed or
+        // baked. cupy is dropped on purpose; python_deps.in carries the measurement.
         size: '37.4MB',
     },
     'ComfyUI-Impact-Subpack': {
@@ -245,32 +240,22 @@ export const nodesDeps = {
     // depth ControlNet (MPI-242). HAS a requirements.txt ⇒ installRequirements:true
     // ⇒ BAKED into the Pod image (needs POD_IMAGE_VERSION bump + rebuild).
     //
-    // ⚠ FIRST baked node whose requirements.txt lists bare `torch` + `torchvision`
-    // (no version constraint). The node does NOT need a different torch — our
-    // 2.12.0+cu130 satisfies it. The danger WAS our own flag: the default installer
-    // used to run `pip install -r requirements.txt --upgrade`, and `--upgrade` on an
-    // unconstrained name resolves from PyPI, which has no `+cu130` wheels.
-    // Empirically verified:
+    // Its requirements.txt lists bare `torch` + `torchvision` (no version constraint),
+    // which WAS a live hazard: the default installer ran `pip install -r
+    // requirements.txt --upgrade`, and `--upgrade` on an unconstrained name resolves
+    // from PyPI, which ships no `+cu130` wheels — and losing +cu130 destroys the ~10x
+    // cold fault-in fix (MPI-187). Empirically verified at the time:
     //   pip install --dry-run --upgrade torch      → "Would install torch-2.13.0"  ✗
     //   pip install --dry-run -r requirements.txt  → "torch ... (2.12.0+cu130)" satisfied ✓
-    // Losing +cu130 destroys the ~10x cold fault-in fix (MPI-187).
     //
-    // MPI-413 FIXED THAT AT THE SOURCE — `--upgrade` is gone from the default path in
-    // `downloadManager.js`, because the same mechanism was silently swapping torch on
-    // CPU-only boxes too. The override below is therefore now EQUIVALENT to the
-    // default rather than a correction of it. It is kept deliberately: it costs
-    // nothing, and it keeps this node safe if the default path ever regains an
-    // upgrade-style flag. Do not read it as evidence that the default is still unsafe.
+    // This entry carried an `installRequirementsCommand` override to dodge that flag.
+    // MPI-413 then removed the per-node requirements step from BOTH engines, so nothing
+    // resolves this file at all any more, and MPI-646 deleted the override as dead
+    // data. The Dockerfile still re-pins the cu130 trio after ComfyUI's own unpinned
+    // `torch`, which is where the hazard actually lives now.
     //
-    // The override runs a NON-upgrade pip run. `installRequirementsCommand`
-    // replaces the default pip path entirely and runs inside the node folder.
-    // (A pip pin could NOT fix this anyway — `pip install torch==2.12.0+cu130` has no
-    // --index-url here and those wheels aren't on PyPI, so the pin would FAIL and
-    // abort the whole node install.) The Dockerfile solves the same hazard for
-    // ComfyUI's own unpinned `torch` by re-pinning the cu130 trio afterwards.
-    //
-    // Its remaining unpinned shared libs are pinned in the curated
-    // dev_configs/python_deps.in set, mediapipe/fvcore/omegaconf/onnxruntime-gpu included.
+    // Its unpinned shared libs are pinned in the curated dev_configs/python_deps.in
+    // set, mediapipe/fvcore/omegaconf/onnxruntime-gpu included.
     'comfyui_controlnet_aux': {
         id: 'comfyui_controlnet_aux',
         name: 'ComfyUI ControlNet Aux (preprocessors)',
@@ -278,7 +263,6 @@ export const nodesDeps = {
         filename: 'comfyui_controlnet_aux',
         url: lockUrl('comfyui_controlnet_aux'),
         installRequirements: true,
-        installRequirementsCommand: 'python -m pip install -r requirements.txt --no-warn-script-location',
         size: '42.7MB',
     },
     // Chatterbox TTS + voice conversion (MPI-607). VENDORS its own `local_chatterbox`

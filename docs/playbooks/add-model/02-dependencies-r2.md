@@ -99,8 +99,9 @@ baked-node bump also needs `POD_IMAGE_VERSION` bumped + an app restart; the app 
 > Do **not** add per-node pip pins to the dep entry. `pipPins` was deleted in MPI-630:
 > neither engine resolves a pack's `requirements.txt` any more, `routes/remoteModels.js`
 > sends no pin passthrough, and the Pod wrapper accepts+ignores `pip_pins`. A version a
-> node needs is a line in `python_deps.in`, nowhere else. (`installRequirementsCommand`
-> survives as data on two entries but nothing executes it either.)
+> node needs is a line in `python_deps.in`, nowhere else. Its twin
+> `installRequirementsCommand` went the same way in MPI-646 — the field no longer exists
+> on any entry, in `nodesDeps.js` or in `node_lock.json`.
 
 **In-folder weights — `targetPath`.** A weight whose node hard-codes its scan dir
 (RIFE reads only `custom_nodes/comfyui-frame-interpolation/ckpts/rife/`) can't live in

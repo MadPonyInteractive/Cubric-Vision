@@ -86,7 +86,14 @@ assert.ok(!/runPipCommand\(\[\s*'install',\s*'-r',\s*reqPath/.test(dmSrc),
     + 'node dependencies come from the curated set');
 assert.ok(!/runCustomCommand\(dep\.installRequirementsCommand/.test(dmSrc),
     'the per-node installRequirementsCommand step must not return in the LOCAL path '
-    + '(the field itself stays — remoteModels.js still sends it to the Pod wrapper)');
+    + '(MPI-646 deleted the field too — the remote path stopped sending it at MPI-413 '
+    + 'and the Pod wrapper accepts-and-ignores it)');
+// `^\s*` anchors this to a real property line — the entries still EXPLAIN the deletion
+// in prose, and a comment naming the field must not fail the test.
+assert.ok(!/^\s*installRequirementsCommand:/m.test(
+    fs.readFileSync(path.join(REPO, 'js', 'data', 'modelConstants', 'nodesDeps.js'), 'utf8')),
+    'installRequirementsCommand must not come back as data (MPI-646) — no engine runs a '
+    + "pack's requirements, so a declared command is a rule nothing enforces");
 
 // 5. Every node the lock is compiled from must still be declared. The compile reads ALL
 // of them, not the `installRequirements: true` subset — that flag is the Pod's bake/volume
