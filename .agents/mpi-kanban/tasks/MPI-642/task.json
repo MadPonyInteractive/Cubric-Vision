@@ -1,0 +1,32 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-642",
+  "title": "Ship the mutation-check harness, and record the two flow-overlay spec traps",
+  "description": "Two close-out proposals Fabio accepted (2026-08-28, MPI-638/641 session). The restore-in-finally mutation harness was hand-written FIVE times in one session while docs/testing.md already mandates the pattern without shipping the tool; and two traps that cost that session real time - stubbing s_installedModelIds is only half of flowAvailability, and the flow overlay has no measurable geometry in the desktop harness - belong in docs/testing.md next to the three that are already there.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "completed",
+  "created_at": "2026-08-28T13:17:30Z",
+  "updated_at": "2026-08-28T13:20:20Z",
+  "labels": [
+    "tooling",
+    "testing",
+    "docs"
+  ],
+  "links": {
+    "checklist": "checklist.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "validation": "validation.md"
+  },
+  "acceptance": [
+    "scripts/mutate-check.mjs breaks ONE file, runs a command, and restores the file inside `finally` with a byte-identical verification - the discipline docs/testing.md already requires",
+    "It refuses loudly when the target string is absent (a stale script must not silently run an unmutated check) with its own exit code",
+    "Exit 0 = mutant KILLED (the command failed, so the check bites); non-zero = SURVIVED or the harness could not run - usable in a chain",
+    "It accepts the mutation text from a FILE as well as a flag, because Git Bash on Windows mangles backticks and heredocs in inline args and blocked this session three times",
+    "It carries its own runnable self-check, so the harness itself is not the untested thing",
+    "docs/testing.md gains the two traps as items in the existing 'Specs that drive a FLOW overlay' list: s_installedModelIds is only half of flowAvailability (the dep half is disk-derived -> green locally, red on CI), and the overlay has NO geometry in that harness (computed styles read fine, every getBoundingClientRect is 0, so any a === b on a measurement is vacuous)",
+    "docs/testing.md points at the new script where it already tells the reader to mutate from a script that restores in finally",
+    "npm test stays green"
+  ]
+}

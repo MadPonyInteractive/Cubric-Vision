@@ -1,0 +1,3 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-642", "type": "task.created", "at": "2026-08-28T13:17:30Z", "actor": "claude", "summary": "Two accepted close-out proposals from the MPI-638/641 session."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-642", "type": "task.moved", "at": "2026-08-28T13:17:30Z", "actor": "claude", "from": "todo", "to": "doing", "summary": "Picked up immediately."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-642", "type": "task.moved", "at": "2026-08-28T13:20:20Z", "actor": "claude", "from": "doing", "to": "done", "summary": "Closed. mutate-check.mjs ships with a self-check and is proven on a real mutation; docs/testing.md carries the two flow-overlay traps and points at the script."}

@@ -1,0 +1,8 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "scripts/mutate-check.mjs",
+    "docs/testing.md",
+    ".agents/mpi-kanban/tasks/MPI-642/"
+  ]
+}

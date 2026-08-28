@@ -205,9 +205,11 @@ deliberately left alone.
   Model Library (needs installed models) and the Flow Library (dev-gated) are not in
   it yet — they need fixtures first.
 
-### Specs that drive a FLOW overlay (MPI-504)
+### Specs that drive a FLOW overlay (MPI-504, MPI-638/641)
 
-Three things cost a failing run each before the three `flow-*.spec.js` specs worked:
+Five things cost a failing run each before the `flow-*.spec.js` specs worked. **Items 4 and 5
+are the expensive shape: the spec goes GREEN and the code is wrong** — one passed on every
+developer machine and failed only on CI, the other passed against a visibly broken box.
 
 1. **Nothing inside a Flow overlay is clickable or fillable with no project open.** It mounts
    into a `main-area` the landing page keeps hidden, so `.click()` / `.fill()` time out with
@@ -229,10 +231,41 @@ Three things cost a failing run each before the three `flow-*.spec.js` specs wor
    instead proves only that the Primitive toggled itself — it does that whether or not anyone
    listened.
 
+4. **Stubbing `state.s_installedModelIds` is only HALF of availability.** `flowAvailability` is
+   `missing.length === 0 && missingDeps.length === 0`, and the dep half comes from
+   `_flowDepStatusCache`, which a dev box fills from disk during the model sync. So a spec that
+   stubs the model set alone is Ready on your machine and Get-models on a bare runner, with
+   identical code. `flow-library-skips-drawer.spec.js` shipped that way and went red on
+   `windows-latest` alone (run 33153649907). Stub `setFlowDepStatus(flowId, …)` too, reading the
+   ids off the descriptor's `requiredDeps` so adding a dep cannot silently re-break it.
+5. **The overlay has NO GEOMETRY here — only styles.** Item 1's "not visible" has a sharper
+   consequence than blocked clicks: every `getBoundingClientRect()` inside the frame returns
+   **0**, while `getComputedStyle` reads perfectly normally (13px font, 10px padding). So a
+   height/width comparison between two elements is `0 === 0` and passes against anything. A
+   spec asserting a box matched the control it replaces did exactly that while the box was 4px
+   too tall (MPI-641). Sizing `.main-area` by hand does not recover it. Assert a measurement is
+   non-degenerate (`> 0`) BEFORE comparing two of them — and when the harness genuinely cannot
+   measure, delete the assertion and pin the property that DECIDES the outcome instead (there,
+   `line-height`), rather than keeping one that cannot fail.
+
 **And mutation-test the guard.** Both MPI-504 specs were run against the bug they cover (the
 old host-div write; the toggle's `onChange` cut) and confirmed RED before being kept. Do the
 mutation from a script that restores in `finally` — a crash mid-run otherwise leaves a real
 source file broken, and the mutant then reads as your own bad edit.
+
+**`scripts/mutate-check.mjs` is that script; do not hand-roll it again.** It breaks one file,
+runs your command, restores in `finally` and verifies byte-identical, and refuses outright when
+the target text is absent — a stale snippet would otherwise run the check against unmutated code
+and print green. Exit 0 = killed, 1 = **survived**, 2 = the harness could not run.
+
+```bash
+node scripts/mutate-check.mjs --file js/x.js --from "a === b" --to "a !== b" --run "npm test"
+```
+
+Omit `--to` to DELETE the snippet (the commonest mutation: drop the guard and see if anything
+notices). Use `--from-file` when the snippet contains backticks or quotes — Git Bash on Windows
+mangles those inline, and this repo's guard hooks block the heredoc workaround.
+`--self-check` proves the harness itself on a temp file.
 
 ### Four traps these specs paid for
 
