@@ -1382,6 +1382,105 @@ export const FLOWS = [
         // and 3 only look contradictory — distance in TIMBRE is what makes the
         // conversion audible, distance in PITCH is what you compensate for.
     },
+    // MPI-607 — "DramaBox". Type a line, optionally hand it a voice to match, get a
+    // performed take. The sibling of Voice Changer and its opposite: that flow needs a
+    // real recording and passes your delivery through, this one has no recording at all
+    // and generates the delivery from the words.
+    //
+    // APPROVED ON IDENTITY, NOT EXPRESSIVENESS, and the description says so on purpose.
+    // Fabio's verdict after his own ear tests: "it sticks to the reference a lot better
+    // than Chatterbox, especially when we add our performances to Chatterbox. Chatterbox
+    // just deviates a lot from the original voice, and DramaBox doesn't." Holding the
+    // supplied voice is the product claim; being more expressive is NOT, and promising
+    // it would be promising the thing that was measured worst.
+    //
+    // ENGLISH ONLY — the HF card carries a single language tag and makes no multilingual
+    // claim. Accent rides on the PROMPT ("a British woman says…") and only accents the
+    // model was trained on land; British and Australian are confirmed, the rest are a
+    // lottery. That is a user-side prompting concern, deliberately not a control.
+    {
+        id: 'drama-box',
+        title: 'DramaBox',
+        // No `preview`/`video` yet — the tile art is /mpi-flow-graphics' job and
+        // `object-stamp` already ships this way. Naming art that does not exist 404s
+        // the Library tile and reddens the desktop suite, so the key stays absent
+        // until the webp and the mp4 are actually made.
+        description: 'Write a line, pick a voice, and hear it performed. Hand DramaBox a sample of the voice you want and it holds onto that voice — the same person, saying something they never said.',
+        requiredModels: [],
+        requiredDeps: [
+            // The DiT + audio components, then the 4-bit Gemma-3-12B text encoder as
+            // fourteen files, because a dep is one file and `from_pretrained` needs the
+            // whole snapshot. 15.23GB all in. See assetDeps.js for why these are plain
+            // mpi_models/ deps and NOT `targetPath` ones like Chatterbox's.
+            'dramabox-dit',
+            'dramabox-audio-components',
+            'dramabox-gemma-added-tokens-json',
+            'dramabox-gemma-chat-template-jinja',
+            'dramabox-gemma-chat-template-json',
+            'dramabox-gemma-config-json',
+            'dramabox-gemma-generation-config-json',
+            'dramabox-gemma-model-00001-of-00002-safetensors',
+            'dramabox-gemma-model-00002-of-00002-safetensors',
+            'dramabox-gemma-model-safetensors-index-json',
+            'dramabox-gemma-preprocessor-config-json',
+            'dramabox-gemma-processor-config-json',
+            'dramabox-gemma-special-tokens-map-json',
+            'dramabox-gemma-tokenizer-json',
+            'dramabox-gemma-tokenizer-model',
+            'dramabox-gemma-tokenizer-config-json',
+            // Flow-only node pack — no model declares it, so it belongs here for the
+            // same reason ComfyUI_Fill-ChatterBox does on the flow above. It reaches
+            // the engine through the boot gate either way; this is what puts it on the
+            // flow's required list. `ComfyUI-MpiNodes` is deliberately NOT listed —
+            // every model declares it, and a flow's deps are pinned unconditionally.
+            'ComfyUI-MelodramaBox',
+        ],
+        operation: 'flowDramaBox',
+        workflow: 'flow_drama_box.json',
+        mediaType: 'audio',
+        inputSchema: {
+            media: [
+                // ONE optional slot. The graph forks on it (MpiAnyChecker#14 selects
+                // between a sampler with `voice_ref` and one without), so leaving it
+                // empty is a supported prompt-only route, not a blocked run — and the
+                // voice is then whatever the prompt describes.
+                {
+                    type: 'audio', mode: 'upto', max: 1,
+                    roles: ['audio1'],
+                    labels: ['Voice to match'],
+                    // The shipped library, same picker route as Voice Changer's target
+                    // slot. There is no "your performance" slot here to keep clear of,
+                    // so the one slot gets it.
+                    voiceLibrary: ['character'],
+                },
+            ],
+        },
+        fields: [
+            {
+                id: 'positive', type: 'text', rows: 3, label: 'The line',
+                placeholder: 'A British woman says, "Hello and welcome to Cubric Studio"',
+            },
+            {
+                // THE SINGLE BIGGEST QUALITY CONTROL, and the reason it is not left at
+                // the node's default. `duration_seconds: 0` means "estimate from the
+                // prompt", and that estimate is what makes the model READ THE PROMPT
+                // ALOUD and stretch a line that should be delivered fast. Fabio found
+                // this by ear and it corrected two earlier sessions.
+                //
+                // The slider therefore starts at 1, never 0 — the estimator is not an
+                // option the user should be able to pick back up. The node's own
+                // ceiling is 300s; 30 is where a spoken LINE stops being one.
+                //
+                // `duration_multiplier` on the samplers is dead weight in this graph:
+                // generate.py:179 uses an explicit duration RAW, so the flat +2.0s then
+                // x1.10 that produced the trailing silence is bypassed entirely.
+                id: 'Input_Duration', type: 'slider', label: 'Seconds',
+                min: 1, max: 30, step: 0.5, default: 5,
+            },
+        ],
+        // No `result.compare` — two waveforms have nothing to reveal between them, the
+        // same call Voice Changer makes.
+    },
     // MPI-596 — "Object Stamp". Take an object out of one photo and put it into
     // another. Draw It In's architecture with the scribble swapped for a real object:
     // the object is composited onto the user's scene, a crop is taken around it, Klein

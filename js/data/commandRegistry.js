@@ -1201,6 +1201,44 @@ export const commands = {
         universal: true,
     },
 
+    // MPI-607 — DramaBox. Text in, a performed line out, with an OPTIONAL voice
+    // reference. Unlike the Voice Changer above this graph DOES read a prompt, so the
+    // `Input_Positive` node is wanted here and `_buildParams`' unconditional emission
+    // is the mechanism rather than the outpaint trap.
+    //
+    // The audio slot is genuinely optional in the WIRING, not just at this layer:
+    // MpiAnyChecker#14 forks between a sampler that takes `voice_ref` and one that does
+    // not, so an empty slot is a supported prompt-only route rather than a blocked run.
+    flowDramaBox: {
+        label: 'Flow: DramaBox',
+        progressLabel: 'Performing the line',
+        mediaType: MEDIA_TYPE.AUDIO,        // OUTPUT type
+        requiresImages: 0,                  // media is never a hard requirement at the op layer
+        mediaInputs: [
+            { key: 'audio1', mediaType: MEDIA_TYPE.AUDIO, title: 'Input_Audio', required: false },
+        ],
+        promptRequired: true,
+        universal: true,
+    },
+
+    // MPI-607 — Chatterbox text-to-speech, the TTS half that the Voice Changer flow
+    // deliberately left unowned. Two audio slots with different jobs: `audio1` is the
+    // voice the line is spoken IN (it feeds `audio_prompt` on both TTS nodes and the
+    // graph blocks without it), `audio2` is an OPTIONAL target that adds the VC stage
+    // on top — the TTS -> VC chain that is this card's settled architecture.
+    flowChatterBox: {
+        label: 'Flow: Text to Speech',
+        progressLabel: 'Speaking the line',
+        mediaType: MEDIA_TYPE.AUDIO,        // OUTPUT type
+        requiresImages: 0,
+        mediaInputs: [
+            { key: 'audio1', mediaType: MEDIA_TYPE.AUDIO, title: 'Input_Audio',   required: false },
+            { key: 'audio2', mediaType: MEDIA_TYPE.AUDIO, title: 'Input_Audio_2', required: false },
+        ],
+        promptRequired: true,
+        universal: true,
+    },
+
     flowCharacterSheet: {
         label: 'Flow: Character Sheet',
         progressLabel: 'Drawing the sheet',

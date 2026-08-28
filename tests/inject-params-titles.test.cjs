@@ -521,6 +521,45 @@ test('the Voice Changer Flow carries its two audio inputs and the audio capture 
         `${file} takes no prompt — a node titled Input_Positive would be written with ''`);
 });
 
+test('the DramaBox Flow carries its prompt, duration, optional voice and audio capture (MPI-607)', () => {
+    // The opposite half of Voice Changer: this graph DOES read a prompt, so
+    // `input_positive` must be PRESENT here where the flow above requires its absence.
+    // Both are the same `_buildParams` behaviour — it emits the title unconditionally —
+    // and which way the assertion points is decided by whether the flow collects a
+    // prompt, never by what reads tidier.
+    const file = 'flow_drama_box.json';
+    const have = titlesOf(file);
+    for (const title of [
+        'input_positive', 'input_seed', 'input_audio', 'input_duration',
+    ]) {
+        assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
+    }
+    assert.ok(have.has('output_audio'), `${file} must carry a capture node titled "output_audio"`);
+
+    // The negative prompt is BAKED on DramaBoxTextEncode and must never become its own
+    // titled node. `_buildParams` emits `Input_Negative: negative || ''` on every run
+    // whatever the flow declares, so an `Input_Negative` node here would have this
+    // baked list silently replaced with an empty string on every single generation —
+    // the bug Draw It In actually shipped (MPI-620).
+    assert.ok(!have.has('input_negative'),
+        `${file} bakes its negative on DramaBoxTextEncode — a titled node would be wiped to ''`);
+    const graph = JSON.parse(
+        fs.readFileSync(path.join(__dirname, '..', 'comfy_workflows', file), 'utf8'));
+    const encode = Object.values(graph).find(n => n?.class_type === 'DramaBoxTextEncode');
+    assert.ok(encode, `${file} must carry a DramaBoxTextEncode`);
+    assert.ok(typeof encode.inputs.negative_prompt === 'string' && encode.inputs.negative_prompt.length,
+        `${file}: the negative must stay baked on the encode node`);
+
+    // The prompt-only route is a real fork, not a fallback: one sampler takes
+    // `voice_ref` and one does not, and an MpiAnyChecker on Input_Audio picks between
+    // them. If both samplers ever take a voice_ref, an empty audio slot stops being a
+    // supported route and the op's `required: false` becomes a lie.
+    const samplers = Object.values(graph).filter(n => n?.class_type === 'DramaBoxSampler');
+    assert.equal(samplers.length, 2, `${file} must keep both sampler arms`);
+    assert.equal(samplers.filter(n => 'voice_ref' in n.inputs).length, 1,
+        `${file}: exactly one sampler arm takes a voice reference (the other is the prompt-only route)`);
+});
+
 test('the prompt enhancer graph carries the seed node its caller drives (MPI-504)', () => {
     // MpiBaseFlow._runEnhance sends `injectionParams: { Input_Seed: <random> }` on every
     // press, because step 3's loop is Enhance -> Generate -> Enhance and a fixed seed

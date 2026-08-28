@@ -53,7 +53,7 @@
   finished result — no workspace to assemble, no settings to know. Open the Flow Library from
   the Flows button at the top of the gallery, from the landing page, or with Tab, which cycles
   the gallery, your last card and the flow you have open, so you can step out to check a
-  picture and land back where you left off. Ten to start with:
+  picture and land back where you left off. Eleven to start with:
 
   - **Head Swap** — put one picture's head on another
   - **Extend Video** — carry on past the last frame
@@ -65,13 +65,14 @@
   - **Outpaint** — extend a picture past its edges
   - **Voice Changer** — say a line and have it come back in someone else's voice
   - **Object Stamp** — take an object out of one photo and put it into another
+  - **DramaBox** — write a line and hear it performed in a voice you choose
 
   Each flow tells you which models it needs and installs them for you, and most of them run on a
   model the Library already offers — so once you own the model, the flow costs you nothing extra.
   The three video flows all run on LTX 2.3 Balanced, so installing it for one gives you the other
-  two. Two flows are the exception and say so on their card: Head Swap adds a head-swap LoRA on
-  top of Qwen Image Edit, and Voice Changer brings its own voice weights and needs no model from
-  the Library at all.
+  two. Three flows are the exception and say so on their card: Head Swap adds a head-swap LoRA on
+  top of Qwen Image Edit, and Voice Changer and DramaBox both bring their own voice weights and
+  need no model from the Library at all.
 
 - **Head Swap** takes a head from one picture and puts it on another. Load the picture you want
   to keep, add the picture with the head you want, draw a square around each head, and run. It
@@ -175,6 +176,22 @@
   take drifts the result. And perform it, but do not push: an over-pressed read converts worse
   than a committed one. It runs on Chatterbox, which the flow brings itself — about a gigabyte,
   and no model from the Library is needed.
+
+- **DramaBox** writes the performance for you. Type the line, give it a sample of the voice you
+  want, set how long the delivery should take, and run. Where Voice Changer needs a recording of
+  you and keeps your delivery, this one starts from nothing but the words — so it is the one to
+  reach for when there is no take to work from, or the voice is not yours to perform.
+
+  What it is unusually good at is staying on the voice you gave it. Hand it a sample and the
+  result keeps sounding like that person, line after line, which is the hard part of putting a
+  character in more than one scene. You can also skip the sample entirely and describe the
+  speaker in the line itself — "a British woman says…" — though only accents the model knows
+  will land, so treat that as a happy accident rather than a setting.
+
+  Set the seconds deliberately: it is the control that matters most here. Left to guess, the
+  model tends to pad the take out or read your instructions back at you, and telling it how long
+  the line should be is what stops both. It speaks English, brings its own weights — about
+  fifteen gigabytes, the largest of any flow — and needs no model from the Library.
 
 - FLUX.2 Klein now comes in two sizes. The 9B card sits beside the 4B one and does the same
   seven things — generate, reshape, follow a depth reference, edit with up to three reference

@@ -515,6 +515,211 @@ export const assetDeps = {
         sha256: '6552d70568833628ba019c6b03459e77fe71ca197d5c560cef9411bee9d87f4e',
         noMirror: true,
     },
+    // DramaBox weights (MPI-607) -------------------------------------------
+    // 15.23GB across 16 entries, and the shape is the OPPOSITE of the Chatterbox
+    // block above. ComfyUI-MelodramaBox resolves every weight through
+    // `folder_paths.get_folder_paths("diffusion_models" | "vae" | "text_encoders")`
+    // (dramabox_nodes/config.py), which DOES read extra_model_paths.yaml — so these
+    // are ordinary mpi_models/ deps with a plain `filename`, and `targetPath` would
+    // be wrong here. Do not copy the Chatterbox reasoning across: that pack computes
+    // its directory from its own __file__ and cannot see the yaml, which is the only
+    // reason its weights are pinned into the engine tree.
+    //
+    // HF-primary with `noMirror: true`, the same call the Chatterbox block makes and
+    // for the same reason: check-dep-urls.mjs would otherwise report 16 "no second
+    // origin" deps that read as forgotten. Mirroring 15.23GB to R2 is a separate
+    // VPN-off job (the VPN throttles R2 ~15x, MPI-354).
+    // ponytail: HF-primary until a measured failure justifies the upload.
+    //
+    // THE TEXT ENCODER IS FOURTEEN ENTRIES BECAUSE A DEP IS ONE FILE. There is no
+    // snapshot/folder dep type, and `from_pretrained` on the directory needs the
+    // config, the index, both shards and the whole tokenizer/processor set — so the
+    // HF snapshot is enumerated file by file. Only `.gitattributes` and the `.cache/`
+    // directory are left out; nothing loads them. The ids keep each file's EXTENSION
+    // (`…-tokenizer-json` vs `…-tokenizer-model`) because stripping it collides two
+    // pairs — chat_template.jinja/.json and tokenizer.json/.model.
+    //
+    // The 4-bit unsloth snapshot is deliberate, not a size compromise: it is what
+    // upstream's own inference path loads. `google/gemma-3-12b-it` is bf16 (~24GB)
+    // AND gated behind Google's licence, so it needs HF auth the download manager
+    // does not have. The nf4 quantisation is why bitsandbytes is a hard requirement,
+    // and why Apple Silicon is unverified (MPI-249).
+    'dramabox-dit': {
+        id: 'dramabox-dit',
+        name: 'DramaBox audio DiT',
+        origin: 'ResembleAI/Dramabox',
+        filename: 'diffusion_models/dramabox-dit-v1.safetensors',
+        url: 'https://huggingface.co/ResembleAI/Dramabox/resolve/main/dramabox-dit-v1.safetensors',
+        size: '6.12GB',
+        bytes: 6575225528,
+        sha256: '01a626525d935e8c9fb0efe124334d1e4970aeda82215d2e14ca9fe904b5c25d',
+        noMirror: true,
+    },
+    'dramabox-audio-components': {
+        id: 'dramabox-audio-components',
+        name: 'DramaBox audio components (VAE + vocoder)',
+        origin: 'ResembleAI/Dramabox',
+        filename: 'vae/dramabox-audio-components.safetensors',
+        url: 'https://huggingface.co/ResembleAI/Dramabox/resolve/main/dramabox-audio-components.safetensors',
+        size: '1.81GB',
+        bytes: 1942831020,
+        sha256: '73d50dd3e913fd1d2511a09e4a2225f60f2ede43ef629764e6d4a389422bf7d1',
+        noMirror: true,
+    },
+    'dramabox-gemma-added-tokens-json': {
+        id: 'dramabox-gemma-added-tokens-json',
+        name: 'Gemma-3-12B 4-bit — added_tokens.json',
+        origin: 'unsloth/gemma-3-12b-it-bnb-4bit',
+        filename: 'text_encoders/gemma-3-12b-it-bnb-4bit/added_tokens.json',
+        url: 'https://huggingface.co/unsloth/gemma-3-12b-it-bnb-4bit/resolve/main/added_tokens.json',
+        size: '35B',
+        bytes: 35,
+        sha256: '50b2f405ba56a26d4913fd772089992252d7f942123cc0a034d96424221ba946',
+        noMirror: true,
+    },
+    'dramabox-gemma-chat-template-jinja': {
+        id: 'dramabox-gemma-chat-template-jinja',
+        name: 'Gemma-3-12B 4-bit — chat_template.jinja',
+        origin: 'unsloth/gemma-3-12b-it-bnb-4bit',
+        filename: 'text_encoders/gemma-3-12b-it-bnb-4bit/chat_template.jinja',
+        url: 'https://huggingface.co/unsloth/gemma-3-12b-it-bnb-4bit/resolve/main/chat_template.jinja',
+        size: '1.50KB',
+        bytes: 1532,
+        sha256: '7de1c58e208eda46e9c7f86397df37ec49883aeece39fb961e0a6b24088dd3c4',
+        noMirror: true,
+    },
+    'dramabox-gemma-chat-template-json': {
+        id: 'dramabox-gemma-chat-template-json',
+        name: 'Gemma-3-12B 4-bit — chat_template.json',
+        origin: 'unsloth/gemma-3-12b-it-bnb-4bit',
+        filename: 'text_encoders/gemma-3-12b-it-bnb-4bit/chat_template.json',
+        url: 'https://huggingface.co/unsloth/gemma-3-12b-it-bnb-4bit/resolve/main/chat_template.json',
+        size: '1.58KB',
+        bytes: 1615,
+        sha256: 'fe16baf728db49457cde32802cd7efc0ac8a7a9877dbe22fe3322b2d9dc6ccd9',
+        noMirror: true,
+    },
+    'dramabox-gemma-config-json': {
+        id: 'dramabox-gemma-config-json',
+        name: 'Gemma-3-12B 4-bit — config.json',
+        origin: 'unsloth/gemma-3-12b-it-bnb-4bit',
+        filename: 'text_encoders/gemma-3-12b-it-bnb-4bit/config.json',
+        url: 'https://huggingface.co/unsloth/gemma-3-12b-it-bnb-4bit/resolve/main/config.json',
+        size: '2.18KB',
+        bytes: 2236,
+        sha256: '095a1c2aeb3dc83f16643964c5dd7d109e002d80e45f54559009d610723c158c',
+        noMirror: true,
+    },
+    'dramabox-gemma-generation-config-json': {
+        id: 'dramabox-gemma-generation-config-json',
+        name: 'Gemma-3-12B 4-bit — generation_config.json',
+        origin: 'unsloth/gemma-3-12b-it-bnb-4bit',
+        filename: 'text_encoders/gemma-3-12b-it-bnb-4bit/generation_config.json',
+        url: 'https://huggingface.co/unsloth/gemma-3-12b-it-bnb-4bit/resolve/main/generation_config.json',
+        size: '210B',
+        bytes: 210,
+        sha256: '031fdd1faee68cf7e0cafd12203a08f51f86abd82877a401fc8dafad7b2f7b5c',
+        noMirror: true,
+    },
+    'dramabox-gemma-model-00001-of-00002-safetensors': {
+        id: 'dramabox-gemma-model-00001-of-00002-safetensors',
+        name: 'Gemma-3-12B 4-bit — model-00001-of-00002.safetensors',
+        origin: 'unsloth/gemma-3-12b-it-bnb-4bit',
+        filename: 'text_encoders/gemma-3-12b-it-bnb-4bit/model-00001-of-00002.safetensors',
+        url: 'https://huggingface.co/unsloth/gemma-3-12b-it-bnb-4bit/resolve/main/model-00001-of-00002.safetensors',
+        size: '4.65GB',
+        bytes: 4992269027,
+        sha256: '5578abd3c27241a31f21c13220f44a427b99f1c36564ac587670f3be990d4ffc',
+        noMirror: true,
+    },
+    'dramabox-gemma-model-00002-of-00002-safetensors': {
+        id: 'dramabox-gemma-model-00002-of-00002-safetensors',
+        name: 'Gemma-3-12B 4-bit — model-00002-of-00002.safetensors',
+        origin: 'unsloth/gemma-3-12b-it-bnb-4bit',
+        filename: 'text_encoders/gemma-3-12b-it-bnb-4bit/model-00002-of-00002.safetensors',
+        url: 'https://huggingface.co/unsloth/gemma-3-12b-it-bnb-4bit/resolve/main/model-00002-of-00002.safetensors',
+        size: '2.61GB',
+        bytes: 2806556175,
+        sha256: '790314e959098fdf65825d475a12c794cacbdffe6097f72a1d25c5720d3625c3',
+        noMirror: true,
+    },
+    'dramabox-gemma-model-safetensors-index-json': {
+        id: 'dramabox-gemma-model-safetensors-index-json',
+        name: 'Gemma-3-12B 4-bit — model.safetensors.index.json',
+        origin: 'unsloth/gemma-3-12b-it-bnb-4bit',
+        filename: 'text_encoders/gemma-3-12b-it-bnb-4bit/model.safetensors.index.json',
+        url: 'https://huggingface.co/unsloth/gemma-3-12b-it-bnb-4bit/resolve/main/model.safetensors.index.json',
+        size: '387.25KB',
+        bytes: 396548,
+        sha256: 'a6fe6d7c94fa568e90b4bf20c68fa85a842198f228aff1bedaa34970c605d593',
+        noMirror: true,
+    },
+    'dramabox-gemma-preprocessor-config-json': {
+        id: 'dramabox-gemma-preprocessor-config-json',
+        name: 'Gemma-3-12B 4-bit — preprocessor_config.json',
+        origin: 'unsloth/gemma-3-12b-it-bnb-4bit',
+        filename: 'text_encoders/gemma-3-12b-it-bnb-4bit/preprocessor_config.json',
+        url: 'https://huggingface.co/unsloth/gemma-3-12b-it-bnb-4bit/resolve/main/preprocessor_config.json',
+        size: '570B',
+        bytes: 570,
+        sha256: 'f688d6bb20c5017601c4011de7ca656da8485b540b05013efdaf986c0fcc918d',
+        noMirror: true,
+    },
+    'dramabox-gemma-processor-config-json': {
+        id: 'dramabox-gemma-processor-config-json',
+        name: 'Gemma-3-12B 4-bit — processor_config.json',
+        origin: 'unsloth/gemma-3-12b-it-bnb-4bit',
+        filename: 'text_encoders/gemma-3-12b-it-bnb-4bit/processor_config.json',
+        url: 'https://huggingface.co/unsloth/gemma-3-12b-it-bnb-4bit/resolve/main/processor_config.json',
+        size: '70B',
+        bytes: 70,
+        sha256: '3ffd5f11778dc73e2b69b3c00535e4121e1badf7018136263cd17b5b34fbaa53',
+        noMirror: true,
+    },
+    'dramabox-gemma-special-tokens-map-json': {
+        id: 'dramabox-gemma-special-tokens-map-json',
+        name: 'Gemma-3-12B 4-bit — special_tokens_map.json',
+        origin: 'unsloth/gemma-3-12b-it-bnb-4bit',
+        filename: 'text_encoders/gemma-3-12b-it-bnb-4bit/special_tokens_map.json',
+        url: 'https://huggingface.co/unsloth/gemma-3-12b-it-bnb-4bit/resolve/main/special_tokens_map.json',
+        size: '670B',
+        bytes: 670,
+        sha256: '45a857d8a2495d0be30a5d2d6de03278195eb028b6e0b8efc248bfa697d65f05',
+        noMirror: true,
+    },
+    'dramabox-gemma-tokenizer-json': {
+        id: 'dramabox-gemma-tokenizer-json',
+        name: 'Gemma-3-12B 4-bit — tokenizer.json',
+        origin: 'unsloth/gemma-3-12b-it-bnb-4bit',
+        filename: 'text_encoders/gemma-3-12b-it-bnb-4bit/tokenizer.json',
+        url: 'https://huggingface.co/unsloth/gemma-3-12b-it-bnb-4bit/resolve/main/tokenizer.json',
+        size: '31.84MB',
+        bytes: 33384568,
+        sha256: '4667f2089529e8e7657cfb6d1c19910ae71ff5f28aa7ab2ff2763330affad795',
+        noMirror: true,
+    },
+    'dramabox-gemma-tokenizer-model': {
+        id: 'dramabox-gemma-tokenizer-model',
+        name: 'Gemma-3-12B 4-bit — tokenizer.model',
+        origin: 'unsloth/gemma-3-12b-it-bnb-4bit',
+        filename: 'text_encoders/gemma-3-12b-it-bnb-4bit/tokenizer.model',
+        url: 'https://huggingface.co/unsloth/gemma-3-12b-it-bnb-4bit/resolve/main/tokenizer.model',
+        size: '4.47MB',
+        bytes: 4689074,
+        sha256: '1299c11d7cf632ef3b4e11937501358ada021bbdf7c47638d13c0ee982f2e79c',
+        noMirror: true,
+    },
+    'dramabox-gemma-tokenizer-config-json': {
+        id: 'dramabox-gemma-tokenizer-config-json',
+        name: 'Gemma-3-12B 4-bit — tokenizer_config.json',
+        origin: 'unsloth/gemma-3-12b-it-bnb-4bit',
+        filename: 'text_encoders/gemma-3-12b-it-bnb-4bit/tokenizer_config.json',
+        url: 'https://huggingface.co/unsloth/gemma-3-12b-it-bnb-4bit/resolve/main/tokenizer_config.json',
+        size: '1.10MB',
+        bytes: 1158492,
+        sha256: '8925eabb556c1897ca1bed405f0612e735a56afcd4d77e76eb90fd771e706f9c',
+        noMirror: true,
+    },
     // Detectors + SAM (engine assets) --------------------------------------
     'face-yolov8n': {
         id: 'face-yolov8n',

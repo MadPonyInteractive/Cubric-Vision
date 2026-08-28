@@ -89,6 +89,18 @@ export const UNIVERSAL_WORKFLOWS = {
     flowVoiceChanger: {
         workflow: 'flow_voice_changer.json',
     },
+    // MPI-607 — DramaBox. Eighteen nodes: a DiT + audio-VAE + 4-bit Gemma stack, two
+    // samplers behind an MpiAnyChecker fork (with and without a voice reference), and
+    // an MpiClearVram either side of the decode.
+    flowDramaBox: {
+        workflow: 'flow_drama_box.json',
+    },
+    // MPI-607 — Chatterbox TTS, optionally chained into VC. Twelve nodes: two TTS
+    // nodes (English and multilingual) behind Input_Is_Multilingual, then a second
+    // MpiIfElse that routes through FL_ChatterboxVC only when a target voice is given.
+    flowChatterBox: {
+        workflow: 'flow_chatter_box.json',
+    },
     // MPI-504 — Krea2 t2i, plus a SAM3 + Klein 4B pass that removes the head from the
     // front body panel. Both run on models the flow declares in `requiredModels`, so
     // this op adds no download of its own beyond the `face-yolov8n` dep.
