@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-649", "type": "task.created", "at": "2026-08-28T19:37:24Z", "actor": "claude", "summary": "Raised from the local bench bump (v0.31.0 -> v0.34.2). Carries the measured requirements diff, the av >=17 PyAV major bump, the workflow-templates meta-package split, and which 11 of 17 node pins are already proven."}
