@@ -119,12 +119,38 @@ says so. **The other 22 are unverified** — nobody on the project speaks them �
 an accepted state rather than a blocker: they come from one checkpoint that either works or
 does not, and shipping a language nobody can audit is the same bet upstream already made.
 
+## 🔴 It produced SILENCE until setuptools was pinned
+
+Before doing anything else with this flow, know the failure it shipped behind. Every run —
+both arms, and the shipped Voice Changer too — wrote a real `.flac` of **zero duration at
+−91 dB while ComfyUI reported success**. Three swallowed failures stacked:
+
+1. `setuptools` resolved to 83 transitively (via torch); setuptools removed
+   `pkg_resources` in 81, and `resemble-perth` imports it.
+2. perth's `__init__` swallows that and sets `PerthImplicitWatermarker = None`, but
+   `import perth` still succeeds — so the pack's `PERTH_AVAILABLE` guard reads as fine.
+3. `ChatterboxTTS.__init__` calls the `None`; `FL_Chatterbox*` catches the `TypeError`
+   into its `message` STRING output, which no graph wires, and returns its pre-initialised
+   `{"waveform": zeros((1,2,1)), "sample_rate": 16000}`.
+
+Fixed by `setuptools<81` in `dev_configs/python_deps.in`. **The tell is the output file:**
+16 kHz stereo with one sample is that placeholder, not audio. If this flow ever goes quiet
+again, check `pkg_resources` before suspecting the model.
+
+## Verified
+
+- **Both arms produce real speech**, measured after the fix: English arm 2.88 s / −22.1 dB,
+  multilingual Chinese 2.91 s / −22.4 dB, Japanese 2.67 s / −20.9 dB — from a shipped
+  library voice as the reference.
+- The graph validates against the live engine: 12 nodes, 0 unknown class_types, 0 missing
+  required inputs, 0 dangling links, 0 widget shifts.
+- All 13 weights install through the app's own download manager onto their `targetPath`s.
+
 ## Not done yet
 
-- **No `preview` / `video`** — `/mpi-flow-graphics` work; the keys are absent rather than
-  pointing at art that does not exist.
-- **No live in-app run.** The graph is validated against the live engine (12 nodes,
-  0 unknown class_types, 0 missing required inputs, 0 dangling links, 0 widget shifts) but
-  no generation has gone through the Flow overlay, and none of the 13 weights is installed
-  on the dev engine yet — only `chatterbox_vc/` exists on disk.
-- **Which languages are worth promising** is still unmeasured beyond Portuguese.
+- **No run through the Flow overlay.** Every generation above was dispatched straight to
+  the engine, which exercises the graph but not the flow's media routing, `.preview-assets`
+  storage or reuse.
+- **The VC stage is unexercised.** `Input_Audio_2` was empty in all three runs, so the
+  TTS → VC chain — the settled architecture — has not been run since the rewire.
+- **Which languages are worth promising** is unmeasured beyond Portuguese.
