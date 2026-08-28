@@ -19,7 +19,7 @@ import { resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { qs, ce, on } from '../../../utils/dom.js';
 import { renderIcon } from '/js/utils/icons.js';
 import { getStepKind, stepValueToParam, stepValueToMedia, isFrameKind } from './stepKinds.js';
-import { enqueueGeneration } from '../../../services/generationService.js';
+import { enqueueGeneration, findMissingMediaSlot } from '../../../services/generationService.js';
 import { getCommand } from '../../../data/commandRegistry.js';
 import { flowModelSlots, flowModelIds, setFlowModel } from '../../../data/flowsRegistry.js';
 import { disambiguatedName } from '../../../data/modelRegistry.js';
@@ -1747,9 +1747,53 @@ export const MpiBaseFlow = ComponentFactory.create({
          * the arrows during a full-quality run is a cage.
          * @param {number} i
          */
+        /**
+         * True when a middle step CREATES the picture rather than editing one
+         * (`composite`, `_deriveRunMedia` above). Such a step fills its role at RUN
+         * time — after the slide the gate below guards — so an empty slot at the
+         * step-0 boundary is not yet a missing input. Scribble is the case and the
+         * reason this exists: its slot reads "Drawing (optional)" and a blank canvas
+         * plus one stroke derives `image1`, even though `flowScribble` declares that
+         * slot required. Gating on the slot alone would refuse the flow's whole point.
+         */
+        const _stepDerivesOwnMedia = (flow.steps || []).some(s => s?.composite);
+
+        /**
+         * Step 0 is where every media slot lives, so leaving it with a required slot
+         * empty means the run is already doomed — and until MPI-644 the refusal landed
+         * at Generate, several slides later, with nothing said in between.
+         *
+         * The predicate is `findMissingMediaSlot` itself, not a copy: the enqueue and
+         * dispatch guards ask the same question, and three answers that can disagree is
+         * how a gate starts refusing a run the queue would have accepted. That also
+         * inherits its per-media-TYPE matching (MPI-466) — one image satisfies every
+         * image slot — which is deliberate and must not be tightened here.
+         *
+         * The copy is generic by request (Fabio, 2026-08-28). The type-naming version in
+         * `_warnMissingMediaSlot` is untouched: it still serves the PromptBox, where one
+         * op with one slot makes naming the media type the useful thing to say.
+         *
+         * @returns {boolean} true when the advance was refused
+         */
+        function _refuseAdvanceWithoutInputs() {
+            if (_stepDerivesOwnMedia) return false;
+            // The same shape `_collectInputs` builds, and only that: a navigation check
+            // must not run the field/param collection, which seeds and maps as it goes.
+            const mediaItems = _mediaGroups.flatMap(entry => entry.items.filter(Boolean));
+            if (!findMissingMediaSlot(flow.operation, mediaItems)) return false;
+            // sound:false — a refused click must not ring (matches _warnMissingMediaSlot).
+            Events.emit('ui:warning', { message: 'You need to add inputs to this flow.', sound: false });
+            return true;
+        }
+
         function _goTo(i) {
             const next = Math.max(0, Math.min(i, _lastIndex()));
             if (next === _current) return;
+            // Every forward route out of step 0 funnels through here — the arrows, the
+            // ticker's direct jumps and the step hotkeys — so one gate covers all three.
+            // Backward navigation is never gated: a user returning to fix the inputs is
+            // exactly what the toast just asked them to do.
+            if (_current === 0 && next > 0 && _refuseAdvanceWithoutInputs()) return;
             _current = next;
             _renderSlide();
         }

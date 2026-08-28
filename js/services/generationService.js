@@ -100,12 +100,16 @@ const PROMPT_EXCERPT_MAX = 140;
 
 // Returns the first REQUIRED media slot an op declares that has no matching asset
 // in `mediaItems`, or null when every required slot is filled. Shared by the
-// enqueue guard (block a no-media job before it ever reaches the queue) and the
+// enqueue guard (block a no-media job before it ever reaches the queue), the
 // dispatch-time guard in startGeneration (the net for loop re-fire / stage-2
-// paths that don't go through enqueueGeneration). An op with only a media-input
-// operation (e.g. the PiD upscaler — its ONLY op needs an image) would otherwise
-// queue a false job that wedges the lane at dispatch (MPI-212).
-function _findMissingMediaSlot(operation, mediaItems = []) {
+// paths that don't go through enqueueGeneration), and — since MPI-644 — the flow
+// frame's step gate, which asks the same question one slide EARLIER so the user
+// is not walked to Generate before being told. Exported for that third caller
+// only: three guards answering "is a required slot empty?" must never be three
+// predicates that can disagree. An op with only a media-input operation (e.g. the
+// PiD upscaler — its ONLY op needs an image) would otherwise queue a false job
+// that wedges the lane at dispatch (MPI-212).
+export function findMissingMediaSlot(operation, mediaItems = []) {
     return getCommandMediaInputs(operation).find(slot => {
         if (slot.required === false) return false;
         const hasRoleMatch = mediaItems.some(m => m.url && m.role === slot.key && m.mediaType === slot.mediaType);
@@ -131,7 +135,7 @@ function _warnMissingMediaSlot(slot) {
 // a painted mask. Unlike a missing media slot, the op is NEVER switched away when
 // the mask is absent — the user's op stays selected and Run is gated HERE instead,
 // at both the enqueue and dispatch sites, with one shared message (mirrors the
-// _findMissingMediaSlot / _warnMissingMediaSlot pair above).
+// findMissingMediaSlot / _warnMissingMediaSlot pair above).
 function _needsMaskButHasNone(operation, maskDataUrl) {
     return !!getCommand(operation)?.requiresMask && !maskDataUrl;
 }
@@ -474,7 +478,7 @@ export function enqueueGeneration(config, callbacks = {}, opts = {}) {
     // whose only op requires an image) would otherwise queue, then fail its
     // required-slot guard only at dispatch — stranding the lane and disabling
     // Stop/Clear while it sat pending (MPI-212). Toast + no-op instead.
-    const missingSlot = _findMissingMediaSlot(config.operation, config.mediaItems || []);
+    const missingSlot = findMissingMediaSlot(config.operation, config.mediaItems || []);
     if (missingSlot) {
         _warnMissingMediaSlot(missingSlot);
         try { callbacks.onCancel?.(); } catch {}
@@ -767,7 +771,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
     // files happen to exist so the run "works", but a remote Pod has a clean
     // volume and ComfyUI rejects the whole prompt (prompt_outputs_failed_validation
     // → bug-reporter dialog). Empty + user-actionable → warning toast, not a bug.
-    const missingSlot = _findMissingMediaSlot(operation, mediaItems);
+    const missingSlot = findMissingMediaSlot(operation, mediaItems);
     if (missingSlot) {
         _warnMissingMediaSlot(missingSlot);
         callbacks.onError?.(new Error(`Missing required ${missingSlot.mediaType} for ${operation}`));

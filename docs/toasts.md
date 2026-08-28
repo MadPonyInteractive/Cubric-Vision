@@ -80,13 +80,14 @@ Sites that pass it:
 
 | Site | Toast |
 |---|---|
-| `generationService.js:121` | "Add an image before generating…" (missing media slot) |
-| `generationService.js:135` | "Paint a mask before generating…" (missing mask) |
+| `generationService.js:131` | "Add an image before generating…" (missing media slot) |
+| `generationService.js:145` | "Paint a mask before generating…" (missing mask) |
 | `downloadService.js:224` | "You're offline — connect to the internet…" (Install while offline) |
 | `downloadService.js:233` | "Not enough disk space to install…" (Install, pre-flight) |
 | `MpiRunpodSettings.js:469` / `shell.js:757` | "Connecting to your Pod…" / "Creating a Pod…" |
 | `MpiModelSettings.js:312`, `MpiSettings.js:536` | "Imported ${filename}." (drop-import confirmation) |
 | `MpiModelManager.js:1467-1498` (5 branches) | "${model} updated." / "files kept…" (uninstall confirmation) |
+| `MpiBaseFlow.js:1785` | "You need to add inputs to this flow." (flow step gate) |
 | `MpiFlowLibrary.js:272` | "Open flows from the Gallery…" |
 | `MpiGalleryBlock.js:356` | "${n} cards added to …" |
 | `MpiGalleryBlock.js:564`, `:745` | "Switched to … — continuing/finishing preview." |
@@ -165,9 +166,9 @@ signals* are suppressed. Rule + rationale: memory `feedback_no_toast_user_stop`.
 
 | File:line | Trigger | Message | Variant | Sound |
 |---|---|---|---|---|
-| `generationService.js:121` | Cue/Run, required media slot empty | Add a/an ${noun} before generating… | warning | **silent** |
-| `generationService.js:135` | Cue/Run, op needs a mask, none painted | Paint a mask before generating… | warning | **silent** |
-| `generationService.js:888` | imageDescribe returned no text | No description was returned. | warning | eligible |
+| `generationService.js:131` | Cue/Run, required media slot empty | Add a/an ${noun} before generating… | warning | **silent** |
+| `generationService.js:145` | Cue/Run, op needs a mask, none painted | Paint a mask before generating… | warning | **silent** |
+| `generationService.js:941` | imageDescribe returned no text | No description was returned. | warning | eligible |
 | `commandExecutor.js:388` | Upscale model file missing → SIAX fallback | Upscale model "…" was not found… Using the default… | warning | eligible |
 | `commandExecutor.js:582` | Remote pre-flight: hot-store has pending files to stage | Preparing the cloud engine for a faster generation… | info | eligible |
 | `commandExecutor.js:624` | "Stage all on connect" on + Pod connected | Warming the cloud engine — staging ${n} model(s)… | info | eligible |
@@ -272,9 +273,10 @@ are eligible.
 | `MpiCanvasViewer.js:368` | Auto-mask, no image selected | No image selected | warning | eligible |
 | `MpiCanvasViewer.js:390` | Auto-mask detected nothing | Nothing detected | warning | eligible |
 | `MpiCanvasViewer.js:581` | Auto-mask picks expired on item switch | Auto-mask picks expired — re-run detect | warning | eligible |
-| `MpiBaseFlow.js:471` | Drop on Flow slot, no project open | Open a project first. | warning | eligible |
-| `MpiBaseFlow.js:481` | Drop on Flow slot, place failed | Could not add ${type} file. | warning | eligible |
-| `MpiBaseFlow.js:1053` | Flow Run with no inputs and blank prompt | ${title} needs at least one input… | warning | eligible |
+| `MpiBaseFlow.js:891` | Drop on Flow slot, no project open | Open a project first. | warning | eligible |
+| `MpiBaseFlow.js:901` | Drop on Flow slot, place failed | Could not add ${type} file. | warning | eligible |
+| `MpiBaseFlow.js:1785` | Flow step 0 → forward, a required media slot empty (MPI-644) | You need to add inputs to this flow. | warning | **silent** |
+| `MpiBaseFlow.js:2635` | Flow Run with no inputs and blank prompt | ${title} needs at least one input… | warning | eligible |
 | `MpiModelSettings.js:312` | LoRA/upscale drop-import success | Imported ${filename}. | success | **silent** |
 | `MpiSettings.js:536` | Settings folder drop-import success | Imported ${filename}. | success | **silent** |
 | `MpiModelManager.js:1467-1498` | `download:uninstalled` (5 branches) | ${model} updated. / files kept variants | success/info | **silent** |

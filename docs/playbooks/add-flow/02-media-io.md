@@ -81,6 +81,33 @@ browser run was fine — a flow-vs-browser divergence is ALWAYS a flow-side inje
    universal/Flow op's declared slots ARE the contract; the capability gate only exists to drop
    LTX's audio slot on WAN.
 
+## Self-gating inputs — the step gate (MPI-644)
+
+The frame refuses to leave **step 0** while a required media slot is empty, and says
+*"You need to add inputs to this flow."* Step 0 is where every slot lives, so an empty
+required one means the run is already doomed; before this the refusal landed at Generate,
+several slides later, with nothing said in between.
+
+- **The question asked is `findMissingMediaSlot`** (`js/services/generationService.js`) —
+  the same predicate the enqueue and dispatch guards use, imported rather than copied.
+  So the gate fires on exactly the ops those two would refuse, and never on one they
+  would accept. It matches per media **TYPE**, not per role (MPI-466): one image
+  satisfies every image slot. Do not tighten that here.
+- **`required: false` opts a slot out**, of the gate and of both run-time guards
+  together. DramaBox's voice is the shipped case — its prompt-only arm builds a speaker
+  from the words, so the flow must reach Generate with nothing attached.
+- **A step that DERIVES its media exempts the whole flow.** `composite: true` on a step
+  means the kind builds the picture rather than editing one (`stepValueToMedia`), and it
+  runs at dispatch — *after* the boundary being guarded. Scribble is the case: its slot
+  reads "Drawing (optional)" and a blank canvas plus one stroke fills `image1`, even
+  though `flowScribble` declares that slot required. `_stepDerivesOwnMedia` reads the
+  flag; a gate without it refuses the flow's whole point.
+
+So a new flow whose middle step CREATES its input must declare `composite` — otherwise
+its users are stopped at step 0 before they can draw the thing that would satisfy the
+slot. Pinned by `tests/desktop/flow-step-gate.spec.js` (both directions) and
+`tests/flow-required-media.test.cjs` (the `required`/`block_if_empty` pair).
+
 ## Self-gating outputs
 
 Flows do **no flow-side output gating**. Every media type self-gates INSIDE the workflow, so the
