@@ -1,0 +1,13 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "id": "MPI-646",
+  "files": [
+    "js/data/modelConstants/nodesDeps.js",
+    "dev_configs/node_lock.json",
+    "tests/controlnet-aux-torch-guard.test.cjs",
+    "tests/curated-python-deps.test.cjs",
+    "docs/download-manager.md",
+    "docs/playbooks/add-model/02-dependencies-r2.md",
+    ".claude/rules/comfy_engine.md"
+  ]
+}

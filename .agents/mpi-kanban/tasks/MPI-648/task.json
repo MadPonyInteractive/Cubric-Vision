@@ -3,12 +3,13 @@
   "id": "MPI-648",
   "title": "Write down the stubbed-global-state race - a spec that assigns state and hopes",
   "description": "MPI-647 fixed one instance of a class this repo will hit again, and the fix is only written down on that card. A desktop spec that assigns a `state.*` key and then asserts on something DEFERRED is racing the app's own async refresh of that key: the assignment is synchronous, the read is not, and the app is still booting. MPI-647's case was `s_installedModelIds` (js/shell.js:1538, the only writer, registered synchronously at boot step 7 before any await) against `openFlowFromReuse`'s `setTimeout(..., 0)` open + toast, and it reddened master once then reran green on the identical commit. Two durable rules came out of it, and NEITHER is obvious from the spec that now embodies them: (1) SUPPRESS the race instead of outrunning it - re-apply the stub from a listener on the same event registered AFTER the app's, because `Events` fans out over an insertion-ordered Set synchronously (js/events.js:59), so the refresh is overwritten inside its own emit; widening the sleep only moves the flake. (2) PROVOKE the CI condition rather than waiting for it - a dev box has the models installed, so the empty refresh never lands here and the flake is unreproducible by definition; emitting the app's own event with the CI payload makes it fail every run without the fix. Source material is already written: .agents/mpi-kanban/tasks/MPI-647/validation.md, and the spec itself carries the comments. Home is docs/testing.md - most likely a fifth entry under the desktop suite's \"traps these specs paid for\" - but that file is already 289 lines against the <=200 budget, so trim or split rather than just appending. Name the state-key + writer + deferred-read triple as the SHAPE to look for, not just the one spec.",
-  "column": "todo",
-  "maturity": "planned",
+  "column": "doing",
+  "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-28T20:25:00+01:00",
-  "updated_at": "2026-08-28T20:25:00+01:00",
+  "updated_at": "2026-08-28T20:05:00+01:00",
   "links": {
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "checklist": "checklist.md"
   }
 }
