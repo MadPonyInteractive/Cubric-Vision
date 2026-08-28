@@ -1,30 +1,8 @@
 {
-  "31": {
-    "inputs": {
-      "use_cpu": false,
-      "keep_model_loaded": false,
-      "input_audio": [
-        "52",
-        0
-      ],
-      "target_voice": [
-        "56",
-        0
-      ],
-      "seed": [
-        "61",
-        0
-      ]
-    },
-    "class_type": "FL_ChatterboxVC",
-    "_meta": {
-      "title": "FL Chatterbox VC"
-    }
-  },
   "33": {
     "inputs": {
       "language": "English (en)",
-      "exaggeration": 0.8,
+      "exaggeration": 0.5,
       "cfg_weight": 0.5,
       "temperature": 0.8,
       "repetition_penalty": 1.5,
@@ -101,26 +79,6 @@
       "title": "Input_Is_Multilingual"
     }
   },
-  "53": {
-    "inputs": {
-      "true": [
-        "31",
-        0
-      ],
-      "false": [
-        "52",
-        0
-      ],
-      "boolean": [
-        "57",
-        1
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Mpi If Else"
-    }
-  },
   "54": {
     "inputs": {
       "string": "",
@@ -131,46 +89,12 @@
       "title": "Input_Audio"
     }
   },
-  "56": {
-    "inputs": {
-      "block_if_empty": false,
-      "string": [
-        "57",
-        0
-      ]
-    },
-    "class_type": "MpiLoadAudio",
-    "_meta": {
-      "title": "Mpi Load Audio"
-    }
-  },
-  "57": {
-    "inputs": {
-      "any": [
-        "58",
-        0
-      ]
-    },
-    "class_type": "MpiAnyChecker",
-    "_meta": {
-      "title": "Mpi Any Checker"
-    }
-  },
-  "58": {
-    "inputs": {
-      "string": ""
-    },
-    "class_type": "MpiString",
-    "_meta": {
-      "title": "Input_Audio_2"
-    }
-  },
   "59": {
     "inputs": {
       "filename_prefix": "audio/Chatterbox",
       "format": "flac",
       "audio": [
-        "53",
+        "52",
         0
       ]
     },

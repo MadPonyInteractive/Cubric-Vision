@@ -1395,12 +1395,14 @@ export const FLOWS = [
     // one a given user runs.
     //
     // 🔴 THERE IS NO VC STAGE ANY MORE, and re-adding one is not an open question.
-    // The graph's VC arm was reached by filling `Input_Audio_2`; nothing fills it now,
-    // so MpiAnyChecker#57 always sends MpiIfElse#53 down the false arm and the run ends
-    // at the TTS output. The dead nodes come out of the raw graph on Fabio's next
-    // re-export. `cfg_weight` stays at 0.5 on the TTS nodes: the 0.3 an earlier
-    // session baked was compensating for a VC -> TTS chain order that was itself
-    // wrong, so it is void twice over.
+    // The arm was reached by filling `Input_Audio_2`; the op stopped mapping that role,
+    // and the nodes themselves were deleted on 2026-08-28 — `Input_Audio_2` (#58),
+    // MpiAnyChecker#57, MpiIfElse#53, MpiLoadAudio#56 and FL_ChatterboxVC#31 are gone,
+    // with `Output_Audio` re-pointed onto the #52 selector. Seven nodes, one route.
+    // `cfg_weight` stays at 0.5 on the TTS nodes: the 0.3 an earlier session baked was
+    // compensating for a VC -> TTS chain order that was itself wrong, so it is void
+    // twice over. Both arms now sit at `exaggeration` 0.5 (Fabio, same re-export — the
+    // multilingual node's 0.8 was aimed at accents, which is not this flow's job).
     //
     // WHY IT WENT, MEASURED (Fabio, 2026-08-28). The VC arm's only real job was
     // EMOTION: text cannot select emotion, so the emotion arrived as one of the

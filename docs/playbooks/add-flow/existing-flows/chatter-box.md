@@ -10,7 +10,7 @@
 | | |
 |---|---|
 | id / op | `chatter-box` / `flowChatterBox` |
-| graph | `comfy_workflows/flow_chatter_box.json` (12 nodes) |
+| graph | `comfy_workflows/flow_chatter_box.json` (7 nodes) |
 | `requiredModels` | `[]` |
 | `requiredDeps` | 13 weights + `ComfyUI_Fill-ChatterBox` — **6.95 GB** |
 | `mediaType` | `'audio'` |
@@ -41,8 +41,10 @@ alone**. Re-adding a slot, or a run-time deriver that fills the role, puts the w
 back. `tests/flow-derived-fields.test.cjs` asserts both halves — one declared role, one
 mapped `mediaInput`.
 
-The dead nodes (`Input_Audio_2`, `MpiAnyChecker#57`, `MpiIfElse#53`, `#56`,
-`FL_ChatterboxVC#31`) come out of `raw/` on Fabio's next re-export.
+Those nodes are **gone** as of 2026-08-28: Fabio re-exported `raw/` without
+`Input_Audio_2` (#58), `MpiAnyChecker#57`, `MpiIfElse#53`, `MpiLoadAudio#56` or
+`FL_ChatterboxVC#31`, and `Output_Audio` was re-pointed from the deleted router #53
+to the `Input_Is_Multilingual` selector #52. Twelve nodes down to seven.
 
 ### Why it went, measured — this is the whole justification
 
@@ -161,7 +163,7 @@ again, check `pkg_resources` before suspecting the model.
 - **Both arms produce real speech**, measured after the fix: English arm 2.88 s / −22.1 dB,
   multilingual Chinese 2.91 s / −22.4 dB, Japanese 2.67 s / −20.9 dB — from a shipped
   library voice as the reference.
-- The graph validates against the live engine: 12 nodes, 0 unknown class_types, 0 missing
+- The graph validates against the live engine: 7 nodes, 0 unknown class_types, 0 missing
   required inputs, 0 dangling links, 0 widget shifts.
 - All 13 weights install through the app's own download manager onto their `targetPath`s.
 
@@ -170,6 +172,13 @@ again, check `pkg_resources` before suspecting the model.
 - **No run through the Flow overlay.** Every generation above was dispatched straight to
   the engine, which exercises the graph but not the flow's media routing, `.preview-assets`
   storage or reuse.
-- **The dead VC nodes are still in the graph.** Unreachable, since nothing fills
-  `Input_Audio_2`, but not yet deleted — that is Fabio's re-export from `raw/`.
+- 🔴 **A run with no voice is a SILENT no-op, and this predates the strip.** The slot is
+  `mode: 'upto'` — the only mode there is — so a user can type a line, leave the voice
+  empty and press Generate. `MpiLoadAudio#54` carries `block_if_empty: true`, which
+  returns an `ExecutionBlocker`: no output, and ComfyUI reports success. Turning the
+  flag off is **not** the fix — `false` emits a 1-sample 44.1 kHz silence
+  (`video.py` `MpiLoadAudio._empty`) which then becomes Chatterbox's `audio_prompt`, so
+  it trades a clean block for a garbage reference. The voice is genuinely required; what
+  is missing is a way for a FlowDef to SAY a slot is required, and neither `upto` nor
+  `requiresImages` (unread on the flow path) provides one.
 - **Which languages are worth promising** is unmeasured beyond Portuguese.
