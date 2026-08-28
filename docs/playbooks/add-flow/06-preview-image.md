@@ -10,6 +10,21 @@ A flow ships **two** assets, and they do different jobs:
 `video` is optional. Omit it and the hero shows the still — which is the state of
 every flow until its loop is made.
 
+> **Run `impeccable` as the structured builder for both assets** (Fabio, 2026-08-28).
+> These are Flow Library surfaces, so they answer to the same design system the app
+> does: its setup step loads `PRODUCT.md` + `DESIGN.md`, which is where "imagery is
+> the page in galleries; chrome retreats", the nested-card ban, `--r-1: 0px` (Stage is
+> angular, not rounded) and "heat used theatrically, never decoratively" all live.
+> Reading the tokens out of `styles/01_base.css` is not a substitute — it gives you
+> the values and none of the rules about when they may be used.
+>
+> **Both assets must teach the flow, not display its outcome.** A tile that is simply
+> a good picture of the result says nothing: the reviewer's words for the first
+> Object Stamp tile were "it just says a table with a candle on it". Show the inputs
+> and the result together, and let the hero walk the flow's own stages in order.
+> Every shipped tile already does a version of this — Draw It In pairs the silhouette
+> with the render, Head Swap freezes its wipe, Outpaint marks the added strip.
+
 ## Where each one is drawn
 
 | Placement | Code | Treatment |
@@ -299,6 +314,10 @@ transparent PNG, useful for floating one over a plate whichever tool draws it.
 | `sharp(f).extract({...}).stats()` | `.stats()` reads the INPUT file and ignores the chain, so six patches at six offsets return byte-identical means. Reads as "the region is flat"; it is "you measured the whole image six times". Use `.raw().toBuffer()` |
 | Judging a strip width by eye on a contact sheet | Estimated ~12px twice for bands that measured 31px and 47px — a 2-4x error, in the direction that would have thrown away the better composition. Measure the run of dark pixels at the real 220px |
 | Sizing a punch-in from the diff BBOX | The bbox spans everything that changed, and for a placed object that includes its **cast shadow and spill light** — which are wide, soft, and invisible at 446px. Object Stamp's bbox read 301px wide; the candlestick BODY was **53px** (a 5.7x error, in the direction that says "full frame is fine"). Take a per-COLUMN diff profile and find the columns carrying real change (`>40` changed px), then size the crop from THAT. The bbox is still the right input for where the wipe has live content — just not for how big the subject is |
+| Judging the tile on its own instead of IN THE GRID | The single most expensive miss on MPI-596. The tile passed every isolated check — 4/5, under budget, legible at 220 px, idle filter applied — and was still rejected on sight in the library, because next to the nine shipped tiles it was the only one that was not full-bleed. Render your candidate at 220 px **beside the existing `flow-*.webp` set** before believing any of the other checks. Isolation cannot show you that you have left the family |
+| Panels floating on a ground colour, in a tile | `MpiTileSheet` is **already a bordered card** with its own surface, so art built as panels-on-`--surface-viewer` ships as a card inside a card — an absolute ban in DESIGN.md, and against "Imagery is the page in galleries; chrome retreats". Every shipped flow tile bleeds edge to edge. When a tile must carry several images, use **Character Sheet's** language: hard-divided regions, hairline `--line` rules, no gaps and no visible ground |
+| An input column down the left of a 4/5 tile | It leaves the result a ~450 px-wide PORTRAIT window, and a landscape plate usually cannot fill one. Object Stamp's window light sits at x≈0-400 and its subject at x≈944-1036 — 900 px apart in a 1280 frame, so no portrait crop holds both and the result read as a dim table. Put the inputs in a **top strip** instead: the result then gets a landscape frame its own source fills, often with no upscale at all. Do this arithmetic before choosing the split |
+| Showing a stage OUTPUT as the flow's input | The object a user brings is a photograph with its own background; the cutout is something the flow MAKES (stage 2, "Cut it out"). Leading the tile or hero with the cutout silently tells them the object must arrive pre-cut, and throws away the most legible beat in the hero — the background lifting away. Use the real upload, and let the removal be a beat. Fit the photo and its cutout at the same size so they register and the crossfade reads as a background lifting, not a cut to another picture |
 | A frozen-wipe tile on an ADD-an-object flow | Head Swap's tile works because both sides of the seam carry a face; the seam is a boundary between two things. On a flow that ADDS an object, the "before" side is empty, so at 220px nothing reads across the line and the accent seam is pure decoration — three crops and four seam positions all looked like a nice photo with a stripe on it. Freeze the wipe only when both halves have content; otherwise ship the result still and let the HERO carry the transformation, which is where motion can actually show it |
 | Before/after plates from two different runs | Everything shimmers, not just the head, and the device collapses. Diff them first |
 | Forgetting the idle filter | Tiles render at `saturate(.92) brightness(.92)`; art that is just contrasty enough in isolation reads flat in the grid |
