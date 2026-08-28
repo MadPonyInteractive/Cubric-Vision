@@ -53,7 +53,7 @@ connect, a 15s poll while any job is non-terminal, and after uninstall. Tests:
 > `store.syncProgress`). The PULL endpoints (`/downloads/status`, `/active`,
 > `_serializeModelJob`) are still MAP-backed, and the runtime maps
 > (`_modelJobs`/`_depJobs`) stay write-authoritative + carry transport detail
-> (url/localPath/sha256/pipPins). The old remote stall-watchdog still reads the
+> (url/localPath/sha256). The old remote stall-watchdog still reads the
 > maps. The full read-flip (delete map status-writes, flip pull reads onto
 > `store.snapshot()`, retire the watchdog into the reconciler) is **MPI-320**,
 > done with the G6 adapter split.
@@ -449,7 +449,7 @@ Two consequences worth knowing:
   wrapper stubbed) + a live browser probe of the toast branches.
 
 **Job storage (runtime maps — write-authoritative, transport carriers):**
-- `_depJobs Map<depId, DepJob>` — individual dependency jobs (URL, bytes, status, sha256, pipPins). **No `refCount` field — DELETED MPI-276.**
+- `_depJobs Map<depId, DepJob>` — individual dependency jobs (URL, bytes, status, sha256). **No `refCount` field — DELETED MPI-276.**
 - `_modelJobs Map<modelId, DownloadJob>` — model-level aggregate job (totalBytes, downloadedBytes, speed, progress, deps[])
 - `_activeDownloaders Map<depId, FileDownloader>` — actively downloading
 - `_sseClients Set<res>` — SSE subscribers
@@ -591,7 +591,7 @@ watching the test fail.
 The local engine installs **one** file, `dev_configs/python_deps.txt`, in a single
 `--no-deps` pass — `ensureCuratedPythonDeps()` in `routes/shared.js`, gated on a
 content-hash marker at `<ENGINE_ROOT>/.cubric_python_deps`. It runs **no** node's
-`requirements.txt`, no `installRequirementsCommand` and no `pipPins`. All custom_nodes are
+`requirements.txt` and no `installRequirementsCommand`. All custom_nodes are
 universal (MPI-222), so the whole set is always the right set, and the marker makes every
 start after the first a no-op and an engine that predates the file self-heal.
 
@@ -673,9 +673,10 @@ The two platform-unresolvable lines that `requirementsDrop` used to strip are ha
 the curated file itself: `onnxruntime-gpu` (CUDA-only, no macOS wheel ever — it bricked
 every Mac first-install of a depth model, MPI-370) carries a PEP 508 marker, and
 `git+…/facebookresearch/sam2` (needs `git` on PATH, which no portable engine ships,
-MPI-387) is omitted outright. `pipPins` and `installRequirementsCommand` survive as data in
-`nodesDeps.js` — `tests/node-drift.test.cjs` and `tests/controlnet-aux-torch-guard.test.cjs`
-still pin them — but nothing executes them on either engine.
+MPI-387) is omitted outright. `installRequirementsCommand` survives as data in
+`nodesDeps.js` but nothing executes it on either engine. `pipPins` is **GONE** (MPI-630):
+it corrected a pip run that no longer happens anywhere, and the invariant test demanding
+one per baked node was propagating dead data onto every new pack.
 
 ## The universal dep set spans TWO HOSTS — install it half-by-half (MPI-427)
 

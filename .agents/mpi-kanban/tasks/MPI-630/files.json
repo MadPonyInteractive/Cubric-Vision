@@ -1,0 +1,13 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/data/modelConstants/nodesDeps.js",
+    "tests/node-drift.test.cjs",
+    "tests/controlnet-aux-torch-guard.test.cjs",
+    "routes/downloadManager.js",
+    "docs/download-manager.md",
+    "docs/playbooks/add-model/02-dependencies-r2.md",
+    "dev_configs/python_deps.in",
+    ".agents/mpi-kanban/tasks/MPI-630/"
+  ]
+}

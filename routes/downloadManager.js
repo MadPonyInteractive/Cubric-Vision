@@ -2622,8 +2622,7 @@ async function _runCustomNodeInstall(modelJob) {
         // 2.13.0+cu130 plus ~14 nvidia-* wheels, gigabytes, on a machine with no
         // NVIDIA driver. Same mechanism bit MPI-217 (opencv 4.13→5.0, numpy bump).
         // Dropping --upgrade keeps the self-heal (missing packages still install) and
-        // loses only the drift. `pipPins` below stays the corrective path when a node
-        // genuinely needs something newer. This also CONVERGES with the remote twin,
+        // loses only the drift. This also CONVERGES with the remote twin,
         // which has always run without --upgrade (cubric-vision-pod wrapper.py
         // `_install_node_requirements`).
         //

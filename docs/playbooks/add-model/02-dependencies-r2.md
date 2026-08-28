@@ -96,10 +96,11 @@ baked-node bump also needs `POD_IMAGE_VERSION` bumped + an app restart; the app 
 > of diffusers/ultralytics/kornia), and more than one opencv distribution (they share the
 > `cv2` namespace, so two means `import cv2` is decided by whichever pip ran last).
 >
-> `pipPins` and `installRequirementsCommand` on the dep entry are now **remote-only** —
-> `routes/remoteModels.js` still sends them to the Pod wrapper, which has not converged
-> onto the curated file yet. Keep them accurate for that path; they no longer affect a
-> local install.
+> Do **not** add per-node pip pins to the dep entry. `pipPins` was deleted in MPI-630:
+> neither engine resolves a pack's `requirements.txt` any more, `routes/remoteModels.js`
+> sends no pin passthrough, and the Pod wrapper accepts+ignores `pip_pins`. A version a
+> node needs is a line in `python_deps.in`, nowhere else. (`installRequirementsCommand`
+> survives as data on two entries but nothing executes it either.)
 
 **In-folder weights — `targetPath`.** A weight whose node hard-codes its scan dir
 (RIFE reads only `custom_nodes/comfyui-frame-interpolation/ckpts/rife/`) can't live in

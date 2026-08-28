@@ -43,25 +43,19 @@ assert.strictEqual(cmd[1].split(' ')[0], 'python',
     'command must start with bare "python" so runCustomCommand swaps in python_embeded');
 assert.ok(/-r\s+requirements\.txt/.test(cmd[1]), 'command must install the requirements file');
 
-// 4. pipPins must NOT pin torch/torchvision. `pip install torch==2.12.0+cu130` has no
-//    --index-url on this path and those wheels are absent from PyPI, so such a pin
-//    would FAIL and abort the whole node install.
-const pins = block.match(/pipPins:\s*\[([\s\S]*?)\]/);
-assert.ok(pins, 'pipPins must exist to correct the other unpinned shared libs');
-assert.ok(!/torch/i.test(pins[1]),
-    'pipPins must NOT contain torch/torchvision — no --index-url here, the pin would fail');
+// 4. MPI-630: assertions on this entry's `pipPins` lived here — that they pin the
+//    shared libs its requirements.txt leaves unpinned, and that they never name
+//    torch/torchvision (`pip install torch==2.12.0+cu130` has no --index-url on this
+//    path, so the pin would FAIL and abort the node install). `pipPins` is gone: no
+//    pip run resolves this pack's requirements on either engine since MPI-413, and the
+//    shared libs are pinned in dev_configs/python_deps.in, guarded by
+//    curated-python-deps.test.cjs.
 
-// 5. The shared libs its requirements.txt leaves unpinned must still be pinned, or
-//    they float and drift the whole engine (the MPI-217 lesson, via RES4LYF).
-for (const pkg of ['numpy', 'opencv-python', 'pillow', 'scipy', 'scikit-image', 'einops']) {
-    assert.ok(pins[1].includes(`${pkg}==`), `pipPins must pin ${pkg}`);
-}
-
-// 6. It is a baked node (has requirements.txt) => Pod image rebuild is required.
+// 5. It is a baked node (has requirements.txt) => Pod image rebuild is required.
 assert.ok(/installRequirements:\s*true/.test(block),
     'has a requirements.txt => installRequirements:true => baked into the Pod image');
 
-// 7. The sibling facok node is code-only => must NOT be baked.
+// 6. The sibling facok node is code-only => must NOT be baked.
 const f = src.match(/'ComfyUI-Krea2-ControlNet':\s*\{([\s\S]*?)\n    \},/);
 assert.ok(f, 'ComfyUI-Krea2-ControlNet dep must exist');
 assert.ok(/installRequirements:\s*false/.test(f[1]),

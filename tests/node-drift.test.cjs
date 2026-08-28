@@ -10,8 +10,7 @@
 //   3. repair-deps unions missing+drifted AND pre-wipes drifted folders (else the
 //      skip-if-exists guard in startUniversalWorkflowInstall would short-circuit them).
 //   4. writeNodeCommitMarker round-trips the pinned commit.
-//   5. Every DEPS custom_node with installRequirements:true has non-empty pipPins.
-//   6. No-wipe invariant: a node-only repair never touches the engine binaries.
+//   5. No-wipe invariant: a node-only repair never touches the engine binaries.
 // The REMOTE half (wrapper manifest drift / baked warn-only) needs a live Pod and is
 // asserted separately in Phase 4/5 — see the card.
 
@@ -304,30 +303,15 @@ test('remote: unknown commit (old wrapper, no nodes[]) → no drift either class
     assert.equal(bak.bakedWarn, false, 'no false warn on an old Pod');
 });
 
-test('invariant: every baked node (installRequirements:true) has non-empty pipPins', () => {
-    // Live pins captured on a working local engine (MPI-222 Phase 3). Every baked node
-    // must pin its drift-risky reqs so a --upgrade install can't major-bump the shared
-    // venv (the MPI-217 failure class). Hard assertion — no known-unpinned tolerance.
-    const offenders = Object.entries(DEPS)
-        .filter(([, d]) => d.type === 'custom_nodes' && d.installRequirements === true)
-        .filter(([, d]) => !Array.isArray(d.pipPins) || d.pipPins.length === 0)
-        .map(([id]) => id);
-    assert.deepEqual(offenders, [], `unpinned baked nodes: ${offenders.join(', ')}`);
-});
-
-test('invariant: no cross-node pipPin version conflict on a shared package', () => {
-    // opencv-python-headless / numpy / matplotlib / scipy / pillow appear in several
-    // nodes' pins. They MUST agree — the venv is shared, so two versions would fight.
-    const byPkg = {};
-    for (const [id, d] of Object.entries(DEPS)) {
-        for (const p of d.pipPins || []) {
-            const [pkg, ver] = p.split('==');
-            (byPkg[pkg] ??= {})[ver] = (byPkg[pkg][ver] || []).concat(id);
-        }
-    }
-    const conflicts = Object.entries(byPkg).filter(([, vers]) => Object.keys(vers).length > 1);
-    assert.deepEqual(conflicts, [], `conflicting pins: ${JSON.stringify(conflicts)}`);
-});
+// MPI-630: the `installRequirements:true ⇒ non-empty pipPins` invariant and its
+// cross-node pin-conflict sibling lived here. Both are DELETED. Since MPI-413 neither
+// engine resolves a pack's requirements.txt, so there is no pip run left for a pin to
+// correct: the local path dropped the per-node requirements step, the remote passthrough
+// is gone (routes/remoteModels.js) and the wrapper accepts+ignores `pip_pins`. Keeping
+// the assertion propagated dead data — adding ComfyUI-MelodramaBox went red until pins
+// were invented for it. Shared-package agreement is now structural: dev_configs/
+// python_deps.in is ONE set, so a package can only have one version. `curated-python-
+// deps.test.cjs` guards that file.
 
 // --- MPI-222 targetPath weights (RIFE) --------------------------------------
 // A weight whose node HARD-CODES an in-folder scan path (RIFE reads only

@@ -3,19 +3,15 @@
   "id": "MPI-630",
   "title": "Delete the vestigial pipPins and the invariant that enforces them",
   "description": "Since MPI-413 nothing resolves a custom node's requirements.txt on EITHER install path, so every `pipPins` array in nodesDeps.js corrects a pip install that no longer happens. The Pod Dockerfile says so in its own comment: \"The clone block above no longer installs anything with pip. Every baked node's Python dependencies come from this single file instead, which is the SAME file the local engine installs.\" `installRequirements` now only decides clone-into-image vs install-to-volume; it no longer means \"pip install its reqs\". But tests/node-drift.test.cjs:307 still asserts that every node with installRequirements:true has non-empty pipPins, which is the MPI-222 invariant from before MPI-413 removed the pip install. That stale test is load-bearing in the wrong direction: adding ComfyUI-MelodramaBox (MPI-607) went red until pipPins were invented for it purely to satisfy the assertion, which is how dead data gets propagated. Remove pipPins from all baked entries, delete the invariant test and its sibling cross-node version-conflict test (which only compares pipPins), and confirm python_deps.in still covers everything via `node scripts/compile-node-deps.mjs --check`. Check the Pod path first: if any pip install of a pack's requirements survives somewhere the Dockerfile comment does not describe, the pins are NOT dead and this card should be closed as rejected instead.",
-  "column": "todo",
-  "maturity": "idea",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "completed",
   "created_at": "2026-08-27T15:57:47Z",
-  "updated_at": "2026-08-27T15:57:47Z",
+  "updated_at": "2026-08-28T17:46:24Z",
   "links": {
-    "brief": "brief.md",
-    "plan": "plan.md",
     "checklist": "checklist.md",
     "validation": "validation.md",
     "files": "files.json",
-    "events": "events.jsonl",
-    "handoffs": "handoffs/",
-    "research": "research/"
+    "events": "events.jsonl"
   }
 }
