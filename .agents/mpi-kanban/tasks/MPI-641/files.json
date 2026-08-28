@@ -1,0 +1,8 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.css",
+    "tests/desktop/flow-lora-button.spec.js",
+    ".agents/mpi-kanban/tasks/MPI-641/"
+  ]
+}

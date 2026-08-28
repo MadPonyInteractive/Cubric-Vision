@@ -1,0 +1,29 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-641",
+  "title": "A one-candidate model slot states its model in a BOX, not as loose text",
+  "description": "MPI-638 follow-up (Fabio, screenshot 2026-08-28): with only Krea 2 installed the Character Sheet's slot renders the model name as bare text beside its cogwheel, which floats against every other control in the 236px column. Give it the dropdown trigger's box so the slot keeps its shape whether or not there is a choice - without dressing it as a control it is not.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "completed",
+  "created_at": "2026-08-28T09:10:30Z",
+  "updated_at": "2026-08-28T09:26:15Z",
+  "labels": [
+    "ux",
+    "flow",
+    "polish"
+  ],
+  "links": {
+    "checklist": "checklist.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "validation": "validation.md"
+  },
+  "acceptance": [
+    "The static model name in .mpi-base-flow__model-name sits in a box matching the MpiDropdown trigger's surface, border, radius and padding, so a one-candidate slot and a choosable one are the same shape and height in the column",
+    "It must NOT read as an interactive control: no chevron, no hover state, no pointer cursor - clicking it does nothing and the box must not promise otherwise",
+    "Values come from the same CSS variables the trigger uses, never hardcoded colours (CLAUDE.md Critical Rules)",
+    "The cogwheel still sits flush beside it and the row still sums to the 236px column",
+    "npm test and npm run test:desktop stay green"
+  ]
+}

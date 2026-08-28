@@ -712,8 +712,11 @@
    MPI-638 deleted those labels by putting each cogwheel next to a dropdown that names
    its model, which is what freed the horizontal room.
 
-   LAYOUT ONLY. Both controls are Primitives and own their fill, border, hover and focus,
-   so anything resembling chrome in this block is a bug (.claude/rules/components.md). */
+   LAYOUT ONLY for the two CONTROLS. The dropdown and the cogwheel are Primitives and own
+   their fill, border, hover and focus, so chrome restated at them is a bug
+   (.claude/rules/components.md). The ONE exception is `__model-name` below, which is not a
+   Primitive at all — it is static text with no control behind it — and the reason it
+   carries chrome is spelled out on its own rule. */
 .mpi-base-flow__models:empty {
     display: none;
 }
@@ -738,10 +741,28 @@
     flex: 1;
     min-width: 0;
 }
-/* One installed candidate = no choice to offer, so the model is stated rather than
-   dressed as a control. Matches the dropdown trigger's type size so a one-candidate
-   slot and a choosable one sit at the same height in the column. */
+/* One installed candidate = no choice to offer, so the model is STATED rather than
+   dressed as a control.
+
+   It still gets the box (MPI-641). Fabio, seeing it as loose text beside the cogwheel:
+   "can we make that name display inside a box to better match the rest of the UI?" — in a
+   236px column of boxed controls, bare text has nothing to align to and reads as a stray
+   caption. This slot renders an MpiDropdown the moment a second candidate is installed, so
+   the box is the DROPDOWN TRIGGER's, not MpiInput's sunken field: the slot then keeps its
+   shape and height whether or not there is a choice, and installing a second model changes
+   the control without moving the layout.
+
+   MIRRORS `.mpi-dropdown__trigger` (MpiDropdown.css) — same tokens, deliberately, so the
+   two cannot drift apart in VALUE. If you restyle that trigger, restyle this with it.
+
+   What it deliberately does NOT copy is everything that PROMISES INTERACTION: no chevron,
+   no hover, no focus ring, no pointer cursor, and one step quieter ink. A box that looks
+   exactly like a dropdown and answers no click is the same lie in the other direction. */
 .mpi-base-flow__model-name {
+    background: var(--surface-2);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--r-1);
+    padding: 10px 14px;
     font-size: var(--t-sm);
     color: var(--ink-2);
     overflow: hidden;

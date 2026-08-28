@@ -149,3 +149,101 @@ test('the run slide pairs a model dropdown with its cogwheel, and the cogwheel f
     await closeApp(app);
   }
 });
+
+/**
+ * MPI-641 — a slot with ONE installed candidate states its model in a BOX.
+ *
+ * Fabio, on the screenshot where only Krea 2 was installed: *"can we make that name display
+ * inside a box to better match the rest of the UI?"* In a 236px column of boxed controls,
+ * bare text has nothing to align to and reads as a stray caption.
+ *
+ * The box is the DROPDOWN TRIGGER's, not MpiInput's sunken field, and that is the point:
+ * this exact slot renders an `MpiDropdown` the moment a second candidate is installed, so
+ * matching the trigger means installing a model changes the CONTROL without moving the
+ * LAYOUT. Asserted on COMPUTED style rather than on the class being present — a class with
+ * its rule deleted still passes a class check, and "it has a box" is the whole request.
+ *
+ * The negative half matters as much: it must not look like a control it is not. A box that
+ * reads as a dropdown and answers no click is the same lie in the other direction.
+ */
+test('a one-candidate slot states its model in a box, and the box is not a control', async ({}, testInfo) => {
+  const { app, window } = await launchApp(testInfo);
+
+  try {
+    await window.waitForTimeout(6000);
+
+    const box = await window.evaluate(async () => {
+      const { MpiBaseFlow } = await import('/js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js');
+      const { getFlowById } = await import('/js/data/flowsRegistry.js');
+      const { state } = await import('/js/state.js');
+
+      // ONLY the SFW arm installed — one candidate, so no choice to offer.
+      state.s_installedModelIds = ['krea2'];
+      state.currentProject = { name: 'e2e', path: 'e2e', itemGroups: [] };
+
+      const flow = MpiBaseFlow.mount(document.createElement('div'),
+        { flow: getFlowById('character-sheet') });
+      window.__mpi641 = flow;
+      flow.el.open();
+      await new Promise(r => setTimeout(r, 400));
+      const ticks = document.querySelectorAll('.mpi-base-flow__tick');
+      ticks[ticks.length - 1].click();
+      await new Promise(r => setTimeout(r, 400));
+
+      const el = document.querySelector('.mpi-base-flow__model-name');
+      if (!el) return { missing: true, dropdowns: document.querySelectorAll('.mpi-base-flow__model-pick .mpi-dropdown').length };
+
+      // Compare against a LIVE trigger on this same slide — the Style field is an
+      // MpiDropdown — instead of hardcoding values. `--r-1` is `0px` ("sharp: Stage
+      // prefers angular over rounded"), so a test asserting "rounded" would have been
+      // asserting a taste this app does not hold; measuring the real thing cannot make
+      // that mistake, and it follows the trigger if the trigger is ever restyled.
+      const trig = document.querySelector('.mpi-base-flow__field-select .mpi-dropdown__trigger');
+      const pick = (e) => {
+        const c = getComputedStyle(e);
+        return {
+          background: c.backgroundColor, borderWidth: c.borderTopWidth,
+          borderStyle: c.borderTopStyle, radius: c.borderTopLeftRadius,
+          padX: c.paddingLeft, padY: c.paddingTop, fontSize: c.fontSize,
+        };
+      };
+      return {
+        text: el.textContent.trim(),
+        tag: el.tagName,
+        dropdowns: document.querySelectorAll('.mpi-base-flow__model-pick .mpi-dropdown').length,
+        name: pick(el),
+        trigger: trig ? pick(trig) : null,
+        cursor: getComputedStyle(el).cursor,
+        nameBorderColor: getComputedStyle(el).borderTopColor,
+        triggerBorderColor: trig ? getComputedStyle(trig).borderTopColor : null,
+      };
+    });
+
+    expect(box.missing, 'one installed candidate must render the NAME, not a dropdown').toBeFalsy();
+    expect(box.dropdowns, 'a one-option dropdown claims a choice that is not there').toBe(0);
+    expect(box.text).toBe('Krea 2');
+    expect(box.trigger, 'no live trigger to compare against — this test is stale').toBeTruthy();
+
+    // THE BOX MATCHES THE CONTROL IT REPLACES. Installing a second candidate swaps this
+    // span for an MpiDropdown in the same spot, so anything that differs here is the
+    // layout shifting under the user for no reason they can see.
+    expect(box.name.background, 'same surface as the trigger').toBe(box.trigger.background);
+    expect(box.name.borderWidth).toBe(box.trigger.borderWidth);
+    expect(box.name.borderStyle).toBe(box.trigger.borderStyle);
+    expect(box.name.radius).toBe(box.trigger.radius);
+    expect(box.name.padX).toBe(box.trigger.padX);
+    expect(box.name.padY).toBe(box.trigger.padY);
+    expect(box.name.fontSize).toBe(box.trigger.fontSize);
+
+    // …and it must NOT pretend to be the control. The border is deliberately one step
+    // quieter than a real trigger's, and there is no chevron, no hover and no pointer:
+    // a box that reads as a dropdown and answers no click is the same lie in reverse.
+    expect(box.nameBorderColor, 'a quieter border is what separates a statement from an offer')
+      .not.toBe(box.triggerBorderColor);
+    expect(box.tag, 'a button would promise a click that does nothing').toBe('SPAN');
+    expect(box.cursor, 'a pointer cursor is a promise').not.toBe('pointer');
+  } finally {
+    await window.evaluate(() => { window.__mpi641?.el?.destroy?.(); }).catch(() => {});
+    await closeApp(app);
+  }
+});
