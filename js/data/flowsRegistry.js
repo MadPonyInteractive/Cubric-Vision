@@ -1408,10 +1408,21 @@ export const FLOWS = [
     {
         id: 'chatter-box',
         title: 'Text to Speech',
-        // No `preview`/`video` yet — the LAST flow without art, now that drama-box and
-        // object-stamp both have theirs. Absent rather than pointing at a file that does
-        // not exist: a descriptor naming missing art 404s the tile and reddens the
-        // desktop suite. Blocked on a real run — see the doc's "Not done yet".
+        // THREE beats, one per language, each from that language's OWN real run — English
+        // on the English-only arm, Chinese and Japanese through the multilingual one. The
+        // change is invisible and the hero is muted, so it animates the added channel like
+        // DramaBox's; what it says that DramaBox's cannot is the LANGUAGE axis, which is
+        // this flow's actual pitch and needs more than one beat to show.
+        //
+        // The tile deliberately does NOT freeze beat 1. Two playbook rules collide here —
+        // "distinct from every other flow's still" against "beat 1 must match the tile",
+        // since the tile is the video's poster — and distinctness wins, because these two
+        // audio tiles now sit side by side in the Library's AUDIO section and a second
+        // block of Latin type over a waveform would read as the same picture twice. The
+        // mismatch is softened rather than ignored: the tile's first line is English and
+        // its waveform IS beat 1's audio.
+        preview: 'flow-chatter-box.webp',
+        video: 'flow-chatter-box.mp4',
         description: 'Type a line and hear it spoken. Give Chatterbox a sample of the voice you want it in, pick a language, and it reads your text in that voice — then optionally converts the result onto a second voice entirely.',
         requiredModels: [],
         requiredDeps: [
