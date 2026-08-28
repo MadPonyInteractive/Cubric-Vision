@@ -1666,13 +1666,20 @@ export const FLOWS = [
                 // the user should be able to pick back up. The node's own ceiling is
                 // 300s; 30 is where a spoken LINE stops being one.
                 //
-                // MIN IS 3, WHICH IS THE MODEL AUTHOR'S OWN FLOOR (MPI-645). Taking the
-                // duration raw skips `sampling.estimate_duration`, and that function is
-                // `max(3.0, ...)`: upstream never asks this model to speak in less than
-                // three seconds, whatever the text. The slider offered 1 and 2, which is
-                // a range below anything the model was ever asked to do, and the window
-                // is a HARD CUT — a line that runs past it is simply truncated, which is
-                // what Fabio hit and reported as a broken model.
+                // MIN IS 4, WHICH IS THE MEASURED FLOOR — ONE ABOVE THE MODEL AUTHOR'S
+                // (MPI-645). Taking the duration raw skips `sampling.estimate_duration`,
+                // and that function is `max(3.0, ...)`: upstream never asks this model to
+                // speak in less than three seconds, whatever the text. The slider offered
+                // 1 and 2, a range below anything the model was ever asked to do, and the
+                // window is a HARD CUT — a line that runs past it is simply truncated,
+                // which is what Fabio hit and reported as a broken model.
+                //
+                // Upstream's 3 is not enough here, and the samples say why: a 3s ask
+                // delivers a 2.89s FILE, and every clip opens with 0.13–1.47s of model
+                // lead-in silence, so the worst one carried 1.15s of audible speech.
+                // Same prompt at 3s truncates mid-word; at 4s it completes with 0.39s
+                // spare (`_007` vs `_008`). 4 is where the flow stops handing back a
+                // clip that is a quarter silence at the front (Fabio, 2026-08-28).
                 //
                 // The pad is deliberately NOT copied over with the floor. Upstream's
                 // x1.1 is headroom over ITS OWN ESTIMATE of the text; applied to a
@@ -1695,7 +1702,7 @@ export const FLOWS = [
                 // fiddly to land on, and a readout flipping between one and two
                 // digits resizes the slider mid-drag, which "looks like it's buggy".
                 id: 'Input_Duration', type: 'slider', label: 'Seconds',
-                min: 3, max: 30, step: 1, default: 5,
+                min: 4, max: 30, step: 1, default: 5,
                 note: 'A hard window — the line is cut off when it runs past this. Give a long line more seconds.',
             },
         ],

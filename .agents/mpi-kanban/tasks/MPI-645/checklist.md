@@ -42,11 +42,15 @@
       mid-word (2.54 s speech), 4 s completes it with 0.39 s spare (3.61 s speech). More
       window does buy more line — the lead-in does not grow to eat it.
 
-- [x] **Floor the slider at the model author's own floor** — drama-box `Input_Duration`
-      `min: 1` → `min: 3`. Below 3 s upstream never asks the model to speak at all.
-      Proven live: the mounted range input reads `min=3 max=30 step=1 value=5`.
+- [x] **Floor the slider** — drama-box `Input_Duration` `min: 1` → `min: 4`.
+      Shipped at 3 (the model author's own floor: below it upstream never asks the model
+      to speak at all) and Fabio raised it to **4** on 2026-08-28 after the envelope
+      numbers: a 3 s ask is a 2.89 s file with 0.13–1.47 s of lead-in silence, and
+      `_007` vs `_008` shows the same prompt truncating at 3 s and completing with 0.39 s
+      spare at 4 s. 4 is the floor at which the flow stops handing back a clip that is a
+      quarter silence at the front. Proven live at 3: `min=3 max=30 step=1 value=5`.
 
-- [x] **Make the hard window legible.** `min: 3` alone does not help the reported case
+- [x] **Make the hard window legible.** The floor alone does not help the reported case
       (Fabio asked for exactly 3). The field now carries a `note`:
       *"A hard window — the line is cut off when it runs past this. Give a long line more
       seconds."* Screenshotted on the real run slide, under the slider, in the stacked
@@ -65,7 +69,7 @@
       a persisted card or a Reuse never meets the control. `mapDeclaredValue` now clamps
       every numeric field, mapped or not; it is the one choke point both payload paths
       (`_collectInputs` and `splitDeclaredValues`) already pass through. A stale
-      `Input_Duration: 1` returns 3.
+      `Input_Duration: 1` returns 4.
 
 - [x] `npm test` 773/773. `npm run test:desktop` 39 passed, 1 environmental failure
       (`model-settings-popup.spec.js` — a `ERR_CACHE_READ_FAILURE` on a video and a 500
@@ -76,22 +80,28 @@
       the floor, the measured grid table and the fact that `duration_multiplier` stays
       dead.
 
-## Open question for Fabio — the card sits in `validating` on this
+## Answered by Fabio — 2026-08-28
 
-The ×1.1 pad is **deliberately not** copied over. Upstream applies it to its own ESTIMATE
-of the text; applying it to a number the user typed does not restore that protection, it
-just makes the readout lie by 10 % (3 → 3.3 → 3.24 s delivered) and still cuts a line that
-needed 5 s. So the fix is floor + honest copy, not floor + pad.
+**The floor is 4, not upstream's 3.** "4 seconds the minimum. I think it solves
+everything." It does: 4 s is the shortest window the samples show delivering a complete
+line (`_007` truncates at 3 s, `_008` completes with 0.39 s spare on the same prompt), and
+it clears the lead-in silence that made a 3 s ask sound like a two-second clip. Shipped as
+`min: 4` in `flowsRegistry.js`, with the comment and `drama-box.md` carrying the reason so
+nobody "restores" the model author's 3. `npm test` 773/773 after the move.
 
-What needs an ear rather than a test: **is `min: 3` the right floor, and does the note read
-right on the slide?** 3 s is the model author's floor, not a measured one of ours — if a
-one-word line at 2 s is something you want back, that is a different call and it comes with
-no upstream support.
+**The note reads right** and stays as written: *"A hard window — the line is cut off when
+it runs past this. Give a long line more seconds."*
 
-And the one the envelope measurement opened: **trim the lead-in silence off the output?**
-`audio_prep.py` carries a `_trim_silence` helper but MelodramaBox exposes **no trim node**,
-and core's `TrimAudioDuration` cuts at fixed times rather than at silence — so it needs an
-MpiNodes node plus a graph re-export, which is a card of its own, not this one. Trimming
-adds no speech; it only stops a 3 s ask returning a file that is a quarter silence at the
-front. The thing that actually buys a complete line is more window, which is what the note
-now tells the user.
+The ×1.1 pad stays **deliberately not** copied over. Upstream applies it to its own
+ESTIMATE of the text; applied to a number the user typed it restores no protection — it
+only makes the readout lie by 10 % and still cuts a line that needed longer. Floor +
+honest copy, not floor + pad.
+
+## Still open — a card of its own, not this one
+
+**Trim the lead-in silence off the output?** `audio_prep.py` carries a `_trim_silence`
+helper but MelodramaBox exposes **no trim node**, and core's `TrimAudioDuration` cuts at
+fixed times rather than at silence — so it needs an MpiNodes node plus Fabio's graph
+re-export. Trimming adds no speech; it only stops a short ask returning a file that is a
+quarter silence at the front. The thing that buys a complete line is more window, which is
+what the floor and the note now handle.

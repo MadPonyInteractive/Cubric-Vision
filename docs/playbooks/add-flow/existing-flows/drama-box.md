@@ -54,15 +54,22 @@ So the slider **never offers 0** — the estimator is not an option the user sho
 to pick back up. The node's own ceiling is 300 s; the slider stops at 30, which is where a
 spoken *line* stops being one.
 
-### The floor is 3 s, which is the model author's own — and the window is a HARD CUT
+### The floor is 4 s — one above the model author's own — and the window is a HARD CUT
 
 Taking the duration raw skips `sampling.estimate_duration`, and that function is
 `max(3.0, round(estimate_speech_duration(text) * multiplier, 1))`. **Upstream never asks
 this model to speak in under three seconds, whatever the text.** The slider shipped with
 `min: 1`, offering a range below anything the model was ever asked to do, and the window
 is a hard cut: a line that runs past it is simply truncated. Fabio hit it at 3 s and read
-it as a broken model (MPI-645). `min` is now **3**, and the field carries a `note` saying
+it as a broken model (MPI-645). `min` is now **4**, and the field carries a `note` saying
 the window is hard — the number is a budget the user spends, not a hint.
+
+**Why 4 and not upstream's 3** (Fabio's call, 2026-08-28): 3 s is upstream's floor for its
+own *estimate*, and it is not enough once the envelope is measured. A 3 s ask delivers a
+2.89 s file, every clip opens with 0.13–1.47 s of lead-in silence, and the worst sample
+carried **1.15 s of audible speech**. `_007` vs `_008` below is the pair that settles it:
+same prompt, 3 s truncates mid-word, 4 s completes with 0.39 s spare. 4 is the floor at
+which the flow stops handing back a clip that is a quarter silence at the front.
 
 🔴 **The ×1.1 pad is deliberately NOT copied over with the floor.** It is headroom over
 upstream's own *estimate of the text*; applied to a number the user typed it restores no
@@ -70,7 +77,7 @@ protection at all — it makes the readout lie by 10 % and still cuts a line tha
 five seconds. Do not add it as "the other half of the fix".
 
 `min` is enforced at payload time, not only by the widget: `mapDeclaredValue` clamps every
-numeric field, so a card Reused from before the floor moved cannot render 3 and send 1.
+numeric field, so a card Reused from before the floor moved cannot render 4 and send 1.
 
 ### The delivered clip is never exactly the number, and that is not a bug
 
