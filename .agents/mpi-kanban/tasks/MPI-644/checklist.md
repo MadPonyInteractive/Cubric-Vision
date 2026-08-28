@@ -20,4 +20,4 @@
       `docs/playbooks/add-flow/02-media-io.md` (§ Self-gating inputs — the step gate).
 - [x] No `UNRELEASED.md` entry — Flows debut in the next release, so a fix to a flow is not
       a fix to anything a user ever had (that file's own § Fixes note).
-- [ ] Fabio's eyes on the toast copy in the running app.
+- [x] Fabio verified it in the running app and approved the copy (2026-08-28).
