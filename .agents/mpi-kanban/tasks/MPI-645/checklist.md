@@ -97,11 +97,10 @@ ESTIMATE of the text; applied to a number the user typed it restores no protecti
 only makes the readout lie by 10 % and still cuts a line that needed longer. Floor +
 honest copy, not floor + pad.
 
-## Still open — a card of its own, not this one
+## Closed too — no trim card
 
-**Trim the lead-in silence off the output?** `audio_prep.py` carries a `_trim_silence`
-helper but MelodramaBox exposes **no trim node**, and core's `TrimAudioDuration` cuts at
-fixed times rather than at silence — so it needs an MpiNodes node plus Fabio's graph
-re-export. Trimming adds no speech; it only stops a short ask returning a file that is a
-quarter silence at the front. The thing that buys a complete line is more window, which is
-what the floor and the note now handle.
+**Trimming the lead-in silence: NOT doing it** (Fabio, 2026-08-28). The floor is the whole
+fix — 4 s comes back as a usable 4 s of line, which is what his tests showed, so there is
+nothing left for a trim to buy. It would have cost an MpiNodes node plus a graph re-export
+(`_trim_silence` is not exposed, core's `TrimAudioDuration` cuts at fixed times). Recorded
+in `drama-box.md` so it does not come back as "the other half of MPI-645".

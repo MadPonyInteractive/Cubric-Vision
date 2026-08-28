@@ -133,11 +133,12 @@ line cut off, not a line that ended. Every clip that finished ends quiet (−47 
 truncates mid-word, 4 s completes it and still has 0.39 s spare. More window does buy more
 line — the lead-in does not simply grow to eat it.
 
-Open, and Fabio's call: whether to trim the lead-in off the output. `audio_prep.py` has a
-`_trim_silence` helper but MelodramaBox **exposes no trim node**, and core's
-`TrimAudioDuration` cuts at fixed times rather than at silence — so it needs an MpiNodes
-node plus a graph re-export, which is a card of its own. Trimming alone adds no speech; it
-only stops a 3 s ask returning a file that is a quarter silence at the front.
+🔴 **Trimming the lead-in is DECIDED — we are not doing it** (Fabio, 2026-08-28). The
+floor is the fix: at 4 s the clip comes back as a usable 4 s of line, which is what his
+tests showed, and a trim node would only shave what the floor already stops mattering. It
+would also cost an MpiNodes node plus a graph re-export, since `audio_prep.py`'s
+`_trim_silence` is not exposed and core's `TrimAudioDuration` cuts at fixed times rather
+than at silence. Do not re-open it as "the other half of MPI-645".
 
 Two related widgets are dead in this graph and must not be resurrected as controls:
 

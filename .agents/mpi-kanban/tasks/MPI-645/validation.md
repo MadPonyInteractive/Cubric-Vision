@@ -41,6 +41,6 @@ Fabio, 2026-08-28: **4 s is the minimum.** The note reads right and stays as wri
   ESTIMATE of the text; over a typed number it only makes the readout lie by 10 %.
 - `duration_seconds: 0` (the estimator) stays banned — MPI-607 removed it because the
   estimate makes the model read the prompt aloud.
-- Trimming the lead-in silence is a card of its own: no trim node in MelodramaBox, core's
-  `TrimAudioDuration` cuts at fixed times, so it needs an MpiNodes node plus Fabio's graph
-  re-export.
+- Trimming the lead-in silence — **decided against, no card** (Fabio, 2026-08-28). The
+  floor is the fix: 4 s comes back as a usable 4 s of line, so a trim buys nothing, and it
+  would cost an MpiNodes node plus a graph re-export.
