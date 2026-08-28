@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-644", "at": "2026-08-28T14:48:44+01:00", "actor": "claude", "column": "todo", "title": "Gate flow step advance on missing inputs, and make the missing-input toast generic"}
