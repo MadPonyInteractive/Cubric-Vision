@@ -764,6 +764,12 @@
     border-radius: var(--r-1);
     padding: 10px 14px;
     font-size: var(--t-sm);
+    /* `normal`, and it is load-bearing: the trigger is a <button>, which does NOT inherit
+       the frame's 1.6 line-height, so a span with identical padding and font-size still
+       came out 43px against the trigger's 39 — the slot grew by 4px the moment a model
+       was uninstalled. Matching the six paint properties was not enough; the HEIGHT is
+       the thing the user sees, and it is what the spec now asserts. */
+    line-height: normal;
     color: var(--ink-2);
     overflow: hidden;
     text-overflow: ellipsis;

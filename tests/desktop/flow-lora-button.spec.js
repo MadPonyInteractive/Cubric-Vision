@@ -205,6 +205,19 @@ test('a one-candidate slot states its model in a box, and the box is not a contr
           background: c.backgroundColor, borderWidth: c.borderTopWidth,
           borderStyle: c.borderTopStyle, radius: c.borderTopLeftRadius,
           padX: c.paddingLeft, padY: c.paddingTop, fontSize: c.fontSize,
+          // `line-height` is here as an INGREDIENT because the outcome it decides cannot
+          // be measured in this harness. A <button> does not inherit the frame's 1.6
+          // line-height, so a span with identical padding and font-size came out 43px
+          // against the trigger's 39 — the slot grew 4px the moment a model was
+          // uninstalled, and the six paint properties above all matched while it did.
+          //
+          // The honest assertion would be equal HEIGHT. It cannot live here: this frame
+          // is a `main-area` MpiOverlay and the suite sits on Landing, where that host
+          // has no size, so every element inside measures 0 and `height === height`
+          // becomes `0 === 0`. That vacuous version was written first and passed against
+          // the 43px box. Sizing the host by hand did not recover real geometry either.
+          // Height was verified live instead (39 = 39, MPI-641 validation.md).
+          lineHeight: c.lineHeight,
         };
       };
       return {
@@ -234,6 +247,13 @@ test('a one-candidate slot states its model in a box, and the box is not a contr
     expect(box.name.padX).toBe(box.trigger.padX);
     expect(box.name.padY).toBe(box.trigger.padY);
     expect(box.name.fontSize).toBe(box.trigger.fontSize);
+    // The one that decides whether the column MOVES. `normal` is the button default the
+    // trigger gets; anything inherited from the frame makes this box taller than the
+    // dropdown it replaces. See the note in `pick()` for why this stands in for a height
+    // assertion rather than being one.
+    expect(box.name.lineHeight, 'an inherited line-height makes the box taller than the '
+      + 'dropdown it replaces, and the slot grows when a model is uninstalled')
+      .toBe(box.trigger.lineHeight);
 
     // …and it must NOT pretend to be the control. The border is deliberately one step
     // quieter than a real trigger's, and there is no chevron, no hover and no pointer:

@@ -41,20 +41,44 @@ follows the trigger if the trigger is ever restyled.
 - `npm test` — 774 pass, 0 fail
 - `npm run test:desktop` — 39 pass, 0 fail (up from 38: this test is new)
 
-## NOT verified: there is no screenshot of it
+## The visual check found a bug the tests had missed
 
-I could not produce one, and the measurement above is what stands in for it.
+The peer committed `main.js` + `scripts/launch-instance.mjs` shortly after the first attempt,
+so `app:isolated` worked again and the screenshot became possible. It was worth going back
+for.
 
-`npm run app:isolated` — the normal route, and the one that produced the measured screenshot
-for MPI-638 an hour earlier — exits 0 in silence right now. A live peer session has
-**uncommitted edits in `main.js` and `scripts/launch-instance.mjs`**, so the launcher is a
-moving target and not mine to debug or work around.
+**Measured live, one candidate installed: the box was 43px tall against the Style dropdown
+trigger's 39.** Same padding, same font-size, same border — and 4px taller. The slot GREW the
+moment a model was uninstalled, which is precisely what this card exists to stop, and the
+six-property test passed the whole time.
 
-Three fallbacks were tried and all failed for one reason: the flow overlay mounts into
-`.main-area`, which has **no size on the Landing page**, and `locator.screenshot` refuses a
-zero-box element. That is the same zero-geometry that makes every interaction in these specs
-go through an in-page `.click()` rather than Playwright's. Forcing a size on the host did not
-recover it either.
+Cause: the trigger is a `<button>`, and a button does not inherit the frame's 1.6
+line-height. The span did — `20.8px` against the button's `normal`. Fixed with one
+declaration; re-measured live after a reload (the first re-measure still read 43, because the
+page had loaded the CSS before the edit — a stale-asset read that looks exactly like a failed
+fix): **39 = 39**.
 
-So: the box is verified by measurement against the control it replaces, not by eye. Fabio's own
-app is running on `:3000` and shows it directly.
+Screenshot taken and checked by eye: "Krea 2" sits in a box the same size and shape as the
+Style dropdown above it, cogwheel flush to its right, row still 236px.
+
+## The height assertion could NOT be pinned, and the vacuous one was removed
+
+The obvious follow-up — assert equal height in the desktop spec — was written, and it
+**passed against the 43px box**. This frame is a `main-area` MpiOverlay and the suite sits on
+Landing, where that host has no size, so every element inside measures 0 and
+`height === height` is `0 === 0`. Sizing the host by hand did not recover real geometry.
+
+Rather than ship a false guarantee, the height assertion was deleted and replaced by the
+INGREDIENT that decides it: `line-height` must equal the trigger's. That one is
+mutation-checked — deleting `line-height: normal` from the CSS turns the spec red
+(`Expected "normal", Received "20.8px"`), file restored byte-identical.
+
+So the spec pins seven computed properties plus the negative half; the HEIGHT itself is
+verified live and recorded here, not in CI. **A desktop spec cannot measure this overlay's
+geometry today** — worth knowing before someone writes another one that appears to.
+
+## Cleanup
+
+Probe project deleted through the app's own `/delete-project` (id-matched); browser closed;
+the instance killed by the PID resolved from its own port, never by a name pattern. `:3000`
+re-checked 200 afterwards — the user's session was untouched throughout.
