@@ -962,7 +962,7 @@ function mountAll() {
         MpiProjectCard.mount(slot('preview-project-card-image'), {
             title: 'Landscape Design',
             date: '3 Apr 2026',
-            media: { type: 'image', src: 'media-for-testing/img (1).png' }
+            media: { type: 'image', src: '/comfy_workflows/display/flow-head-swap.webp' }
         });
     });
 
@@ -970,7 +970,7 @@ function mountAll() {
         MpiProjectCard.mount(slot('preview-project-card-video'), {
             title: 'Motion Graphics',
             date: '2 Apr 2026',
-            media: { type: 'video', src: 'media-for-testing/video-16-9.mp4' }
+            media: { type: 'video', src: '/comfy_workflows/display/flow-head-swap.mp4' }
         });
     });
 
