@@ -560,6 +560,65 @@ test('the DramaBox Flow carries its prompt, duration, optional voice and audio c
         `${file}: exactly one sampler arm takes a voice reference (the other is the prompt-only route)`);
 });
 
+test('the Text to Speech Flow carries both TTS arms, and VC reads the SELECTOR (MPI-607)', () => {
+    const file = 'flow_chatter_box.json';
+    const have = titlesOf(file);
+    for (const title of [
+        'input_positive', 'input_seed', 'input_audio', 'input_audio_2',
+        'input_is_multilingual', 'input_language',
+    ]) {
+        assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
+    }
+    assert.ok(have.has('output_audio'), `${file} must carry a capture node titled "output_audio"`);
+
+    const graph = JSON.parse(
+        fs.readFileSync(path.join(__dirname, '..', 'comfy_workflows', file), 'utf8'));
+    const byTitle = (t) => Object.entries(graph)
+        .find(([, n]) => (n._meta?.title || '').toLowerCase() === t);
+
+    // 🔴 THE REGRESSION THIS TEST EXISTS FOR. FL_ChatterboxVC was wired straight to the
+    // English TTS instead of to the Input_Is_Multilingual selector, so on the TTS -> VC
+    // route the language pick did nothing: MpiIfElse is LAZY, node 53 took its `true`
+    // arm, that arm needed the English TTS, and the selector was never evaluated. Audio
+    // still came out and nothing errored — it was just always English.
+    const [selectorId] = byTitle('input_is_multilingual');
+    const vc = Object.values(graph).find(n => n?.class_type === 'FL_ChatterboxVC');
+    assert.ok(vc, `${file} must carry FL_ChatterboxVC`);
+    assert.ok(Array.isArray(vc.inputs.input_audio),
+        `${file}: FL_ChatterboxVC.input_audio must be wired, not baked`);
+    assert.equal(vc.inputs.input_audio[0], selectorId,
+        `${file}: FL_ChatterboxVC must read from the Input_Is_Multilingual selector (#${selectorId}), `
+        + `not straight off one TTS arm — otherwise the language pick is dead on the TTS -> VC route`);
+
+    // Both arms must survive: the flow declares BOTH weight sets and the selector needs
+    // something on each side.
+    assert.ok(Object.values(graph).some(n => n?.class_type === 'FL_ChatterboxTTS'),
+        `${file} must keep the English TTS arm`);
+    assert.ok(Object.values(graph).some(n => n?.class_type === 'FL_ChatterboxMultilingualTTS'),
+        `${file} must keep the multilingual TTS arm`);
+
+    // The dotted key the FlowDef emits must address a real node AND a real widget. The
+    // MPI-359 sweep further down reads PromptBoxControls.js only, so it does NOT cover a
+    // FLOW's declared fields — without this assertion a renamed widget here is a dead
+    // control that no test notices.
+    const flows = fs.readFileSync(
+        path.join(__dirname, '..', 'js/data/flowsRegistry.js'), 'utf8');
+    const dotted = [...flows.matchAll(/id: '(Input_\w+)\.(\w+)'/g)];
+    assert.ok(dotted.length >= 1, 'no dotted flow field found — flowsRegistry has drifted');
+    for (const [, title, widget] of dotted) {
+        const hit = byTitle(title.toLowerCase());
+        if (!hit) continue;                       // a dotted key for some other flow's graph
+        assert.ok(widget in hit[1].inputs,
+            `${file}: node "${title}" has no widget "${widget}" — the declared field is dead`);
+    }
+
+    // The baked language must be one the FlowDef actually offers, or the default sends a
+    // value ComfyUI rejects with "Value not in list".
+    const lang = byTitle('input_language')[1].inputs.language;
+    assert.ok(flows.includes(`v: '${lang}'`),
+        `${file}: baked language ${JSON.stringify(lang)} is not among the FlowDef's options`);
+});
+
 test('the prompt enhancer graph carries the seed node its caller drives (MPI-504)', () => {
     // MpiBaseFlow._runEnhance sends `injectionParams: { Input_Seed: <random> }` on every
     // press, because step 3's loop is Enhance -> Generate -> Enhance and a fixed seed

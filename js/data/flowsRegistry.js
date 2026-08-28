@@ -1382,6 +1382,164 @@ export const FLOWS = [
         // and 3 only look contradictory — distance in TIMBRE is what makes the
         // conversion audible, distance in PITCH is what you compensate for.
     },
+    // MPI-607 — "Text to Speech". Chatterbox: type a line, give it a voice to speak
+    // in, optionally convert the result onto a second voice. The TTS half that the
+    // Voice Changer flow deliberately left unowned, and the third audio-only Flow.
+    //
+    // TWO ARMS, ONE PICKED PER RUN. `Input_Is_Multilingual` (MpiIfElse#52) selects
+    // between FL_ChatterboxTTS (English only, node 43) and
+    // FL_ChatterboxMultilingualTTS (23 languages, node 33). MpiIfElse is LAZY — its
+    // `true`/`false` inputs declare `lazy: True` and `check_lazy_status` returns only
+    // the taken branch — so exactly one TTS model loads per run and the other arm's
+    // weights are never touched. Both sets are declared because either arm can be the
+    // one a given user runs.
+    //
+    // THE VC STAGE IS OPTIONAL AND SITS ON TOP. `Input_Audio_2` feeds an MpiAnyChecker
+    // that flips MpiIfElse#53: with a target voice the run goes TTS -> VC, without one
+    // it ends at the TTS output. TTS -> VC is the settled chain order (it was proven
+    // the wrong way round in an earlier session, which is also why `cfg_weight` is back
+    // at 0.5 — the 0.3 was compensating for the reversed order and is void).
+    //
+    // 🔴 FL_ChatterboxVC#31 MUST TAKE ITS INPUT FROM #52, NOT FROM #43. It was wired
+    // straight to the English TTS, so on the TTS -> VC route — the flow's main route —
+    // the language pick did nothing at all: node 53 took its `true` arm, that arm
+    // needed 43, and 52 was never evaluated. Nothing errored and audio still came out,
+    // in English, whatever language was chosen. Fixed on the raw graph and re-baked.
+    {
+        id: 'chatter-box',
+        title: 'Text to Speech',
+        // No `preview`/`video` yet — /mpi-flow-graphics work, same as drama-box and
+        // object-stamp. A descriptor naming art that does not exist 404s the tile.
+        description: 'Type a line and hear it spoken. Give Chatterbox a sample of the voice you want it in, pick a language, and it reads your text in that voice — then optionally converts the result onto a second voice entirely.',
+        requiredModels: [],
+        requiredDeps: [
+            // The English arm (3.19GB) — what every measurement on this card was made
+            // on, so it stays reachable rather than being folded into the multilingual
+            // model that also speaks English.
+            'chatterbox-ve',
+            'chatterbox-t3',
+            'chatterbox-s3gen',
+            'chatterbox-tokenizer',
+            'chatterbox-conds',
+            // The 23-language arm (2.99GB). ONE checkpoint for all 23 — t3_mtl23ls_v2
+            // is "multilingual, 23 languages" — so there is no per-language cost and
+            // no list worth trimming.
+            'chatterbox-mtl-t3',
+            'chatterbox-mtl-s3gen',
+            'chatterbox-mtl-ve',
+            'chatterbox-mtl-grapheme',
+            'chatterbox-mtl-cangjie',
+            'chatterbox-mtl-conds',
+            // The VC pair (1.06GB), shared with the Voice Changer flow — same ids, so
+            // a user who owns that flow already has these.
+            'chatterbox-vc-s3gen',
+            'chatterbox-vc-conds',
+            // Flow-only node pack; no model declares it. `ComfyUI-MpiNodes` stays out
+            // for the reason spelled out on voice-changer above.
+            'ComfyUI_Fill-ChatterBox',
+        ],
+        operation: 'flowChatterBox',
+        workflow: 'flow_chatter_box.json',
+        mediaType: 'audio',
+        inputSchema: {
+            media: [
+                // TWO roles with different jobs, so neither can fall back to the
+                // frame's "Audio 1 / Audio 2" labels. Slot 0 is the voice the line is
+                // SPOKEN IN and the graph blocks without it (MpiLoadAudio#54 carries
+                // `block_if_empty`); slot 1 is an OPTIONAL second voice that adds the
+                // VC stage.
+                {
+                    type: 'audio', mode: 'upto', max: 2,
+                    roles: ['audio1', 'audio2'],
+                    labels: ['Voice to speak in', 'Convert onto (optional)'],
+                    // The shipped library on BOTH slots — unlike Voice Changer, neither
+                    // slot has to be the user's own take, because nothing here passes a
+                    // real performance through.
+                    voiceLibrary: ['character', 'character'],
+                },
+            ],
+        },
+        fields: [
+            {
+                id: 'positive', type: 'text', rows: 3, label: 'The line',
+                placeholder: 'Hello and welcome to Cubric Studio.',
+            },
+            {
+                // The ARM SELECTOR, declared before the language so it reads as the
+                // gate that it is. A plain key reaches MpiIfElse#52 because `boolean`
+                // is in the injector's spray list and the node's `true`/`false` inputs
+                // are links, which `_isLink` skips.
+                //
+                // Default FALSE, which is the English-only arm — every measurement on
+                // this card was made there, so the untouched default is the measured
+                // configuration rather than a second model's take on English.
+                id: 'Input_Is_Multilingual', type: 'toggle', label: 'Other languages',
+                icon: 'globe', default: false,
+            },
+            {
+                // DOTTED KEY, and it has to be. `language` is NOT in the injector's
+                // spray list, so a plain `Input_Language` would match the node by title
+                // and then write nothing. `Title.widget` (MPI-359) addresses the one
+                // widget directly; `tests/inject-params-titles.test.cjs` has a case that
+                // asserts every dotted key resolves to a real node AND a real widget.
+                //
+                // The values are the node's EXACT combo labels — ComfyUI rejects
+                // anything else with "Value not in list" — and they are generated from
+                // the live /object_info list rather than typed, so they cannot drift.
+                id: 'Input_Language.language', type: 'select', label: 'Language',
+                default: 'English (en)',
+                options: [
+                    { v: 'English (en)', label: 'English',
+                      info: 'The default, and the one language both arms speak — it works with Other languages off.' },
+                    { v: 'Arabic (ar)', label: 'Arabic',
+                      info: 'Needs "Other languages" turned on.' },
+                    { v: 'Danish (da)', label: 'Danish',
+                      info: 'Needs "Other languages" turned on.' },
+                    { v: 'German (de)', label: 'German',
+                      info: 'Needs "Other languages" turned on.' },
+                    { v: 'Greek (el)', label: 'Greek',
+                      info: 'Needs "Other languages" turned on.' },
+                    { v: 'Spanish (es)', label: 'Spanish',
+                      info: 'Needs "Other languages" turned on.' },
+                    { v: 'Finnish (fi)', label: 'Finnish',
+                      info: 'Needs "Other languages" turned on.' },
+                    { v: 'French (fr)', label: 'French',
+                      info: 'Needs "Other languages" turned on.' },
+                    { v: 'Hebrew (he)', label: 'Hebrew',
+                      info: 'Needs "Other languages" turned on.' },
+                    { v: 'Hindi (hi)', label: 'Hindi',
+                      info: 'Needs "Other languages" turned on.' },
+                    { v: 'Italian (it)', label: 'Italian',
+                      info: 'Needs "Other languages" turned on.' },
+                    { v: 'Japanese (ja)', label: 'Japanese',
+                      info: 'Needs "Other languages" turned on.' },
+                    { v: 'Korean (ko)', label: 'Korean',
+                      info: 'Needs "Other languages" turned on.' },
+                    { v: 'Malay (ms)', label: 'Malay',
+                      info: 'Needs "Other languages" turned on.' },
+                    { v: 'Dutch (nl)', label: 'Dutch',
+                      info: 'Needs "Other languages" turned on.' },
+                    { v: 'Norwegian (no)', label: 'Norwegian',
+                      info: 'Needs "Other languages" turned on.' },
+                    { v: 'Polish (pl)', label: 'Polish',
+                      info: 'Needs "Other languages" turned on.' },
+                    { v: 'Portuguese (pt)', label: 'Portuguese',
+                      info: 'Needs "Other languages" turned on. Delivers BRAZILIAN Portuguese — confirmed by ear; the node label does not say so.' },
+                    { v: 'Russian (ru)', label: 'Russian',
+                      info: 'Needs "Other languages" turned on.' },
+                    { v: 'Swedish (sv)', label: 'Swedish',
+                      info: 'Needs "Other languages" turned on.' },
+                    { v: 'Swahili (sw)', label: 'Swahili',
+                      info: 'Needs "Other languages" turned on.' },
+                    { v: 'Turkish (tr)', label: 'Turkish',
+                      info: 'Needs "Other languages" turned on.' },
+                    { v: 'Chinese (zh)', label: 'Chinese',
+                      info: 'Needs "Other languages" turned on.' },
+                ],
+            },
+        ],
+        // No `result.compare` — two waveforms have nothing to reveal between them.
+    },
     // MPI-607 — "DramaBox". Type a line, optionally hand it a voice to match, get a
     // performed take. The sibling of Voice Changer and its opposite: that flow needs a
     // real recording and passes your delivery through, this one has no recording at all

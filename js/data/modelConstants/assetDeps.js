@@ -515,6 +515,99 @@ export const assetDeps = {
         sha256: '6552d70568833628ba019c6b03459e77fe71ca197d5c560cef9411bee9d87f4e',
         noMirror: true,
     },
+    // Chatterbox MULTILINGUAL (MPI-607) — the 23-language arm ------------------
+    // ONE model, not one per language. `t3_mtl23ls_v2` is "multilingual, 23
+    // languages" in a single checkpoint, so shipping all 23 costs exactly what
+    // shipping one would and there is no list to trim. Six files, 2.99GB, into the
+    // pack's own `chatterbox_multilingual/` — same `targetPath` reasoning as the
+    // English set above: ComfyUI_Fill-ChatterBox computes its directory from
+    // `__file__` and never reads extra_model_paths.yaml, and the loader ends in
+    // `download_chatterbox_models(...)`, which hf_hub_downloads anything it does not
+    // find — outside the download manager, no progress, no sha, no GC, re-pulled on
+    // every engine reinstall.
+    //
+    // `s3gen.pt` and `conds.pt` are BYTE-IDENTICAL to their chatterbox_vc twins
+    // (sha 9b9ff07e… and 6552d705…) and are deliberately NOT deduped, for the reason
+    // already recorded against conds.pt: the pack expects each model to find its own
+    // copy beside it, and the two loaders read two paths. It costs a duplicated 1GB
+    // for s3gen; a symlink or a shared dep would be a silent breakage the first time
+    // a user installs one flow without the other.
+    //
+    // `ve.pt` here is NOT `chatterbox-ve` above — that one is `ve.safetensors`,
+    // 5695784 bytes; this is `ve.pt`, 5698626. Different files, similar size, easy
+    // to mistake for a duplicate.
+    'chatterbox-mtl-t3': {
+        id: 'chatterbox-mtl-t3',
+        name: 'Chatterbox multilingual T3 (23 languages)',
+        origin: 'ResembleAI/chatterbox',
+        filename: 't3_mtl23ls_v2.safetensors',
+        targetPath: 'models/chatterbox/chatterbox_multilingual',
+        url: 'https://huggingface.co/ResembleAI/chatterbox/resolve/main/t3_mtl23ls_v2.safetensors',
+        size: '2.00GB',
+        bytes: 2143989752,
+        sha256: 'b1237586127ce98e7800a68e49938eb5092846862aabcb6e17b2fda7889a6c75',
+        noMirror: true,
+    },
+    'chatterbox-mtl-s3gen': {
+        id: 'chatterbox-mtl-s3gen',
+        name: 'Chatterbox multilingual S3Gen',
+        origin: 'ResembleAI/chatterbox',
+        filename: 's3gen.pt',
+        targetPath: 'models/chatterbox/chatterbox_multilingual',
+        url: 'https://huggingface.co/ResembleAI/chatterbox/resolve/main/s3gen.pt',
+        size: '1008.19MB',
+        bytes: 1057165844,
+        sha256: '9b9ff07e60b20c136e2b1b3d7563a24604e8d2c4c267888d1ee929dd0151d2a3',
+        noMirror: true,
+    },
+    'chatterbox-mtl-ve': {
+        id: 'chatterbox-mtl-ve',
+        name: 'Chatterbox multilingual voice encoder',
+        origin: 'ResembleAI/chatterbox',
+        filename: 've.pt',
+        targetPath: 'models/chatterbox/chatterbox_multilingual',
+        url: 'https://huggingface.co/ResembleAI/chatterbox/resolve/main/ve.pt',
+        size: '5.43MB',
+        bytes: 5698626,
+        sha256: '4b16d836bc598509860f6fa068165a8bb5e9ac84f05582dfcf278a5a372879f1',
+        noMirror: true,
+    },
+    'chatterbox-mtl-grapheme': {
+        id: 'chatterbox-mtl-grapheme',
+        name: 'Chatterbox multilingual grapheme map',
+        origin: 'ResembleAI/chatterbox',
+        filename: 'grapheme_mtl_merged_expanded_v1.json',
+        targetPath: 'models/chatterbox/chatterbox_multilingual',
+        url: 'https://huggingface.co/ResembleAI/chatterbox/resolve/main/grapheme_mtl_merged_expanded_v1.json',
+        size: '68.35KB',
+        bytes: 69989,
+        sha256: '69632f47220a788a52ce2661d096453c5655e9bf25289d89a8d832c46ee07dbf',
+        noMirror: true,
+    },
+    'chatterbox-mtl-cangjie': {
+        id: 'chatterbox-mtl-cangjie',
+        name: 'Chatterbox Cangjie map (Chinese)',
+        origin: 'ResembleAI/chatterbox',
+        filename: 'Cangjie5_TC.json',
+        targetPath: 'models/chatterbox/chatterbox_multilingual',
+        url: 'https://huggingface.co/ResembleAI/chatterbox/resolve/main/Cangjie5_TC.json',
+        size: '1.83MB',
+        bytes: 1920163,
+        sha256: '7073fd9de919443ae88e0bd2449917a65fe54898a4413ed1edcc4b67f28bce8c',
+        noMirror: true,
+    },
+    'chatterbox-mtl-conds': {
+        id: 'chatterbox-mtl-conds',
+        name: 'Chatterbox multilingual conditionals',
+        origin: 'ResembleAI/chatterbox',
+        filename: 'conds.pt',
+        targetPath: 'models/chatterbox/chatterbox_multilingual',
+        url: 'https://huggingface.co/ResembleAI/chatterbox/resolve/main/conds.pt',
+        size: '104.86KB',
+        bytes: 107374,
+        sha256: '6552d70568833628ba019c6b03459e77fe71ca197d5c560cef9411bee9d87f4e',
+        noMirror: true,
+    },
     // DramaBox weights (MPI-607) -------------------------------------------
     // 15.23GB across 16 entries, and the shape is the OPPOSITE of the Chatterbox
     // block above. ComfyUI-MelodramaBox resolves every weight through

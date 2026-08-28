@@ -53,7 +53,7 @@
   finished result — no workspace to assemble, no settings to know. Open the Flow Library from
   the Flows button at the top of the gallery, from the landing page, or with Tab, which cycles
   the gallery, your last card and the flow you have open, so you can step out to check a
-  picture and land back where you left off. Eleven to start with:
+  picture and land back where you left off. Twelve to start with:
 
   - **Head Swap** — put one picture's head on another
   - **Extend Video** — carry on past the last frame
@@ -66,13 +66,15 @@
   - **Voice Changer** — say a line and have it come back in someone else's voice
   - **Object Stamp** — take an object out of one photo and put it into another
   - **DramaBox** — write a line and hear it performed in a voice you choose
+  - **Text to Speech** — read your text aloud in a voice you pick, in any of 23 languages
 
   Each flow tells you which models it needs and installs them for you, and most of them run on a
   model the Library already offers — so once you own the model, the flow costs you nothing extra.
   The three video flows all run on LTX 2.3 Balanced, so installing it for one gives you the other
-  two. Three flows are the exception and say so on their card: Head Swap adds a head-swap LoRA on
-  top of Qwen Image Edit, and Voice Changer and DramaBox both bring their own voice weights and
-  need no model from the Library at all.
+  two. Four flows are the exception and say so on their card: Head Swap adds a head-swap LoRA on
+  top of Qwen Image Edit, and Voice Changer, DramaBox and Text to Speech all bring their own voice
+  weights and need no model from the Library at all. The three voice flows share weights where
+  they can, so owning one makes the next one smaller.
 
 - **Head Swap** takes a head from one picture and puts it on another. Load the picture you want
   to keep, add the picture with the head you want, draw a square around each head, and run. It
@@ -192,6 +194,19 @@
   model tends to pad the take out or read your instructions back at you, and telling it how long
   the line should be is what stops both. It speaks English, brings its own weights — about
   fifteen gigabytes, the largest of any flow — and needs no model from the Library.
+
+- **Text to Speech** reads your writing aloud. Type the line, give it a sample of the voice you
+  want it in, and run. Turn on Other languages and you can have it in any of twenty-three —
+  Chinese, Japanese, French, Italian, German, Spanish, Arabic, Hindi and more — all from one
+  model, so no language costs you an extra download.
+
+  There is a second voice slot, and it is worth understanding because it changes what you get.
+  Leave it empty and you hear the line in the voice you supplied. Fill it and the result is
+  converted again onto that second voice, which is the same conversion the Voice Changer flow
+  does — useful when you want one voice's delivery and another's identity.
+
+  A note on Portuguese: it comes out Brazilian. That is the model, not a setting, and it is
+  flagged on the option itself so it is not a surprise halfway through a project.
 
 - FLUX.2 Klein now comes in two sizes. The 9B card sits beside the 4B one and does the same
   seven things — generate, reshape, follow a depth reference, edit with up to three reference
