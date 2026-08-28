@@ -79,9 +79,19 @@ Flows reach it like everything else: `MpiBaseFlow._run` → `submitFlowGeneratio
 
 **The law, and `tests/flow-required-media.test.cjs` enforces it repo-wide:** a slot whose
 graph blocks when empty must not declare `required: false`. It is asserted as that PAIR
-rather than "everything is required", because DramaBox is the legitimate counter-example —
-its loader carries `block_if_empty: false` and its voice slot really is optional, which is
-how its prompt-only arm builds a speaker from the words alone.
+rather than "everything is required", because DramaBox is the legitimate counter-example:
+its voice slot really is optional, which is how its prompt-only arm builds a speaker from
+the words alone.
+
+🔴 **And DramaBox is exempt through LAZINESS, not through the flag** — stated wrongly
+once already and caught by a claim audit. `MpiLoadAudio#11` carries `block_if_empty: true`
+like every other loader. `Input_Audio` is an `MpiString` whose only consumer is
+`MpiAnyChecker#14`, and that checker's boolean drives `MpiIfElse#15` between two samplers,
+one taking a `voice_ref` and one not. `MpiIfElse` declares its arms **lazy**, so an empty
+slot takes the prompt-only arm and the loader is never requested — the flag is real and
+simply unreachable. **So "does this slot block?" is not answerable from the flag alone.**
+Route an injected path through a presence check when you want it optional; wire it into a
+loader directly when you do not.
 
 ## Injection routing (`comfyController` media-kind sweep)
 

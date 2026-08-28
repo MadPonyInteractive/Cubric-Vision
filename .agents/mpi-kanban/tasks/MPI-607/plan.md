@@ -80,6 +80,39 @@
 
 Project mode: scalable-foundation.
 
+> ### 2026-08-28 (session 31, close-out) — 🔴 A CLAIM AUDIT CAUGHT ONE FALSE STATEMENT.
+>
+> **The claim:** commit `b39ebe06`'s message, and two files written the same day, said
+> DramaBox's voice slot is legitimately optional *"because its loader carries
+> `block_if_empty: false`"*. **That is FALSE.** `MpiLoadAudio#11` carries **`true`**,
+> exactly like every other loader in the repo.
+>
+> **The real mechanism is LAZINESS.** `Input_Audio` is an `MpiString` (#13) whose ONLY
+> consumer is `MpiAnyChecker#14`; that checker's boolean drives `MpiIfElse#15` between
+> `DramaBoxSampler#9` (takes `voice_ref`) and `#10` (does not). `MpiIfElse` declares its
+> arms lazy, so an empty slot takes the false arm, `#11` is never requested, and its
+> blocker never fires. The flag is real and simply unreachable.
+>
+> **Why it matters beyond wording.** The sweep's own test asserted DramaBox's exemption
+> via a `block_if_empty` walk that returned `false` — the right answer for the wrong
+> reason, since the walk stops one hop out and never reached #11. It would have said the
+> same thing about a chain where the loader really was reachable. The case now asserts
+> the WIRING (string → checker → if/else → two samplers, exactly one taking `voice_ref`)
+> and is mutation-checked: rewiring the checker into a loader kills it.
+>
+> **The sweep itself stands.** Re-checked: in all twelve flipped slots the titled node IS
+> the blocking loader, with no lazy gate in front, and none of those flows has a
+> prompt-only route. DramaBox was the only exemption and it stayed exempt.
+>
+> `b39ebe06` is pushed, so its message cannot be corrected — this entry is the record.
+> Fixed in `tests/flow-required-media.test.cjs` and `docs/playbooks/add-flow/02-media-io.md`;
+> `drama-box.md` had it right all along ("`MpiAnyChecker#14` forks to a sampler with no
+> `voice_ref`").
+>
+> Audit verdict otherwise: **33 claims PROVEN**, 1 unproven (the DramaBox safetensors
+> video-key count, which no tool in the auditor's shell could inspect — it was measured
+> directly this session by reading both files' safetensors headers).
+
 > ### 2026-08-28 (session 31) — 🟢 THE STRIP IS DONE AND PUSHED (`126cbdba`).
 >
 > **Text to Speech is now a line, a voice and a language**, verified in the real UI on an
