@@ -24,10 +24,23 @@
       | 10 s | 249 | 9.93 s | −0.07 s |
 
       The gap runs −0.11 s to +0.17 s, **goes both ways**, and is never a whole second, so
-      it is not a trim and there is nothing further to hunt. Corroborated by
-      `%APPDATA%\Cubric Vision\logs\app.log` 14:28–14:30: `Sampling 3.0s` → `Decoded 2.9s`,
-      `Sampling 4.0s` → `Decoded 4.2s`. The "two-second clip" is a 2.89 s file whose line
-      needed longer — **the cut is the whole story.**
+      it is not a trim. Corroborated by `%APPDATA%\Cubric Vision\logs\app.log` 14:28–14:30:
+      `Sampling 3.0s` → `Decoded 2.9s`, `Sampling 4.0s` → `Decoded 4.2s`.
+
+- [x] **CORRECTION — "the cut is the whole story" was wrong, and Fabio was right to push
+      back.** File length is not what an ear calls the length. `silencedetect` at −45 dB on
+      the same clips: every one opens with **model-generated lead-in silence of 0.13–1.47 s**,
+      and short windows also come back with holes in the middle. `_001` (asked 3 s) is
+      0.75 s of lead, a 0.71 s gap at 1.08–1.79 and 0.28 s trailing — **1.15 s of audible
+      speech in a 2.89 s file.** "A two-second output" was generous, not a rounding.
+
+      The truncation is proven on the samples too: `_007` has NO trailing silence and its
+      last 100 ms peaks at **−8.0 dB**, i.e. loud at the final sample. Every clip that
+      finished ends at −47 dB or below.
+
+      `_007` vs `_008` settles the product question: **same prompt**, 3 s truncates
+      mid-word (2.54 s speech), 4 s completes it with 0.39 s spare (3.61 s speech). More
+      window does buy more line — the lead-in does not grow to eat it.
 
 - [x] **Floor the slider at the model author's own floor** — drama-box `Input_Duration`
       `min: 1` → `min: 3`. Below 3 s upstream never asks the model to speak at all.
@@ -74,3 +87,11 @@ What needs an ear rather than a test: **is `min: 3` the right floor, and does th
 right on the slide?** 3 s is the model author's floor, not a measured one of ours — if a
 one-word line at 2 s is something you want back, that is a different call and it comes with
 no upstream support.
+
+And the one the envelope measurement opened: **trim the lead-in silence off the output?**
+`audio_prep.py` carries a `_trim_silence` helper but MelodramaBox exposes **no trim node**,
+and core's `TrimAudioDuration` cuts at fixed times rather than at silence — so it needs an
+MpiNodes node plus a graph re-export, which is a card of its own, not this one. Trimming
+adds no speech; it only stops a 3 s ask returning a file that is a quarter silence at the
+front. The thing that actually buys a complete line is more window, which is what the note
+now tells the user.

@@ -96,10 +96,41 @@ loses a constant **0.03 s** on top (`delivered = n_frames / 25 − 0.03`). Measu
 | 10 s | 249 | 9.93 s | −0.07 s |
 
 The gap runs **−0.11 s to +0.17 s and is never a whole second** — it goes both ways, so it
-is not a trim. A "two-second" clip from a 3 s request is a 2.89 s file whose line needed
-longer: **the cut is the whole story, and there is no second bug to hunt.** Do not
-re-derive this — and note `ebur128` cannot help you here, it reports the −70 LUFS silence
-floor on anything under ~10 s (memory `tool_measure_generated_audio`).
+is not a trim. Do not re-derive this — and note `ebur128` cannot help you here, it reports
+the −70 LUFS silence floor on anything under ~10 s (memory `tool_measure_generated_audio`).
+
+### 🔴 The window is NOT all speech — the model spends part of it on silence
+
+**Measure the envelope, not the file length.** The file length above is not what an ear
+calls the length: every clip opens with model-generated lead-in silence, and short windows
+also come back with gaps in the middle. `silencedetect` at −45 dB over the same nine clips:
+
+| clip | asked | file | lead-in | audible speech |
+|---|---|---|---|---|
+| `_001` "Hello my name is John" | 3 s | 2.89 s | **0.75 s** | **~1.15 s** (plus a 0.71 s hole at 1.08–1.79) |
+| `_005` | 3 s | 2.89 s | 0.19 s | 2.26 s |
+| `_006` | 3 s | 2.89 s | 0.24 s | 2.40 s |
+| `_007` | 3 s | 2.89 s | 0.35 s | 2.54 s, **and cut mid-sound** |
+| `_008` same line as `_007` | 4 s | 4.17 s | 0.17 s | 3.61 s, finishes 0.39 s early |
+| `_004` | 10 s | 9.93 s | **1.47 s** | 5.32 s (a monologue with real pauses) |
+
+Lead-in runs **0.13 s to 1.47 s** and does not scale with the window, so it cannot be
+predicted from the number. That is why a 3 s request can be heard as "a two-second clip"
+and the report is literally accurate rather than a rounding of 2.89.
+
+**`_007` is the truncation, proven on the samples:** it has no trailing silence at all and
+its last 100 ms peaks at **−8.0 dB** — the waveform is loud at the final sample, which is a
+line cut off, not a line that ended. Every clip that finished ends quiet (−47 dB or below).
+
+**`_007` vs `_008` is the whole product argument in one pair:** identical prompt, 3 s
+truncates mid-word, 4 s completes it and still has 0.39 s spare. More window does buy more
+line — the lead-in does not simply grow to eat it.
+
+Open, and Fabio's call: whether to trim the lead-in off the output. `audio_prep.py` has a
+`_trim_silence` helper but MelodramaBox **exposes no trim node**, and core's
+`TrimAudioDuration` cuts at fixed times rather than at silence — so it needs an MpiNodes
+node plus a graph re-export, which is a card of its own. Trimming alone adds no speech; it
+only stops a 3 s ask returning a file that is a quarter silence at the front.
 
 Two related widgets are dead in this graph and must not be resurrected as controls:
 
