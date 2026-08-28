@@ -18,7 +18,7 @@ So every `pipPins` array corrected a pip run that happens nowhere. Proceeded.
 
 ## What shipped
 
-- `js/data/modelConstants/nodesDeps.js` — `pipPins` removed from all 8 entries that had
+- `js/data/modelConstants/nodesDeps.js` — `pipPins` removed from all 9 entries that had
   it (LTXVideo, Impact-Pack, kjnodes, Frame-Interpolation, Impact-Subpack, RES4LYF,
   controlnet_aux, Fill-ChatterBox, MelodramaBox). The comments each pin justified were
   kept as knowledge and re-pointed at `dev_configs/python_deps.in`, which is where those
@@ -46,18 +46,26 @@ So every `pipPins` array corrected a pip run that happens nowhere. Proceeded.
 | `node --test tests/curated-python-deps.test.cjs` | 1/1 pass |
 | `npm test` (full suite) | **773 pass, 0 fail**, exit 0 |
 
-Every version the deleted pins carried was checked present in `python_deps.in` by hand
-before deleting them: kornia 0.8.2, numpy 2.5.1, scipy 1.18.0, scikit-image 0.26.0,
-matplotlib 3.11.0, pillow 12.3.0, color-matcher 0.6.0, mss 10.2.0, ultralytics 8.4.78,
-dill 0.4.1, einops 0.8.2, `transformers[timm]` 5.13.0, safetensors, diffusers, and the
-single deliberate opencv build (`opencv-contrib-python-headless==5.0.0.93`).
+Every version the deleted pins carried was checked present before deleting them. Thirteen
+are pinned in `python_deps.in` itself: kornia 0.8.2, numpy 2.5.1, scipy 1.18.0,
+scikit-image 0.26.0, matplotlib 3.11.0, pillow 12.3.0, color-matcher 0.6.0, mss 10.2.0,
+ultralytics 8.4.78, dill 0.4.1, einops 0.8.2, `transformers[timm]` 5.13.0, and the single
+deliberate opencv build (`opencv-contrib-python-headless==5.0.0.93`).
+
+The other two — `safetensors==0.8.0` and `diffusers==0.39.0`, both from Fill-ChatterBox —
+are named UNVERSIONED in `python_deps.in` and pinned at exactly those versions by the
+compiled `python_deps.txt` (`:377` and `:65`), which is the file both engines install. So
+nothing floated, but the pin moved from hand-written to resolved: a future recompile can
+move them, where the old `pipPins` would have held. That is the intended behaviour of the
+curated set (one resolved closure, not per-pack hand pins), noted here because the
+close-out audit flagged it — reading only the `.in` makes it look unpinned.
 
 ## Left open
 
-`.claude/rules/comfy_engine.md:34` already calls `pipPins` dead data, but its closing
-clause — "They survive only as fields in `nodesDeps.js`, pinned by
-`tests/node-drift.test.cjs`" — is now stale. Rule files are not edited without explicit
-permission (CLAUDE.md § 5), so it is flagged, not changed.
+`.claude/rules/comfy_engine.md` had two stale `pipPins` clauses — ":10" calling it a live
+FIELD, and ":34" closing with "they survive only as fields in `nodesDeps.js`, pinned by
+`tests/node-drift.test.cjs`", which is the test this card deleted. Flagged first (rule files
+need explicit permission, CLAUDE.md § 5), then FIXED once Fabio gave it, 2026-08-28.
 
 No release-note entry: nothing user-visible changed. No engine or Pod rebuild is implied
 — the data was inert on both.
