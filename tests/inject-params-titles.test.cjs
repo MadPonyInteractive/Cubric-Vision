@@ -560,11 +560,14 @@ test('the DramaBox Flow carries its prompt, duration, optional voice and audio c
         `${file}: exactly one sampler arm takes a voice reference (the other is the prompt-only route)`);
 });
 
-test('the Text to Speech Flow carries both TTS arms, and VC reads the SELECTOR (MPI-607)', () => {
+test('the Text to Speech Flow carries both TTS arms (MPI-607)', () => {
     const file = 'flow_chatter_box.json';
     const have = titlesOf(file);
+    // NOT `input_audio_2`. That node fed the VC arm, which was stripped on
+    // 2026-08-28 — the op maps one audio role now, so nothing can fill it. Asserting
+    // it would demand a node the flow no longer has a way to reach.
     for (const title of [
-        'input_positive', 'input_seed', 'input_audio', 'input_audio_2',
+        'input_positive', 'input_seed', 'input_audio',
         'input_is_multilingual', 'input_language',
     ]) {
         assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
@@ -576,19 +579,14 @@ test('the Text to Speech Flow carries both TTS arms, and VC reads the SELECTOR (
     const byTitle = (t) => Object.entries(graph)
         .find(([, n]) => (n._meta?.title || '').toLowerCase() === t);
 
-    // 🔴 THE REGRESSION THIS TEST EXISTS FOR. FL_ChatterboxVC was wired straight to the
-    // English TTS instead of to the Input_Is_Multilingual selector, so on the TTS -> VC
-    // route the language pick did nothing: MpiIfElse is LAZY, node 53 took its `true`
-    // arm, that arm needed the English TTS, and the selector was never evaluated. Audio
-    // still came out and nothing errored — it was just always English.
-    const [selectorId] = byTitle('input_is_multilingual');
-    const vc = Object.values(graph).find(n => n?.class_type === 'FL_ChatterboxVC');
-    assert.ok(vc, `${file} must carry FL_ChatterboxVC`);
-    assert.ok(Array.isArray(vc.inputs.input_audio),
-        `${file}: FL_ChatterboxVC.input_audio must be wired, not baked`);
-    assert.equal(vc.inputs.input_audio[0], selectorId,
-        `${file}: FL_ChatterboxVC must read from the Input_Is_Multilingual selector (#${selectorId}), `
-        + `not straight off one TTS arm — otherwise the language pick is dead on the TTS -> VC route`);
+    // THE VC ASSERTIONS ARE GONE BECAUSE THE VC ARM IS. They pinned a real regression —
+    // FL_ChatterboxVC#31 was wired straight to the English TTS instead of to the
+    // Input_Is_Multilingual selector, and since MpiIfElse is lazy the selector was never
+    // evaluated, so on the TTS -> VC route the language pick did nothing and the output
+    // was always English. That route no longer exists: the op maps one audio role, so
+    // `Input_Audio_2` is never filled and MpiAnyChecker#57 can only take the false arm.
+    // The bypass itself is guarded in tests/flow-derived-fields.test.cjs, which is the
+    // assertion that matters now — one declared role, one mapped mediaInput.
 
     // Both arms must survive: the flow declares BOTH weight sets and the selector needs
     // something on each side.
