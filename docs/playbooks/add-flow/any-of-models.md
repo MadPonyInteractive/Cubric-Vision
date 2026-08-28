@@ -99,12 +99,77 @@ MPI-316 removed that field from both Krea 2 cards on purpose: it drives the H/B/
 and SFW/NSFW are content variants, not tiers. Re-adding it renders "Krea 2 NSFW H" again — the
 exact bug MPI-316 fixed.
 
-## The picker
+## The picker — TWO surfaces, TWO questions, ONE session Map
 
-One `MpiDropdown` per choosable slot (never a bare `<select>` — MPI-582) in the Flow Library
-slide-over, labelled with the slot's own `label`, **above** the required-models list because the
-pick drives that list, and **before** the flow opens. The recommended candidate carries
-`icon: 'sparkle', meta: 'Recommended'` — the same sparkle the Model Library flags Featured with
-(MPI-514), and the word rather than a hover tooltip, because a dropdown row has room for it. A
-change re-renders the whole drawer, since the resolved id feeds the rows, the install keys and the
-footer button.
+One `MpiDropdown` per choosable slot (never a bare `<select>` — MPI-582), and it appears in two
+places because there are two different questions to ask. Both write the same `setFlowModel` Map,
+so there is no second state and nothing to reconcile.
+
+| surface | the question | candidates offered |
+|---|---|---|
+| **Flow Library slide-over** | which one do I **download**? | ALL of them, installed or not (MPI-599) |
+| **Run slide** (`MpiBaseFlow`) | which one do I **run**? | INSTALLED only (MPI-638) |
+
+**The filter on the run slide is load-bearing, not tidiness.** `flowModelIds` lets a pick win even
+when its candidate is not on disk — deliberately, because that is how a user says *"download that
+one instead"* — so an unfiltered picker inside an OPEN flow would let someone flip that flow to
+unavailable and meet a toast at Generate, with no Install button anywhere on the slide. The
+drawer is where downloading is chosen; the run slide is where running is.
+
+The two are also reachable in disjoint situations, which is what keeps the pair from being
+confusing: since MPI-638 an **installed** flow opens straight into its frame and never renders the
+drawer at all, so a Ready flow's only picker is the run slide's, and an unready flow's only picker
+is the drawer's.
+
+### Slide-over specifics
+
+Above the required-models list, because the pick drives that list. The recommended candidate
+carries `icon: 'sparkle', meta: 'Recommended'` — the same sparkle the Model Library flags Featured
+with (MPI-514), and the word rather than a hover tooltip, because a dropdown row has room for it.
+A change re-renders the whole drawer, since the resolved id feeds the rows, the install keys and
+the footer button.
+
+### Run-slide specifics
+
+In the control column above Generate, **paired with that slot's LoRA cogwheel** — the two controls
+a slot owns, side by side (see [ui/lora-rack.md](ui/lora-rack.md)). A slot with exactly one
+installed candidate renders the model's NAME as plain text instead of a dropdown: there is no
+choice to offer, and a one-option dropdown claims one that is not there. A pick repaints the ROW,
+never the slide — `_renderSlide()` tears down and replays the result pane, the compare view and
+the video player.
+
+## `label` is a DISAMBIGUATOR, not a name (MPI-638)
+
+**It is rendered only when a flow declares two or more slots.** With one slot the dropdown already
+says which model this is, and a caption above it is a word invented for no reader.
+
+Fabio, 2026-08-28, on the "Render model" / "Edit model" captions that used to show unconditionally:
+
+> They are not names that are sustainable because we might have "pinpaint model" or "remove model"
+> or something like that. If those names were introduced, it would die, or it would introduce
+> complexity. So if we move the model drop downs to the last stage of the flow and place a little
+> cogwheel next to the model drop down that is solved.
+
+Every shipped flow declares exactly ONE slot, so that wording left the app with **no descriptor
+edit at all** — the field stays in the `FlowDef`, tested and documented, for the day a two-slot
+flow ships and its author has a real distinction that earns words. The drawer falls back to a
+generic `Model` caption; the run slide renders none.
+
+So `label` is still **not optional in the object form**: write it for the reader who will need it,
+even though today nobody sees it. What changed is when it PAINTS, not whether it is declared.
+
+## Two candidates that share a NAME
+
+`disambiguatedName(id, siblingIds)` in `modelRegistry.js` — the model's name, plus its
+`sizeTierLetter` only when a sibling **in the same slot** shares that name. Both pickers call it;
+it lives there rather than in `flowsRegistry.js` because the import is one-way
+(`modelRegistry.js` § the `flowDepUniverse` import), and it is shared rather than copied because
+drift shows up as one surface disambiguating and the other not.
+
+`sizeTierLetter`, never `tierLetterFor`: the latter is install-gated, and the drawer's picker
+exists to name a model the user does not have yet.
+
+*(FLUX.2 Klein was the original clash and is not one any more — MPI-619 put the size in both
+names, because 4B and 9B are two models the public knows by name and their LoRAs do not
+interchange. `tests/flow-model-choice.test.cjs` now finds a live clash rather than hardcoding one,
+and fails loudly if none is left.)*

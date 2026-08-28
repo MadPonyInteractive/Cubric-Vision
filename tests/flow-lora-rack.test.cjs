@@ -163,36 +163,51 @@ test('the opt-in survives: a slot without `loras` contributes no rack', () => {
     }
 });
 
-test('the slide-over gives every rack-bearing slot its OWN cogwheel', () => {
-    // Fabio, MPI-608: "each model has its own separate cogwheel that opens its own
-    // separate 6 LoRA selector" — so a third model in a future flow needs no new UI.
+test('the slide-over has NO cogwheel — the rack lives on the run slide only (MPI-638)', () => {
+    // MPI-608 put a per-slot cogwheel in this drawer; MPI-613 put one on the run slide
+    // as well, and BOTH were live until MPI-638. Consolidating on the run slide is not a
+    // taste call: since MPI-638 an installed flow opens straight into its frame and never
+    // renders this drawer, so the only flow that reaches it is one whose weights are NOT
+    // on disk — and a LoRA rack for a model the user has not downloaded configures
+    // nothing. Re-adding one here brings back the duplication, not a feature.
     const src = read('js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js');
-    assert.match(src, /slot\.loras \? `<div id="flow-detail-loras-\$\{i\}"><\/div>` : ''/,
-        'the cogwheel host is rendered per slot, and only for a slot that declared a rack');
-    assert.match(src, /Events\.emit\('ui:open-model-settings', \{ modelId: runningId \}\)/,
-        'it opens the app\'s OWN panel on the member running in THAT slot');
+    assert.ok(!/flow-detail-loras-/.test(src),
+        'the drawer must not render a cogwheel host — the rack moved to the run slide');
+    assert.ok(!/ui:open-model-settings/.test(src),
+        'the drawer must not open the settings panel; MpiBaseFlow owns its own instance');
+    // The picker itself STAYS: this drawer is where a user chooses what to DOWNLOAD.
+    assert.match(src, /_mountModelChoice\(flow\)/,
+        'the model picker must survive the cogwheel removal — it answers a different question');
     // The phase is the slot's position in requiredModels. flowModelChoices FILTERS
     // single-candidate slots out, so its array index is not the phase — carrying the
-    // original index is what stops a cogwheel addressing the wrong model.
+    // original index is what stops a control addressing the wrong model.
     const reg = read('js/data/flowsRegistry.js');
     assert.match(reg, /\.map\(\(slot, index\) => \(\{ \.\.\.slot, index \}\)\)/,
         'flowModelChoices must carry the ORIGINAL slot index through the filter');
 });
 
-test('the RUN slide carries the same per-slot cogwheels, beside the output (MPI-613)', () => {
+test('the RUN slide carries the per-slot cogwheels, beside the output (MPI-613/638)', () => {
     // Fabio, after live-testing MPI-610: "It should be on the final stage, actually. It's
     // where the output is, so if the user decides to test some different LoRAs, he has to
     // go all the way back to the slide over, and that doesn't make much sense."
     //
     // LoRA choice is a COMPARE decision. From the slide-over, changing one costs six
-    // navigations with the result and the control at opposite ends of the app.
+    // navigations with the result and the control at opposite ends of the app. MPI-638
+    // moved the MODEL DROPDOWN here for the same reason and paired the two.
     const src = read('js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js');
 
-    assert.match(src, /flowLoraPhases\(flow\)/,
-        'the frame must render the flow\'s DECLARED racks, not a per-flow hardcode');
-    assert.match(src, /slots\[phase - 1\]\?\.label/,
-        'each cogwheel keeps its slot label — two reading "LoRAs" cannot be told apart '
-        + 'here, where the models are no longer on screen beside them');
+    assert.match(src, /const slots = flowModelSlots\(flow\)/,
+        'the frame must render the flow\'s DECLARED slots, not a per-flow hardcode');
+    assert.match(src, /const resolved = flowModelIds\(flow\)/,
+        'the cogwheel must open on the id that will actually RUN, resolved through the '
+        + 'any-of set — never on `slot.models[0]`');
+    // MPI-638 deleted the cogwheel's text label. It is no longer needed BECAUSE the
+    // dropdown beside it names the model, which is the whole reason the pairing exists:
+    // "render model" / "edit model" were unsustainable names (Fabio, 2026-08-28).
+    assert.ok(!/label: slotLabel/.test(src),
+        'the cogwheel must not carry a slot label — the dropdown beside it names the model');
+    assert.match(src, /const multi = slots\.length > 1;/,
+        'a slot label is a DISAMBIGUATOR: rendered only when the flow declares 2+ slots');
 
     // The trap this placement must NOT inherit: `ui:open-model-settings` is listened for
     // by exactly two components and both are workspace Blocks, so a flow opened from the
@@ -213,8 +228,8 @@ test('the RUN slide carries the same per-slot cogwheels, beside the output (MPI-
         const end = src.indexOf('\n        }', at);
         return src.slice(at, end === -1 ? undefined : end);
     };
-    assert.match(body('function _teardownSlide()'), /_destroyLoraBtns\(\)/,
-        'slide teardown must destroy the cogwheels');
+    assert.match(body('function _teardownSlide()'), /_destroyModelBtns\(\)/,
+        'slide teardown must destroy the dropdowns AND the cogwheels');
     assert.match(body('el.destroy = ()'), /_loraSettings\?\.el\?\.destroy\?\.\(\)/,
         'the overlay outlives the slide and must die with the flow');
 });

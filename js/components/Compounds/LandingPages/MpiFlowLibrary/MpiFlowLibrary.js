@@ -6,10 +6,10 @@ import { Events } from '../../../../events.js';
 import { state } from '../../../../state.js';
 import {
     listFlows, flowAvailability, getFlowDependencies, flowDepKey,
-    flowModelIds, flowModelChoices, setFlowModel,
+    flowModelIds, flowModelChoices, flowModelSlots, setFlowModel,
 } from '../../../../data/flowsRegistry.js';
 import { MpiDropdown } from '../../../Primitives/MpiDropdown/MpiDropdown.js';
-import { getModelById, getModelDependencies, sizeTierLetter } from '../../../../data/modelRegistry.js';
+import { getModelById, getModelDependencies, disambiguatedName } from '../../../../data/modelRegistry.js';
 import { downloadService } from '../../../../services/downloadService.js';
 import { sizeToGb } from '../../../../data/modelConstants/footprint.js';
 import { PAGE_GALLERY } from '../../../../router.js';
@@ -224,25 +224,32 @@ export const MpiFlowLibrary = ComponentFactory.create({
             return _rowHtml(label, done);
         }
 
-        // MPI-590/599 — the model pickers. One labelled dropdown per CHOOSABLE SLOT: a role
-        // the flow's graph plays a model in, with more than one candidate for it. A flow can
-        // have several (an image model for one phase, an edit model for another), so the
-        // slot's own label is the field label — two fields both reading "Model" say nothing.
-        // They sit BEFORE the flow opens (Fabio's placement), above the required-models list
-        // the pick drives.
+        // MPI-590/599 — the model pickers. One dropdown per CHOOSABLE SLOT: a role the flow's
+        // graph plays a model in, with more than one candidate for it. They sit BEFORE the
+        // flow opens, above the required-models list the pick drives, and this drawer is now
+        // the one place that question is asked — since MPI-638 an INSTALLED flow opens
+        // straight into its frame and never renders this panel at all.
         //
-        // Candidates are offered whether or not they are INSTALLED (MPI-599). The picker
-        // used to appear only once two were on disk, which meant the one user who most needed
-        // it — the user with none — silently downloaded the first candidate and was never
-        // told there had been a choice.
+        // THE QUESTION HERE IS "WHICH ONE DO I DOWNLOAD", and that is why candidates are
+        // offered whether or not they are installed (MPI-599). The run slide asks the other
+        // question — which one do I RUN — and offers installed candidates only. Two surfaces,
+        // two questions, one session Map (`setFlowModel`).
+        //
+        // The slot's `label` is a DISAMBIGUATOR, not a name (MPI-638). It renders only when
+        // the flow declares more than one slot; otherwise the caption is the generic "Model"
+        // and the dropdown's own rows carry the identity. Fabio, 2026-08-28: "render model"
+        // and "edit model" "are not names that are sustainable because we might have
+        // 'pinpaint model' or 'remove model'". No shipped flow declares two slots, so today
+        // that wording is gone from the app without a single descriptor edit — and the day a
+        // two-slot flow ships, the label returns to a place where it earns its words.
         function _modelChoiceHtml(flow) {
+            const multi = flowModelSlots(flow).length > 1;
             return flowModelChoices(flow)
                 .map((slot, i) => `
                 <div class="mpi-detail__field">
-                    <span class="mpi-detail__field-label">${slot.label}</span>
+                    <span class="mpi-detail__field-label">${multi ? slot.label : 'Model'}</span>
                     <div class="mpi-detail__model-pick">
                         <div id="flow-detail-model-${i}"></div>
-                        ${slot.loras ? `<div id="flow-detail-loras-${i}"></div>` : ''}
                     </div>
                 </div>`)
                 .join('');
@@ -256,18 +263,12 @@ export const MpiFlowLibrary = ComponentFactory.create({
                 if (!host) return;
                 // Two candidates in ONE slot can share a display name — FLUX.2 Klein 4B and
                 // 9B are both literally "FLUX.2 Klein" — which renders two identical rows the
-                // user cannot choose between (MPI-567). Append the tier letter when, and only
-                // when, this slot is actually ambiguous, matching the prompt box's own L/B
-                // convention. `sizeTierLetter`, not `tierLetterFor`: the latter is install-
-                // gated, and this picker exists to choose BEFORE anything is installed, so the
-                // gate would blank the letter exactly when it is needed.
-                const _label = (id) => {
-                    const name = getModelById(id)?.name || id;
-                    const clashes = slot.models.some(other => other !== id
-                        && (getModelById(other)?.name || other) === name);
-                    const letter = clashes ? sizeTierLetter(id) : '';
-                    return letter ? `${name} ${letter}` : name;
-                };
+                // user cannot choose between (MPI-567). `disambiguatedName` appends the tier
+                // letter when, and only when, this slot is actually ambiguous. It lives in
+                // modelRegistry.js because MpiBaseFlow's run-slide picker needs the exact
+                // same call (MPI-638), and two copies would drift into one surface
+                // disambiguating and the other not.
+                const _label = (id) => disambiguatedName(id, slot.models);
                 const dd = MpiDropdown.mount(host, {
                     options: slot.models.map(id => ({
                         value: id,
@@ -294,31 +295,13 @@ export const MpiFlowLibrary = ComponentFactory.create({
                 });
                 _detailBtns.push(dd);
 
-                // A cogwheel PER MODEL SLOT, opening the app's own Model Settings panel on
-                // whichever member of THIS slot is running — the six-slot LoRA rack,
-                // strengths, bypass and drop zones, already built (Fabio, MPI-608: "each
-                // model has its own separate cogwheel that opens its own separate 6 LoRA
-                // selector"). A third model in a future flow costs a third cogwheel and no
-                // new UI, which is the whole reason this is per-slot rather than per-flow.
-                //
-                // The panel is NOT rebuilt here: this emits and whoever mounted the overlay
-                // opens it, exactly as `ui:open-model-picker` already works. The rack it
-                // edits is that model's OWN settings, shared with its ordinary generations
-                // — the same LoRA is the same LoRA whether the flow or the prompt box runs
-                // it (MPI-504), and that is deliberate, not an oversight.
-                if (!slot.loras) return;
-                const cogHost = qs(`#flow-detail-loras-${i}`, detailBody);
-                if (!cogHost) return;
-                const runningId = slot.models.find(id => resolved.includes(id)) || slot.recommended;
-                const cog = MpiButton.mount(cogHost, {
-                    icon: 'settings',
-                    label: 'LoRAs',
-                    size: 'sm',
-                    info: `LoRAs for ${_label(runningId)} — the same rack this model uses everywhere`,
-                    extraClasses: 'mpi-detail__loras-btn',
-                });
-                cog.on('click', () => Events.emit('ui:open-model-settings', { modelId: runningId }));
-                _detailBtns.push(cog);
+                // NO LoRA COGWHEEL HERE (MPI-638). MPI-608 put one in this drawer and
+                // MPI-613 put another on the run slide, and both were live at once. Since
+                // MPI-638 an INSTALLED flow never opens this drawer at all, so the only
+                // flow that reaches it is one whose weights are not on disk — and a LoRA
+                // rack for a model the user has not downloaded configures nothing. The
+                // cogwheel now lives beside the model dropdown on the run slide, where the
+                // rack it edits is one press from the Generate button that uses it.
             });
         }
 
@@ -391,6 +374,33 @@ export const MpiFlowLibrary = ComponentFactory.create({
             detailPanel.classList.add('is-open');
         }
 
+        // A tile press. An INSTALLED flow opens straight into its frame — the drawer is
+        // skipped, not hidden (MPI-638).
+        //
+        // Fabio, 2026-08-28: "when a flow is installed and the user clicks it, the slide over
+        // shows up for the user to press open. The first thing that the user sees is an
+        // explanation of how the flow works and what it does, so the slide over is an
+        // unnecessary step." He is describing a literal duplicate: `MpiBaseFlow`'s step 0
+        // already paints the title, the hero clip and the description in its right column,
+        // so for a Ready flow the drawer's only unique content is install machinery that
+        // flow has no use for.
+        //
+        // The drawer still opens for everything else, and both cases are load-bearing:
+        //   - NOT available → Install, the aggregated progress bar and Cancel-all live there,
+        //     and so does the model picker, which is where a user chooses what to DOWNLOAD.
+        //   - available but not in the Gallery → `flow:open` would go nowhere. Flows land as
+        //     gallery cards in the current project, so the drawer's disabled Open + its toast
+        //     stay the honest answer on Landing.
+        // `#flow-back` inside the frame reopens this library, so nothing becomes unreachable.
+        function _pick(flow) {
+            if (flowAvailability(flow).available && state.currentPage === PAGE_GALLERY) {
+                el.close();
+                Events.emit('flow:open', { flowId: flow.id });
+                return;
+            }
+            openDetail(flow);
+        }
+
         function _closeDetail() {
             scrim.classList.remove('is-open');
             detailPanel.classList.remove('is-open');
@@ -442,7 +452,7 @@ export const MpiFlowLibrary = ComponentFactory.create({
             bodySlot.appendChild(head);
 
             const sheet = MpiTileSheet.mount(ce('div'), { items: items.map(_tileItem) });
-            sheet.on('select', ({ item }) => openDetail(item.source));
+            sheet.on('select', ({ item }) => _pick(item.source));
             _sheets.push(sheet);
             bodySlot.appendChild(sheet.el);
         }

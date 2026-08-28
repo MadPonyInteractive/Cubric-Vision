@@ -21,8 +21,9 @@ import { renderIcon } from '/js/utils/icons.js';
 import { getStepKind, stepValueToParam, stepValueToMedia, isFrameKind } from './stepKinds.js';
 import { enqueueGeneration } from '../../../services/generationService.js';
 import { getCommand } from '../../../data/commandRegistry.js';
-import { flowLoraPhases, flowModelSlots } from '../../../data/flowsRegistry.js';
-import { getModelById } from '../../../data/modelRegistry.js';
+import { flowModelSlots, flowModelIds, setFlowModel } from '../../../data/flowsRegistry.js';
+import { disambiguatedName } from '../../../data/modelRegistry.js';
+import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
 import { buildField, mapDeclaredValue, isInjectionParam } from '../../../utils/declaredFields.js';
 
 /**
@@ -1103,21 +1104,61 @@ export const MpiBaseFlow = ComponentFactory.create({
         // different LoRA. From the slide-over that costs close flow → reopen Library →
         // slide-over → cogwheel → back → reopen flow → run, with the result and the control
         // that changes it at opposite ends of the app.
+        //
+        // MPI-638 brought the MODEL DROPDOWN here for the same reason and put it in the
+        // same row, so a slot's two controls — which model, and that model's LoRAs — are
+        // one press apart from the Generate button that uses them. The cogwheel is now
+        // ONLY here: it was duplicated into the Library drawer (MPI-608) and this slide
+        // (MPI-613) at once, and the drawer no longer opens for an installed flow at all.
         let _loraSettings = null;
-        let _loraBtns = [];
+        let _modelBtns = [];
+        // The host the model row is painted into. Stable for the life of the slide, so a
+        // pick can repaint the row WITHOUT `_renderSlide()` — that tears down and replays
+        // the result pane, the compare view and the video player to change one dropdown.
+        let _modelRowHost = null;
 
-        function _destroyLoraBtns() {
-            _loraBtns.forEach(inst => inst?.el?.destroy?.());
-            _loraBtns = [];
+        function _destroyModelBtns() {
+            _modelBtns.forEach(inst => inst?.el?.destroy?.());
+            _modelBtns = [];
         }
 
         /**
-         * One labelled cogwheel per rack-bearing model slot, for the run slide's control
-         * column. Driven off the flow's DECLARED racks, so this is generic — every flow
-         * gets it with no FlowDef, graph or per-flow change. Written for the two-rack
-         * flows of MPI-608/610; none is left (MPI-628 took the character sheet's second
-         * slot when its head removal stopped being a model pass), so today every caller
-         * renders exactly one. The loop is still the contract — do not collapse it.
+         * The run slide's MODEL ROW — one line per declared model slot, each carrying the
+         * two controls that slot owns:
+         *
+         *     [ FLUX.2 Klein 9B   ▾ ][⚙]
+         *
+         * Driven off the flow's DECLARED slots, so it is generic: every flow gets it with
+         * no FlowDef, graph or per-flow change. Written for the two-slot flows of
+         * MPI-608/610; none is left (MPI-628 took the character sheet's second slot when
+         * its head removal stopped being a model pass), so today every caller renders
+         * exactly one line. The loop is still the contract — do not collapse it.
+         *
+         * WHAT EACH HALF DOES, and when it appears:
+         *
+         * - **The dropdown** appears when the slot has more than one INSTALLED candidate.
+         *   With exactly one there is no choice to offer, and a one-option dropdown claims
+         *   a choice that is not there — so that case renders the model's NAME as plain
+         *   text instead. Filtering to installed is not cosmetic: `flowModelIds` lets a
+         *   pick win even when its candidate is NOT on disk (MPI-599, deliberately, because
+         *   that is how a user says "download that one instead"), so an unfiltered picker
+         *   here would let someone flip an open flow to unavailable and meet a toast at
+         *   Generate. The Library drawer keeps asking the OTHER question — which one do I
+         *   download — and keeps offering everything.
+         *
+         * - **The cogwheel** appears when the slot declared `loras: true`, and opens that
+         *   slot's running model's own six-slot rack. The same LoRA is the same LoRA
+         *   whether the flow or the prompt box runs it (MPI-504) — deliberate, not an
+         *   oversight.
+         *
+         * THE SLOT LABEL IS A DISAMBIGUATOR, NOT A NAME (MPI-638). It is rendered only when
+         * the flow declares more than one slot; with one slot the dropdown already says
+         * which model this is, and a caption above it would be a word invented for no
+         * reader. Fabio, 2026-08-28: "render model" and "edit model" "are not names that
+         * are sustainable because we might have 'pinpaint model' or 'remove model' ... it
+         * would die, or it would introduce complexity". No shipped flow declares two slots,
+         * so that wording is gone from the app with no descriptor edit at all — and the day
+         * a two-slot flow ships, the label returns where it has something real to separate.
          *
          * The `MpiModelSettings` overlay is mounted HERE rather than reached through
          * `ui:open-model-settings`. That event is listened for by exactly two components,
@@ -1125,47 +1166,93 @@ export const MpiBaseFlow = ComponentFactory.create({
          * opened from the landing page has neither on screen, so the emit would land
          * nowhere at all: no panel, no error, no log. Owning the instance also stops a
          * Block's listener opening a SECOND panel when a flow runs over one.
-         *
-         * @returns {HTMLElement|null} the row, or null when this flow has no racks
          */
-        function _buildLoraRacks() {
-            _destroyLoraBtns();
-            // A rack edits settings that live on the PROJECT, and a flow cannot run
-            // without one either — generationService bails on a null currentProject — so
-            // there is nothing meaningful to offer until one is open.
-            if (!state.currentProject) return null;
-            const phases = flowLoraPhases(flow);
-            if (!phases.length) return null;
-            const slots = flowModelSlots(flow);
+        function _paintModelSlots() {
+            if (!_modelRowHost) return;
+            _destroyModelBtns();
+            _modelRowHost.innerHTML = '';
 
-            const row = ce('div', { className: 'mpi-base-flow__loras' });
-            phases.forEach(({ phase, modelId }) => {
-                // `flowLoraPhases` numbers phases 1-based over `flowModelSlots`, so this
-                // is the slot that produced the entry — and its label is the one the
-                // slide-over shows ("Render model" / "Blend model"). Two cogwheels reading
-                // "LoRAs" would be worse here than in the Library, because the models they
-                // address are no longer on screen beside them.
-                const slotLabel = slots[phase - 1]?.label || 'Model';
-                const modelName = getModelById(modelId)?.name || modelId;
-                const host = ce('div');
-                row.appendChild(host);
-                const cog = MpiButton.mount(host, {
-                    icon: 'settings',
-                    label: slotLabel,
-                    size: 'sm',
-                    info: `LoRAs for ${modelName} — the same rack this model uses everywhere`,
-                    extraClasses: 'mpi-base-flow__loras-btn',
-                });
-                cog.on('click', () => {
-                    // Mounted on first use: a flow with no racks never pays for it.
-                    if (!_loraSettings) {
-                        _loraSettings = MpiModelSettings.mount(document.createElement('div'));
-                    }
-                    _loraSettings.el.open({ modelId });
-                });
-                _loraBtns.push(cog);
+            const slots = flowModelSlots(flow);
+            const resolved = flowModelIds(flow);
+            const installed = state.s_installedModelIds || [];
+            // A rack edits settings that live on the PROJECT, and a flow cannot run without
+            // one either — generationService bails on a null currentProject — so there is
+            // nothing meaningful to open until one is. The DROPDOWN needs no project; only
+            // the cogwheel is gated.
+            const canRack = !!state.currentProject;
+            const multi = slots.length > 1;
+
+            slots.forEach((slot, i) => {
+                const choices = slot.models.filter(id => installed.includes(id));
+                const showPick = choices.length > 1;
+                const showCog = slot.loras && canRack;
+                if (!showPick && !showCog) return;
+
+                // The id this slot will actually run. `resolved[i]` normally, but it can
+                // name an UNINSTALLED candidate when the user picked one in the Library
+                // and has not downloaded it yet — this row only ever offers what is on
+                // disk, so fall back to the first installed candidate rather than seeding
+                // the dropdown with a value none of its options carry.
+                const runningId = choices.includes(resolved[i]) ? resolved[i] : choices[0];
+                if (!runningId) return;
+                const name = disambiguatedName(runningId, slot.models);
+
+                const field = ce('div', { className: 'mpi-base-flow__model-slot' });
+                if (multi) {
+                    const cap = ce('span', { className: 'mpi-base-flow__field-label' });
+                    cap.textContent = slot.label;
+                    field.appendChild(cap);
+                }
+                const pick = ce('div', { className: 'mpi-base-flow__model-pick' });
+                field.appendChild(pick);
+
+                if (showPick) {
+                    const host = ce('div');
+                    pick.appendChild(host);
+                    const dd = MpiDropdown.mount(host, {
+                        options: choices.map(id => ({
+                            value: id,
+                            label: disambiguatedName(id, slot.models),
+                        })),
+                        value: runningId,
+                    });
+                    dd.on('change', ({ value }) => {
+                        setFlowModel(flow.id, value);
+                        // Repaint the ROW, not the slide: the cogwheel beside this dropdown
+                        // addresses the model that is running, so it has to follow the pick.
+                        // Everything else on this slide (params, racks, the payload) is read
+                        // at Run through the same session Map, so nothing else needs telling.
+                        _paintModelSlots();
+                    });
+                    _modelBtns.push(dd);
+                } else {
+                    const label = ce('span', { className: 'mpi-base-flow__model-name' });
+                    label.textContent = name;
+                    pick.appendChild(label);
+                }
+
+                if (showCog) {
+                    const cogHost = ce('div');
+                    pick.appendChild(cogHost);
+                    const cog = MpiButton.mount(cogHost, {
+                        icon: 'settings',
+                        size: 'sm',
+                        info: `LoRAs for ${name} — the same rack this model uses everywhere`,
+                        extraClasses: 'mpi-base-flow__model-cog',
+                    });
+                    cog.el.setAttribute('aria-label', `LoRAs for ${name}`);
+                    cog.on('click', () => {
+                        // Mounted on first use: a flow with no racks never pays for it.
+                        if (!_loraSettings) {
+                            _loraSettings = MpiModelSettings.mount(document.createElement('div'));
+                        }
+                        _loraSettings.el.open({ modelId: runningId });
+                    });
+                    _modelBtns.push(cog);
+                }
+
+                _modelRowHost.appendChild(field);
             });
-            return row;
         }
 
         /**
@@ -1528,9 +1615,14 @@ export const MpiBaseFlow = ComponentFactory.create({
                 _paintEnhance();
             }
 
-            // Beside the output, above Run (MPI-613).
-            const racks = _buildLoraRacks();
-            if (racks) contentSlot.appendChild(racks);
+            // Model slot(s) — the dropdown and its LoRA cogwheel — beside the output and
+            // above Run (MPI-613, MPI-638). The host is stable so a pick repaints only the
+            // row; it stays in the tree even when the flow declares no model slot, because
+            // an empty div costs nothing and a conditional append would need the same
+            // branch again on every repaint.
+            _modelRowHost = ce('div', { className: 'mpi-base-flow__models' });
+            contentSlot.appendChild(_modelRowHost);
+            _paintModelSlots();
 
             const genWrap = ce('div', { className: 'mpi-base-flow__gen' });
             const runHost = ce('div');
@@ -1614,9 +1706,10 @@ export const MpiBaseFlow = ComponentFactory.create({
             // viewer hold RAF loops that must stop.
             _teardownResultSurfaces();
             // Run-slide only, and the slide is rebuilt on every navigation — without this
-            // each visit leaks another set of cogwheel instances. The overlay itself is
-            // NOT dropped here: it survives slide changes and dies with the flow.
-            _destroyLoraBtns();
+            // each visit leaks another set of dropdown + cogwheel instances. The overlay
+            // itself is NOT dropped here: it survives slide changes and dies with the flow.
+            _destroyModelBtns();
+            _modelRowHost = null;
             _runBtn = null; _resultMediaEl = null; _statusEl = null;
             _pendingNote = null; _gaugeEl = null;
             _resultFrameEl = null; _resultPaneEl = null;

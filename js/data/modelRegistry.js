@@ -338,6 +338,39 @@ export function sizeTierLetter(modelOrId) {
     return (model && _TIER_LETTER[model.sizeTier]) || '';
 }
 
+/**
+ * A model's display name, disambiguated against the SIBLINGS it is being offered
+ * beside — the tier letter appended only when one of them shares its name.
+ *
+ * Written for FLUX.2 Klein, whose 4B and 9B cards were both literally named "FLUX.2
+ * Klein" (MPI-567) — a picker listing the pair rendered two identical rows the user
+ * could not choose between. That particular clash is GONE: MPI-619 put the size in
+ * both names, because they are two models the public knows by name and their LoRAs do
+ * not interchange. Others remain (`tests/flow-model-choice.test.cjs` finds a live one
+ * rather than hardcoding it, and fails loudly the day none is left).
+ *
+ * The scope is the caller's own candidate list, not the whole registry: a flow slot
+ * offering only 9B has nothing to tell it apart from, and a bare name is right there.
+ *
+ * `sizeTierLetter`, never `tierLetterFor` — the latter is install-gated, and both
+ * callers here (the Library picker choosing what to DOWNLOAD, and the run slide's
+ * picker) exist to name a model the user may not have on disk.
+ *
+ * Two callers by design (MPI-638): the Flow Library drawer and MpiBaseFlow's run
+ * slide. Drift between them shows as one surface disambiguating and the other not.
+ *
+ * @param {string} modelId
+ * @param {string[]} siblingIds the ids offered alongside it, this one included
+ * @returns {string}
+ */
+export function disambiguatedName(modelId, siblingIds = []) {
+    const name = getModelById(modelId)?.name || modelId;
+    const clashes = siblingIds.some(other => other !== modelId
+        && (getModelById(other)?.name || other) === name);
+    const letter = clashes ? sizeTierLetter(modelId) : '';
+    return letter ? `${name} ${letter}` : name;
+}
+
 export function tierLetterFor(modelOrId) {
     const model = typeof modelOrId === 'string' ? getModelById(modelOrId) : modelOrId;
     if (!model || !model.sizeTier) return '';

@@ -499,15 +499,85 @@ test('the Flow Library renders the picker and reads RESOLVED ids', () => {
     assert.ok(!/flow\.requiredModels/.test(src),
         'the drawer must resolve through flowModelIds — a raw read renders a slot object as a model row');
 
-    // MPI-599: each dropdown wears its slot's own label, and the recommended candidate is
-    // flagged. Both are silent when they rot — two fields reading "Model", or four SDXL
-    // checkpoints with nothing to choose between them.
-    assert.match(src, /mpi-detail__field-label">\$\{slot\.label\}/,
-        'a slot must label its own field, or a multi-slot flow shows two identical "Model" rows');
+    // MPI-638: the slot label is a DISAMBIGUATOR, not a name. A flow declaring ONE slot
+    // gets the generic "Model" caption, because the dropdown's own rows already say which
+    // model this is; the slot's label appears only when there are two slots to tell apart.
+    // Fabio, 2026-08-28: "render model" / "edit model" "are not names that are sustainable
+    // because we might have 'pinpaint model' or 'remove model'". No shipped flow declares
+    // two slots, so this rule is what removed that wording from the app with no descriptor
+    // edit — and it must stay a RULE, not a rename, or the next two-slot flow shows two
+    // identical "Model" rows.
+    assert.match(src, /const multi = flowModelSlots\(flow\)\.length > 1;/,
+        'the caption rule must be derived from the slot COUNT, not hardcoded per flow');
+    assert.match(src, /mpi-detail__field-label">\$\{multi \? slot\.label : 'Model'\}/,
+        'one slot gets "Model"; two or more get their own labels, or they cannot be told apart');
     assert.match(src, /id === slot\.recommended \? \{ icon: 'sparkle', meta: 'Recommended' \}/,
         'the recommendation must be visible in the list, not just be the default value');
     assert.ok(!/disabled: !installed/.test(src),
         'an uninstalled candidate is pickable ON PURPOSE — disabling it removes the whole point');
+});
+
+test('an INSTALLED flow opens straight into its frame, skipping the drawer (MPI-638)', () => {
+    // Fabio, 2026-08-28: "when a flow is installed and the user clicks it, the slide over
+    // shows up for the user to press open. The first thing that the user sees is an
+    // explanation of how the flow works and what it does, so the slide over is an
+    // unnecessary step." MpiBaseFlow's step 0 already paints the title, the hero clip and
+    // the description, so the drawer was a literal second copy plus install machinery that
+    // an installed flow has no use for.
+    //
+    // Both surviving branches are load-bearing, and each is one condition:
+    //   not available  → Install / the aggregated bar / Cancel-all / the download picker
+    //   not in Gallery → `flow:open` would land nowhere; flows become cards in the
+    //                    current project, so the disabled Open + its toast stay honest.
+    const src = read('js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js');
+    assert.match(src, /sheet\.on\('select', \(\{ item \}\) => _pick\(item\.source\)\)/,
+        'a tile press must route through _pick, not straight into openDetail');
+    assert.match(
+        src,
+        /if \(flowAvailability\(flow\)\.available && state\.currentPage === PAGE_GALLERY\) \{/,
+        'both conditions gate the direct open — availability alone would emit flow:open '
+        + 'from Landing, where it lands nowhere',
+    );
+    assert.match(src, /Events\.emit\('flow:open', \{ flowId: flow\.id \}\);\s*return;\s*\}\s*openDetail\(flow\);/,
+        'everything else must still open the drawer, or an uninstalled flow becomes '
+        + 'uninstallable');
+});
+
+test('the RUN slide picker offers INSTALLED candidates only (MPI-638)', () => {
+    // TWO PICKERS, TWO QUESTIONS, ONE session Map:
+    //   the Library drawer asks "which one do I DOWNLOAD" and offers everything (MPI-599);
+    //   the run slide asks "which one do I RUN" and offers what is on disk.
+    //
+    // The filter is load-bearing, not cosmetic. `flowModelIds` lets a pick win even when
+    // its candidate is NOT installed — deliberately, because that is how a user says
+    // "download that one instead" — so an unfiltered picker inside an OPEN flow would let
+    // someone flip that flow to unavailable and meet a toast at Generate, with no Install
+    // button anywhere on the slide to recover with.
+    const src = read('js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js');
+    assert.match(src, /const choices = slot\.models\.filter\(id => installed\.includes\(id\)\)/,
+        'the run-slide picker must filter candidates to the installed set');
+    assert.match(src, /const showPick = choices\.length > 1;/,
+        'one installed candidate is not a choice — a one-option dropdown claims one that '
+        + 'is not there, so that case states the model name instead');
+    assert.match(src, /choices\.includes\(resolved\[i\]\) \? resolved\[i\] : choices\[0\]/,
+        'a pick for an UNINSTALLED candidate must not be seeded into a dropdown whose '
+        + 'options cannot carry it');
+    assert.match(src, /setFlowModel\(flow\.id, value\)/,
+        'the pick must be recorded, not just displayed');
+    // A pick repaints the ROW. `_renderSlide()` would tear down and replay the result
+    // pane, the compare view and the video player to change one dropdown.
+    assert.match(src, /_paintModelSlots\(\);/,
+        'a pick must repaint the model row, never the whole slide');
+
+    // The two option lists must stay DIFFERENT. The obvious "tidy" is to make both
+    // surfaces call the same thing, and that silently reverses MPI-599 in the one place
+    // the choice can still be acted on.
+    assert.match(src, /options: choices\.map\(/,
+        'the run slide lists the INSTALLED candidates');
+    const lib = read('js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js');
+    assert.match(lib, /options: slot\.models\.map\(/,
+        'the drawer lists EVERY candidate — MPI-599 offers what is not installed and only '
+        + 'annotates it, because that is where the user chooses what to download');
 });
 
 test('flowService carries the resolved model into the run', () => {
@@ -638,13 +708,31 @@ test('two candidates sharing a NAME are told apart in the picker (MPI-567)', asy
     // harness. The source check below is what actually holds the line.
     void tierLetterFor;
 
-    const src = read('js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js');
-    assert.match(src, /sizeTierLetter\(id\)/,
-        'the picker must append the tier letter, or two Klein rows read identically');
-    // A CALL, not a mention — the comment beside `_label` names `tierLetterFor` to explain
-    // why it is the wrong one, and a bare substring test flags its own documentation.
-    assert.ok(!/[^e]tierLetterFor\s*\(/.test(src),
+    // The letter logic lives in ONE place since MPI-638: `disambiguatedName` in
+    // modelRegistry.js, called by BOTH pickers — the Library drawer's and MpiBaseFlow's
+    // run-slide row. Two copies would drift into one surface disambiguating and the other
+    // not, which is invisible until a user meets two identical rows on one screen only.
+    const reg = read('js/data/modelRegistry.js');
+    assert.match(reg, /export function disambiguatedName\(modelId, siblingIds = \[\]\)/,
+        'the shared helper must exist — flowsRegistry cannot host it (one-way import)');
+    assert.match(reg, /const letter = clashes \? sizeTierLetter\(modelId\) : '';/,
+        'it must append the tier letter, or two same-named rows read identically');
+    // A CALL, not a mention — `sizeTierLetter`'s own doc comment names `tierLetterFor` to
+    // explain why it is the wrong one, and a bare substring test flags that documentation.
+    // The install gate would blank the letter for exactly the uninstalled candidate the
+    // Library picker exists to offer.
+    const helper = reg.slice(reg.indexOf('export function disambiguatedName'),
+        reg.indexOf('export function tierLetterFor'));
+    assert.ok(!/tierLetterFor\s*\(/.test(helper),
         'the install-gated helper here would hide the letter for the uninstalled candidate');
+
+    for (const src of [
+        read('js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js'),
+        read('js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js'),
+    ]) {
+        assert.match(src, /disambiguatedName\(/,
+            'both pickers must go through the shared helper, not re-derive the letter');
+    }
 
     // Declaration order IS preference order. The character sheet recommends 4B — that is
     // what the graph bakes and what every sheet has ever been judged on — so this asserts

@@ -707,17 +707,54 @@
     flex-direction: column;
     gap: var(--s-4);
 }
-/* Per-slot LoRA cogwheels on the run slide (MPI-613). Stacked, not a row: the
-   control column is 236px and a slot label ("Render model" / "Blend model") is the
-   whole point of the button, so side-by-side would truncate exactly the word that
-   tells the two racks apart. */
-.mpi-base-flow__loras {
+/* Per-slot model controls on the run slide (MPI-613, MPI-638): one line per declared
+   model slot, each carrying its dropdown (or the model's plain name when the slot has
+   only one installed candidate) and its LoRA cogwheel.
+
+   The slots STACK and the two controls inside one sit SIDE BY SIDE — the pairing is the
+   whole point. MPI-613 stacked the cogwheels because their labels ("Render model" /
+   "Blend model") were the only thing telling two racks apart and would have truncated;
+   MPI-638 deleted those labels by putting each cogwheel next to a dropdown that names
+   its model, which is what freed the horizontal room.
+
+   LAYOUT ONLY. Both controls are Primitives and own their fill, border, hover and focus,
+   so anything resembling chrome in this block is a bug (.claude/rules/components.md). */
+.mpi-base-flow__models:empty {
+    display: none;
+}
+.mpi-base-flow__models {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+}
+.mpi-base-flow__model-slot {
     display: flex;
     flex-direction: column;
     gap: var(--s-2);
+    font-size: var(--t-2xs);
 }
-.mpi-base-flow__loras-btn {
-    width: 100%;
+.mpi-base-flow__model-pick {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+}
+/* The dropdown (or the static name) takes the width; the cogwheel keeps its own. */
+.mpi-base-flow__model-pick > :first-child {
+    flex: 1;
+    min-width: 0;
+}
+/* One installed candidate = no choice to offer, so the model is stated rather than
+   dressed as a control. Matches the dropdown trigger's type size so a one-candidate
+   slot and a choosable one sit at the same height in the column. */
+.mpi-base-flow__model-name {
+    font-size: var(--t-sm);
+    color: var(--ink-2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.mpi-base-flow__model-cog {
+    flex: none;
 }
 .mpi-base-flow__gen {
     display: flex;

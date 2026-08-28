@@ -1,0 +1,41 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-638",
+  "title": "Installed Flows open straight into phase 1; the model picker moves to the run slide beside its cogwheel",
+  "description": "Clicking a Ready Flow skips the detail slide-over and opens the frame, whose phase 1 already carries the same title, hero and description. The model picker follows to the run slide and pairs with the LoRA cogwheel, which drops its slot label - the dropdown names the model, so 'Render model' / 'Edit model' stop being invented per flow. Read brief.md.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "created_at": "2026-08-28T07:25:57Z",
+  "updated_at": "2026-08-28T07:59:53Z",
+  "labels": [
+    "ux",
+    "flow",
+    "simplification"
+  ],
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "validation": "validation.md"
+  },
+  "acceptance": [
+    "Clicking a flow tile whose availability is Ready, while the current page is the Gallery, closes the Flow Library and emits flow:open directly - no detail slide-over",
+    "A flow that is NOT Ready, or a Ready flow clicked from Landing, still opens the slide-over: that is where Install, the aggregated progress bar and Cancel-all live",
+    "The run slide renders one row per model slot: a dropdown when the slot has more than one INSTALLED candidate, a static model name when it has one, and an icon-only LoRA cogwheel to its right when the slot declares loras: true",
+    "The run-slide picker offers INSTALLED candidates only - picking an uninstalled one inside an open flow flips the flow unavailable and Run dies on a toast. The Library picker keeps offering uninstalled candidates, which is MPI-599's choose-what-to-download and must not regress",
+    "Klein 9B and Klein 4B are told apart in both pickers by one shared helper exported from modelRegistry.js, not by two copies of the sizeTierLetter logic",
+    "The slot label renders ONLY when a flow declares two or more model slots. No shipped flow does, so 'Render model' and 'Edit model' leave the UI with no descriptor edits",
+    "The LoRA cogwheel is REMOVED from the Flow Library slide-over: it was duplicated there (MPI-608) and on the run slide (MPI-613), and the drawer now only ever shows an uninstalled flow, whose rack is unreachable anyway",
+    "A pick rebuilds the model row in place, never the whole slide - _renderSlide tears down and replays the result pane",
+    "tests/flow-lora-rack.test.cjs and tests/desktop/flow-lora-button.spec.js are updated: both pin shapes this card deliberately reverses (the Library cog markup, and the assertion that the slot must label itself rather than read Model)",
+    "npm test and npm run test:desktop are green",
+    "docs/playbooks/add-flow/any-of-models.md and 04-overlay-and-shell.md match what shipped - the latter's flow diagram still routes every open through the slide-over"
+  ],
+  "attention": {
+    "state": "required",
+    "reason": "Code shipped and verified (771 node + 38 desktop green, 3 mutants killed, live run on an isolated instance). Two leftovers are the user's call, not an agent's: (1) .claude/rules/component-mounts.md:252 now describes the old mount and CLAUDE.md rule 5 forbids editing .claude/rules/ without permission; (2) 04-overlay-and-shell.md is 213 lines against the 200-line budget - it was already at 196 before this card, and the documented remedy is a split it does not own.",
+    "updated_at": "2026-08-28T07:59:53Z"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js",
+    "js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.css",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.css",
+    "js/data/modelRegistry.js",
+    "tests/flow-model-choice.test.cjs",
+    "tests/flow-lora-rack.test.cjs",
+    "tests/desktop/flow-lora-button.spec.js",
+    "tests/desktop/flow-library-skips-drawer.spec.js",
+    "docs/playbooks/add-flow/any-of-models.md",
+    "docs/playbooks/add-flow/04-overlay-and-shell.md",
+    "docs/playbooks/add-flow/ui/lora-rack.md",
+    ".agents/mpi-kanban/tasks/MPI-638/"
+  ]
+}
