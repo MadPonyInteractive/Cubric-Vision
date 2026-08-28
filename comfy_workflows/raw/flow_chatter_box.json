@@ -16,18 +16,16 @@
         303.7050461047886
       ],
       "flags": {},
-      "order": 10,
+      "order": 8,
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "audio_prompt",
           "name": "audio_prompt",
           "shape": 7,
           "type": "AUDIO",
           "link": 105
         },
         {
-          "localized_name": "text",
           "name": "text",
           "type": "STRING",
           "widget": {
@@ -36,65 +34,16 @@
           "link": 76
         },
         {
-          "localized_name": "exaggeration",
-          "name": "exaggeration",
-          "type": "FLOAT",
-          "widget": {
-            "name": "exaggeration"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "cfg_weight",
-          "name": "cfg_weight",
-          "type": "FLOAT",
-          "widget": {
-            "name": "cfg_weight"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "temperature",
-          "name": "temperature",
-          "type": "FLOAT",
-          "widget": {
-            "name": "temperature"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "seed",
           "name": "seed",
           "type": "INT",
           "widget": {
             "name": "seed"
           },
           "link": 108
-        },
-        {
-          "localized_name": "use_cpu",
-          "name": "use_cpu",
-          "shape": 7,
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "use_cpu"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "keep_model_loaded",
-          "name": "keep_model_loaded",
-          "shape": 7,
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "keep_model_loaded"
-          },
-          "link": null
         }
       ],
       "outputs": [
         {
-          "localized_name": "audio",
           "name": "audio",
           "type": "AUDIO",
           "links": [
@@ -102,16 +51,15 @@
           ]
         },
         {
-          "localized_name": "message",
           "name": "message",
           "type": "STRING",
           "links": null
         }
       ],
       "properties": {
+        "Node name for S&R": "FL_ChatterboxTTS",
         "cnr_id": "comfyui_fill-chatterbox",
         "ver": "e0f3a489f9f72d3347f61b5fe8da281430eb20df",
-        "Node name for S&R": "FL_ChatterboxTTS",
         "aux_id": "filliptm/ComfyUI_Fill-ChatterBox"
       },
       "widgets_values": [
@@ -139,34 +87,22 @@
         78
       ],
       "flags": {},
-      "order": 12,
+      "order": 9,
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "true",
           "name": "true",
           "type": "*",
           "link": 90
         },
         {
-          "localized_name": "false",
           "name": "false",
           "type": "*",
           "link": 91
-        },
-        {
-          "localized_name": "boolean",
-          "name": "boolean",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "boolean"
-          },
-          "link": null
         }
       ],
       "outputs": [
         {
-          "localized_name": "output",
           "name": "output",
           "type": "*",
           "links": [
@@ -177,9 +113,9 @@
       ],
       "title": "Input_Is_Multilingual",
       "properties": {
+        "Node name for S&R": "MpiIfElse",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
-        "Node name for S&R": "MpiIfElse"
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1"
       },
       "widgets_values": [
         true
@@ -199,18 +135,16 @@
         372
       ],
       "flags": {},
-      "order": 9,
+      "order": 7,
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "audio_prompt",
           "name": "audio_prompt",
           "shape": 7,
           "type": "AUDIO",
           "link": 104
         },
         {
-          "localized_name": "text",
           "name": "text",
           "type": "STRING",
           "widget": {
@@ -219,101 +153,16 @@
           "link": 51
         },
         {
-          "localized_name": "language",
-          "name": "language",
-          "type": "COMBO",
-          "widget": {
-            "name": "language"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "exaggeration",
-          "name": "exaggeration",
-          "type": "FLOAT",
-          "widget": {
-            "name": "exaggeration"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "cfg_weight",
-          "name": "cfg_weight",
-          "type": "FLOAT",
-          "widget": {
-            "name": "cfg_weight"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "temperature",
-          "name": "temperature",
-          "type": "FLOAT",
-          "widget": {
-            "name": "temperature"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "repetition_penalty",
-          "name": "repetition_penalty",
-          "type": "FLOAT",
-          "widget": {
-            "name": "repetition_penalty"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "min_p",
-          "name": "min_p",
-          "type": "FLOAT",
-          "widget": {
-            "name": "min_p"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "top_p",
-          "name": "top_p",
-          "type": "FLOAT",
-          "widget": {
-            "name": "top_p"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "seed",
           "name": "seed",
           "type": "INT",
           "widget": {
             "name": "seed"
           },
           "link": 109
-        },
-        {
-          "localized_name": "use_cpu",
-          "name": "use_cpu",
-          "shape": 7,
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "use_cpu"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "keep_model_loaded",
-          "name": "keep_model_loaded",
-          "shape": 7,
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "keep_model_loaded"
-          },
-          "link": null
         }
       ],
       "outputs": [
         {
-          "localized_name": "audio",
           "name": "audio",
           "type": "AUDIO",
           "links": [
@@ -321,16 +170,16 @@
           ]
         },
         {
-          "localized_name": "message",
           "name": "message",
           "type": "STRING",
           "links": null
         }
       ],
+      "title": "Input_Language",
       "properties": {
+        "Node name for S&R": "FL_ChatterboxMultilingualTTS",
         "cnr_id": "comfyui_fill-chatterbox",
         "ver": "e0f3a489f9f72d3347f61b5fe8da281430eb20df",
-        "Node name for S&R": "FL_ChatterboxMultilingualTTS",
         "aux_id": "filliptm/ComfyUI_Fill-ChatterBox"
       },
       "widgets_values": [
@@ -348,8 +197,7 @@
         false
       ],
       "color": "#16727c",
-      "bgcolor": "#4F0074",
-      "title": "Input_Language"
+      "bgcolor": "#4F0074"
     },
     {
       "id": 57,
@@ -363,11 +211,10 @@
         46
       ],
       "flags": {},
-      "order": 6,
+      "order": 4,
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "any",
           "name": "any",
           "type": "*",
           "link": 95
@@ -375,7 +222,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "any",
           "name": "any",
           "type": "*",
           "links": [
@@ -383,7 +229,6 @@
           ]
         },
         {
-          "localized_name": "has_value",
           "name": "has_value",
           "type": "BOOLEAN",
           "links": [
@@ -392,9 +237,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiAnyChecker",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
-        "Node name for S&R": "MpiAnyChecker"
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1"
       },
       "widgets_values": []
     },
@@ -412,20 +257,9 @@
       "flags": {},
       "order": 0,
       "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "string",
-          "name": "string",
-          "type": "STRING",
-          "widget": {
-            "name": "string"
-          },
-          "link": null
-        }
-      ],
+      "inputs": [],
       "outputs": [
         {
-          "localized_name": "string",
           "name": "string",
           "type": "STRING",
           "links": [
@@ -435,9 +269,9 @@
       ],
       "title": "Input_Audio_2",
       "properties": {
+        "Node name for S&R": "MpiString",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
-        "Node name for S&R": "MpiString"
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1"
       },
       "widgets_values": [
         ""
@@ -457,54 +291,30 @@
         150
       ],
       "flags": {},
-      "order": 11,
+      "order": 10,
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "input_audio",
           "name": "input_audio",
           "type": "AUDIO",
           "link": 77
         },
         {
-          "localized_name": "target_voice",
           "name": "target_voice",
           "type": "AUDIO",
           "link": 97
         },
         {
-          "localized_name": "seed",
           "name": "seed",
           "type": "INT",
           "widget": {
             "name": "seed"
           },
           "link": 107
-        },
-        {
-          "localized_name": "use_cpu",
-          "name": "use_cpu",
-          "shape": 7,
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "use_cpu"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "keep_model_loaded",
-          "name": "keep_model_loaded",
-          "shape": 7,
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "keep_model_loaded"
-          },
-          "link": null
         }
       ],
       "outputs": [
         {
-          "localized_name": "audio",
           "name": "audio",
           "type": "AUDIO",
           "links": [
@@ -512,16 +322,15 @@
           ]
         },
         {
-          "localized_name": "message",
           "name": "message",
           "type": "STRING",
           "links": null
         }
       ],
       "properties": {
+        "Node name for S&R": "FL_ChatterboxVC",
         "cnr_id": "comfyui_fill-chatterbox",
         "ver": "e0f3a489f9f72d3347f61b5fe8da281430eb20df",
-        "Node name for S&R": "FL_ChatterboxVC",
         "aux_id": "filliptm/ComfyUI_Fill-ChatterBox"
       },
       "widgets_values": [
@@ -545,23 +354,20 @@
         78
       ],
       "flags": {},
-      "order": 13,
+      "order": 11,
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "true",
           "name": "true",
           "type": "*",
           "link": 92
         },
         {
-          "localized_name": "false",
           "name": "false",
           "type": "*",
           "link": 93
         },
         {
-          "localized_name": "boolean",
           "name": "boolean",
           "type": "BOOLEAN",
           "widget": {
@@ -572,7 +378,6 @@
       ],
       "outputs": [
         {
-          "localized_name": "output",
           "name": "output",
           "type": "*",
           "links": [
@@ -581,9 +386,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiIfElse",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
-        "Node name for S&R": "MpiIfElse"
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1"
       },
       "widgets_values": [
         true
@@ -601,7 +406,7 @@
         26
       ],
       "flags": {},
-      "order": 7,
+      "order": 5,
       "mode": 0,
       "inputs": [
         {
@@ -639,20 +444,9 @@
       "flags": {},
       "order": 1,
       "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "string",
-          "name": "string",
-          "type": "STRING",
-          "widget": {
-            "name": "string"
-          },
-          "link": null
-        }
-      ],
+      "inputs": [],
       "outputs": [
         {
-          "localized_name": "Text",
           "name": "Text",
           "type": "STRING",
           "links": [
@@ -663,9 +457,9 @@
       ],
       "title": "Input_Positive",
       "properties": {
+        "Node name for S&R": "MpiText",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
-        "Node name for S&R": "MpiText"
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1"
       },
       "widgets_values": [
         "Hello and welcome to Cubric Studio."
@@ -687,29 +481,9 @@
       "flags": {},
       "order": 2,
       "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "string",
-          "name": "string",
-          "type": "STRING",
-          "widget": {
-            "name": "string"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "block_if_empty",
-          "name": "block_if_empty",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "block_if_empty"
-          },
-          "link": null
-        }
-      ],
+      "inputs": [],
       "outputs": [
         {
-          "localized_name": "audio",
           "name": "audio",
           "type": "AUDIO",
           "links": [
@@ -719,9 +493,9 @@
       ],
       "title": "Input_Audio",
       "properties": {
+        "Node name for S&R": "MpiLoadAudio",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
-        "Node name for S&R": "MpiLoadAudio"
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1"
       },
       "widgets_values": [
         "",
@@ -729,60 +503,6 @@
       ],
       "color": "#432",
       "bgcolor": "#653"
-    },
-    {
-      "id": 56,
-      "type": "MpiLoadAudio",
-      "pos": [
-        2460.0439654901484,
-        -151.27966862749363
-      ],
-      "size": [
-        270,
-        82
-      ],
-      "flags": {},
-      "order": 8,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "string",
-          "name": "string",
-          "type": "STRING",
-          "widget": {
-            "name": "string"
-          },
-          "link": 96
-        },
-        {
-          "localized_name": "block_if_empty",
-          "name": "block_if_empty",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "block_if_empty"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "audio",
-          "name": "audio",
-          "type": "AUDIO",
-          "links": [
-            97
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
-        "Node name for S&R": "MpiLoadAudio"
-      },
-      "widgets_values": [
-        "",
-        true
-      ]
     },
     {
       "id": 61,
@@ -796,22 +516,11 @@
         58
       ],
       "flags": {},
-      "order": 5,
+      "order": 3,
       "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "int",
-          "name": "int",
-          "type": "INT",
-          "widget": {
-            "name": "int"
-          },
-          "link": null
-        }
-      ],
+      "inputs": [],
       "outputs": [
         {
-          "localized_name": "int",
           "name": "int",
           "type": "INT",
           "links": [
@@ -823,9 +532,9 @@
       ],
       "title": "Input_Seed",
       "properties": {
+        "Node name for S&R": "MpiInt",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
-        "Node name for S&R": "MpiInt"
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1"
       },
       "widgets_values": [
         0
@@ -845,46 +554,17 @@
         136
       ],
       "flags": {},
-      "order": 15,
+      "order": 12,
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "audio",
           "name": "audio",
           "type": "AUDIO",
           "link": 102
-        },
-        {
-          "localized_name": "filename_prefix",
-          "name": "filename_prefix",
-          "type": "STRING",
-          "widget": {
-            "name": "filename_prefix"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "format",
-          "name": "format",
-          "type": "COMFY_DYNAMICCOMBO_V3",
-          "widget": {
-            "name": "format"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "audioUI",
-          "name": "audioUI",
-          "type": "AUDIO_UI",
-          "widget": {
-            "name": "audioUI"
-          },
-          "link": null
         }
       ],
       "outputs": [
         {
-          "localized_name": "audio",
           "name": "audio",
           "type": "AUDIO",
           "links": null
@@ -901,6 +581,49 @@
       ],
       "color": "#432",
       "bgcolor": "#653"
+    },
+    {
+      "id": 56,
+      "type": "MpiLoadAudio",
+      "pos": [
+        2460.0439654901484,
+        -151.27966862749363
+      ],
+      "size": [
+        270,
+        82
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": 96
+        }
+      ],
+      "outputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": [
+            97
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MpiLoadAudio",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1"
+      },
+      "widgets_values": [
+        "",
+        false
+      ]
     }
   ],
   "links": [
@@ -1037,7 +760,7 @@
       61,
       0,
       43,
-      5,
+      2,
       "INT"
     ],
     [
@@ -1045,7 +768,7 @@
       61,
       0,
       33,
-      9,
+      2,
       "INT"
     ]
   ],
@@ -1055,12 +778,16 @@
     "ds": {
       "scale": 0.7050767845524278,
       "offset": [
-        -1805.964553249059,
-        1021.8798479186147
+        -1608.8229042182593,
+        1043.154126591004
       ]
     },
     "workflowRendererVersion": "LG",
-    "frontendVersion": "1.34.9"
+    "frontendVersion": "1.48.7",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
   },
   "version": 0.4
 }
