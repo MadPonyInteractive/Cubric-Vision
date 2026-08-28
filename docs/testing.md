@@ -125,6 +125,15 @@ exempting `CUBRIC_E2E` from the lock — the only spec that behaves differently 
 such a guard is one that forgot `CUBRIC_E2E_USER_DATA`, and it would then boot against
 your real user data instead of dying loudly.
 
+**Always run it through its config — `npm run test:desktop`, or
+`npx playwright test --config=playwright.desktop.config.js <spec>` for one file.** A bare
+`npx playwright test <spec>` never loads `globalSetup.js`, so no free `CUBRIC_PORT` is
+assigned and `shellWindow.js` falls back to its `3000` default. The suite then hunts for a
+window on the port your own app owns and every spec dies with
+`shellWindow: no 127.0.0.1:3000 window within 30000ms` after burning its full 30s timeout.
+That reads as the app failing to boot, or as the suite fighting your session — it is
+neither, and the fix is the flag, not the app (four confusing failures, 2026-08-28).
+
 The port is a value now, not a literal. `CUBRIC_PORT` (default 3000) is read by
 `server.js`, `main.js` and `tests/desktop/shellWindow.js`; `tests/desktop/globalSetup.js`
 picks a free one per run and Playwright's workers inherit it, so every spec's
