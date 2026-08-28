@@ -78,5 +78,10 @@ project-paths.json
 __pycache__/
 *.pyc
 
-# Mpi-Kanban per-session hook flags ({"card_prompted": true}) - ephemeral, never shared
-.agents/mpi-kanban/state/hooks/
+# Mpi-Kanban runtime state - sessions, file claims, messages, handoffs, hook flags.
+# Machine-local coordination the hooks read off DISK (guard-claim resolves owner_session
+# by path; live_peers scans sessions/ for a fresh heartbeat). Git plays no part, and a
+# record arriving by pull is stale by definition - a heartbeat older than the push is
+# past heartbeat_timeout_minutes. The BOARD stays tracked: board.json, tasks/ and
+# tasks/_archived/ (the only copy of an archived card). See .claude/rules/kanban.md.
+.agents/mpi-kanban/state/
