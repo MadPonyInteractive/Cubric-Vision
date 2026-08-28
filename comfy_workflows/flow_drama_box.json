@@ -1,0 +1,271 @@
+{
+  "1": {
+    "inputs": {
+      "model_name": "dramabox-dit-v1.safetensors",
+      "dtype": "bf16"
+    },
+    "class_type": "DramaBoxDiTLoader",
+    "_meta": {
+      "title": "DramaBox DiT Loader"
+    }
+  },
+  "2": {
+    "inputs": {
+      "components_name": "dramabox-audio-components.safetensors",
+      "dtype": "bf16"
+    },
+    "class_type": "DramaBoxAudioVAELoader",
+    "_meta": {
+      "title": "DramaBox Audio VAE Loader"
+    }
+  },
+  "3": {
+    "inputs": {
+      "text_encoder": "gemma-3-12b-it 4-bit (~8 GB, recommended)",
+      "components_name": "dramabox-audio-components.safetensors",
+      "keep_loaded": false
+    },
+    "class_type": "DramaBoxTextEncoderLoader",
+    "_meta": {
+      "title": "DramaBox Text Encoder Loader (Gemma-3)"
+    }
+  },
+  "4": {
+    "inputs": {
+      "negative_prompt": "worst quality, inconsistent, robotic, distorted, noise, static, muffled, unclear, unnatural, monotone",
+      "text_encoder": [
+        "3",
+        0
+      ],
+      "prompt": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "DramaBoxTextEncode",
+    "_meta": {
+      "title": "DramaBox Text Encode"
+    }
+  },
+  "5": {
+    "inputs": {
+      "passthrough": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "6": {
+    "inputs": {
+      "string": "A British woman says, \"Hello and welcome to Cubric Studio\""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Positive"
+    }
+  },
+  "7": {
+    "inputs": {
+      "trim_silence": true,
+      "max_duration_sec": 30,
+      "denoise": false,
+      "strength": 1,
+      "file_path": "",
+      "audio_vae": [
+        "2",
+        0
+      ],
+      "audio": [
+        "11",
+        0
+      ]
+    },
+    "class_type": "DramaBoxVoiceReferenceLoader",
+    "_meta": {
+      "title": "DramaBox Zero-Shot Voice Reference"
+    }
+  },
+  "9": {
+    "inputs": {
+      "quality_preset": "default",
+      "steps": 30,
+      "cfg_scale": 2.5,
+      "stg_scale": 1.5,
+      "duration_multiplier": 1.1,
+      "cfg_rescale": -1,
+      "dit": [
+        "1",
+        0
+      ],
+      "conditioning": [
+        "5",
+        0
+      ],
+      "voice_ref": [
+        "7",
+        0
+      ],
+      "seed": [
+        "12",
+        0
+      ],
+      "duration_seconds": [
+        "22",
+        0
+      ]
+    },
+    "class_type": "DramaBoxSampler",
+    "_meta": {
+      "title": "DramaBox Sampler"
+    }
+  },
+  "10": {
+    "inputs": {
+      "quality_preset": "default",
+      "steps": 30,
+      "cfg_scale": 2.5,
+      "stg_scale": 1.5,
+      "duration_multiplier": 1.1,
+      "cfg_rescale": -1,
+      "dit": [
+        "1",
+        0
+      ],
+      "conditioning": [
+        "5",
+        0
+      ],
+      "seed": [
+        "12",
+        0
+      ],
+      "duration_seconds": [
+        "22",
+        0
+      ]
+    },
+    "class_type": "DramaBoxSampler",
+    "_meta": {
+      "title": "DramaBox Sampler"
+    }
+  },
+  "11": {
+    "inputs": {
+      "block_if_empty": true,
+      "string": [
+        "14",
+        0
+      ]
+    },
+    "class_type": "MpiLoadAudio",
+    "_meta": {
+      "title": "Mpi Load Audio"
+    }
+  },
+  "12": {
+    "inputs": {
+      "int": 0
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    }
+  },
+  "13": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Input_Audio"
+    }
+  },
+  "14": {
+    "inputs": {
+      "any": [
+        "13",
+        0
+      ]
+    },
+    "class_type": "MpiAnyChecker",
+    "_meta": {
+      "title": "Mpi Any Checker"
+    }
+  },
+  "15": {
+    "inputs": {
+      "true": [
+        "9",
+        0
+      ],
+      "false": [
+        "10",
+        0
+      ],
+      "boolean": [
+        "14",
+        1
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "16": {
+    "inputs": {
+      "crossfade_ms": 50,
+      "audio_vae": [
+        "2",
+        0
+      ],
+      "audio_latent": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "DramaBoxVAEDecode",
+    "_meta": {
+      "title": "DramaBox VAE Decode (Audio)"
+    }
+  },
+  "18": {
+    "inputs": {
+      "passthrough": [
+        "16",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "19": {
+    "inputs": {
+      "filename_prefix": "audio/DramaBox",
+      "format": "flac",
+      "audio": [
+        "18",
+        0
+      ]
+    },
+    "class_type": "SaveAudioAdvanced",
+    "_meta": {
+      "title": "Output_Audio"
+    }
+  },
+  "22": {
+    "inputs": {
+      "float": 5
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_Duration"
+    }
+  }
+}
