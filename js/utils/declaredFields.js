@@ -94,7 +94,7 @@ export function fieldNumber(raw, f) {
  * not. The widget clamps what the user DRAGS, and that is not the same thing: an
  * untouched field arrives here straight from a persisted card or a Reuse, having
  * never met the control. So when a declared floor MOVES — drama-box's `Input_Duration`
- * went 1 → 3 with MPI-645 — an old value below it would otherwise SHOW as the new
+ * went 1 → 4 with MPI-645 — an old value below it would otherwise SHOW as the new
  * floor (the slider clamps at render) and SEND the old number, which is the one
  * failure worse than a rejected run. Both payload paths pass through here, so the
  * flow frame and the upscale tool-options twin get it from one place.

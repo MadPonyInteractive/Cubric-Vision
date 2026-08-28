@@ -143,7 +143,7 @@
       "MPI-647"
     ]
   },
-  "updated_at": "2026-08-28T20:25:00+01:00",
+  "updated_at": "2026-08-28T20:20:00+01:00",
   "events": [
     {
       "at": "2026-08-27T15:31:00Z",
@@ -3997,6 +3997,13 @@
       "from": "doing",
       "to": "done",
       "note": "Closed. Fabio's call: the floor is 4, not upstream's 3 - drama-box Input_Duration min 1 -> 4 in flowsRegistry.js. 3 is upstream's floor for its own ESTIMATE and it is not enough once the envelope is measured: a 3s ask is a 2.89s file opening with 0.13-1.47s of model lead-in silence (the worst sample carried 1.15s of audible speech), and _007 vs _008 shows the same prompt truncating mid-word at 3s and completing with 0.39s spare at 4s. The field note stays as written and reads right on the run slide. The x1.1 pad stays deliberately NOT copied over. Also shipped on this card: buildField's f.note moved past every branch (four declared slider notes had never reached the screen), and mapDeclaredValue now clamps every numeric field so a moved floor cannot render one number and send another. npm test 773/773 after the move to 4; drama-box.md and the checklist carry the reason so nobody restores the 3. Left open as a card of its own: trimming the lead-in silence needs an MpiNodes trim node plus Fabio's graph re-export."
+    },
+    {
+      "at": "2026-08-28T20:20:00+01:00",
+      "type": "task.updated",
+      "task": "MPI-645",
+      "actor": "implementer:254ff8ae-41ce-42c0-861a-5d99a4ff7f17",
+      "note": "Correction to this card's close-out event: trimming the lead-in silence is NOT left open as a card of its own - Fabio decided against it at close-out. The 4s floor IS the fix (his tests come back as a usable 4s of line), so a trim node buys nothing and would cost an MpiNodes node plus a graph re-export. Recorded in drama-box.md, checklist.md and validation.md (commit e4a19f6b). Do not re-open it as 'the other half of MPI-645'."
     }
   ]
 }
