@@ -1227,17 +1227,29 @@ export const commands = {
     // without it.
     //
     // THERE IS NO `audio2`, AND MAPPING ONE BACK PUTS THE VC ARM BACK (2026-08-28).
-    // `Input_Audio_2` is the only thing MpiAnyChecker#57 reads to switch the graph
-    // onto FL_ChatterboxVC, so leaving the role unmapped is what keeps this flow on
-    // TTS alone. It carried an emotion clip for one session and was killed on
-    // measurement — the reason is on the FlowDef in flowsRegistry.js.
+    // The VC nodes are gone from the graph as of that re-export, so a role mapped here
+    // would write `Input_Audio_2` on a node that no longer exists. It carried an
+    // emotion clip for one session and was killed on measurement — the reason is on
+    // the FlowDef in flowsRegistry.js.
+    //
+    // `audio1` IS REQUIRED, and saying so is what produces the toast. `MpiLoadAudio#54`
+    // carries `block_if_empty: true`, so a run with no voice returns an
+    // ExecutionBlocker: zero output, and ComfyUI reports SUCCESS. The slot renders as
+    // optional either way (`upto` is the only media mode there is), so `required` is
+    // the only thing standing between the user and a silent no-op — it is what
+    // `_findMissingMediaSlot` reads at enqueue AND at dispatch. It was `false`, which
+    // opts OUT of that guard; absent would have been enough, but say it out loud.
+    //
+    // Turning `block_if_empty` off instead is NOT the alternative: MpiLoadAudio._empty
+    // returns a 1-sample 44.1 kHz silence, which would become Chatterbox's
+    // `audio_prompt` — a garbage reference in place of a clean refusal.
     flowChatterBox: {
         label: 'Flow: Text to Speech',
         progressLabel: 'Speaking the line',
         mediaType: MEDIA_TYPE.AUDIO,        // OUTPUT type
         requiresImages: 0,
         mediaInputs: [
-            { key: 'audio1', mediaType: MEDIA_TYPE.AUDIO, title: 'Input_Audio', required: false },
+            { key: 'audio1', mediaType: MEDIA_TYPE.AUDIO, title: 'Input_Audio', required: true },
         ],
         promptRequired: true,
         universal: true,
