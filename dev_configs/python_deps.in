@@ -42,6 +42,32 @@
 #   install, silently (MPI-413 Evidence C). Its only job is runtime CUDA detection, which
 #   is exactly what this file replaces.
 
+# ── setuptools: pinned BELOW the pkg_resources removal ──────────────────────────
+# setuptools arrives transitively (via torch) and resolved to 83.0.0, which no longer
+# ships `pkg_resources` — it was removed in 81. `resemble-perth` 1.0.1 imports it in
+# `perth/perth_net/__init__.py`, and the resulting breakage is invisible three times
+# over, which is why it survived a shipped release:
+#
+#   1. perth's own __init__ swallows the ImportError and sets
+#      `PerthImplicitWatermarker = None`, but `import perth` still SUCCEEDS — so the
+#      node's `try: import perth / PERTH_AVAILABLE = True` guard reads as available.
+#   2. `ChatterboxTTS.__init__` / `ChatterboxVC.__init__` then call that None and raise
+#      `TypeError: 'NoneType' object is not callable`.
+#   3. FL_Chatterbox* catches it into its `message` STRING output, which no graph wires,
+#      and returns its pre-initialised `{"waveform": zeros((1,2,1)), "sample_rate":
+#      16000}` — so SaveAudio writes a real .flac of ZERO duration and ComfyUI reports
+#      `success`. No error anywhere, in the log or the UI.
+#
+# Measured 2026-08-28 (MPI-607): every Chatterbox run — English arm, multilingual arm,
+# and the SHIPPED Voice Changer flow — produced a 0-duration, -91 dB file. Restoring
+# `pkg_resources` fixes it; setuptools' own deprecation notice says the same ("pin to
+# Setuptools<81"). The cupy-wheel note at the top of this file already flagged this exact
+# hazard at BUILD time; this is the same removal biting at RUNTIME.
+#
+# ponytail: a version ceiling, not a downgrade treadmill. Lift it when resemble-perth
+# stops importing pkg_resources, not on a setuptools release.
+setuptools<81
+
 # ── Pinned shared set ───────────────────────────────────────────────────────────
 # These were `pipPins` in js/data/modelConstants/nodesDeps.js — a per-node, hand-
 # maintained repair applied AFTER each node's requirements had already drifted the
@@ -119,6 +145,11 @@ pyyaml
 # and Vision is the provider of the synthetic audio, so the marking is not optional and
 # the failure mode is silent — which is exactly why it is pinned HERE rather than left to
 # the node. Removing this line does not break a build; it ships unmarked audio (MPI-607).
+#
+# 🔴 AND IT NEEDS `setuptools<81` BELOW TO WORK AT ALL. Measured 2026-08-28: with
+# setuptools 83 the watermarker is dead and BOTH Chatterbox flows return a 0-duration
+# silent file while ComfyUI reports success. So the comment above understates it — the
+# failure is no longer "unmarked audio", it is NO audio. See the setuptools pin.
 resemble-perth
 resampy
 s3tokenizer
