@@ -161,3 +161,22 @@ it was simulated by flipping that stub to `false`: the spec then fails with CI's
 Lesson for the next desktop spec: **stubbing `s_installedModelIds` is only half of
 availability.** A flow with `requiredDeps` needs `setFlowDepStatus` as well, or the spec
 passes on every developer machine and fails on CI alone.
+
+## Claim audit (mpi-end-session close-out)
+
+Fourteen claims from the four commits and both validation files were audited against the repo.
+**13 proven, 1 overstated, 0 false.**
+
+**OVERSTATED, and corrected:** *"Every shipped flow declares exactly ONE model slot."* Nine do;
+the three audio flows — `voice-changer`, `chatter-box`, `drama-box` — declare
+`requiredModels: []` and render no model row at all (`flowsRegistry.js:1327, 1435, 1590`).
+Twelve flows, not nine.
+
+The conclusion it supports is unaffected — the label renders only at 2+ slots, and a zero-slot
+flow shows no label either — but the stated fact was wrong and a reader could have built on it.
+Fixed in `docs/playbooks/add-flow/any-of-models.md` and in this card's `brief.md`, both now
+reading "no shipped flow declares two or more slots" with the nine/three split spelled out.
+
+The code comments were already right (`MpiFlowLibrary.js:243`: "No shipped flow declares two
+slots"), as was the commit body of `4de052f7`. The overstatement existed only in the prose I
+wrote around them — which is exactly the shape this audit exists to catch.

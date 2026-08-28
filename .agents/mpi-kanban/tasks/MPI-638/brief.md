@@ -51,7 +51,7 @@ Run slide, control column (236px), one row per model slot:
 `label` stops being a **name** and becomes a **disambiguator**: rendered only when a flow
 declares two or more model slots.
 
-Every shipped flow declares exactly ONE slot (verified 2026-08-28 across `head-swap`,
+No shipped flow declares two or more slots (verified 2026-08-28: nine declare exactly one - `head-swap`,
 `ltx-extend`, `ltx-foley`, `ltx-upscale`, `scribble-object`, `scribble`, `character-sheet`,
 `outpaint`, `object-stamp`; the audio three declare none). So "Render model" and "Edit model"
 leave the UI today with **zero descriptor edits and zero migration**, and nobody ever has to
