@@ -114,3 +114,22 @@ whose regex `^(?:Input_)?Lora_(?:[A-Za-z0-9]+_)?\d+$` does match a phase key).
 - **The `klein-9b` blend arm still has not been run** — this run resolved to 4B.
 - **Nobody has confirmed the head comes off CLEANLY.** The branch executed and produced an
   image; whether the removal reads well is a visual judgement.
+
+## 2026-08-28 — 🟢 FABIO ANSWERED THE VISUAL QUESTION: the head comes off CLEANLY
+
+The one thing no test could settle. Asked at MPI-607's close-out, answered directly:
+
+> *"603, I can confirm it does come off cleanly. Character sheet is working fine."*
+
+So the LanPaint branch is **visually confirmed**, not merely confirmed-to-have-executed —
+which is all the earlier note could claim (prompt `998b97a2`, `Remove Head` true, an image
+out of `Output_Image`, nobody having judged it). The Character Sheet flow is confirmed
+working in the same breath.
+
+**This closes the JUDGEMENT half of this card only.** Brief steps 3-5 are still open
+implementation: drop the dep from Klein in `models.js`, ship a build without it, then
+delete it from R2/HF. Do NOT read this entry as the card being done.
+
+**One blocker on those steps is now STALE and can be ignored:** the attention note said
+`models.js` was "live-claimed by MPI-607". MPI-607 closed on 2026-08-28 and its file-claim
+record no longer exists on disk, so nothing holds `models.js` any more.
