@@ -109,7 +109,7 @@ export const nodesDeps = {
     },
     'ComfyUI-Frame-Interpolation': {
         id: 'ComfyUI-Frame-Interpolation',
-        name: 'ComfyUI Impact Subpack',
+        name: 'ComfyUI Frame Interpolation',
         type: 'custom_nodes',
         filename: 'comfyui-frame-interpolation',
         url: lockUrl('ComfyUI-Frame-Interpolation'),

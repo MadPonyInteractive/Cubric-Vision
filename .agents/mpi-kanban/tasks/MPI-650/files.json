@@ -1,0 +1,7 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "id": "MPI-650",
+  "files": [
+    "js/data/modelConstants/nodesDeps.js"
+  ]
+}

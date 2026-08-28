@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-650",
+  "title": "Frame-Interpolation dep carries Impact Subpack's display name",
+  "description": "Found 2026-08-28 while verifying node pins for MPI-649 and deliberately left there to keep that card's diff to the engine pin. js/data/modelConstants/nodesDeps.js:112 gives 'ComfyUI-Frame-Interpolation' the name 'ComfyUI Impact Subpack', copy-pasted off the 'ComfyUI-Impact-Subpack' entry twenty lines below. `name` is the human label, so every surface that renders a dep - Model Library rows, the dependency and install-progress lists - shows two different packs under one name and the Frame Interpolation pack never appears under its own. Fix the label and sweep all 17 entries' `name` against their `id`/`filename` for the same clone slip.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-08-28T20:22:32Z",
+  "updated_at": "2026-08-28T20:27:39Z",
+  "links": {
+    "events": "events.jsonl",
+    "files": "files.json",
+    "checklist": "checklist.md",
+    "validation": "validation.md"
+  }
+}
