@@ -44,6 +44,45 @@ holdout — it wanted an input-dir name, so the flow injected a path it couldn't
 kept the source's own audio (MPI-259). The path-reading audio node fixed it: consistent
 architecture across all three media types.
 
+## 🔴 Self-gating is not the same as HANDLED
+
+The table above says an empty slot "self-gates", which is true and reads as reassuring.
+It is not. A self-gated branch produces **no output**, and ComfyUI reports the run as
+**success** — so the user presses Generate, waits, and gets nothing, with no error
+anywhere. Twelve slots across eight flows shipped in exactly that state (2026-08-28).
+
+**What turns a self-gate into a refusal is `required` on the OP's media slot**, in
+`js/data/commandRegistry.js`:
+
+```js
+mediaInputs: [
+    { key: 'audio1', mediaType: MEDIA_TYPE.AUDIO, title: 'Input_Audio', required: true },
+],
+```
+
+`_findMissingMediaSlot` (`js/services/generationService.js`) reads it at **enqueue** and
+again at **dispatch**, and raises "Add an image/video/audio file before generating".
+Flows reach it like everything else: `MpiBaseFlow._run` → `submitFlowGeneration` →
+`enqueueGeneration`.
+
+- **An ABSENT `required` already means required.** `required: false` is never accidental —
+  it is always a deliberate opt-out of that guard.
+- **The check is per media TYPE, not per role** (MPI-466). One attached image satisfies
+  every image slot, so it catches "no media of this type at all" and never a deliberate
+  one-of-two run.
+- **A later step may DERIVE the media**, after the slot the user sees. Scribble's slot is
+  labelled "Drawing (optional)" and its `paint` step fills `image1` at run time, before
+  enqueue — so the blank-canvas route passes the guard. Check `flow.steps[].into` before
+  concluding a slot is unfillable.
+- **`upto` is the only media mode there is**, so a slot can never RENDER as required. The
+  declaration is the only signal; nothing in the UI shows it.
+
+**The law, and `tests/flow-required-media.test.cjs` enforces it repo-wide:** a slot whose
+graph blocks when empty must not declare `required: false`. It is asserted as that PAIR
+rather than "everything is required", because DramaBox is the legitimate counter-example —
+its loader carries `block_if_empty: false` and its voice slot really is optional, which is
+how its prompt-only arm builds a speaker from the words alone.
+
 ## Injection routing (`comfyController` media-kind sweep)
 
 `comfyController` (in `runWorkflow`) classifies each media param's KIND, then routes it:
