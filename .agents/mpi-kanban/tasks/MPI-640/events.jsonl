@@ -1,0 +1,3 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-640", "at": "2026-08-28T09:56:21+01:00", "actor": "claude", "column": "doing", "title": "Agent app instances launch minimized, off the user's screen"}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-640", "type": "task.updated", "at": "2026-08-28T10:09:16+01:00", "actor": "claude", "summary": "Retitled: parking the window off-screen, not minimizing it - a minimized window does not composite on Windows (2 fps, stalled transitions)."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-640", "at": "2026-08-28T10:12:23+01:00", "actor": "claude", "from": "doing", "to": "done", "reason": "Off-screen background launch shipped; desktop suite 38/38 and node suite 774/774 green."}

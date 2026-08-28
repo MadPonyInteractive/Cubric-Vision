@@ -164,6 +164,13 @@ When you genuinely need a running app, take your own: `npm run app:isolated`
 STABLE profile (`%TEMP%\cubric-agent-profile`, stable on purpose so an engine install survives), and
 prints `READY <url>`. Drive that URL, never 3000.
 
+- **It starts OFF-SCREEN and never takes focus** — the launcher sets `CUBRIC_BACKGROUND=1`, so
+  `main.js` skips the splash and reveals with `showInactive()` after parking the window below
+  every monitor (MPI-640). It renders normally there (77 fps) and a Playwright/CDP screenshot of
+  it returns real pixels in ~130ms. Do NOT "improve" this by minimizing instead: a minimized
+  window does not composite on Windows — 2 fps, 2.1s screenshots, and stalled CSS transitions
+  that failed a toast spec. Pass `CUBRIC_BACKGROUND=0` when you want the window up and focused.
+
 - **To test an ENGINE INSTALL, give it a throwaway engine**:
   `CUBRIC_ENGINE_ROOT="<scratch>" npm run app:isolated`. The launcher spreads `process.env`, and
   `getEngineRoot()` checks the var FIRST — ahead of `.engine-config.json` — so the whole app,

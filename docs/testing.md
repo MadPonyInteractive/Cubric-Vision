@@ -113,6 +113,27 @@ per-test `CUBRIC_E2E_USER_DATA`, so normal app data is never touched.
 **The suite runs alongside your open app** — verified 2026-08-05 with a dev instance
 live on 3000, 17/17 green on port 63877 and the instance untouched (MPI-448).
 
+**And it runs off your screen.** `CUBRIC_E2E` (and `CUBRIC_BACKGROUND`, which
+`app:isolated` sets) makes `main.js` skip the splash entirely — it is `alwaysOnTop` and
+centred on the primary monitor — and reveal the shell with `showInactive()` after
+parking it below every monitor, instead of `show()`. So a run never covers the screen or
+steals focus from what you are doing (MPI-640). Set `CUBRIC_BACKGROUND=0` to get a
+normal visible window for the run you want to watch.
+
+**Parked off-screen, not minimized — the difference is measurable.** A minimized window
+does not composite on Windows: measured **2 frames/s**, and screenshots took 2.1s. CSS
+transitions then stall and complete in a batch, and `MpiToast` removes a toast from the
+DOM on `transitionend`, so `toast-serial-countdown.spec.js` saw two toasts vanish in the
+same instant and failed. A window that is merely off-screen is still a normal shown
+window: **77 frames/s, screenshots in ~130ms**, spec green. That also means no
+`backgroundThrottling: false` and no `disable-backgrounding-occluded-windows` switches
+are needed — both were tried against the minimized window and neither fixed it (timers
+were never the problem: 20 × `setTimeout(25)` ran in 520ms throughout).
+
+**Screenshots work off-screen.** Playwright captures the renderer surface over CDP, not
+the desktop, so a parked window still yields real pixels — verified 1280×800 of actual
+UI, `document.visibilityState` `visible` throughout.
+
 What that does NOT buy you is a *second* app. Start `npm start` while one is already
 open and it launches, flashes a splash and closes within ~2s — exit 0, no error, and
 nothing in `app.log`. During a suite run that reads as "the tests killed my app"; it

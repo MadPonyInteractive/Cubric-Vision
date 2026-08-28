@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-640",
+  "title": "Agent app instances launch off-screen, not on the user monitor",
+  "description": "Agent-launched Electron instances (desktop suite + app:isolated) hijacked the primary monitor: the splash is alwaysOnTop+centred and the main window show()s with focus. Under CUBRIC_E2E / CUBRIC_BACKGROUND there is now no splash and the window is parked below every monitor with showInactive(). Minimizing was tried first and rejected: a minimized window does not composite on Windows (2 fps, stalled CSS transitions, one failed toast spec).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-08-28T09:56:21+01:00",
+  "updated_at": "2026-08-28T10:12:23+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

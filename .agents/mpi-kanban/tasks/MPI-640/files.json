@@ -1,0 +1,9 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "main.js",
+    "scripts/launch-instance.mjs",
+    "docs/testing.md",
+    "docs/testing-harnesses.md"
+  ]
+}

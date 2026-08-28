@@ -63,7 +63,15 @@ if (await listening(3000)) {
 console.log(`[isolated] profile ${PROFILE}`);
 console.log(`[isolated] port    ${port}`);
 
-const env = { ...process.env, CUBRIC_USER_DATA_ROOT: PROFILE, CUBRIC_PORT: String(port) };
+// CUBRIC_BACKGROUND: park the window off-screen, no splash, no focus steal (MPI-640)
+// — an agent instance must not climb over whatever the user is doing on their screen.
+// Set it to 0 in the caller's env for the run where you want to watch the window.
+const env = {
+  CUBRIC_BACKGROUND: '1',
+  ...process.env,
+  CUBRIC_USER_DATA_ROOT: PROFILE,
+  CUBRIC_PORT: String(port),
+};
 // The agent sandbox sets this to 1, which runs main.js as plain Node — `app` is then
 // undefined and it dies on app.getPath. Must be gone from the CHILD's env.
 delete env.ELECTRON_RUN_AS_NODE;

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, session, Menu, MenuItem, ipcMain, dialog, shell, Notification, safeStorage, nativeImage } = require('electron');
+const { app, BrowserWindow, screen, session, Menu, MenuItem, ipcMain, dialog, shell, Notification, safeStorage, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { randomUUID } = require('crypto');
@@ -14,6 +14,18 @@ const floatLatent = require('./main/floatLatentWindow.cjs');
 // fork reads the same value; every URL below is built from it, never a literal.
 const SERVER_PORT = Number(process.env.CUBRIC_PORT) || 3000;
 const SERVER_ORIGIN = `http://127.0.0.1:${SERVER_PORT}`;
+
+// MPI-640: an agent-launched instance must never take over the user's screen. Two
+// windows did: the splash is `alwaysOnTop` and centred on the primary monitor, and
+// the main window's reveal is `show()`, which activates and steals focus — mid-run,
+// repeatedly, while the user is working in another app. Under this flag there is no
+// splash and the window is parked off-screen with `showInactive()`. The desktop suite
+// already sets CUBRIC_E2E on every spec; `app:isolated` sets CUBRIC_BACKGROUND.
+// `CUBRIC_BACKGROUND=0` forces a normal visible window even under E2E, for the run
+// where someone wants to watch what a spec is doing.
+const BACKGROUND_LAUNCH = process.env.CUBRIC_BACKGROUND === '0'
+  ? false
+  : Boolean(process.env.CUBRIC_E2E || process.env.CUBRIC_BACKGROUND);
 
 // A fatal boot error used to leave NOTHING behind: main had no handlers, so the
 // process died silently, and routes/logger appends with `await` — a dying process
@@ -315,6 +327,16 @@ if (!gotTheLock) {
   });
 }
 
+// Where a background instance parks (MPI-640): below every monitor, off the bottom
+// of the virtual desktop. It is a normal shown window there — Windows keeps
+// compositing it, so frames, CSS transitions and screenshots all still work — it is
+// just nowhere the user can see it.
+function backgroundSpot() {
+  const displays = screen.getAllDisplays();
+  const bottom = Math.max(...displays.map(d => d.bounds.y + d.bounds.height));
+  return { x: displays[0].bounds.x + 40, y: bottom + 40 };
+}
+
 function loadWindowState() {
   try {
     if (fs.existsSync(STATE_FILE)) {
@@ -327,6 +349,9 @@ function loadWindowState() {
 
 function saveWindowState() {
   if (!mainWindow) return;
+  // A background instance parks off the bottom of the virtual desktop; persisting
+  // that would hand the next launch from the same profile an off-screen window.
+  if (BACKGROUND_LAUNCH) return;
   try {
     const bounds = mainWindow.getBounds();
     // Always save x/y to remember monitor, but only save width/height if not maximized/fullscreen
@@ -477,10 +502,10 @@ function createWindow() {
   const revealMainWindow = () => {
     if (revealed || !mainWindow || mainWindow.isDestroyed()) return;
     revealed = true;
-    if (windowState.isMaximized) {
+    if (!BACKGROUND_LAUNCH && windowState.isMaximized) {
       mainWindow.maximize();
     }
-    if (windowState.isFullScreen) {
+    if (!BACKGROUND_LAUNCH && windowState.isFullScreen) {
       mainWindow.setFullScreen(true);
     }
     // Destroy the family splash (MPI-10) before revealing the main window.
@@ -488,7 +513,20 @@ function createWindow() {
       splashWindow.close();
       splashWindow = null;
     }
-    mainWindow.show();
+    if (BACKGROUND_LAUNCH) {
+      // MOVED, not minimized. A minimized window does not composite on Windows —
+      // measured 2 frames/s against 77 when merely off-screen — so CSS transitions
+      // stall and complete in a batch, and anything waiting on `transitionend`
+      // misfires (MpiToast removes a toast on one; two left in the same instant and
+      // failed toast-serial-countdown.spec.js). So the window stays a normal shown
+      // window and just lives where the user cannot see it. `showInactive` keeps the
+      // focus where the user left it.
+      const spot = backgroundSpot();
+      mainWindow.setPosition(spot.x, spot.y);
+      mainWindow.showInactive();
+    } else {
+      mainWindow.show();
+    }
     // MPI-10: report window visibility to the broker (via the server fork) so
     // it can track the family-wide window count for last-window teardown.
     serverProcess?.send?.({ type: 'cubric-window-state', visible: true });
@@ -880,7 +918,10 @@ app.on('ready', () => {
   // Family splash (MPI-10): visible instantly, gate the main window.
   // Destroyed in createWindow()'s ready-to-show handler once the page is live.
   // The 5s server-ready fallback below is the natural splash ceiling.
-  try {
+  // Skipped entirely for a background launch (MPI-640) — alwaysOnTop + centered on
+  // the primary monitor is exactly the popup an agent run must not produce. The
+  // reveal path already tolerates a null splash.
+  if (!BACKGROUND_LAUNCH) try {
     splashWindow = new BrowserWindow({
       width: 400,
       height: 200,
