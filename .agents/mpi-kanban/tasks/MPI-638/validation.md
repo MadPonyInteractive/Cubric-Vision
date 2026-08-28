@@ -135,3 +135,29 @@ checklist rows), `docs/flows.md` (topic table), and the two existing-flow files 
   overlay X so the topbar's Flows button is the only exit) and one MPI-607 voice-library change.
   Left untouched and not committed. The docs here deliberately do not describe the X change: it
   is uncommitted and could still be revised.
+
+## CI went RED on the first push, and the fix is recorded here
+
+Run 33153649907 failed on `windows-latest` with **both suites green locally**. One test:
+`flow-library-skips-drawer.spec.js` - `result.ready.opened` came back `[]` instead of
+`["head-swap"]`, i.e. the Ready branch never fired on the runner.
+
+**Cause: the spec inherited availability from the DISK.** `flowAvailability` is
+`missing.length === 0 && missingDeps.length === 0`, and Head Swap declares two
+`requiredDeps` (`qwen-lora-headswap`, `comfyui-inpaint-cropandstitch`). Their status comes
+from `_flowDepStatusCache`, which a dev box fills from disk during the model sync. So
+`s_installedModelIds` was stubbed identically in both places and the two machines still
+disagreed: Ready here, Get-models on a bare runner.
+
+**Fix:** stub the dep cache too - `setFlowDepStatus(FLOW, new Map(requiredDeps.map(id => [id, true])))`,
+read off the descriptor rather than hardcoded so adding a dep to the flow cannot silently
+re-break it.
+
+**Diagnosis proved, not guessed.** The bare-runner condition cannot occur on this machine, so
+it was simulated by flipping that stub to `false`: the spec then fails with CI's exact output
+(`Array []` against `["head-swap"]`), and passes with `true`. Script restored the file in
+`finally`, verified byte-identical.
+
+Lesson for the next desktop spec: **stubbing `s_installedModelIds` is only half of
+availability.** A flow with `requiredDeps` needs `setFlowDepStatus` as well, or the spec
+passes on every developer machine and fails on CI alone.

@@ -28,6 +28,15 @@ const { launchApp, closeApp } = require('./launch');
  * `flow-reuse-opens-without-model.spec.js` makes. `head-swap` is the fixture because it
  * needs exactly one model (`qwen-edit`) and declares no choosable slot, so availability is
  * the ONLY variable this spec moves.
+ *
+ * **THE DEP CACHE MUST BE STUBBED TOO, and leaving it out is a CI-only failure.**
+ * `flowAvailability` is `missing.length === 0 && missingDeps.length === 0`, and Head Swap
+ * declares two `requiredDeps` (`qwen-lora-headswap`, `comfyui-inpaint-cropandstitch`). Their
+ * status comes from `_flowDepStatusCache`, which a dev machine fills from disk during the
+ * model sync — so a developer's box says Ready and a bare CI runner says Get-models, with
+ * `s_installedModelIds` stubbed identically in both. This spec went green locally and red on
+ * `windows-latest` for exactly that reason (run 33153649907). Stub BOTH halves so the only
+ * variable is the one each case intends to move.
  */
 test.setTimeout(90000);
 
@@ -43,6 +52,15 @@ test('a Ready flow tile opens the frame; an unready one still opens the drawer',
       const { Events } = await import('/js/events.js');
       const { state } = await import('/js/state.js');
       const { PAGE_GALLERY, PAGE_LANDING } = await import('/js/router.js');
+      const { getFlowById, setFlowDepStatus } = await import('/js/data/flowsRegistry.js');
+
+      // Head Swap's two requiredDeps, marked present. Without this the flow is never
+      // available on a runner with a bare disk, whatever s_installedModelIds says — see
+      // the header note. Read off the descriptor rather than hardcoded, so adding a dep
+      // to the flow cannot silently re-break this.
+      const FLOW = 'head-swap';
+      setFlowDepStatus(FLOW, new Map(
+        (getFlowById(FLOW).requiredDeps || []).map(id => [id, true])));
 
       const lib = MpiFlowLibrary.mount(document.createElement('div'));
       window.__mpi638lib = lib;
