@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-645",
+  "title": "DramaBox clips the line at short durations - the slider goes below the model's own 3s floor",
+  "description": "Asking for 3 seconds returns a ~2s clip cut mid-sentence. Our graph passes duration RAW, bypassing upstream's estimator, which floors at 3.0s and pads by 1.1x.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-28T15:32:22+01:00",
+  "updated_at": "2026-08-28T15:32:22+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

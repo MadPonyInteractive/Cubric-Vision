@@ -1588,3 +1588,61 @@ Automated evidence, all run before he was asked:
 measured a BLEND, and the new UNRELEASED entry repeats the strong claim ("Only
 the voice is different"). Fabio has now heard a real run and said "Good match".
 Both files change together or neither does - ask him at close-out.
+
+## 2026-08-28 — 🟢 FABIO SETTLED THE HONESTY CHECK, on BOTH routes. Card closed.
+
+Asked at MPI-607's close-out, answered from two real runs. Verbatim:
+
+> *"622, you can close it as settled because I just ran it where I created a southern
+> western accent, and it came out as flat. The performance, the accent, the mannerisms
+> did not come through. Only the voice did. This was for Chatterbox."*
+
+> *"I went back into the workflow for Chatterbox, and I had an idea to add VC as an extra
+> to see if the performance and accent would come through, but it doesn't come through.
+> It's a model limitation. There's nothing we can do there."*
+
+**The claim under review stands.** "Only the voice is different" / "swapping the voice
+itself" is what he observed: the output is cleanly the target voice, not a hybrid. That
+was the worry, and it is retired. No copy change on either file.
+
+### 🔴 This is the SECOND, INDEPENDENT kill of the add-VC-to-carry-performance idea
+
+He rebuilt it from scratch — Chatterbox graph, VC bolted on as an extra stage, explicitly
+to see whether performance and accent would survive — and they did not. That is exactly
+the architecture MPI-607 removed after measuring it, arrived at again independently and
+failing again for the same reason.
+
+**So the VC arm deleted from `flow_chatter_box.json` on 2026-08-28 is now doubly
+justified, and a third attempt is waste.** The verdict is his: *"It's a model limitation.
+There's nothing we can do there."* Chatterbox VC moves TIMBRE and nothing else — not
+emotion (MPI-607), not accent, not mannerisms.
+
+### ⚠️ It contradicts the measurement at ~line 628, and that is NOT reconciled here
+
+That entry concluded the **source's accent is imposed on the output and the target's is
+overwritten** — two different characters through VC both arriving as 1930s New York,
+their only shared factor being the VC source. Fabio's VC run says the opposite: a
+southern-western source came out flat, the accent not carried at all.
+
+**Both are left standing deliberately. Do not delete either.** They may not conflict: the
+:628 source carried a strong 1930s New York accent that survived, and a southern-western
+one did not. "This accent transfers and that one does not" is a narrower and more
+believable finding than either "accent transfers" or "accent does not". Anyone revisiting
+this must control for the accent itself before concluding anything.
+
+Closing this card settles the PRODUCT question Fabio was asked. It does not settle the
+mechanism, and nothing here should be cited as if it did.
+
+### The finding worth carrying forward: Chatterbox flattens, DramaBox does not
+
+> *"In DramaBox ... even without referencing the accent, [it] brings the accent and the
+> mannerisms through."*
+
+Third independent time DramaBox has won on fidelity to a reference, and it is why the
+flow was approved at all (MPI-607 session 28: *"it sticks to the reference a lot better
+than Chatterbox"*). Consistent with this card's own conclusion that timbre and
+articulation are separate channels — Chatterbox moves the first and drops the second.
+
+**Product consequence, uncarded:** a user who wants a performance held should be steered
+to DramaBox, and one who wants a specific voice to Chatterbox. The two audio flows are
+not redundant, and this is the sharpest statement yet of what separates them.

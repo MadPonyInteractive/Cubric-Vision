@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-645", "at": "2026-08-28T15:32:22+01:00", "actor": "claude", "column": "todo", "title": "DramaBox clips the line at short durations - the slider goes below the model's own 3s floor"}
