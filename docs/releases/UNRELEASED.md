@@ -65,7 +65,7 @@
   - **Outpaint** — extend a picture past its edges
   - **Voice Changer** — say a line and have it come back in someone else's voice
   - **Object Stamp** — take an object out of one photo and put it into another
-  - **DramaBox** — write a line and hear it performed in a voice you choose
+  - **DramaBox** — describe a speaker and a performance, and hear your line delivered
   - **Text to Speech** — read your text aloud in a voice you pick, in any of 23 languages
 
   Each flow tells you which models it needs and installs them for you, and most of them run on a
@@ -270,6 +270,12 @@
 > latent previews now play everywhere they appear" names the **Flow result pane** alongside the
 > History workspace and the minimised preview window. The last two are real released bugs and
 > the entry is worth keeping; the Flow clause is the part to drop when folding.
+
+- No more terminal windows flashing open when Vision starts. On Windows, launching the app
+  popped up to ten black console windows for a moment each - one for every background check
+  Vision runs at boot to find your graphics card and start the Cubric services. They did
+  nothing and closed themselves, but they looked alarming, and enough of them landed at once
+  to read as something malicious. They are now hidden, as they were always meant to be.
 
 - The colour picker no longer opens off the bottom of the screen. Clicking the colour swatch
   in the Paint, Crop, Resize, Remove Background or Adjust tool options while the panel sat low
