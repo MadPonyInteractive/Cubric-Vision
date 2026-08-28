@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-635", "at": "2026-08-28T07:33:32+01:00", "actor": "claude", "column": "doing", "title": "Flow Library: the ready/need-models sub-line goes stale against the tile badges"}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-635", "at": "2026-08-28T07:36:03+01:00", "actor": "claude", "from": "doing", "to": "done", "reason": "Sub-line and badges now share one derivation with two callers; verified live across both re-derivation paths. Lint clean, 761 tests pass."}

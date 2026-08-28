@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-635",
+  "title": "Flow Library: the ready/need-models sub-line goes stale against the tile badges",
+  "description": "subEl is written only by renderList(), while the tile chips re-derive on models:checked and download:*. The header count can therefore disagree with the grid below it until the next full render.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-08-28T07:33:32+01:00",
+  "updated_at": "2026-08-28T07:36:03+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

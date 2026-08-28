@@ -447,15 +447,26 @@ export const MpiFlowLibrary = ComponentFactory.create({
             bodySlot.appendChild(sheet.el);
         }
 
-        function renderList() {
-            _destroyAllTiles();
-            bodySlot.innerHTML = '';
-
+        // The head count, derived from the SAME `flowAvailability` the tile badges are.
+        // It lives in its own function because it has two callers (MPI-635): a full
+        // render, and every install-state change that re-derives the badges without one.
+        // Written only by renderList(), it read "11 ready" over a grid of twelve
+        // Get-models chips — the header and the grid below it are one claim about one
+        // set, so they have to be recomputed by one signal.
+        function _renderSub() {
             const flows = listFlows();
             const readyN = flows.filter(a => flowAvailability(a).available).length;
             subEl.textContent = flows.length
                 ? `${readyN} ready · ${flows.length - readyN} need models`
                 : 'No flows yet.';
+        }
+
+        function renderList() {
+            _destroyAllTiles();
+            bodySlot.innerHTML = '';
+
+            const flows = listFlows();
+            _renderSub();
 
             if (!flows.length) {
                 bodySlot.appendChild(ce('div', {
@@ -491,6 +502,7 @@ export const MpiFlowLibrary = ComponentFactory.create({
         // every tile whose required set includes it. Cheap: iterate the tiny flow list.
         function _patchAllAffected() {
             for (const flow of listFlows()) _patchTile(flow.id);
+            _renderSub();
         }
 
         // Tick only the aggregated bar width/pct in the open detail — cheap, per-progress
