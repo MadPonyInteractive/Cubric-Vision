@@ -55,7 +55,9 @@ No suspected break to date against `node_lock.json` history.
 
 ## Gate 3 — the pins
 
-Four values moved, and they were grepped afterwards and agree:
+Five values moved across the two version files — **four** of them in `node_lock.json`, which is
+the half that reads as singular and gets left behind. All five were grepped afterwards and
+agree:
 
 | file | field | was | now |
 |---|---|---|---|
@@ -112,7 +114,7 @@ In-place upgrade landed 0.34.0; version stamp written
 
 Exactly the six moved requirement lines, no torch, **no wipe** — as gate 0 predicted.
 
-**Four independent reads agree the tree actually moved** (the MPI-419 self-concealing-restamp
+**Five independent reads agree the tree actually moved** (the MPI-419 self-concealing-restamp
 trap): `git rev-parse HEAD` = `12d52794`, `git describe --tags` = `v0.34.0`,
 `comfyui_version.py` `__version__ = "0.34.0"`, `engine/.mpi_engine_version` = `0.34.0`, and the
 live `/system_stats` = `0.34.0`. The stamp is written only after the code re-reads
