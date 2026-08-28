@@ -26,10 +26,10 @@ the gate's and not a fallthrough to the dispatch guard, whose copy names the med
 > `docs/playbooks/add-flow/02-media-io.md`, making it five. A repo-wide count is a claim
 > with a shelf life; scope it to the code, or re-run it last.
 
-## Still open
+## Human check
 
-Fabio has not seen the toast in the running app. The copy is his call and the card is
-`validating` for that reason alone — the behaviour itself is proven above.
+Fabio ran it in the app and approved the generic copy (2026-08-28), which is the one thing
+the tests above could not decide. Card closed on that plus the recorded evidence.
 
 ## Known residual, out of scope
 
