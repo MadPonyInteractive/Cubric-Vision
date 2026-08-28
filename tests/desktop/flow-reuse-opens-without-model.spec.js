@@ -40,6 +40,20 @@ test('reuse opens a flow whose model is missing, keeps the inputs, and toasts', 
       const { state } = await import('/js/state.js');
       const { Events } = await import('/js/events.js');
 
+      // MPI-647: `shell.js`'s `models:checked` listener is the ONLY writer of
+      // `s_installedModelIds` and it refreshes asynchronously from the backend. On a
+      // runner with no weights it resolves to [] and can land inside the 80ms window
+      // below — after the stub, before the deferred toast reads it — which is how this
+      // spec reddened master and then reran green on the identical commit. Re-apply the
+      // stub from a listener registered AFTER shell's: `Events` fans out over an
+      // insertion-ordered Set synchronously, so the refresh is overwritten inside its own
+      // emit, before any deferred reader can see it. This suppresses the race rather than
+      // outrunning it — widening the sleep would only move the flake.
+      let stubbed = null;
+      const unstub = Events.on('models:checked', () => {
+        if (stubbed) state.s_installedModelIds = stubbed;
+      });
+
       const run = async (installed, recorded) => {
         const seen = [];
         const unsubs = [
@@ -48,6 +62,7 @@ test('reuse opens a flow whose model is missing, keeps the inputs, and toasts', 
           Events.on('flow:open', p => seen.push({ kind: 'open', flowId: p.flowId })),
           Events.on('flows:open', () => seen.push({ kind: 'library' })),
         ];
+        stubbed = installed;
         state.s_installedModelIds = installed;
         state.s_flowInputs = {};
         const handled = openFlowFromReuse({
@@ -55,6 +70,13 @@ test('reuse opens a flow whose model is missing, keeps the inputs, and toasts', 
           flowInputs: { positive: 'a cliff' },
           generationSettings: { flowModelIds: recorded },
         });
+        // MPI-647: provoke the CI condition instead of waiting for it. This is exactly
+        // what the boot refresh emits on a machine with no weights installed, and it is
+        // synchronous, so it lands in the worst possible place — after the stub, before
+        // the deferred read. Waiting cannot reproduce it here: the real models ARE
+        // installed on a dev box, so the refresh never resolves empty. Without the
+        // re-stub above, this fails `legacyCard` on every run.
+        Events.emit('models:checked', { installedModelIds: [] });
         // The open + toast are deferred one tick on purpose (the reuse menu's teardown
         // fires a bare `ui:close-all-popups` that would otherwise eat the overlay).
         await new Promise(r => setTimeout(r, 80));
@@ -62,12 +84,14 @@ test('reuse opens a flow whose model is missing, keeps the inputs, and toasts', 
         return { handled, restored: state.s_flowInputs?.scribble?.positive ?? null, seen };
       };
 
-      return {
+      const cases = {
         substituted: await run(['klein-4b'], ['klein-9b']),
         nothingInstalled: await run([], ['klein-9b']),
         sameTier: await run(['klein-9b'], ['klein-9b']),
         legacyCard: await run(['klein-4b'], undefined),
       };
+      unstub();
+      return cases;
     });
 
     for (const [name, r] of Object.entries(result)) {
