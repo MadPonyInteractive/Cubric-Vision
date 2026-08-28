@@ -80,6 +80,49 @@
 
 Project mode: scalable-foundation.
 
+> **2026-08-28 (session 29) — BOTH AUDIO FLOWS ARE WIRED, ILLUSTRATED AND PUSHED. What is
+> left is Fabio's own smoke test through the Flow overlay.** Everything below was dispatched
+> straight to the engine, which exercises the graphs but NOT the flow's media routing,
+> `.preview-assets` storage or reuse.
+>
+> **🔴 THE FIND OF THE SESSION: every Chatterbox run produced SILENCE, including the SHIPPED
+> Voice Changer flow.** A real `.flac`, zero duration, −91 dB, and ComfyUI reporting
+> `success`. Three swallowed failures: `setuptools` resolved to 83 (via torch) and setuptools
+> dropped `pkg_resources` in 81 → `resemble-perth` cannot import → perth's `__init__` swallows
+> that and sets `PerthImplicitWatermarker = None` while `import perth` still SUCCEEDS, so the
+> pack's `PERTH_AVAILABLE` guard reads as fine → `ChatterboxTTS.__init__` calls the None, and
+> `FL_Chatterbox*` catches the `TypeError` into its `message` output (which no graph wires)
+> and returns its placeholder `{"waveform": zeros((1,2,1)), "sample_rate": 16000}`. Fixed with
+> `setuptools<81` (`0340df4f`). **The tell is the file: 16 kHz stereo, one sample.**
+> `python_deps.in` already warned about this exact removal breaking `cupy-wheel` at BUILD
+> time — same removal, biting at RUNTIME.
+>
+> **DramaBox ships (`0588d7a2`, art `e1d567a2`).** Op in all four registries, FlowDef, 17 deps
+> = 15.23 GB HF-primary/`noMirror`, verified against the HF API (4 LFS oids match local
+> sha256, 10 non-LFS match on size, every primary 200). GENERATES FOR REAL: 6.09 s of audio
+> in 32 s on the app engine.
+>
+> **Chatterbox ships with all 23 languages (`55b28d67`, art `20e165ef`).** They are ONE
+> checkpoint (`t3_mtl23ls_v2` = "multilingual, 23 languages"), so shipping every language
+> costs what shipping one would — there was never a list to trim. 14 deps, 6.95 GB, both arms
+> measured working after the fix (en 2.88 s/−22.1 dB, zh 2.91 s/−22.4 dB, ja 2.67 s/−20.9 dB).
+>
+> **A REAL GRAPH BUG was found and fixed:** `FL_ChatterboxVC` read straight off the English
+> TTS instead of the `Input_Is_Multilingual` selector, so on the TTS → VC route — the settled
+> architecture — the language pick did NOTHING and the output was always English. Silent,
+> because `MpiIfElse` is lazy so the selector was simply never evaluated. Fabio gave explicit
+> permission to edit the raw graph. The regression test is MUTATION-CHECKED.
+>
+> **FABIO CORRECTED THE COPY (`ac977451`, `eb1541d1`):** both flows are text-to-speech, so
+> leading DramaBox with "hear your line performed" made the pair read as duplicates. The real
+> split is in the graph — Chatterbox REQUIRES a voice, DramaBox FORKS on the slot and its
+> prompt-only arm builds a speaker from the words. Copy now leads with DIRECTION: describe the
+> speaker and the performance in the line, emotion in the text not a slider.
+>
+> **Peer-session hazard, cost two rebuilds:** the engine's `output/` directory is SHARED and a
+> peer agent's instance wiped it twice, seconds after successful runs. Fetch generated files
+> over `/view` in-process; never read them off disk later.
+
 > **2026-08-27 (session 28) — FABIO SAID YES. DramaBox ships as a Flow, and the reason is
 > IDENTITY:** *"it sticks to the reference a lot better than Chatterbox, especially when we add
 > our performances to Chatterbox. Chatterbox just deviates a lot from the original voice."*
