@@ -108,7 +108,7 @@
   },
   "112": {
     "inputs": {
-      "string": "an Amazon Warrior wearing leaves and strings made out of trees to cover our private parts, with Maori tattoos "
+      "string": "An eighty-year-old wizard with a long beard a pointy hat and fully white eyes with no iris, holding a large staff with a blue jewel on its handle "
     },
     "class_type": "MpiText",
     "_meta": {
@@ -684,7 +684,7 @@
   },
   "737": {
     "inputs": {
-      "boolean": true
+      "boolean": false
     },
     "class_type": "MpiSimpleBoolean",
     "_meta": {
@@ -698,7 +698,7 @@
         0
       ],
       "false": [
-        "860",
+        "874",
         0
       ],
       "boolean": [
@@ -740,7 +740,7 @@
   },
   "754": {
     "inputs": {
-      "text": "head, hat",
+      "text": "face, hat, moustache",
       "clip": [
         "753",
         1
@@ -978,7 +978,7 @@
       "y": 0,
       "operation": "subtract",
       "destination": [
-        "860",
+        "874",
         0
       ],
       "source": [
@@ -1003,29 +1003,108 @@
       "title": "Invert Mask"
     }
   },
-  "860": {
+  "864": {
     "inputs": {
-      "bg_removal_model": [
-        "861",
+      "threshold": 0.5,
+      "refine_iterations": 2,
+      "individual_masks": false,
+      "model": [
+        "753",
         0
       ],
       "image": [
         "730",
         0
+      ],
+      "conditioning": [
+        "866",
+        0
       ]
     },
-    "class_type": "RemoveBackground",
+    "class_type": "SAM3_Detect",
     "_meta": {
-      "title": "Remove Background"
+      "title": "char"
     }
   },
-  "861": {
+  "866": {
     "inputs": {
-      "bg_removal_name": "birefnet.safetensors"
+      "text": "background:3",
+      "clip": [
+        "753",
+        1
+      ]
     },
-    "class_type": "LoadBackgroundRemovalModel",
+    "class_type": "CLIPTextEncode",
     "_meta": {
-      "title": "Load Background Removal Model"
+      "title": "SAM3 vocabulary"
+    }
+  },
+  "868": {
+    "inputs": {
+      "x": 0,
+      "y": 0,
+      "operation": "add",
+      "destination": [
+        "870",
+        0
+      ],
+      "source": [
+        "864",
+        0
+      ]
+    },
+    "class_type": "MaskComposite",
+    "_meta": {
+      "title": "paste the head mask back at full size"
+    }
+  },
+  "870": {
+    "inputs": {
+      "value": 0,
+      "width": [
+        "771",
+        0
+      ],
+      "height": [
+        "772",
+        0
+      ]
+    },
+    "class_type": "SolidMask",
+    "_meta": {
+      "title": "empty sheet-sized canvas"
+    }
+  },
+  "874": {
+    "inputs": {
+      "mask": [
+        "875",
+        0
+      ]
+    },
+    "class_type": "InvertMask",
+    "_meta": {
+      "title": "Invert Mask"
+    }
+  },
+  "875": {
+    "inputs": {
+      "expand": 3,
+      "incremental_expandrate": 0,
+      "tapered_corners": true,
+      "flip_input": false,
+      "blur_radius": 1,
+      "lerp_alpha": 1,
+      "decay_factor": 1,
+      "fill_holes": false,
+      "mask": [
+        "868",
+        0
+      ]
+    },
+    "class_type": "GrowMaskWithBlur",
+    "_meta": {
+      "title": "Grow Mask With Blur"
     }
   }
 }

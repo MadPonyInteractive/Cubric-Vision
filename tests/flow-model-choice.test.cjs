@@ -416,8 +416,32 @@ test('the Character Sheet fills its ONE LoRA rack, and no flat or phase-2 rack s
     // because this is the test that used to prove the opposite.
     assert.ok(!Object.values(sheet).some(n => n.class_type === 'LanPaint_KSampler'),
         'the LanPaint head-removal pass should be gone — MPI-628 replaced it with a matte');
-    assert.ok(Object.values(sheet).some(n => n.class_type === 'RemoveBackground'),
-        'the head removal now subtracts the head mask from a BiRefNet subject matte');
+
+    // The subject matte is SAM3-on-BACKGROUND, INVERTED — not a subject segmenter.
+    // This is not a stylistic preference, it is the fix for a shipped defect: BiRefNet
+    // was asked to keep "the subject" across a THREE-PANEL sheet and dropped the thin
+    // props, so a wizard's staff was painted out as background. Segmenting what to
+    // THROW AWAY is closed-world — anything the model fails to call background survives
+    // by default — while segmenting what to keep has to name every prop. A regression to
+    // any subject-matting model brings the dropped-prop bug straight back.
+    assert.ok(!Object.values(sheet).some(n =>
+        n.class_type === 'RemoveBackground' || n.class_type === 'LoadBackgroundRemovalModel'),
+    'the subject matte must not come from a background-removal model — that is what dropped the staffs');
+
+    const bgVocab = Object.values(sheet)
+        .filter(n => n.class_type === 'SAM3_Detect')
+        .map(n => sheet[n.inputs?.conditioning?.[0]]?.inputs?.text)
+        .find(text => typeof text === 'string' && text.includes('background'));
+    assert.ok(bgVocab, 'the sheet needs a SAM3_Detect prompted with "background" to build the matte');
+
+    // `max_detections` DEFAULTS TO 1 (comfy/text_encoders/sam3_clip.py `_parse_prompts`),
+    // and the cap is applied AFTER thresholding — `order = scores.argsort(...)[:max_det]`
+    // in comfy_extras/nodes_sam3.py. The sheet has three panels, so a bare "background"
+    // mattes ONE of them and greys the other two. It fails silently: a plausible image
+    // comes back and only a careful look at the sheet shows it. The `:N` suffix is the
+    // only thing preventing that, which is why it is pinned here and not merely commented.
+    assert.match(bgVocab, /background\s*:\s*[2-9]/,
+        'the background vocabulary must carry an explicit ":N" — max_detections defaults to 1 and would matte one panel of three');
 });
 
 test('the Outpaint arms match the weights and the twin graph (MPI-594)', async () => {

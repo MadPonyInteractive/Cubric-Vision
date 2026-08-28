@@ -10,6 +10,8 @@
     "docs/models/klein/9b.md",
     "docs/models/klein/removal.md",
     "docs/releases/UNRELEASED.md",
+    "tests/flow-model-choice.test.cjs",
+    "docs/flows/character-sheet.md",
     ".agents/mpi-kanban/tasks/MPI-603/"
   ]
 }

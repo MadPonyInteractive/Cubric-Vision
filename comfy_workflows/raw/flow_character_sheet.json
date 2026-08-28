@@ -1,22 +1,22 @@
 {
   "id": "8c903c85-8d5e-4c32-82d9-491dd4cd89e3",
   "revision": 0,
-  "last_node_id": 863,
-  "last_link_id": 1725,
+  "last_node_id": 880,
+  "last_link_id": 1765,
   "nodes": [
     {
       "id": 136,
       "type": "MpiLoraModel",
       "pos": [
-        -4312.552491457467,
-        2814.4276577445025
+        -5039.825218730188,
+        3796.245839562677
       ],
       "size": [
         270,
         122
       ],
       "flags": {},
-      "order": 77,
+      "order": 87,
       "mode": 0,
       "inputs": [
         {
@@ -46,9 +46,9 @@
       ],
       "title": "Input_Lora_Phase1_2",
       "properties": {
+        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -66,15 +66,15 @@
       "id": 137,
       "type": "MpiLoraModel",
       "pos": [
-        -3991.892472329964,
-        2814.8723806649614
+        -4719.165199602685,
+        3796.6905624831356
       ],
       "size": [
         270,
         122
       ],
       "flags": {},
-      "order": 83,
+      "order": 93,
       "mode": 0,
       "inputs": [
         {
@@ -104,9 +104,9 @@
       ],
       "title": "Input_Lora_Phase1_5",
       "properties": {
+        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -124,15 +124,15 @@
       "id": 138,
       "type": "MpiLoraModel",
       "pos": [
-        -4310.463546873375,
-        3008.6457000985356
+        -5037.736274146096,
+        3990.46388191671
       ],
       "size": [
         270,
         122
       ],
       "flags": {},
-      "order": 87,
+      "order": 99,
       "mode": 0,
       "inputs": [
         {
@@ -162,9 +162,9 @@
       ],
       "title": "Input_Lora_Phase1_3",
       "properties": {
+        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -182,15 +182,15 @@
       "id": 141,
       "type": "MpiLoraModel",
       "pos": [
-        -4311.730380625652,
-        2621.665143098422
+        -5039.003107898373,
+        3603.4833249165963
       ],
       "size": [
         270,
         122
       ],
       "flags": {},
-      "order": 61,
+      "order": 73,
       "mode": 0,
       "inputs": [
         {
@@ -220,9 +220,9 @@
       ],
       "title": "Input_Lora_Phase1_1",
       "properties": {
+        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -240,15 +240,15 @@
       "id": 139,
       "type": "MpiLoraModel",
       "pos": [
-        -3991.2590954309653,
-        3006.179327625947
+        -4718.531822703686,
+        3987.997509444121
       ],
       "size": [
         270,
         122
       ],
       "flags": {},
-      "order": 92,
+      "order": 103,
       "mode": 0,
       "inputs": [
         {
@@ -278,9 +278,9 @@
       ],
       "title": "Input_Lora_Phase1_6",
       "properties": {
+        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -298,15 +298,15 @@
       "id": 268,
       "type": "SetNode",
       "pos": [
-        -3628.449985834746,
-        3280.099232745876
+        -4355.722713107468,
+        4261.917414564051
       ],
       "size": [
         210,
         60
       ],
       "flags": {},
-      "order": 43,
+      "order": 45,
       "mode": 0,
       "inputs": [
         {
@@ -338,8 +338,8 @@
       "id": 56,
       "type": "VAELoader",
       "pos": [
-        -4112.26387005694,
-        3458.3143083463538
+        -4839.53659732966,
+        4440.1324901645285
       ],
       "size": [
         453.81388422219266,
@@ -359,9 +359,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "VAELoader",
         "cnr_id": "comfy-core",
         "ver": "0.25.0",
-        "Node name for S&R": "VAELoader",
         "models": [
           {
             "name": "qwen_image_vae.safetensors",
@@ -380,15 +380,15 @@
       "id": 269,
       "type": "SetNode",
       "pos": [
-        -3628.449985834746,
-        3458.3143083463538
+        -4355.722713107468,
+        4440.1324901645285
       ],
       "size": [
         210,
         60
       ],
       "flags": {},
-      "order": 39,
+      "order": 42,
       "mode": 0,
       "inputs": [
         {
@@ -420,8 +420,8 @@
       "id": 51,
       "type": "CLIPTextEncode",
       "pos": [
-        -3244.0209570528546,
-        2987.507710461571
+        -3971.2936843255766,
+        3969.3258922797454
       ],
       "size": [
         480,
@@ -430,7 +430,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 45,
+      "order": 47,
       "mode": 0,
       "inputs": [
         {
@@ -460,9 +460,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "CLIPTextEncode",
         "cnr_id": "comfy-core",
-        "ver": "0.25.0",
-        "Node name for S&R": "CLIPTextEncode"
+        "ver": "0.25.0"
       },
       "widgets_values": [
         "A high-contrast, hyper-stylized fashion editorial portrait shot against a saturated mustard-yellow seamless backdrop, with the central figure rendered in crisp desaturated black-and-white, creating a striking duotone aesthetic reminiscent of David LaChapelle meets Helmut Newton with a punk-gothic edge.\n\nThe subject is a fierce young woman with a platinum-bleached, spiked liberty mohawk crown of hair, her expression cold and commanding as she stares directly into the lens. She wears a cropped black leather biker jacket exploding with oversized metallic conical studs and spikes across the shoulders, paired with a minimal black bikini bottom, sheer black thigh-high stockings, and chunky knee-high lace-up combat platform boots. Her toned, athletic physique is fully exposed at the midriff.\n\nShe sits regally upon an ornate throne carved in the shape of a snarling, fanged beast's head — part dragon, part demonic feline — its silver-grey surface intricately detailed with bones, scales, and gothic ornamentation. Her booted foot rests on a battered metal road case wrapped in heavy chains and covered in stickers and band decals.\n\nIn her right hand she grips a massive medieval war scythe, its long wooden shaft wrapped in leather, the enormous curved blade arcing dramatically over her head. Perched on her left fist, talons gripping her knuckles, is a majestic American bald eagle with pristine white head feathers and a sharp yellow beak, staring off to the side with predatory alertness.\n\nStudio lighting is hard and theatrical, casting crisp shadows. The composition is symmetrical, iconic, and poster-like — punk rock goddess of war meets American mythology. Hyperrealistic, high-fashion photography, 8k, sharp detail, magazine cover quality."
@@ -474,8 +474,8 @@
       "id": 290,
       "type": "ToBasicPipe",
       "pos": [
-        -2666.378308687776,
-        2955.7732024755946
+        -3393.6510359604986,
+        3937.591384293769
       ],
       "size": [
         187.5,
@@ -484,7 +484,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 98,
+      "order": 109,
       "mode": 0,
       "inputs": [
         {
@@ -524,9 +524,9 @@
       ],
       "title": "Balanced",
       "properties": {
+        "Node name for S&R": "ToBasicPipe",
         "cnr_id": "comfyui-impact-pack",
         "ver": "8.22.0",
-        "Node name for S&R": "ToBasicPipe",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.1",
@@ -539,8 +539,8 @@
       "id": 143,
       "type": "ToBasicPipe",
       "pos": [
-        -2663.2959554038757,
-        2773.505403084469
+        -3390.568682676598,
+        3755.3235849026432
       ],
       "size": [
         187.5,
@@ -549,7 +549,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 97,
+      "order": 108,
       "mode": 0,
       "inputs": [
         {
@@ -589,9 +589,9 @@
       ],
       "title": "High",
       "properties": {
+        "Node name for S&R": "ToBasicPipe",
         "cnr_id": "comfyui-impact-pack",
         "ver": "8.22.0",
-        "Node name for S&R": "ToBasicPipe",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.1",
@@ -604,8 +604,8 @@
       "id": 57,
       "type": "ConditioningZeroOut",
       "pos": [
-        -2928.5874232700776,
-        3041.53803735323
+        -3655.8601505428005,
+        4023.356219171404
       ],
       "size": [
         225,
@@ -614,7 +614,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 62,
+      "order": 66,
       "mode": 0,
       "inputs": [
         {
@@ -633,9 +633,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "ConditioningZeroOut",
         "cnr_id": "comfy-core",
-        "ver": "0.25.0",
-        "Node name for S&R": "ConditioningZeroOut"
+        "ver": "0.25.0"
       },
       "widgets_values": []
     },
@@ -653,7 +653,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 81,
+      "order": 89,
       "mode": 0,
       "inputs": [
         {
@@ -678,9 +678,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "VAEDecode",
         "cnr_id": "comfy-core",
         "ver": "0.3.29",
-        "Node name for S&R": "VAEDecode",
         "enableTabs": false,
         "tabWidth": 65,
         "tabXOffset": 10,
@@ -699,15 +699,15 @@
       "id": 500,
       "type": "SetNode",
       "pos": [
-        -2432.151075429491,
-        4695.3832009170765
+        -2541.2419845203995,
+        7013.565019098876
       ],
       "size": [
         210,
         58
       ],
       "flags": {},
-      "order": 55,
+      "order": 56,
       "mode": 0,
       "inputs": [
         {
@@ -782,7 +782,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 40,
+      "order": 43,
       "mode": 0,
       "inputs": [
         {
@@ -835,9 +835,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "FromBasicPipe",
         "cnr_id": "comfyui-impact-pack",
         "ver": "8.22.0",
-        "Node name for S&R": "FromBasicPipe",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.1",
@@ -858,7 +858,7 @@
         26
       ],
       "flags": {},
-      "order": 59,
+      "order": 64,
       "mode": 0,
       "inputs": [
         {
@@ -967,7 +967,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 60,
+      "order": 65,
       "mode": 0,
       "inputs": [
         {
@@ -999,9 +999,9 @@
       ],
       "title": "Accelerator Lora",
       "properties": {
+        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -1019,8 +1019,8 @@
       "id": 617,
       "type": "MpiSimpleBoolean",
       "pos": [
-        -2739.1020672627933,
-        4836.644363615327
+        -2848.192976353702,
+        7154.826181797127
       ],
       "size": [
         270,
@@ -1041,9 +1041,9 @@
       ],
       "title": "Input_is_Turbo",
       "properties": {
+        "Node name for S&R": "MpiSimpleBoolean",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "aaa1d2d9fa713decae6843e64f5a81b84f9f443d",
-        "Node name for S&R": "MpiSimpleBoolean"
+        "ver": "aaa1d2d9fa713decae6843e64f5a81b84f9f443d"
       },
       "widgets_values": [
         true
@@ -1063,7 +1063,7 @@
         78
       ],
       "flags": {},
-      "order": 86,
+      "order": 95,
       "mode": 0,
       "inputs": [
         {
@@ -1095,9 +1095,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiIfElse",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633",
-        "Node name for S&R": "MpiIfElse"
+        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633"
       },
       "widgets_values": [
         true
@@ -1142,15 +1142,15 @@
       "id": 621,
       "type": "MpiIfElse",
       "pos": [
-        -2359.630686572589,
-        2876.2867767065936
+        -3086.9034138453126,
+        3858.104958524768
       ],
       "size": [
         227.56230003818587,
         78
       ],
       "flags": {},
-      "order": 99,
+      "order": 110,
       "mode": 0,
       "inputs": [
         {
@@ -1182,9 +1182,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiIfElse",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633",
-        "Node name for S&R": "MpiIfElse"
+        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633"
       },
       "widgets_values": [
         true
@@ -1194,8 +1194,8 @@
       "id": 622,
       "type": "GetNode",
       "pos": [
-        -2356.703537352901,
-        3001.8364341091074
+        -3083.976264625624,
+        3983.6546159272816
       ],
       "size": [
         210,
@@ -1229,15 +1229,15 @@
       "id": 253,
       "type": "SetNode",
       "pos": [
-        -2093.6267911473533,
-        2880.8578465021706
+        -2820.8995184200767,
+        3862.676028320345
       ],
       "size": [
         210,
         58
       ],
       "flags": {},
-      "order": 100,
+      "order": 111,
       "mode": 0,
       "inputs": [
         {
@@ -1267,15 +1267,15 @@
       "id": 656,
       "type": "SetNode",
       "pos": [
-        -4613.239977277482,
-        4185.091472776772
+        -7513.239977277463,
+        7257.8187455040215
       ],
       "size": [
         210,
         58
       ],
       "flags": {},
-      "order": 44,
+      "order": 46,
       "mode": 0,
       "inputs": [
         {
@@ -1302,62 +1302,18 @@
       ]
     },
     {
-      "id": 55,
-      "type": "UNETLoader",
-      "pos": [
-        -5308.494705770039,
-        2629.685042861824
-      ],
-      "size": [
-        448.2014121009079,
-        82.44518722905514
-      ],
-      "flags": {},
-      "order": 7,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "MODEL",
-          "type": "MODEL",
-          "links": [
-            952
-          ]
-        }
-      ],
-      "title": "Input_Base_Model",
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.25.0",
-        "Node name for S&R": "UNETLoader",
-        "models": [
-          {
-            "name": "krea2_turbo_fp8_scaled.safetensors",
-            "url": "https://huggingface.co/Comfy-Org/Krea-2/resolve/main/diffusion_models/krea2_turbo_fp8_scaled.safetensors",
-            "directory": "diffusion_models"
-          }
-        ]
-      },
-      "widgets_values": [
-        "krea2_raw_int8_convrot.safetensors",
-        "default"
-      ],
-      "color": "#323",
-      "bgcolor": "#535"
-    },
-    {
       "id": 69,
       "type": "CLIPLoader",
       "pos": [
-        -4113.789423745817,
-        3280.099232745876
+        -4841.062151018537,
+        4261.917414564051
       ],
       "size": [
         455.3394379110698,
         108.2150756004794
       ],
       "flags": {},
-      "order": 8,
+      "order": 7,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -1370,9 +1326,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "CLIPLoader",
         "cnr_id": "comfy-core",
         "ver": "0.25.0",
-        "Node name for S&R": "CLIPLoader",
         "models": [
           {
             "name": "qwen3vl_4b_fp8_scaled.safetensors",
@@ -1393,15 +1349,15 @@
       "id": 659,
       "type": "GetNode",
       "pos": [
-        -3535.411087945669,
-        2970.634495405839
+        -4262.683815218391,
+        3952.4526772240133
       ],
       "size": [
         210,
         58
       ],
       "flags": {},
-      "order": 9,
+      "order": 8,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -1426,15 +1382,15 @@
       "id": 657,
       "type": "GetNode",
       "pos": [
-        -3585.3235758842025,
-        2884.9615445600084
+        -4312.5963031569245,
+        3866.7797263781827
       ],
       "size": [
         210,
         58
       ],
       "flags": {},
-      "order": 10,
+      "order": 9,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -1459,8 +1415,8 @@
       "id": 282,
       "type": "CLIPTextEncode",
       "pos": [
-        -3238.1253603173795,
-        2900.8009987393416
+        -3965.3980875901016,
+        3882.619180557516
       ],
       "size": [
         480,
@@ -1469,7 +1425,7 @@
       "flags": {
         "collapsed": true
       },
-      "order": 46,
+      "order": 48,
       "mode": 0,
       "inputs": [
         {
@@ -1497,9 +1453,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "CLIPTextEncode",
         "cnr_id": "comfy-core",
-        "ver": "0.25.0",
-        "Node name for S&R": "CLIPTextEncode"
+        "ver": "0.25.0"
       },
       "widgets_values": [
         ""
@@ -1521,7 +1477,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 69,
+      "order": 75,
       "mode": 0,
       "inputs": [
         {
@@ -1596,9 +1552,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "ClownsharKSampler_Beta",
         "cnr_id": "RES4LYF",
         "ver": "5ce9b5a77c227bf864e447a1e65305bf6cada5c2",
-        "Node name for S&R": "ClownsharKSampler_Beta",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.1",
@@ -1635,7 +1591,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 76,
+      "order": 83,
       "mode": 0,
       "inputs": [
         {
@@ -1710,9 +1666,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "ClownsharKSampler_Beta",
         "cnr_id": "RES4LYF",
         "ver": "5ce9b5a77c227bf864e447a1e65305bf6cada5c2",
-        "Node name for S&R": "ClownsharKSampler_Beta",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.1",
@@ -1749,7 +1705,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 75,
+      "order": 82,
       "mode": 0,
       "inputs": [
         {
@@ -1824,9 +1780,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "ClownsharKSampler_Beta",
         "cnr_id": "RES4LYF",
         "ver": "5ce9b5a77c227bf864e447a1e65305bf6cada5c2",
-        "Node name for S&R": "ClownsharKSampler_Beta",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.1",
@@ -1863,7 +1819,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 47,
+      "order": 49,
       "mode": 0,
       "inputs": [
         {
@@ -1894,9 +1850,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "EmptyLatentImage",
         "cnr_id": "comfy-core",
         "ver": "0.3.60",
-        "Node name for S&R": "EmptyLatentImage",
         "ue_properties": {
           "widget_ue_connectable": {
             "width": true,
@@ -1917,15 +1873,15 @@
       "id": 670,
       "type": "MpiAnySwitch",
       "pos": [
-        -4960,
-        3720
+        -7859.999999999979,
+        6792.72727272725
       ],
       "size": [
         270,
         138
       ],
       "flags": {},
-      "order": 52,
+      "order": 54,
       "mode": 0,
       "inputs": [
         {
@@ -1983,80 +1939,27 @@
       ],
       "title": "Recipe_Select",
       "properties": {
+        "Node name for S&R": "MpiAnySwitch",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633",
-        "Node name for S&R": "MpiAnySwitch"
+        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633"
       },
       "widgets_values": [
         1
       ]
     },
     {
-      "id": 672,
-      "type": "StringReplace",
-      "pos": [
-        -4600,
-        3720
-      ],
-      "size": [
-        400,
-        200
-      ],
-      "flags": {},
-      "order": 65,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "string",
-          "type": "STRING",
-          "widget": {
-            "name": "string"
-          },
-          "link": 1441
-        },
-        {
-          "name": "replace",
-          "type": "STRING",
-          "widget": {
-            "name": "replace"
-          },
-          "link": 1442
-        }
-      ],
-      "outputs": [
-        {
-          "name": "STRING",
-          "type": "STRING",
-          "links": [
-            1443
-          ]
-        }
-      ],
-      "title": "Sheet_Prompt",
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.27.0",
-        "Node name for S&R": "StringReplace"
-      },
-      "widgets_values": [
-        "",
-        "[CHARACTER PROMPT]",
-        ""
-      ]
-    },
-    {
       "id": 673,
       "type": "PreviewAny",
       "pos": [
-        -3758.1196555444726,
-        3720
+        -6658.119655544455,
+        6792.72727272725
       ],
       "size": [
         340,
         450
       ],
       "flags": {},
-      "order": 79,
+      "order": 85,
       "mode": 0,
       "inputs": [
         {
@@ -2074,9 +1977,9 @@
       ],
       "title": "Output_prompt",
       "properties": {
+        "Node name for S&R": "PreviewAny",
         "cnr_id": "comfy-core",
-        "ver": "0.27.0",
-        "Node name for S&R": "PreviewAny"
+        "ver": "0.27.0"
       },
       "widgets_values": [],
       "color": "#432",
@@ -2086,15 +1989,15 @@
       "id": 658,
       "type": "SetNode",
       "pos": [
-        -4118.908710119196,
-        3736.907234314218
+        -7018.908710119178,
+        6809.634507041468
       ],
       "size": [
         210,
         58
       ],
       "flags": {},
-      "order": 73,
+      "order": 78,
       "mode": 0,
       "inputs": [
         {
@@ -2126,15 +2029,15 @@
       "id": 283,
       "type": "MpiText",
       "pos": [
-        -5255.253551512975,
-        4183.76895542614
+        -8155.253551512946,
+        7256.496228153389
       ],
       "size": [
         568.2989837959294,
         128.74933532727096
       ],
       "flags": {},
-      "order": 11,
+      "order": 10,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -2148,9 +2051,9 @@
       ],
       "title": "Input_Negative",
       "properties": {
+        "Node name for S&R": "MpiText",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
-        "Node name for S&R": "MpiText",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -2167,15 +2070,15 @@
       "id": 245,
       "type": "MpiLoraModel",
       "pos": [
-        -4803.535947737574,
-        2624.2907281801045
+        -5530.808675010295,
+        3606.1089099982787
       ],
       "size": [
         398.93750945335853,
         122
       ],
       "flags": {},
-      "order": 42,
+      "order": 59,
       "mode": 0,
       "inputs": [
         {
@@ -2205,9 +2108,9 @@
       ],
       "title": "Input_Bypass_Filter_Lora",
       "properties": {
+        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -2225,15 +2128,15 @@
       "id": 140,
       "type": "MpiLoraModel",
       "pos": [
-        -4001.259095430966,
-        2616.2877951642067
+        -4728.531822703687,
+        3598.105976982381
       ],
       "size": [
         270,
         122
       ],
       "flags": {},
-      "order": 71,
+      "order": 80,
       "mode": 0,
       "inputs": [
         {
@@ -2263,9 +2166,9 @@
       ],
       "title": "Input_Lora_Phase1_4",
       "properties": {
+        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
-        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -2283,15 +2186,15 @@
       "id": 271,
       "type": "GetNode",
       "pos": [
-        -2958.0988368343174,
-        2917.978668782649
+        -3685.3715641070403,
+        3899.7968506008233
       ],
       "size": [
         210,
         58
       ],
       "flags": {},
-      "order": 12,
+      "order": 11,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -2319,15 +2222,15 @@
       "id": 270,
       "type": "GetNode",
       "pos": [
-        -3585.8667029172407,
-        2789.758573380363
+        -4313.139430189963,
+        3771.5767551985373
       ],
       "size": [
         210,
         60
       ],
       "flags": {},
-      "order": 13,
+      "order": 12,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -2357,15 +2260,15 @@
       "id": 529,
       "type": "SetNode",
       "pos": [
-        -3025.302371229652,
-        2629.388667901177
+        -3752.575098502374,
+        3611.2068497193513
       ],
       "size": [
         210,
         60
       ],
       "flags": {},
-      "order": 95,
+      "order": 106,
       "mode": 0,
       "inputs": [
         {
@@ -2400,15 +2303,15 @@
       "id": 618,
       "type": "SetNode",
       "pos": [
-        -2428.5119101250234,
-        4838.251994862164
+        -2537.602819215932,
+        7156.433813043964
       ],
       "size": [
         210,
         58
       ],
       "flags": {},
-      "order": 41,
+      "order": 44,
       "mode": 0,
       "inputs": [
         {
@@ -2448,7 +2351,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 70,
+      "order": 76,
       "mode": 0,
       "inputs": [
         {
@@ -2523,9 +2426,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "ClownsharKSampler_Beta",
         "cnr_id": "RES4LYF",
         "ver": "5ce9b5a77c227bf864e447a1e65305bf6cada5c2",
-        "Node name for S&R": "ClownsharKSampler_Beta",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.1",
@@ -2552,8 +2455,8 @@
       "id": 674,
       "type": "SetNode",
       "pos": [
-        -1566.2231855388316,
-        5106.941297183475
+        -1675.3140946297399,
+        7425.123115365276
       ],
       "size": [
         210,
@@ -2562,7 +2465,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 66,
+      "order": 71,
       "mode": 0,
       "inputs": [
         {
@@ -2594,8 +2497,8 @@
       "id": 675,
       "type": "SetNode",
       "pos": [
-        -1561.0450542623537,
-        5230.645949318939
+        -1670.135963353262,
+        7548.827767500738
       ],
       "size": [
         210,
@@ -2604,7 +2507,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 67,
+      "order": 72,
       "mode": 0,
       "inputs": [
         {
@@ -2644,7 +2547,7 @@
         60
       ],
       "flags": {},
-      "order": 14,
+      "order": 13,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -2679,7 +2582,7 @@
         58
       ],
       "flags": {},
-      "order": 15,
+      "order": 14,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -2714,7 +2617,7 @@
         26
       ],
       "flags": {},
-      "order": 91,
+      "order": 101,
       "mode": 0,
       "inputs": [
         {
@@ -2734,9 +2637,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MpiClearVram",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "4709e344671c395192bbec971b33179e6ee518ad",
-        "Node name for S&R": "MpiClearVram"
+        "ver": "4709e344671c395192bbec971b33179e6ee518ad"
       },
       "widgets_values": []
     },
@@ -2752,7 +2655,7 @@
         60
       ],
       "flags": {},
-      "order": 96,
+      "order": 107,
       "mode": 0,
       "inputs": [
         {
@@ -2792,7 +2695,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 82,
+      "order": 90,
       "mode": 0,
       "inputs": [
         {
@@ -2817,9 +2720,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "VAEDecode",
         "cnr_id": "comfy-core",
         "ver": "0.3.29",
-        "Node name for S&R": "VAEDecode",
         "enableTabs": false,
         "tabWidth": 65,
         "tabXOffset": 10,
@@ -2846,7 +2749,7 @@
         32.756528546552545
       ],
       "flags": {},
-      "order": 94,
+      "order": 105,
       "mode": 0,
       "inputs": [
         {
@@ -2866,9 +2769,9 @@
       ],
       "title": "Character Sheet Generation Image Output",
       "properties": {
+        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
-        "Node name for S&R": "MpiReroute"
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1"
       },
       "widgets_values": []
     },
@@ -2876,15 +2779,15 @@
       "id": 739,
       "type": "SetNode",
       "pos": [
-        -2433.2939719509673,
-        4954.332422999537
+        -2542.384881041876,
+        7272.514241181337
       ],
       "size": [
         210,
         60
       ],
       "flags": {},
-      "order": 54,
+      "order": 63,
       "mode": 0,
       "inputs": [
         {
@@ -2922,7 +2825,7 @@
         58
       ],
       "flags": {},
-      "order": 16,
+      "order": 15,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -2947,15 +2850,49 @@
       "bgcolor": "#29699c"
     },
     {
-      "id": 744,
-      "type": "GetNode",
+      "id": 667,
+      "type": "PrimitiveStringMultiline",
       "pos": [
-        -5984.630500038655,
-        6697.3426832836385
+        -9203.926730773368,
+        6718.148472211601
       ],
       "size": [
-        210,
-        58
+        560,
+        420
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            1438
+          ]
+        }
+      ],
+      "title": "Recipe_3D",
+      "properties": {
+        "Node name for S&R": "PrimitiveStringMultiline",
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0"
+      },
+      "widgets_values": [
+        "3D animated character reference sheet of [CHARACTER PROMPT], modelled as a hero character for a feature animation. A single continuous rendered turnaround image containing three views of the same character arranged side by side in one unbroken frame, the grey background flowing continuously behind all three, the same character in every view with identical face, hair and wardrobe. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, a gentle three-quarter angle close to frontal, the whole nose clearly visible with both nostrils and the tip of the nose sitting well inside the outline of the face, both cheeks visible, both eyes visible and looking into the camera, neutral expression, mouth closed, face sharp and clear, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms hanging loose and relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Plain smooth eighteen percent grey card seamless studio background, flat neutral grey. Extremely even flat frontal illumination, soft open shadows, uniform brightness from edge to edge. Clean stylised 3D render with subsurface skin shading, groomed hair, glossy eyes with a small bright catch-light in each pupil, even studio render lighting."
+      ]
+    },
+    {
+      "id": 666,
+      "type": "PrimitiveStringMultiline",
+      "pos": [
+        -9206.620594724594,
+        6246.013589428228
+      ],
+      "size": [
+        560,
+        420
       ],
       "flags": {},
       "order": 17,
@@ -2963,217 +2900,29 @@
       "inputs": [],
       "outputs": [
         {
-          "name": "INT",
-          "type": "INT",
-          "links": [
-            1551,
-            1580
-          ]
-        }
-      ],
-      "title": "Get_H",
-      "properties": {
-        "Node name for S&R": "GetNode",
-        "aux_id": "kijai/ComfyUI-KJNodes"
-      },
-      "widgets_values": [
-        "H"
-      ],
-      "color": "#1b4669",
-      "bgcolor": "#29699c"
-    },
-    {
-      "id": 752,
-      "type": "MpiBox",
-      "pos": [
-        -4693.654337745735,
-        6923.138672710201
-      ],
-      "size": [
-        270.4146484375,
-        130
-      ],
-      "flags": {},
-      "order": 63,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "width",
-          "type": "INT",
-          "widget": {
-            "name": "width"
-          },
-          "link": 1579
-        },
-        {
-          "name": "height",
-          "type": "INT",
-          "widget": {
-            "name": "height"
-          },
-          "link": 1580
-        }
-      ],
-      "outputs": [
-        {
-          "name": "mpi_box",
-          "type": "MPI_BOX",
-          "links": [
-            1545
-          ]
-        }
-      ],
-      "title": "the far-left region (front body only)",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "7d58def84882c6d2e376fe4096f7104012ebc6ec",
-        "Node name for S&R": "MpiBox"
-      },
-      "widgets_values": [
-        512,
-        512,
-        0,
-        0
-      ]
-    },
-    {
-      "id": 755,
-      "type": "SAM3_Detect",
-      "pos": [
-        -4773.654337745736,
-        7253.138672710201
-      ],
-      "size": [
-        330,
-        206
-      ],
-      "flags": {},
-      "order": 78,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 1546
-        },
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 1548
-        },
-        {
-          "name": "conditioning",
-          "shape": 7,
-          "type": "CONDITIONING",
-          "link": 1549
-        },
-        {
-          "label": "bboxes",
-          "name": "bboxes",
-          "shape": 7,
-          "type": "BOUNDING_BOX",
-          "link": null
-        },
-        {
-          "label": "positive_coords",
-          "name": "positive_coords",
-          "shape": 7,
+          "name": "STRING",
           "type": "STRING",
-          "link": null
-        },
-        {
-          "label": "negative_coords",
-          "name": "negative_coords",
-          "shape": 7,
-          "type": "STRING",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "masks",
-          "type": "MASK",
           "links": [
-            1553
-          ]
-        },
-        {
-          "name": "bboxes",
-          "type": "BOUNDING_BOX",
-          "links": []
-        }
-      ],
-      "title": "head + hat, unioned",
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.28.0",
-        "Node name for S&R": "SAM3_Detect"
-      },
-      "widgets_values": [
-        0.5,
-        2,
-        false
-      ]
-    },
-    {
-      "id": 756,
-      "type": "SolidMask",
-      "pos": [
-        -4093.654337745735,
-        6923.138672710201
-      ],
-      "size": [
-        270,
-        106
-      ],
-      "flags": {},
-      "order": 49,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "width",
-          "type": "INT",
-          "widget": {
-            "name": "width"
-          },
-          "link": 1550
-        },
-        {
-          "name": "height",
-          "type": "INT",
-          "widget": {
-            "name": "height"
-          },
-          "link": 1551
-        }
-      ],
-      "outputs": [
-        {
-          "name": "MASK",
-          "type": "MASK",
-          "links": [
-            1552
+            1437
           ]
         }
       ],
-      "title": "empty sheet-sized canvas",
+      "title": "Recipe_Photoreal",
       "properties": {
+        "Node name for S&R": "PrimitiveStringMultiline",
         "cnr_id": "comfy-core",
-        "ver": "0.28.0",
-        "Node name for S&R": "SolidMask"
+        "ver": "0.27.0"
       },
       "widgets_values": [
-        0,
-        512,
-        512
+        "Live-action photographic character reference sheet of [CHARACTER PROMPT], photographed as a real actor for a feature film. A single continuous studio photograph containing three views of the same character arranged side by side in one unbroken frame, the grey background flowing continuously behind all three, the same character in every view with identical face, hair and wardrobe. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, a gentle three-quarter angle close to frontal, the whole nose clearly visible with both nostrils and the tip of the nose sitting well inside the outline of the face, both cheeks visible, both eyes visible and looking into the lens, neutral expression, mouth closed, face sharp and clear, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms hanging loose and relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Plain smooth eighteen percent grey card seamless studio background, flat neutral grey. Extremely even flat frontal illumination, soft open shadows, uniform brightness from edge to edge. Authentic skin texture with visible pores, natural hair, realistic eyes with a small bright catch-light in each pupil, 85mm lens."
       ]
     },
     {
-      "id": 667,
+      "id": 668,
       "type": "PrimitiveStringMultiline",
       "pos": [
-        -6303.926730773398,
-        3645.4211994843504
+        -9209.588615677343,
+        7192.1447299625415
       ],
       "size": [
         560,
@@ -3188,26 +2937,26 @@
           "name": "STRING",
           "type": "STRING",
           "links": [
-            1438
+            1439
           ]
         }
       ],
-      "title": "Recipe_3D",
+      "title": "Recipe_Anime",
       "properties": {
+        "Node name for S&R": "PrimitiveStringMultiline",
         "cnr_id": "comfy-core",
-        "ver": "0.27.0",
-        "Node name for S&R": "PrimitiveStringMultiline"
+        "ver": "0.27.0"
       },
       "widgets_values": [
-        "3D animated character reference sheet of [CHARACTER PROMPT], modelled as a hero character for a feature animation. A single continuous rendered turnaround image containing three views of the same character arranged side by side in one unbroken frame, the grey background flowing continuously behind all three, the same character in every view with identical face, hair and wardrobe. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, a gentle three-quarter angle close to frontal, the whole nose clearly visible with both nostrils and the tip of the nose sitting well inside the outline of the face, both cheeks visible, both eyes visible and looking into the camera, neutral expression, mouth closed, face sharp and clear, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms hanging loose and relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Plain smooth eighteen percent grey card seamless studio background, flat neutral grey. Extremely even flat frontal illumination, soft open shadows, uniform brightness from edge to edge. Clean stylised 3D render with subsurface skin shading, groomed hair, glossy eyes with a small bright catch-light in each pupil, even studio render lighting."
+        "Anime character reference sheet of [CHARACTER PROMPT], drawn as a key character for an animated feature. A single continuous cel-shaded illustration containing three views of the same character arranged side by side in one unbroken frame, the grey background flowing continuously behind all three, the same character in every view with identical face, hair and wardrobe. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, a gentle three-quarter angle close to frontal, the whole nose clearly visible with both nostrils and the tip of the nose sitting well inside the outline of the face, both cheeks visible, both eyes visible and looking at the viewer, neutral expression, mouth closed, face sharp and clear, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms hanging loose and relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Plain smooth eighteen percent grey card seamless studio background, flat neutral grey. Extremely even flat frontal illumination, soft open shadows, uniform brightness from edge to edge. Crisp line art with flat cel-shaded colour fills, clean anime eyes with a small bright highlight in each pupil, model-sheet clarity."
       ]
     },
     {
-      "id": 666,
+      "id": 669,
       "type": "PrimitiveStringMultiline",
       "pos": [
-        -6306.620594724625,
-        3173.2863167009777
+        -9198.493057125492,
+        7680.504510675639
       ],
       "size": [
         560,
@@ -3222,83 +2971,15 @@
           "name": "STRING",
           "type": "STRING",
           "links": [
-            1437
-          ]
-        }
-      ],
-      "title": "Recipe_Photoreal",
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.27.0",
-        "Node name for S&R": "PrimitiveStringMultiline"
-      },
-      "widgets_values": [
-        "Live-action photographic character reference sheet of [CHARACTER PROMPT], photographed as a real actor for a feature film. A single continuous studio photograph containing three views of the same character arranged side by side in one unbroken frame, the grey background flowing continuously behind all three, the same character in every view with identical face, hair and wardrobe. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, a gentle three-quarter angle close to frontal, the whole nose clearly visible with both nostrils and the tip of the nose sitting well inside the outline of the face, both cheeks visible, both eyes visible and looking into the lens, neutral expression, mouth closed, face sharp and clear, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms hanging loose and relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Plain smooth eighteen percent grey card seamless studio background, flat neutral grey. Extremely even flat frontal illumination, soft open shadows, uniform brightness from edge to edge. Authentic skin texture with visible pores, natural hair, realistic eyes with a small bright catch-light in each pupil, 85mm lens."
-      ]
-    },
-    {
-      "id": 668,
-      "type": "PrimitiveStringMultiline",
-      "pos": [
-        -6309.588615677373,
-        4119.417457235292
-      ],
-      "size": [
-        560,
-        420
-      ],
-      "flags": {},
-      "order": 20,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "STRING",
-          "type": "STRING",
-          "links": [
-            1439
-          ]
-        }
-      ],
-      "title": "Recipe_Anime",
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.27.0",
-        "Node name for S&R": "PrimitiveStringMultiline"
-      },
-      "widgets_values": [
-        "Anime character reference sheet of [CHARACTER PROMPT], drawn as a key character for an animated feature. A single continuous cel-shaded illustration containing three views of the same character arranged side by side in one unbroken frame, the grey background flowing continuously behind all three, the same character in every view with identical face, hair and wardrobe. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, a gentle three-quarter angle close to frontal, the whole nose clearly visible with both nostrils and the tip of the nose sitting well inside the outline of the face, both cheeks visible, both eyes visible and looking at the viewer, neutral expression, mouth closed, face sharp and clear, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms hanging loose and relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Plain smooth eighteen percent grey card seamless studio background, flat neutral grey. Extremely even flat frontal illumination, soft open shadows, uniform brightness from edge to edge. Crisp line art with flat cel-shaded colour fills, clean anime eyes with a small bright highlight in each pupil, model-sheet clarity."
-      ]
-    },
-    {
-      "id": 669,
-      "type": "PrimitiveStringMultiline",
-      "pos": [
-        -6298.493057125522,
-        4607.7772379483895
-      ],
-      "size": [
-        560,
-        420
-      ],
-      "flags": {},
-      "order": 21,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "STRING",
-          "type": "STRING",
-          "links": [
             1440
           ]
         }
       ],
       "title": "Recipe_Cartoon",
       "properties": {
+        "Node name for S&R": "PrimitiveStringMultiline",
         "cnr_id": "comfy-core",
-        "ver": "0.27.0",
-        "Node name for S&R": "PrimitiveStringMultiline"
+        "ver": "0.27.0"
       },
       "widgets_values": [
         "2D cartoon character reference sheet of [CHARACTER PROMPT], drawn as a hero character for an animated series. A single continuous flat-colour illustration containing three views of the same character arranged side by side in one unbroken frame, the grey background flowing continuously behind all three, the same character in every view with identical face, hair and wardrobe. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, a gentle three-quarter angle close to frontal, the whole nose clearly visible with both nostrils and the tip of the nose sitting well inside the outline of the face, both cheeks visible, both eyes visible and looking at the viewer, neutral expression, mouth closed, face sharp and clear, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms hanging loose and relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Plain smooth eighteen percent grey card seamless studio background, flat neutral grey. Extremely even flat frontal illumination, soft open shadows, uniform brightness from edge to edge. Bold clean outlines with flat colour fills and simple soft shading, expressive eyes with a small bright highlight in each pupil, model-sheet clarity."
@@ -3308,15 +2989,15 @@
       "id": 676,
       "type": "MpiInt",
       "pos": [
-        -2413.5043007050804,
-        5101.349444238286
+        -2522.595209795989,
+        7419.531262420086
       ],
       "size": [
         210,
         58
       ],
       "flags": {},
-      "order": 22,
+      "order": 20,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3330,9 +3011,9 @@
       ],
       "title": "W_1k",
       "properties": {
+        "Node name for S&R": "MpiInt",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04",
-        "Node name for S&R": "MpiInt"
+        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04"
       },
       "widgets_values": [
         1280
@@ -3344,15 +3025,15 @@
       "id": 677,
       "type": "MpiInt",
       "pos": [
-        -2413.5043007050804,
-        5301.349444238286
+        -2522.595209795989,
+        7619.531262420086
       ],
       "size": [
         210,
         58
       ],
       "flags": {},
-      "order": 23,
+      "order": 21,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3366,9 +3047,9 @@
       ],
       "title": "H_1k",
       "properties": {
+        "Node name for S&R": "MpiInt",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04",
-        "Node name for S&R": "MpiInt"
+        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04"
       },
       "widgets_values": [
         800
@@ -3388,7 +3069,7 @@
         60
       ],
       "flags": {},
-      "order": 88,
+      "order": 96,
       "mode": 0,
       "inputs": [
         {
@@ -3426,7 +3107,7 @@
         58
       ],
       "flags": {},
-      "order": 24,
+      "order": 22,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3461,7 +3142,7 @@
         58
       ],
       "flags": {},
-      "order": 25,
+      "order": 23,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3483,46 +3164,6 @@
       ]
     },
     {
-      "id": 754,
-      "type": "CLIPTextEncode",
-      "pos": [
-        -5255.275229094701,
-        7382.864020803997
-      ],
-      "size": [
-        400,
-        200
-      ],
-      "flags": {},
-      "order": 51,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "clip",
-          "type": "CLIP",
-          "link": 1547
-        }
-      ],
-      "outputs": [
-        {
-          "name": "CONDITIONING",
-          "type": "CONDITIONING",
-          "links": [
-            1549
-          ]
-        }
-      ],
-      "title": "SAM3 vocabulary",
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.28.0",
-        "Node name for S&R": "CLIPTextEncode"
-      },
-      "widgets_values": [
-        "head, hat"
-      ]
-    },
-    {
       "id": 753,
       "type": "CheckpointLoaderSimple",
       "pos": [
@@ -3534,7 +3175,7 @@
         98
       ],
       "flags": {},
-      "order": 26,
+      "order": 24,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3542,14 +3183,16 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            1546
+            1546,
+            1726
           ]
         },
         {
           "name": "CLIP",
           "type": "CLIP",
           "links": [
-            1547
+            1547,
+            1730
           ]
         },
         {
@@ -3560,152 +3203,13 @@
       ],
       "title": "SAM3 Model",
       "properties": {
+        "Node name for S&R": "CheckpointLoaderSimple",
         "cnr_id": "comfy-core",
-        "ver": "0.28.0",
-        "Node name for S&R": "CheckpointLoaderSimple"
+        "ver": "0.28.0"
       },
       "widgets_values": [
         "sam3.1_multiplex_fp16.safetensors"
       ]
-    },
-    {
-      "id": 758,
-      "type": "MpiBoxCrop",
-      "pos": [
-        -4413.654337745736,
-        6923.138672710201
-      ],
-      "size": [
-        250,
-        78
-      ],
-      "flags": {},
-      "order": 72,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 1561
-        },
-        {
-          "name": "mpi_box",
-          "type": "MPI_BOX",
-          "link": 1545
-        }
-      ],
-      "outputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "links": [
-            1548
-          ]
-        },
-        {
-          "name": "mpi_box",
-          "type": "MPI_BOX",
-          "links": []
-        }
-      ],
-      "title": "crop to the far-left region",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "7d58def84882c6d2e376fe4096f7104012ebc6ec",
-        "Node name for S&R": "MpiBoxCrop"
-      },
-      "widgets_values": [
-        false
-      ]
-    },
-    {
-      "id": 759,
-      "type": "MpiBlocker",
-      "pos": [
-        -5665.766464024663,
-        6672.1109090524105
-      ],
-      "size": [
-        270,
-        58
-      ],
-      "flags": {},
-      "order": 50,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "input",
-          "type": "*",
-          "link": 1559
-        },
-        {
-          "name": "boolean",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "boolean"
-          },
-          "link": 1566
-        }
-      ],
-      "outputs": [
-        {
-          "name": "output",
-          "type": "*",
-          "links": [
-            1561,
-            1569
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
-        "Node name for S&R": "MpiBlocker"
-      },
-      "widgets_values": [
-        true
-      ]
-    },
-    {
-      "id": 112,
-      "type": "MpiText",
-      "pos": [
-        -5248.673075542955,
-        3927.3375965835394
-      ],
-      "size": [
-        554.275529025053,
-        196.90800028317108
-      ],
-      "flags": {},
-      "order": 27,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "Text",
-          "type": "STRING",
-          "links": [
-            1442
-          ]
-        }
-      ],
-      "title": "Input_Positive",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
-        "Node name for S&R": "MpiText",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        "an Amazon Warrior wearing leaves and strings made out of trees to cover our private parts, with Maori tattoos "
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
     },
     {
       "id": 757,
@@ -3719,7 +3223,7 @@
         150
       ],
       "flags": {},
-      "order": 84,
+      "order": 91,
       "mode": 0,
       "inputs": [
         {
@@ -3745,9 +3249,9 @@
       ],
       "title": "paste the head mask back at full size",
       "properties": {
+        "Node name for S&R": "MaskComposite",
         "cnr_id": "comfy-core",
-        "ver": "0.28.0",
-        "Node name for S&R": "MaskComposite"
+        "ver": "0.28.0"
       },
       "widgets_values": [
         0,
@@ -3756,88 +3260,18 @@
       ]
     },
     {
-      "id": 766,
-      "type": "PreviewImage",
-      "pos": [
-        -3994.550725534243,
-        7337.630150241289
-      ],
-      "size": [
-        140,
-        246
-      ],
-      "flags": {},
-      "order": 64,
-      "mode": 2,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 1569
-        }
-      ],
-      "outputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "links": null
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.31.0",
-        "Node name for S&R": "PreviewImage"
-      },
-      "widgets_values": []
-    },
-    {
-      "id": 767,
-      "type": "MaskPreview",
-      "pos": [
-        -3467.7923475619796,
-        7338.318193894252
-      ],
-      "size": [
-        140,
-        246
-      ],
-      "flags": {},
-      "order": 89,
-      "mode": 2,
-      "inputs": [
-        {
-          "name": "mask",
-          "type": "MASK",
-          "link": 1570
-        }
-      ],
-      "outputs": [
-        {
-          "name": "mask",
-          "type": "MASK",
-          "links": null
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.31.0",
-        "Node name for S&R": "MaskPreview"
-      },
-      "widgets_values": []
-    },
-    {
       "id": 671,
       "type": "MpiInt",
       "pos": [
-        -5476.588630092682,
-        3819.7398744042
+        -8376.58863009265,
+        6892.4671471314505
       ],
       "size": [
         270,
         58
       ],
       "flags": {},
-      "order": 28,
+      "order": 25,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3851,9 +3285,9 @@
       ],
       "title": "Input_Recipe",
       "properties": {
+        "Node name for S&R": "MpiInt",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
-        "Node name for S&R": "MpiInt"
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1"
       },
       "widgets_values": [
         1
@@ -3865,15 +3299,15 @@
       "id": 768,
       "type": "MpiInt",
       "pos": [
-        -2413.5043007050804,
-        5201.349444238286
+        -2522.595209795989,
+        7519.531262420087
       ],
       "size": [
         210,
         58
       ],
       "flags": {},
-      "order": 29,
+      "order": 26,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3887,9 +3321,9 @@
       ],
       "title": "W_2k",
       "properties": {
+        "Node name for S&R": "MpiInt",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04",
-        "Node name for S&R": "MpiInt"
+        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04"
       },
       "widgets_values": [
         1792
@@ -3901,15 +3335,15 @@
       "id": 769,
       "type": "MpiInt",
       "pos": [
-        -2413.5043007050804,
-        5401.349444238286
+        -2522.595209795989,
+        7719.531262420088
       ],
       "size": [
         210,
         58
       ],
       "flags": {},
-      "order": 30,
+      "order": 27,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -3923,9 +3357,9 @@
       ],
       "title": "H_2k",
       "properties": {
+        "Node name for S&R": "MpiInt",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04",
-        "Node name for S&R": "MpiInt"
+        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04"
       },
       "widgets_values": [
         1120
@@ -3934,96 +3368,18 @@
       "bgcolor": "#653"
     },
     {
-      "id": 771,
-      "type": "MpiAnySwitch",
-      "pos": [
-        -2073.5043007050776,
-        5101.349444238286
-      ],
-      "size": [
-        270,
-        138
-      ],
-      "flags": {},
-      "order": 56,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "any_1",
-          "shape": 7,
-          "type": "*",
-          "link": 1447
-        },
-        {
-          "name": "any_2",
-          "shape": 7,
-          "type": "*",
-          "link": 1573
-        },
-        {
-          "name": "any_3",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        },
-        {
-          "name": "any_4",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        },
-        {
-          "name": "any_5",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        },
-        {
-          "name": "select",
-          "type": "INT",
-          "widget": {
-            "name": "select"
-          },
-          "link": 1575
-        }
-      ],
-      "outputs": [
-        {
-          "name": "any",
-          "type": "*",
-          "links": [
-            1571
-          ]
-        },
-        {
-          "name": "index",
-          "type": "INT",
-          "links": null
-        }
-      ],
-      "title": "Width_Select",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633",
-        "Node name for S&R": "MpiAnySwitch"
-      },
-      "widgets_values": [
-        1
-      ]
-    },
-    {
       "id": 772,
       "type": "MpiAnySwitch",
       "pos": [
-        -2073.5043007050776,
-        5301.349444238286
+        -2182.595209795986,
+        7619.531262420086
       ],
       "size": [
         270,
         138
       ],
       "flags": {},
-      "order": 57,
+      "order": 58,
       "mode": 0,
       "inputs": [
         {
@@ -4081,27 +3437,823 @@
       ],
       "title": "Height_Select",
       "properties": {
+        "Node name for S&R": "MpiAnySwitch",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633",
-        "Node name for S&R": "MpiAnySwitch"
+        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633"
       },
       "widgets_values": [
         1
       ]
     },
     {
+      "id": 850,
+      "type": "GetNode",
+      "pos": [
+        -5599.539108576414,
+        9242.364414975553
+      ],
+      "size": [
+        210,
+        58
+      ],
+      "flags": {},
+      "order": 28,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            1698
+          ]
+        }
+      ],
+      "title": "Get_inpaint mask",
+      "properties": {
+        "Node name for S&R": "GetNode",
+        "aux_id": "kijai/ComfyUI-KJNodes"
+      },
+      "widgets_values": [
+        "inpaint mask"
+      ],
+      "color": "#1c5715",
+      "bgcolor": "#1f401b"
+    },
+    {
+      "id": 494,
+      "type": "PreviewImage",
+      "pos": [
+        -3676.230996673041,
+        8883.626659584339
+      ],
+      "size": [
+        694.920468277696,
+        516.4480839411115
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 102,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 1713
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": []
+        }
+      ],
+      "title": "Output_Image",
+      "properties": {
+        "Node name for S&R": "PreviewImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.3.50",
+        "enableTabs": false,
+        "tabWidth": 65,
+        "tabXOffset": 10,
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "secondTabOffset": 80,
+        "secondTabWidth": 65,
+        "ue_properties": {
+          "version": "7.0.1",
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {}
+        }
+      },
+      "widgets_values": [],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 854,
+      "type": "GrowMask",
+      "pos": [
+        -5350.418888273888,
+        9241.520048674824
+      ],
+      "size": [
+        270,
+        82
+      ],
+      "flags": {},
+      "order": 55,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mask",
+          "type": "MASK",
+          "link": 1698
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            1706
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GrowMask",
+        "cnr_id": "comfy-core",
+        "ver": "0.31.0"
+      },
+      "widgets_values": [
+        6,
+        true
+      ]
+    },
+    {
+      "id": 742,
+      "type": "MpiIfElse",
+      "pos": [
+        -4711.255154248925,
+        9160.404942222585
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 79,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "true",
+          "type": "*",
+          "link": 1754
+        },
+        {
+          "name": "false",
+          "type": "*",
+          "link": 1765
+        },
+        {
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "boolean"
+          },
+          "link": 1528
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": [
+            1716
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MpiIfElse",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1"
+      },
+      "widgets_values": [
+        true
+      ]
+    },
+    {
+      "id": 741,
+      "type": "GetNode",
+      "pos": [
+        -4980.591694840967,
+        9328.95579900628
+      ],
+      "size": [
+        210,
+        58
+      ],
+      "flags": {},
+      "order": 29,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "BOOLEAN",
+          "type": "BOOLEAN",
+          "links": [
+            1528
+          ]
+        }
+      ],
+      "title": "Get_is remove head",
+      "properties": {
+        "Node name for S&R": "GetNode",
+        "aux_id": "kijai/ComfyUI-KJNodes"
+      },
+      "widgets_values": [
+        "is remove head"
+      ]
+    },
+    {
+      "id": 859,
+      "type": "InvertMask",
+      "pos": [
+        -4213.835306710712,
+        9162.543747474669
+      ],
+      "size": [
+        140,
+        26
+      ],
+      "flags": {},
+      "order": 92,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mask",
+          "type": "MASK",
+          "link": 1709
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            1710
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "InvertMask",
+        "cnr_id": "comfy-core",
+        "ver": "0.31.0"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 503,
+      "type": "MpiInt",
+      "pos": [
+        -2833.54190623505,
+        7012.213713389565
+      ],
+      "size": [
+        253.5164346041356,
+        58.91996868586102
+      ],
+      "flags": {},
+      "order": 30,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "int",
+          "type": "INT",
+          "slot_index": 0,
+          "links": [
+            1108
+          ]
+        }
+      ],
+      "title": "Input_Seed",
+      "properties": {
+        "Node name for S&R": "MpiInt",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "aaa1d2d9fa713decae6843e64f5a81b84f9f443d"
+      },
+      "widgets_values": [
+        976866873950
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 770,
+      "type": "MpiInt",
+      "pos": [
+        -2882.595209795989,
+        7519.531262420087
+      ],
+      "size": [
+        210,
+        58
+      ],
+      "flags": {},
+      "order": 31,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "int",
+          "type": "INT",
+          "links": [
+            1575,
+            1576
+          ]
+        }
+      ],
+      "title": "Input_Quality",
+      "properties": {
+        "Node name for S&R": "MpiInt",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04"
+      },
+      "widgets_values": [
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 771,
+      "type": "MpiAnySwitch",
+      "pos": [
+        -2182.595209795986,
+        7419.531262420086
+      ],
+      "size": [
+        270,
+        138
+      ],
+      "flags": {},
+      "order": 57,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "any_1",
+          "shape": 7,
+          "type": "*",
+          "link": 1447
+        },
+        {
+          "name": "any_2",
+          "shape": 7,
+          "type": "*",
+          "link": 1573
+        },
+        {
+          "name": "any_3",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        },
+        {
+          "name": "any_4",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        },
+        {
+          "name": "any_5",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        },
+        {
+          "name": "select",
+          "type": "INT",
+          "widget": {
+            "name": "select"
+          },
+          "link": 1575
+        }
+      ],
+      "outputs": [
+        {
+          "name": "any",
+          "type": "*",
+          "links": [
+            1571
+          ]
+        },
+        {
+          "name": "index",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "title": "Width_Select",
+      "properties": {
+        "Node name for S&R": "MpiAnySwitch",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633"
+      },
+      "widgets_values": [
+        1
+      ]
+    },
+    {
+      "id": 672,
+      "type": "StringReplace",
+      "pos": [
+        -7499.999999999982,
+        6792.72727272725
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 69,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": 1441
+        },
+        {
+          "name": "replace",
+          "type": "STRING",
+          "widget": {
+            "name": "replace"
+          },
+          "link": 1442
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            1443
+          ]
+        }
+      ],
+      "title": "Sheet_Prompt",
+      "properties": {
+        "Node name for S&R": "StringReplace",
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0"
+      },
+      "widgets_values": [
+        "",
+        "[CHARACTER PROMPT]",
+        ""
+      ]
+    },
+    {
+      "id": 55,
+      "type": "UNETLoader",
+      "pos": [
+        -6035.76743304276,
+        3611.5032246799983
+      ],
+      "size": [
+        448.2014121009079,
+        82.44518722905514
+      ],
+      "flags": {},
+      "order": 32,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            952
+          ]
+        }
+      ],
+      "title": "Input_Base_Model",
+      "properties": {
+        "Node name for S&R": "UNETLoader",
+        "cnr_id": "comfy-core",
+        "ver": "0.25.0",
+        "models": [
+          {
+            "name": "krea2_turbo_fp8_scaled.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/Krea-2/resolve/main/diffusion_models/krea2_turbo_fp8_scaled.safetensors",
+            "directory": "diffusion_models"
+          }
+        ]
+      },
+      "widgets_values": [
+        "krea2_raw_int8_convrot.safetensors",
+        "default"
+      ],
+      "color": "#323",
+      "bgcolor": "#535"
+    },
+    {
+      "id": 766,
+      "type": "PreviewImage",
+      "pos": [
+        -4285.382388817443,
+        7296.082769772259
+      ],
+      "size": [
+        403.13340963717974,
+        293.4827205360325
+      ],
+      "flags": {},
+      "order": 68,
+      "mode": 2,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 1569
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "PreviewImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.31.0"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 767,
+      "type": "MaskPreview",
+      "pos": [
+        -3841.718771783235,
+        7304.684600181227
+      ],
+      "size": [
+        458.5299169292175,
+        287.5473804690291
+      ],
+      "flags": {},
+      "order": 97,
+      "mode": 2,
+      "inputs": [
+        {
+          "name": "mask",
+          "type": "MASK",
+          "link": 1570
+        }
+      ],
+      "outputs": [
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MaskPreview",
+        "cnr_id": "comfy-core",
+        "ver": "0.31.0"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 754,
+      "type": "CLIPTextEncode",
+      "pos": [
+        -5255.275229094701,
+        7382.864020803997
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 52,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 1547
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            1549
+          ]
+        }
+      ],
+      "title": "SAM3 vocabulary",
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode",
+        "cnr_id": "comfy-core",
+        "ver": "0.28.0"
+      },
+      "widgets_values": [
+        "face, hat, moustache"
+      ]
+    },
+    {
+      "id": 755,
+      "type": "SAM3_Detect",
+      "pos": [
+        -4773.654337745736,
+        7253.138672710201
+      ],
+      "size": [
+        330,
+        206
+      ],
+      "flags": {},
+      "order": 84,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 1546
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 1548
+        },
+        {
+          "name": "conditioning",
+          "shape": 7,
+          "type": "CONDITIONING",
+          "link": 1549
+        },
+        {
+          "label": "bboxes",
+          "name": "bboxes",
+          "shape": 7,
+          "type": "BOUNDING_BOX",
+          "link": null
+        },
+        {
+          "label": "positive_coords",
+          "name": "positive_coords",
+          "shape": 7,
+          "type": "STRING",
+          "link": null
+        },
+        {
+          "label": "negative_coords",
+          "name": "negative_coords",
+          "shape": 7,
+          "type": "STRING",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "masks",
+          "type": "MASK",
+          "links": [
+            1553
+          ]
+        },
+        {
+          "name": "bboxes",
+          "type": "BOUNDING_BOX",
+          "links": []
+        }
+      ],
+      "title": "head + hat, unioned",
+      "properties": {
+        "Node name for S&R": "SAM3_Detect",
+        "cnr_id": "comfy-core",
+        "ver": "0.28.0"
+      },
+      "widgets_values": [
+        0.5,
+        2,
+        false
+      ]
+    },
+    {
+      "id": 756,
+      "type": "SolidMask",
+      "pos": [
+        -4126.491066481982,
+        6923.273803281135
+      ],
+      "size": [
+        270,
+        106
+      ],
+      "flags": {},
+      "order": 60,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 1550
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 1551
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            1552
+          ]
+        }
+      ],
+      "title": "empty sheet-sized canvas",
+      "properties": {
+        "Node name for S&R": "SolidMask",
+        "cnr_id": "comfy-core",
+        "ver": "0.28.0"
+      },
+      "widgets_values": [
+        0,
+        512,
+        512
+      ]
+    },
+    {
+      "id": 752,
+      "type": "MpiBox",
+      "pos": [
+        -4730.815244751773,
+        6940.975908073101
+      ],
+      "size": [
+        270.4146484375,
+        130
+      ],
+      "flags": {},
+      "order": 67,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 1579
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 1580
+        }
+      ],
+      "outputs": [
+        {
+          "name": "mpi_box",
+          "type": "MPI_BOX",
+          "links": [
+            1545
+          ]
+        }
+      ],
+      "title": "the far-left region (front body only)",
+      "properties": {
+        "Node name for S&R": "MpiBox",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "7d58def84882c6d2e376fe4096f7104012ebc6ec"
+      },
+      "widgets_values": [
+        512,
+        512,
+        0,
+        0
+      ]
+    },
+    {
       "id": 774,
       "type": "MpiMath",
       "pos": [
-        -5313.654337745735,
-        6923.138672710201
+        -5273.520558179213,
+        6894.896383385612
       ],
       "size": [
         295.386328125,
         128
       ],
       "flags": {},
-      "order": 48,
+      "order": 50,
       "mode": 0,
       "inputs": [
         {
@@ -4133,62 +4285,166 @@
       ],
       "title": "left 25% of the sheet width",
       "properties": {
+        "Node name for S&R": "MpiMath",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "7d58def84882c6d2e376fe4096f7104012ebc6ec",
-        "Node name for S&R": "MpiMath"
+        "ver": "7d58def84882c6d2e376fe4096f7104012ebc6ec"
       },
       "widgets_values": [
         "a // 4"
       ]
     },
     {
-      "id": 850,
+      "id": 758,
+      "type": "MpiBoxCrop",
+      "pos": [
+        -4413.654337745736,
+        6923.138672710201
+      ],
+      "size": [
+        250,
+        78
+      ],
+      "flags": {},
+      "order": 77,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 1561
+        },
+        {
+          "name": "mpi_box",
+          "type": "MPI_BOX",
+          "link": 1545
+        }
+      ],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            1548
+          ]
+        },
+        {
+          "name": "mpi_box",
+          "type": "MPI_BOX",
+          "links": []
+        }
+      ],
+      "title": "crop to the far-left region",
+      "properties": {
+        "Node name for S&R": "MpiBoxCrop",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "7d58def84882c6d2e376fe4096f7104012ebc6ec"
+      },
+      "widgets_values": [
+        false
+      ]
+    },
+    {
+      "id": 744,
       "type": "GetNode",
       "pos": [
-        -2525.9021779326345,
-        4153.280309973872
+        -5984.630500038655,
+        6697.3426832836385
       ],
       "size": [
         210,
         58
       ],
       "flags": {},
-      "order": 31,
+      "order": 33,
       "mode": 0,
       "inputs": [],
       "outputs": [
         {
-          "name": "MASK",
-          "type": "MASK",
+          "name": "INT",
+          "type": "INT",
           "links": [
-            1698
+            1551,
+            1580
           ]
         }
       ],
-      "title": "Get_inpaint mask",
+      "title": "Get_H",
       "properties": {
         "Node name for S&R": "GetNode",
         "aux_id": "kijai/ComfyUI-KJNodes"
       },
       "widgets_values": [
-        "inpaint mask"
+        "H"
       ],
-      "color": "#1c5715",
-      "bgcolor": "#1f401b"
+      "color": "#1b4669",
+      "bgcolor": "#29699c"
+    },
+    {
+      "id": 870,
+      "type": "SolidMask",
+      "pos": [
+        -4782.265980415005,
+        8157.285495927655
+      ],
+      "size": [
+        270,
+        106
+      ],
+      "flags": {},
+      "order": 61,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 1760
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 1761
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            1746
+          ]
+        }
+      ],
+      "title": "empty sheet-sized canvas",
+      "properties": {
+        "Node name for S&R": "SolidMask",
+        "cnr_id": "comfy-core",
+        "ver": "0.28.0"
+      },
+      "widgets_values": [
+        0,
+        512,
+        512
+      ]
     },
     {
       "id": 851,
       "type": "ImageCompositeMasked",
       "pos": [
-        -932.0810857045236,
-        3792.244401753025
+        -4005.718016348301,
+        8881.328506754713
       ],
       "size": [
         271.64609375,
         146
       ],
       "flags": {},
-      "order": 90,
+      "order": 98,
       "mode": 0,
       "inputs": [
         {
@@ -4218,9 +4474,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "ImageCompositeMasked",
         "cnr_id": "comfy-core",
-        "ver": "0.31.0",
-        "Node name for S&R": "ImageCompositeMasked"
+        "ver": "0.31.0"
       },
       "widgets_values": [
         0,
@@ -4229,116 +4485,191 @@
       ]
     },
     {
-      "id": 494,
-      "type": "PreviewImage",
+      "id": 759,
+      "type": "MpiBlocker",
       "pos": [
-        -602.5940660292633,
-        3794.542554582651
+        -5665.766464024663,
+        6672.1109090524105
       ],
       "size": [
-        694.920468277696,
-        516.4480839411115
+        270,
+        58
       ],
-      "flags": {
-        "collapsed": false
-      },
-      "order": 93,
+      "flags": {},
+      "order": 51,
       "mode": 0,
       "inputs": [
         {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 1713
+          "name": "input",
+          "type": "*",
+          "link": 1559
+        },
+        {
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "boolean"
+          },
+          "link": 1566
         }
       ],
       "outputs": [
         {
-          "name": "images",
+          "name": "output",
+          "type": "*",
+          "links": [
+            1561,
+            1569
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MpiBlocker",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1"
+      },
+      "widgets_values": [
+        true
+      ]
+    },
+    {
+      "id": 864,
+      "type": "SAM3_Detect",
+      "pos": [
+        -4832.725784090938,
+        8319.500075332773
+      ],
+      "size": [
+        330,
+        206
+      ],
+      "flags": {},
+      "order": 74,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 1726
+        },
+        {
+          "name": "image",
           "type": "IMAGE",
+          "link": 1749
+        },
+        {
+          "name": "conditioning",
+          "shape": 7,
+          "type": "CONDITIONING",
+          "link": 1731
+        },
+        {
+          "label": "bboxes",
+          "name": "bboxes",
+          "shape": 7,
+          "type": "BOUNDING_BOX",
+          "link": null
+        },
+        {
+          "label": "positive_coords",
+          "name": "positive_coords",
+          "shape": 7,
+          "type": "STRING",
+          "link": null
+        },
+        {
+          "label": "negative_coords",
+          "name": "negative_coords",
+          "shape": 7,
+          "type": "STRING",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "masks",
+          "type": "MASK",
+          "links": [
+            1740
+          ]
+        },
+        {
+          "name": "bboxes",
+          "type": "BOUNDING_BOX",
           "links": []
         }
       ],
-      "title": "Output_Image",
+      "title": "char",
       "properties": {
+        "Node name for S&R": "SAM3_Detect",
         "cnr_id": "comfy-core",
-        "ver": "0.3.50",
-        "Node name for S&R": "PreviewImage",
-        "enableTabs": false,
-        "tabWidth": 65,
-        "tabXOffset": 10,
-        "hasSecondTab": false,
-        "secondTabText": "Send Back",
-        "secondTabOffset": 80,
-        "secondTabWidth": 65,
-        "ue_properties": {
-          "version": "7.0.1",
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {}
-        }
+        "ver": "0.28.0"
       },
-      "widgets_values": [],
-      "color": "#432",
-      "bgcolor": "#653"
+      "widgets_values": [
+        0.5,
+        2,
+        false
+      ]
     },
     {
-      "id": 854,
-      "type": "GrowMask",
+      "id": 866,
+      "type": "CLIPTextEncode",
       "pos": [
-        -2276.7819576301094,
-        4152.435943673144
+        -5322.531152850242,
+        8330.131530455028
       ],
       "size": [
-        270,
-        82
+        400,
+        200
       ],
       "flags": {},
       "order": 53,
       "mode": 0,
       "inputs": [
         {
-          "name": "mask",
-          "type": "MASK",
-          "link": 1698
+          "name": "clip",
+          "type": "CLIP",
+          "link": 1730
         }
       ],
       "outputs": [
         {
-          "name": "MASK",
-          "type": "MASK",
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
           "links": [
-            1706
+            1731
           ]
         }
       ],
+      "title": "SAM3 vocabulary",
       "properties": {
+        "Node name for S&R": "CLIPTextEncode",
         "cnr_id": "comfy-core",
-        "ver": "0.31.0",
-        "Node name for S&R": "GrowMask"
+        "ver": "0.28.0"
       },
       "widgets_values": [
-        6,
-        true
+        "background:3"
       ]
     },
     {
       "id": 858,
       "type": "MaskComposite",
       "pos": [
-        -1958.836088309852,
-        4042.1339192116957
+        -5032.47301895363,
+        9131.218024213375
       ],
       "size": [
         270,
         126
       ],
       "flags": {},
-      "order": 68,
+      "order": 70,
       "mode": 0,
       "inputs": [
         {
           "name": "destination",
           "type": "MASK",
-          "link": 1724
+          "link": 1764
         },
         {
           "name": "source",
@@ -4351,14 +4682,14 @@
           "name": "MASK",
           "type": "MASK",
           "links": [
-            1715
+            1754
           ]
         }
       ],
       "properties": {
+        "Node name for S&R": "MaskComposite",
         "cnr_id": "comfy-core",
-        "ver": "0.31.0",
-        "Node name for S&R": "MaskComposite"
+        "ver": "0.31.0"
       },
       "widgets_values": [
         0,
@@ -4367,111 +4698,222 @@
       ]
     },
     {
-      "id": 742,
-      "type": "MpiIfElse",
+      "id": 871,
+      "type": "MaskPreview",
       "pos": [
-        -1637.6182236051459,
-        4071.320837220905
+        -4137.2462973335705,
+        8153.045677865756
       ],
       "size": [
-        270,
-        78
+        458.5299169292175,
+        287.5473804690291
       ],
-      "flags": {
-        "collapsed": false
-      },
-      "order": 74,
-      "mode": 0,
+      "flags": {},
+      "order": 94,
+      "mode": 4,
       "inputs": [
         {
-          "name": "true",
-          "type": "*",
-          "link": 1715
-        },
-        {
-          "name": "false",
-          "type": "*",
-          "link": 1725
-        },
-        {
-          "name": "boolean",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "boolean"
-          },
-          "link": 1528
+          "name": "mask",
+          "type": "MASK",
+          "link": 1758
         }
       ],
       "outputs": [
         {
-          "name": "output",
-          "type": "*",
+          "name": "mask",
+          "type": "MASK",
           "links": [
-            1716
+            1755
           ]
         }
       ],
       "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
-        "Node name for S&R": "MpiIfElse"
+        "Node name for S&R": "MaskPreview",
+        "cnr_id": "comfy-core",
+        "ver": "0.31.0"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 877,
+      "type": "GetNode",
+      "pos": [
+        -4935.297071960843,
+        8272.352503546303
+      ],
+      "size": [
+        210,
+        58
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 34,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            1761
+          ]
+        }
+      ],
+      "title": "Get_H",
+      "properties": {
+        "Node name for S&R": "GetNode",
+        "aux_id": "kijai/ComfyUI-KJNodes"
       },
       "widgets_values": [
-        true
+        "H"
+      ],
+      "color": "#1b4669",
+      "bgcolor": "#29699c"
+    },
+    {
+      "id": 876,
+      "type": "GetNode",
+      "pos": [
+        -4935.539582438806,
+        8221.262927824615
+      ],
+      "size": [
+        210,
+        58
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 35,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            1760
+          ]
+        }
+      ],
+      "title": "Get_W",
+      "properties": {
+        "Node name for S&R": "GetNode",
+        "aux_id": "kijai/ComfyUI-KJNodes"
+      },
+      "widgets_values": [
+        "W"
+      ],
+      "color": "#1b4669",
+      "bgcolor": "#29699c"
+    },
+    {
+      "id": 875,
+      "type": "GrowMaskWithBlur",
+      "pos": [
+        -4482.185027430302,
+        8375.979383214244
+      ],
+      "size": [
+        299.84375,
+        246
+      ],
+      "flags": {},
+      "order": 88,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mask",
+          "type": "MASK",
+          "link": 1757
+        }
+      ],
+      "outputs": [
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": [
+            1758
+          ]
+        },
+        {
+          "name": "mask_inverted",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "GrowMaskWithBlur"
+      },
+      "widgets_values": [
+        3,
+        0,
+        true,
+        false,
+        1,
+        1,
+        1,
+        false
       ]
     },
     {
-      "id": 741,
+      "id": 878,
       "type": "GetNode",
       "pos": [
-        -1906.9547641971883,
-        4239.871694004601
+        -5632.806649664278,
+        8001.735436958801
       ],
       "size": [
         210,
         58
       ],
       "flags": {},
-      "order": 32,
+      "order": 36,
       "mode": 0,
       "inputs": [],
       "outputs": [
         {
-          "name": "BOOLEAN",
-          "type": "BOOLEAN",
+          "name": "*",
+          "type": "*",
           "links": [
-            1528
+            1762
           ]
         }
       ],
-      "title": "Get_is remove head",
+      "title": "Get_sheet output",
       "properties": {
         "Node name for S&R": "GetNode",
         "aux_id": "kijai/ComfyUI-KJNodes"
       },
       "widgets_values": [
-        "is remove head"
+        "sheet output"
       ]
     },
     {
-      "id": 859,
-      "type": "InvertMask",
+      "id": 868,
+      "type": "MaskComposite",
       "pos": [
-        -1140.1983760669334,
-        4073.4596424729893
+        -4458.806162182386,
+        8154.833302800396
       ],
       "size": [
-        140,
-        26
+        290,
+        150
       ],
       "flags": {},
-      "order": 85,
+      "order": 81,
       "mode": 0,
       "inputs": [
         {
-          "name": "mask",
+          "name": "destination",
           "type": "MASK",
-          "link": 1709
+          "link": 1746
+        },
+        {
+          "name": "source",
+          "type": "MASK",
+          "link": 1740
         }
       ],
       "outputs": [
@@ -4479,65 +4921,145 @@
           "name": "MASK",
           "type": "MASK",
           "links": [
-            1710
+            1757
+          ]
+        }
+      ],
+      "title": "paste the head mask back at full size",
+      "properties": {
+        "Node name for S&R": "MaskComposite",
+        "cnr_id": "comfy-core",
+        "ver": "0.28.0"
+      },
+      "widgets_values": [
+        0,
+        0,
+        "add"
+      ]
+    },
+    {
+      "id": 874,
+      "type": "InvertMask",
+      "pos": [
+        -3641.1309670158844,
+        8155.555023745914
+      ],
+      "size": [
+        140,
+        26
+      ],
+      "flags": {},
+      "order": 100,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mask",
+          "type": "MASK",
+          "link": 1755
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            1763
           ]
         }
       ],
       "properties": {
+        "Node name for S&R": "InvertMask",
         "cnr_id": "comfy-core",
-        "ver": "0.31.0",
-        "Node name for S&R": "InvertMask"
-      }
+        "ver": "0.31.0"
+      },
+      "widgets_values": []
     },
     {
-      "id": 737,
-      "type": "MpiSimpleBoolean",
+      "id": 879,
+      "type": "SetNode",
       "pos": [
-        -2743.0363198863315,
-        4958.906429299286
+        -3446.058460058158,
+        8161.887820023121
       ],
       "size": [
-        270,
+        210,
+        60
+      ],
+      "flags": {},
+      "order": 104,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "link": 1763
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "title": "Set_removed_background",
+      "properties": {
+        "Node name for S&R": "SetNode",
+        "aux_id": "kijai/ComfyUI-KJNodes",
+        "previousName": "removed_background"
+      },
+      "widgets_values": [
+        "removed_background"
+      ],
+      "color": "#1c5715",
+      "bgcolor": "#1f401b"
+    },
+    {
+      "id": 849,
+      "type": "GetNode",
+      "pos": [
+        -4279.063004853082,
+        8839.502723112148
+      ],
+      "size": [
+        210,
         58
       ],
       "flags": {},
-      "order": 33,
+      "order": 37,
       "mode": 0,
       "inputs": [],
       "outputs": [
         {
-          "name": "boolean",
-          "type": "BOOLEAN",
+          "name": "*",
+          "type": "*",
           "links": [
-            1527
+            1694
           ]
         }
       ],
-      "title": "Input_Remove_Head",
+      "title": "Get_sheet output",
       "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "aaa1d2d9fa713decae6843e64f5a81b84f9f443d",
-        "Node name for S&R": "MpiSimpleBoolean"
+        "Node name for S&R": "GetNode",
+        "aux_id": "kijai/ComfyUI-KJNodes"
       },
       "widgets_values": [
-        true
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
+        "sheet output"
+      ]
     },
     {
       "id": 852,
       "type": "EmptyImage",
       "pos": [
-        -1644.7540986572762,
-        3866.7300411618667
+        -4347.227890124767,
+        8965.624625613144
       ],
       "size": [
         270,
         130
       ],
       "flags": {},
-      "order": 34,
+      "order": 38,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -4550,9 +5072,9 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "EmptyImage",
         "cnr_id": "comfy-core",
-        "ver": "0.31.0",
-        "Node name for S&R": "EmptyImage"
+        "ver": "0.31.0"
       },
       "widgets_values": [
         512,
@@ -4562,92 +5084,54 @@
       ]
     },
     {
-      "id": 503,
-      "type": "MpiInt",
+      "id": 880,
+      "type": "GetNode",
       "pos": [
-        -2724.4509971441416,
-        4694.031895207765
-      ],
-      "size": [
-        253.5164346041356,
-        58.91996868586102
-      ],
-      "flags": {},
-      "order": 35,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "int",
-          "type": "INT",
-          "slot_index": 0,
-          "links": [
-            1108
-          ]
-        }
-      ],
-      "title": "Input_Seed",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "aaa1d2d9fa713decae6843e64f5a81b84f9f443d",
-        "Node name for S&R": "MpiInt"
-      },
-      "widgets_values": [
-        976866873950
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 770,
-      "type": "MpiInt",
-      "pos": [
-        -2773.5043007050804,
-        5201.349444238286
+        -5290.414245639013,
+        9126.368501763905
       ],
       "size": [
         210,
         58
       ],
       "flags": {},
-      "order": 36,
+      "order": 39,
       "mode": 0,
       "inputs": [],
       "outputs": [
         {
-          "name": "int",
-          "type": "INT",
+          "name": "MASK",
+          "type": "MASK",
           "links": [
-            1575,
-            1576
+            1764,
+            1765
           ]
         }
       ],
-      "title": "Input_Quality",
+      "title": "Get_removed_background",
       "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04",
-        "Node name for S&R": "MpiInt"
+        "Node name for S&R": "GetNode",
+        "aux_id": "kijai/ComfyUI-KJNodes"
       },
       "widgets_values": [
-        1
+        "removed_background"
       ],
-      "color": "#432",
-      "bgcolor": "#653"
+      "color": "#1c5715",
+      "bgcolor": "#1f401b"
     },
     {
       "id": 856,
       "type": "MaskPreview",
       "pos": [
-        -1324.0764628751592,
-        4071.9743229743376
+        -4397.713393518938,
+        9161.058427976017
       ],
       "size": [
         140,
         246
       ],
       "flags": {},
-      "order": 80,
+      "order": 86,
       "mode": 4,
       "inputs": [
         {
@@ -4666,127 +5150,125 @@
         }
       ],
       "properties": {
+        "Node name for S&R": "MaskPreview",
         "cnr_id": "comfy-core",
-        "ver": "0.31.0",
-        "Node name for S&R": "MaskPreview"
+        "ver": "0.31.0"
       },
       "widgets_values": []
     },
     {
-      "id": 849,
-      "type": "GetNode",
+      "id": 112,
+      "type": "MpiText",
       "pos": [
-        -2982.757934493974,
-        3796.2008555418943
+        -8148.673075542925,
+        7000.06486931079
       ],
       "size": [
-        210,
+        554.275529025053,
+        196.90800028317108
+      ],
+      "flags": {},
+      "order": 40,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            1442
+          ]
+        }
+      ],
+      "title": "Input_Positive",
+      "properties": {
+        "Node name for S&R": "MpiText",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "An eighty-year-old wizard with a long beard a pointy hat and fully white eyes with no iris, holding a large staff with a blue jewel on its handle "
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 737,
+      "type": "MpiSimpleBoolean",
+      "pos": [
+        -2852.12722897724,
+        7277.088247481086
+      ],
+      "size": [
+        270,
         58
       ],
       "flags": {},
-      "order": 37,
+      "order": 41,
       "mode": 0,
       "inputs": [],
       "outputs": [
         {
-          "name": "*",
-          "type": "*",
+          "name": "boolean",
+          "type": "BOOLEAN",
           "links": [
-            1694,
-            1722
+            1527
           ]
         }
       ],
-      "title": "Get_sheet output",
+      "title": "Input_Remove_Head",
       "properties": {
-        "Node name for S&R": "GetNode",
-        "aux_id": "kijai/ComfyUI-KJNodes"
+        "Node name for S&R": "MpiSimpleBoolean",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "aaa1d2d9fa713decae6843e64f5a81b84f9f443d"
       },
       "widgets_values": [
-        "sheet output"
-      ]
+        false
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
     },
     {
-      "id": 860,
-      "type": "RemoveBackground",
+      "id": 872,
+      "type": "PreviewImage",
       "pos": [
-        -2322.856671606017,
-        4005.327366313381
+        -5344.357316821332,
+        7999.718161152133
       ],
       "size": [
-        302.25,
-        72
+        403.13340963717974,
+        293.4827205360325
       ],
       "flags": {},
-      "order": 58,
-      "mode": 0,
+      "order": 62,
+      "mode": 4,
       "inputs": [
         {
-          "name": "bg_removal_model",
-          "type": "BACKGROUND_REMOVAL",
-          "link": 1719
-        },
-        {
-          "name": "image",
+          "name": "images",
           "type": "IMAGE",
-          "link": 1722
+          "link": 1762
         }
       ],
       "outputs": [
         {
-          "name": "mask",
-          "type": "MASK",
+          "name": "images",
+          "type": "IMAGE",
           "links": [
-            1724,
-            1725
+            1749
           ]
         }
       ],
       "properties": {
+        "Node name for S&R": "PreviewImage",
         "cnr_id": "comfy-core",
-        "ver": "0.31.0",
-        "Node name for S&R": "RemoveBackground"
-      }
-    },
-    {
-      "id": 861,
-      "type": "LoadBackgroundRemovalModel",
-      "pos": [
-        -2727.652030424896,
-        3974.2326478418336
-      ],
-      "size": [
-        311.484375,
-        85.515625
-      ],
-      "flags": {},
-      "order": 38,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "bg_model",
-          "type": "BACKGROUND_REMOVAL",
-          "links": [
-            1719
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.31.0",
-        "Node name for S&R": "LoadBackgroundRemovalModel",
-        "models": [
-          {
-            "name": "birefnet.safetensors",
-            "url": "https://huggingface.co/Comfy-Org/BiRefNet/resolve/main/background_removal/birefnet.safetensors",
-            "directory": "background_removal"
-          }
-        ]
+        "ver": "0.31.0"
       },
-      "widgets_values": [
-        "birefnet.safetensors"
-      ]
+      "widgets_values": []
     }
   ],
   "links": [
@@ -5679,14 +6161,6 @@
       "IMAGE"
     ],
     [
-      1715,
-      858,
-      0,
-      742,
-      0,
-      "MASK"
-    ],
-    [
       1716,
       742,
       0,
@@ -5695,32 +6169,128 @@
       "MASK"
     ],
     [
-      1719,
-      861,
+      1726,
+      753,
       0,
-      860,
+      864,
       0,
-      "BACKGROUND_REMOVAL"
+      "MODEL"
     ],
     [
-      1722,
-      849,
+      1730,
+      753,
+      1,
+      866,
       0,
-      860,
+      "CLIP"
+    ],
+    [
+      1731,
+      866,
+      0,
+      864,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      1740,
+      864,
+      0,
+      868,
+      1,
+      "MASK"
+    ],
+    [
+      1746,
+      870,
+      0,
+      868,
+      0,
+      "MASK"
+    ],
+    [
+      1749,
+      872,
+      0,
+      864,
       1,
       "IMAGE"
     ],
     [
-      1724,
-      860,
+      1754,
+      858,
+      0,
+      742,
+      0,
+      "MASK"
+    ],
+    [
+      1755,
+      871,
+      0,
+      874,
+      0,
+      "MASK"
+    ],
+    [
+      1757,
+      868,
+      0,
+      875,
+      0,
+      "MASK"
+    ],
+    [
+      1758,
+      875,
+      0,
+      871,
+      0,
+      "MASK"
+    ],
+    [
+      1760,
+      876,
+      0,
+      870,
+      0,
+      "INT"
+    ],
+    [
+      1761,
+      877,
+      0,
+      870,
+      1,
+      "INT"
+    ],
+    [
+      1762,
+      878,
+      0,
+      872,
+      0,
+      "IMAGE"
+    ],
+    [
+      1763,
+      874,
+      0,
+      879,
+      0,
+      "MASK"
+    ],
+    [
+      1764,
+      880,
       0,
       858,
       0,
       "MASK"
     ],
     [
-      1725,
-      860,
+      1765,
+      880,
       0,
       742,
       1,
@@ -5732,8 +6302,8 @@
       "id": 7,
       "title": "Loras",
       "bounding": [
-        -4322.552491457467,
-        2546.2877951642067,
+        -5049.825218730188,
+        3528.105976982381,
         611.2933960264963,
         594.3579049343289
       ],
@@ -5763,6 +6333,18 @@
       ],
       "color": "#3f789e",
       "flags": {}
+    },
+    {
+      "id": 13,
+      "title": "Remove Background",
+      "bounding": [
+        -5642.806649664278,
+        7929.718161152133,
+        2462.8853468283037,
+        719.0186655179523
+      ],
+      "color": "#3f789e",
+      "flags": {}
     }
   ],
   "config": {},
@@ -5773,10 +6355,10 @@
     "VHS_MetadataImage": true,
     "VHS_KeepIntermediate": true,
     "ds": {
-      "scale": 0.45949729863572425,
+      "scale": 0.45949729863572686,
       "offset": [
-        4283.611986737832,
-        -2651.6926070107534
+        6463.238611593008,
+        -7591.89669617244
       ]
     }
   },

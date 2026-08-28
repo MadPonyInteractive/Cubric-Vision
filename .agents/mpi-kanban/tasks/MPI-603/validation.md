@@ -1,5 +1,10 @@
 # MPI-603 Validation
 
+> 🔴 **The LanPaint head-removal branch described below NO LONGER EXISTS.** It was deleted
+> outright on 2026-08-27 (`19ec571c`) and head removal is now pure compositing. Read the
+> 2026-08-28 SUPERSEDED section at the bottom of this file before trusting anything here
+> about the graph. The outpaint-LoRA half of this card is unaffected and still stands.
+
 ## What shipped 2026-08-23
 
 `flow_character_sheet`'s head-removal branch is off the pre-LanPaint recipe. **No graph in
@@ -196,3 +201,41 @@ kind of silence that reads as a bug.
 
 Doing 5 before 4 turns every released install into a 404 instead of a clean skip. **Do not
 close this card on step 3.**
+
+
+---
+
+## 2026-08-28 — SUPERSEDED: the LanPaint branch this file documents NO LONGER EXISTS
+
+Everything above about `#775 SetLatentNoiseMask`, `#776 FluxGuidance` and `#777
+LanPaint_KSampler` was true when written and was live-confirmed by Fabio. It is now
+**history**. Read it as a record of what MPI-603 did, never as the current graph.
+
+**What happened.** Fabio rewrote `flow_character_sheet`'s head-removal branch on 2026-08-27
+(`19ec571c`, "chore(workflows): raw source edit", -4104/+1364). The sampler pass was deleted
+outright. Head removal is now **pure compositing** — no `LanPaint_KSampler`, no
+`SetLatentNoiseMask`, no `InpaintCropImproved`/`StitchImproved`, no sampler of any kind in
+that branch. A subject matte minus a head mask, with a grey plate composited over everything
+outside the result.
+
+That rewrite shipped a defect, found by Fabio in the app on 2026-08-28: a wizard's staff
+vanished from the sheet and read as "head removal removed the staff". It was the **BiRefNet
+subject matte** (`RemoveBackground`), not the head branch — a single-salient-subject
+segmenter handed a three-panel sheet under-segments the two narrow side views, and the grey
+plate is the same `0x808080` as the recipe's backdrop, so anything it dropped looked
+deliberately deleted. The head mask is confined to the sheet's left quarter by
+`MpiBox(W//4, H, 0, 0)` and could not have reached the back view at all.
+
+Fixed the same day by mattting the **background** (`SAM3_Detect`, vocabulary `background:3`)
+and inverting it, instead of matting the subject. BiRefNet is out of the graph.
+
+**The durable lesson, and the current graph's shape, live in
+`docs/playbooks/add-flow/existing-flows/character-sheet.md`.** That file is the source of
+truth for this flow; this card record is not.
+
+### What this does NOT change
+
+MPI-603's own scope is unaffected. The outpaint LoRA is still retired, still loaded by no
+graph, still dropped from Klein 4B's dep list, and its `loraDeps.js` entry still stays for
+the orphan sweep. Steps 4 and 5 — ship a build without the dep, THEN delete from R2/HF —
+remain open in that order.
