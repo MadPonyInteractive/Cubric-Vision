@@ -352,8 +352,9 @@ export const modelDeps = {
     // = the documented distilled 80/69 split (base quantizes 70/79). Native
     // `comfy_quant` markers, so stock UNETLoader loads it with no custom node dep.
     //
-    // Support weights: qwen3-4b-clip + vae-flux2 (assetDeps), klein-lora-outpaint +
-    // klein-lora-refcontrol-depth + klein-lora-nsfw + 8 klein-style-* (loraDeps).
+    // Support weights: qwen3-4b-clip + vae-flux2 (assetDeps), klein-lora-refcontrol-depth +
+    // klein-lora-nsfw + 8 klein-style-* (loraDeps). klein-lora-outpaint was here until
+    // MPI-603 dropped it — LanPaint replaced the path it was baked in for.
     // NOTHING was reusable — the FLUX.2 TE/VAE are distinct weights from every
     // Qwen-* and FLUX.1 dep we already host.
     'klein-4b-transformer': {

@@ -456,10 +456,12 @@ export const loraDeps = {
     // THE ENTRY STAYS ANYWAY, and must not be deleted here. `_orphanedDepIds`
     // (routes/downloadManager.js) iterates DEPS to reclaim what no model protects — delete the
     // entry and the 72MB strands on the disk of every user who already downloaded it,
-    // untracked, with nothing in the app able to remove it. Klein 4B still lists it in
-    // models.js, and released builds (1.4.0) fetch it, so the R2 and HF objects must also stay
-    // up until a build WITHOUT the dep has shipped: deleting them first turns every released
-    // install into a 404 rather than a clean skip. Remaining steps live on MPI-603.
+    // untracked, with nothing in the app able to remove it. 2026-08-28 Klein 4B DROPPED it
+    // from its dep list in models.js, so NO model protects it any more and the sweep reclaims
+    // it on next run — which is the point. But released builds (1.4.0) still fetch it, so the
+    // R2 and HF objects must stay up until a build WITHOUT the dep has shipped: deleting them
+    // first turns every released install into a 404 rather than a clean skip. Remaining steps
+    // (ship, then delete from R2/HF) live on MPI-603.
     // MUST be the comfy-converted file (`diffusion_model.*` prefix, rank 16, all 68 target
     // keys bind) — the plain diffusers weight silently binds nothing in ComfyUI.
     'klein-lora-outpaint': {

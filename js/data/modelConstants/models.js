@@ -1040,7 +1040,10 @@ export const MODELS = [
             'klein-4b-transformer',
             'qwen3-4b-clip',                 // Qwen3-4B TEXT-ONLY — not any Qwen-VL we host
             'vae-flux2',                     // FLUX.2 VAE — not FLUX.1's ae.safetensors
-            'klein-lora-outpaint',           // baked; mandatory for the fill/removal path
+            // 'klein-lora-outpaint' DROPPED (MPI-603) — LanPaint replaced the green-plate
+            // workaround it was baked in for and no graph loads it. Its loraDeps entry
+            // STAYS, unprotected on purpose: that is what lets the orphan sweep reclaim
+            // the 72MB from users who already downloaded it.
             'klein-lora-refcontrol-depth',   // baked on the depth branch; IS the depth op
             'klein-lora-nsfw',               // baked + PROMPT-gated; never loads on a clean prompt
             'klein-style-muppets',

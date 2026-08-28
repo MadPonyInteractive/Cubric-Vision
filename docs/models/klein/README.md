@@ -31,11 +31,15 @@ and the only proven path to **object removal**.
 | `qwen_3_4b.safetensors` (text encoder) | 8.04 GB | `text_encoders/` | `qwen3-4b-clip` |
 | `flux2-vae.safetensors` | 0.34 GB | `vae/` | `vae-flux2` |
 | `flux2_klein_4b_refcontrol_depth.safetensors` | 0.092 GB | `loras/flux2-klein/` | `klein-lora-refcontrol-depth` |
-| `flux2-klein-4b-outpaint.safetensors` | 0.076 GB | `loras/flux2-klein/` | `klein-lora-outpaint` |
 | `NSFW_party_time_v2.0_klein4b.safetensors` | 0.18 GB | `loras/flux2-klein/` | `klein-lora-nsfw` |
 | 8 style LoRAs | 0.77 GB | `loras/flux2-klein/styles/4b/` | `klein-style-*` |
 
-Total **+13.6 GB** (14 deps). Two more weights the graph loads are NOT Klein deps:
+`flux2-klein-4b-outpaint.safetensors` (0.076 GB, `klein-lora-outpaint`) was a 14th dep until
+MPI-603 dropped it 2026-08-28 — LanPaint replaced the green-plate workaround it was baked in
+for. Its `loraDeps.js` entry stays so the orphan sweep can reclaim it; the R2 and HF objects
+stay up until a build without the dep ships.
+
+Total **+13.5 GB** (13 deps). Two more weights the graph loads are NOT Klein deps:
 `4x_NMKD-Siax_200k.pth` is the shared `4x-NMKD-Siax` engineAsset (already hosted, also
 used by SDXL/Krea2/Chroma), and `depth_anything_v2_vits.pth` is auto-downloaded by the
 `comfyui_controlnet_aux` node dep. **Reconcile the dep set against what the template

@@ -8,6 +8,9 @@
 - [x] Klein docs healed where they still say the LoRA is in a shipped graph
 - [x] Node tests green (726/726)
 
-- [ ] **Live run by Fabio** - Character Sheet with Remove Head ON. Not doable here: bench had 3.4GB of 16GB VRAM free and the app is live. See validation.md.
-- [ ] Drop the dep from Klein in models.js - BLOCKED, live-claimed by MPI-607
-- [ ] Ship a release without the dep, THEN delete from R2/HF
+- [x] **Live run by Fabio** - the head comes off cleanly, Character Sheet working (2026-08-28)
+- [x] Drop the dep from Klein in models.js - the MPI-607 claim was stale and is gone. Dropped 2026-08-28: Klein 4B is 21 deps, `klein-lora-outpaint` protected by no model, `loraDeps.js` entry kept. Proven sweepable-orphan by a direct classification probe; 775/775 node tests green.
+- [x] Release note bullet in `docs/releases/UNRELEASED.md` (§ Important changes) - a user's disk loses 72MB on update, that is user-visible
+
+- [ ] Ship a release without the dep - until a build is out, released 1.4.0 installs still fetch it
+- [ ] ONLY THEN delete from R2 and HF (`rclone deletefile --s3-no-check-bucket`, verify HTTP 404). Re-uploadable from `G:\CubricModels`.

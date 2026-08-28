@@ -46,6 +46,10 @@
   that is exactly what Vision used to fill in for you behind the scenes. Both the 4B and 9B
   cards.
 
+- FLUX.2 Klein 4B is one weight lighter. The 72 MB outpaint LoRA was part of the old erase
+  trick and nothing uses it any more, so Klein no longer downloads it and Vision clears it off
+  your disk if you already had it.
+
 ## What's new
 
 - **Flows are here, and they are the headline of this release.** A flow is a whole job in one

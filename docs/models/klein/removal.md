@@ -6,8 +6,9 @@
 > The shipped removal path is `LanPaint_KSampler` + `SetLatentNoiseMask`, where the model
 > SEES under the mask and the prompt must NAME what to remove — read `9b.md` § "Inpaint is
 > LanPaint now" before acting on anything below. Kept because the measurements are still
-> the only characterisation of these two fal weights, and the weight itself is still a live
-> dep (see `loraDeps.js` `klein-lora-outpaint`).
+> the only characterisation of these two fal weights. As of 2026-08-28 (MPI-603) **no model
+> declares the weight either** — its `loraDeps.js` `klein-lora-outpaint` entry survives only
+> so the orphan sweep can reclaim it from users who already downloaded it.
 >
 > **MEASURED 2026-07-26 — the object-remove LoRA is NOT our removal path.** It is
 > object-specific: on a tattoo it lost to the **base model with no LoRA at all**. The

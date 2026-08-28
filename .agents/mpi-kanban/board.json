@@ -140,7 +140,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-27T18:25:41Z",
+  "updated_at": "2026-08-28T15:49:27Z",
   "events": [
     {
       "at": "2026-08-27T15:31:00Z",
@@ -3957,6 +3957,13 @@
       "task": "MPI-630",
       "actor": "claude",
       "note": "Raised from MPI-607. pipPins are dead data since MPI-413 removed the per-pack pip install, but tests/node-drift.test.cjs still enforces them on every baked node - which forced inventing pins for ComfyUI-MelodramaBox just to get the suite green."
+    },
+    {
+      "at": "2026-08-28T15:49:27Z",
+      "type": "task.updated",
+      "task": "MPI-603",
+      "actor": "claude",
+      "note": "Step 3 DONE: 'klein-lora-outpaint' dropped from Klein 4B's dependencies in models.js (the loraDeps.js DEPS entry is KEPT - that is what lets the orphan sweep reclaim the 72MB from users who already have it). Proven with the real registry rather than the diff: Klein 4B is 21 deps, no model declares the weight, and the _orphanedDepIds predicate now returns SWEEPABLE ORPHAN true. Six stale 'Klein still lists it' statements healed (loraDeps, modelDeps, klein README/9b/removal) and one UNRELEASED.md bullet added - a user's disk loses 72MB on update. npm test 775/775. Card stays validating: REMAINING is step 4 ship a build without the dep, THEN step 5 delete from R2/HF. Do not close on step 3."
     }
   ]
 }

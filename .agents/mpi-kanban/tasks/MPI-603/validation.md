@@ -133,3 +133,66 @@ delete it from R2/HF. Do NOT read this entry as the card being done.
 **One blocker on those steps is now STALE and can be ignored:** the attention note said
 `models.js` was "live-claimed by MPI-607". MPI-607 closed on 2026-08-28 and its file-claim
 record no longer exists on disk, so nothing holds `models.js` any more.
+
+
+## 2026-08-28 — STEP 3 DONE: the dep is dropped from Klein 4B
+
+`'klein-lora-outpaint'` is out of Klein 4B's `dependencies` in `js/data/modelConstants/models.js`.
+The `loraDeps.js` DEPS entry **stays**, exactly as `brief.md` step 3 requires.
+
+The MPI-607 block was stale and is gone; the only live peer session
+(`86d93af1-e16f-4672-9017-7106b5b5fcda`) holds no file claims, so this session claimed
+`models.js` + `modelDeps.js` + `loraDeps.js` + the three Klein docs + `UNRELEASED.md`
+(`state/files/c3f18d90-4a7b-4e52-9f61-2b8c7d045a13.json`) before touching anything.
+
+### What was proven, not assumed
+
+Loaded the real registry rather than reading the diff:
+
+```
+klein deps includes outpaint?  false          (Klein 4B now 21 deps)
+DEPS['klein-lora-outpaint']    present        loras/flux2-klein/flux2-klein-4b-outpaint.safetensors
+models still declaring it      []
+```
+
+Then ran the orphan classifier's own predicate against the entry — the point of the whole
+ordering, so it is checked rather than argued:
+
+```
+type undefined · engineAsset false · targetPath false · has filename true
+universal(exempt) false · protected by a model false
+=> SWEEPABLE ORPHAN: true
+```
+
+That is `_orphanedDepIds` (`routes/downloadManager.js:269`) reaching the intended verdict:
+nothing protects the weight, so `_sweepOrphanedDeps` trashes the 72MB off the disk of every
+user who already downloaded it. **This is the desired outcome, not a leak** — it is the exact
+reason the DEPS entry had to survive.
+
+`npm test` — **775/775 green**, zero fail.
+
+### Statements healed with it
+
+Six places asserted "Klein still lists it" or "still a live dep", and each is now false:
+
+| file | was |
+|---|---|
+| `js/data/modelConstants/loraDeps.js` | "Klein 4B still lists it in models.js" |
+| `js/data/modelConstants/modelDeps.js` | outpaint named in `klein-4b-transformer`'s support-weight list |
+| `docs/models/klein/README.md` | dep table row + "Total +13.6 GB (14 deps)" → **+13.5 GB (13 deps)** |
+| `docs/models/klein/9b.md` | the "Klein 4B still lists it" bullet, and "only the two bullets above" |
+| `docs/models/klein/removal.md` | "the weight itself is still a live dep" |
+
+One release-note bullet added to `docs/releases/UNRELEASED.md` § Important changes: a user's
+disk loses 72MB on update, and a sweep that deletes a file with nothing in the notes is the
+kind of silence that reads as a bug.
+
+### What is STILL open, and the ordering still holds
+
+4. **Ship a release without the dep.** Until a build is out, every released 1.4.0 install
+   still fetches the weight.
+5. **Only then** delete from R2 and HF — `rclone deletefile --s3-no-check-bucket`, verify
+   HTTP 404. Re-uploadable from `G:\CubricModels` if this turns out wrong.
+
+Doing 5 before 4 turns every released install into a 404 instead of a clean skip. **Do not
+close this card on step 3.**
