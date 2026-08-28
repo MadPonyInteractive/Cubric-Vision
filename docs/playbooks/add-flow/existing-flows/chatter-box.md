@@ -1,9 +1,9 @@
-# Text to Speech (MPI-607) — Chatterbox, two arms and an optional VC stage
+# Text to Speech (MPI-607) — Chatterbox, two language arms
 
 > Part of [add-flow/existing-flows](../README.md). Type a line, give it a voice to speak
-> in, optionally convert the result onto a second voice. **The TTS half that
-> [Voice Changer](voice-changer.md) deliberately left unowned**, and the third audio-only
-> Flow. Read this before touching the flow, its graph, or the Chatterbox deps.
+> in, pick a language. **The TTS half that [Voice Changer](voice-changer.md) deliberately
+> left unowned**, and the third audio-only Flow. Read this before touching the flow, its
+> graph, or the Chatterbox deps.
 
 ## Shape
 
@@ -14,7 +14,7 @@
 | `requiredModels` | `[]` |
 | `requiredDeps` | 13 weights + `ComfyUI_Fill-ChatterBox` — **6.95 GB** |
 | `mediaType` | `'audio'` |
-| inputs | prompt, `Input_Is_Multilingual`, `Input_Language.language`, `audio1` (required by the graph), `audio2` (optional) |
+| inputs | prompt, `Input_Language.language`, `audio1` (required by the graph). `Input_Is_Multilingual` is DERIVED, never a control |
 | output | `SaveAudioAdvanced` titled `Output_Audio`, flac |
 
 ## Two arms, one picked per run — and MpiIfElse is LAZY
@@ -29,35 +29,42 @@ containing two TTS nodes runs both — is wrong, and an earlier note on this car
 
 Both weight sets are still declared, because either arm can be the one a given user runs.
 
-## 🔴 FL_ChatterboxVC must read from the SELECTOR, not from one TTS arm
+## 🔴 THERE IS NO VC STAGE, and this is not an open question
 
-`FL_ChatterboxVC#31.input_audio` was wired straight to the English TTS (#43). The effect was
-narrow and silent:
+The flow declares **one** media slot — `audio1` → `Input_Audio`, the voice the line is
+spoken in, which `MpiLoadAudio#54` marks `block_if_empty` so the graph blocks without it.
+The op maps that role and **nothing else**.
 
-- **With** a target voice, `MpiIfElse#53` takes its `true` arm → the VC → which needed #43.
-  Laziness meant the selector `#52` was **never evaluated**, so whatever language the user
-  picked, the output was English. Nothing errored; audio came out.
-- **Without** a target voice, #53 takes `false` → #52 → the language worked correctly.
+`Input_Audio_2` is the only thing `MpiAnyChecker#57` reads to flip `MpiIfElse#53` onto
+`FL_ChatterboxVC`, so **leaving the `audio2` role unmapped is what keeps this flow on TTS
+alone**. Re-adding a slot, or a run-time deriver that fills the role, puts the whole VC arm
+back. `tests/flow-derived-fields.test.cjs` asserts both halves — one declared role, one
+mapped `mediaInput`.
 
-So the language control was dead on exactly the TTS → VC route the card's settled
-architecture is built around, and working on the other one — which is why it survived
-review. Fixed on the raw graph (link 77 re-originated from #52) and re-baked.
-`tests/inject-params-titles.test.cjs` asserts the wiring, and that assertion has been
-mutation-checked: reintroducing the old link fails it.
+The dead nodes (`Input_Audio_2`, `MpiAnyChecker#57`, `MpiIfElse#53`, `#56`,
+`FL_ChatterboxVC#31`) come out of `raw/` on Fabio's next re-export.
 
-## The two audio slots do different jobs
+### Why it went, measured — this is the whole justification
 
-| slot | role | job |
-|---|---|---|
-| 0 | `audio1` → `Input_Audio` | the voice the line is **spoken in**. `MpiLoadAudio#54` carries `block_if_empty`, so the graph blocks without it |
-| 1 | `audio2` → `Input_Audio_2` | an **optional** second voice. Present → `MpiAnyChecker#57` flips `MpiIfElse#53` and the run goes TTS → VC |
+The VC arm's only real job was **emotion**. Text cannot select emotion (MPI-622 measured a
+neutral reference plus angry words as soulless at exaggeration 0.5 and the *wrong* emotion
+at 1.0), so emotion arrived as one of the voice library's 30 performance clips — and that
+clip is the VC `target_voice`.
 
-Both offer the shipped voice library, unlike Voice Changer where slot 0 must be the user's
-own take — nothing here passes a real performance through, so neither slot has to be theirs.
+`FL_ChatterboxVC` takes **timbre from the target**, so the output is the clip's speaker and
+the chosen voice is overwritten. And the 30 clips carry **30 distinct seeds**
+(`qwen3-tts-voicedesign`), so they are 30 different people rather than 6 emotions from 5
+speakers. Young Male (R3, 201-250 Hz) plus `perf_R3_cheerful` (seed 2010, 272.5 Hz) came
+out a **child**, as it must: register matching bounds PITCH, never identity — a register is
+a band, not a person.
 
-TTS → VC is the settled chain order. It was proven the wrong way round in an earlier
-session, which is also why `cfg_weight` is back at **0.5**: the 0.3 was compensating for
-the reversed order and is void.
+A role swap (emotion clip → TTS `audio_prompt`, chosen voice → VC target) was offered and
+**rejected** on the grounds that it would still be inconsistent. Fabio, 2026-08-28: *"let's
+ship something that works, not something that may work sometimes."* Do not re-propose it.
+
+One thing from the VC era survives and is still load-bearing: `cfg_weight` stays at **0.5**
+on the TTS nodes. The 0.3 an earlier session baked was compensating for a VC → TTS chain
+order that was itself wrong, so it is void twice over.
 
 ## 🟢 All 23 languages are ONE model — there is no list to trim
 
@@ -81,7 +88,8 @@ the node by title and then write nothing. The field uses `Input_Language.languag
 `Title.widget` form (MPI-359, `comfyController.js` §3) that addresses one widget directly.
 
 By contrast `Input_Is_Multilingual` uses a **plain** key, because `boolean` **is** in the
-spray list and the node's `true`/`false` inputs are links, which `_isLink` skips.
+spray list and the node's `true`/`false` inputs are links, which `_isLink` skips. It is not
+a field at all — see the next section.
 
 **The MPI-359 dotted-key sweep does not cover this.** That test reads
 `PromptBoxControls.js` only, so it passes whether or not a *flow's* declared dotted field
@@ -92,24 +100,35 @@ The option values are the node's **exact** combo labels (ComfyUI rejects anythin
 "Value not in list") and were generated from the live `/object_info` rather than typed, so
 they cannot drift.
 
-## The one state a user can get wrong
+## The arm is DERIVED, because the toggle had one unwinnable state
 
-**"Other languages" off + a non-English language selected → English output.** The toggle
-gates the arm; the select only means anything once it is on.
+There used to be an "Other languages" toggle beside the select, and the pair had exactly
+one state a user could get wrong: **toggle off + a non-English language → English output**,
+silently. `showWhen` was rejected (MPI-620: one boolean with one meaning, against a
+predicate language the frame would own forever) and `blankOnly` is step-fields-only, so the
+mitigation was copy — the toggle declared first, plus 21 `info` hovers saying to turn it on.
 
-This is not hidden behind a conditional because `showWhen` was explicitly rejected
-(MPI-620: one boolean with one meaning, against a predicate language the frame would then
-own forever), and `blankOnly` is step-fields-only and keys off a media role. So the
-mitigation is the existing machinery: the toggle is declared **first** so it reads as the
-gate, and every non-English option carries an `info` hover saying it needs the toggle on.
+Fabio removed the class of error instead (2026-08-28): *"If English is selected, then we
+ourselves inject false into the other languages boolean."* The FlowDef now carries a
+`derived[]` entry — read `from`, compare to `equals`, send `then`/`else` to `id`:
 
-`Input_Is_Multilingual` defaults to **false** — the English-only arm. Every measurement on
-this card was made there, so the untouched default is the measured configuration rather
-than a second model's take on English.
+```js
+derived: [
+    { id: 'Input_Is_Multilingual', from: 'Input_Language.language',
+      equals: 'English (en)', then: false, else: true },
+],
+```
+
+`MpiBaseFlow._collectInputs` evaluates it. **One shape, no predicate language** — that was
+the condition for accepting it at all. The broken state is now unreachable rather than
+warned about, and the 21 dead hovers went with the toggle.
+
+English still takes the English-only arm, which is where every measurement on this card was
+made.
 
 > **Open, and Fabio is the one who can close it:** whether the multilingual model's English
-> is as good as the English-only model's. If it is, the toggle and the whole 3.19 GB English
-> arm collapse into the language select and this flow gets simpler and smaller. It is an
+> is as good as the English-only model's. If it is, the whole 3.19 GB English arm collapses
+> into the language select and this flow gets simpler and smaller. It is an
 > English-vs-English comparison, so it is judgeable by ear.
 
 ## Portuguese is BRAZILIAN
@@ -151,6 +170,6 @@ again, check `pkg_resources` before suspecting the model.
 - **No run through the Flow overlay.** Every generation above was dispatched straight to
   the engine, which exercises the graph but not the flow's media routing, `.preview-assets`
   storage or reuse.
-- **The VC stage is unexercised.** `Input_Audio_2` was empty in all three runs, so the
-  TTS → VC chain — the settled architecture — has not been run since the rewire.
+- **The dead VC nodes are still in the graph.** Unreachable, since nothing fills
+  `Input_Audio_2`, but not yet deleted — that is Fabio's re-export from `raw/`.
 - **Which languages are worth promising** is unmeasured beyond Portuguese.

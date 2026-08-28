@@ -196,14 +196,9 @@
   fifteen gigabytes, the largest of any flow — and needs no model from the Library.
 
 - **Text to Speech** reads your writing aloud. Type the line, give it a sample of the voice you
-  want it in, and run. Turn on Other languages and you can have it in any of twenty-three —
-  Chinese, Japanese, French, Italian, German, Spanish, Arabic, Hindi and more — all from one
-  model, so no language costs you an extra download.
-
-  There is a second voice slot, and it is worth understanding because it changes what you get.
-  Leave it empty and you hear the line in the voice you supplied. Fill it and the result is
-  converted again onto that second voice, which is the same conversion the Voice Changer flow
-  does — useful when you want one voice's delivery and another's identity.
+  want it in, pick a language, and run. Twenty-three are on offer — Chinese, Japanese, French,
+  Italian, German, Spanish, Arabic, Hindi and more — all from one model, so no language costs
+  you an extra download, and choosing one is the whole of it: there is no switch to remember.
 
   A note on Portuguese: it comes out Brazilian. That is the model, not a setting, and it is
   flagged on the option itself so it is not a surprise halfway through a project.

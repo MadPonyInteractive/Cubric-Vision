@@ -1383,8 +1383,8 @@ export const FLOWS = [
         // conversion audible, distance in PITCH is what you compensate for.
     },
     // MPI-607 — "Text to Speech". Chatterbox: type a line, give it a voice to speak
-    // in, optionally convert the result onto a second voice. The TTS half that the
-    // Voice Changer flow deliberately left unowned, and the third audio-only Flow.
+    // in, pick a language. The TTS half that the Voice Changer flow deliberately left
+    // unowned, and the third audio-only Flow.
     //
     // TWO ARMS, ONE PICKED PER RUN. `Input_Is_Multilingual` (MpiIfElse#52) selects
     // between FL_ChatterboxTTS (English only, node 43) and
@@ -1394,17 +1394,25 @@ export const FLOWS = [
     // weights are never touched. Both sets are declared because either arm can be the
     // one a given user runs.
     //
-    // THE VC STAGE IS OPTIONAL AND SITS ON TOP. `Input_Audio_2` feeds an MpiAnyChecker
-    // that flips MpiIfElse#53: with a target voice the run goes TTS -> VC, without one
-    // it ends at the TTS output. TTS -> VC is the settled chain order (it was proven
-    // the wrong way round in an earlier session, which is also why `cfg_weight` is back
-    // at 0.5 — the 0.3 was compensating for the reversed order and is void).
+    // 🔴 THERE IS NO VC STAGE ANY MORE, and re-adding one is not an open question.
+    // The graph's VC arm was reached by filling `Input_Audio_2`; nothing fills it now,
+    // so MpiAnyChecker#57 always sends MpiIfElse#53 down the false arm and the run ends
+    // at the TTS output. The dead nodes come out of the raw graph on Fabio's next
+    // re-export. `cfg_weight` stays at 0.5 on the TTS nodes: the 0.3 an earlier
+    // session baked was compensating for a VC -> TTS chain order that was itself
+    // wrong, so it is void twice over.
     //
-    // 🔴 FL_ChatterboxVC#31 MUST TAKE ITS INPUT FROM #52, NOT FROM #43. It was wired
-    // straight to the English TTS, so on the TTS -> VC route — the flow's main route —
-    // the language pick did nothing at all: node 53 took its `true` arm, that arm
-    // needed 43, and 52 was never evaluated. Nothing errored and audio still came out,
-    // in English, whatever language was chosen. Fixed on the raw graph and re-baked.
+    // WHY IT WENT, MEASURED (Fabio, 2026-08-28). The VC arm's only real job was
+    // EMOTION: text cannot select emotion, so the emotion arrived as one of the
+    // library's 30 performance clips, and that clip is the VC `target_voice`.
+    // FL_ChatterboxVC takes TIMBRE from the target, so the output is the CLIP'S
+    // speaker and the chosen voice is overwritten — and the 30 clips carry 30
+    // DISTINCT seeds, so they are 30 different people rather than 6 emotions from 5
+    // speakers. Young Male (R3, 201-250 Hz) plus perf_R3_cheerful (272.5 Hz) came out
+    // a child, as it must: register matching bounds PITCH, never identity. A role swap
+    // (emotion clip -> TTS `audio_prompt`, chosen voice -> VC target) was offered and
+    // rejected on the same grounds — "let's ship something that works, not something
+    // that may work sometimes".
     {
         id: 'chatter-box',
         title: 'Text to Speech',
@@ -1423,7 +1431,7 @@ export const FLOWS = [
         // its waveform IS beat 1's audio.
         preview: 'flow-chatter-box.webp',
         video: 'flow-chatter-box.mp4',
-        description: 'Type a line and hear it spoken. Give Chatterbox a sample of the voice you want it in, pick one of 23 languages, and it reads your text in that voice. Add an emotion — angry, sad, cheerful, a whisper — and it performs the line instead of just reading it.',
+        description: 'Type a line and hear it spoken. Give Chatterbox a sample of the voice you want it in, pick one of 23 languages, and it reads your text in that voice.',
         requiredModels: [],
         requiredDeps: [
             // The English arm (3.19GB) — what every measurement on this card was made
@@ -1456,13 +1464,11 @@ export const FLOWS = [
         mediaType: 'audio',
         inputSchema: {
             media: [
-                // ONE slot. `audio2` still exists as a ROLE — it is what reaches
-                // `Input_Audio_2` and switches the graph onto the VC arm — but the user
-                // never fills it by hand. A second raw audio slot was tried and pulled
-                // (Fabio, 2026-08-28): read cold it says nothing, and "converts onto a
-                // second voice" describes a mechanism nobody asked for. The VC arm's
-                // real job is EMOTION, and it is now driven by the `emotion` field
-                // below, which derives that role's clip at run time.
+                // ONE slot, and there is no second one. "Convert onto (optional)" was
+                // tried and pulled (Fabio, 2026-08-28): read cold it says nothing, and
+                // "converts onto a second voice" describes a mechanism nobody asked
+                // for. The `audio2` role it fed is gone with it — see the VC note on
+                // the flow above.
                 {
                     type: 'audio', mode: 'upto', max: 1,
                     roles: ['audio1'],
@@ -1529,52 +1535,6 @@ export const FLOWS = [
                     { v: 'Chinese (zh)', label: 'Chinese' },
                 ],
             },
-            {
-                // WHAT THE VC ARM IS ACTUALLY FOR. Text cannot select emotion — MPI-622
-                // measured a neutral reference plus angry words as soulless at
-                // exaggeration 0.5 and the WRONG emotion at 1.0 — so emotion has to
-                // arrive as a performance clip. That clip is the VC target, and the
-                // library ships 30 of them: 5 registers x 6 emotions.
-                //
-                // `none` inserts nothing, which leaves `Input_Audio_2` empty, which is
-                // what `MpiAnyChecker#57` reads to send `MpiIfElse#53` down the false
-                // arm — straight off the TTS with no VC at all. The bypass is the
-                // graph's existing routing, not a new branch (Fabio, 2026-08-28: "If
-                // none is selected, nothing is inserted. It takes another route.").
-                //
-                // FIVE emotions ship, not the library's six: `flat` is held back
-                // because next to `neutral` it is a distinction a user cannot act on,
-                // and it is the row closest in meaning to None.
-                // ONLY FOR OUR OWN VOICES. `libraryVoiceOnly` disables this whenever the
-                // slot holds anything but a library pick — a user's own recording carries
-                // no register, so the clip could only be guessed, and a guessed register
-                // is what produced a female performance on a male voice and an output that
-                // was a different person entirely. Fabio: "Only our library is tested, not
-                // user voices, so might as well not have anything but a poor result."
-                //
-                // DISABLED, not hidden — MPI-620 rejected `showWhen`, and Fabio rejected a
-                // control that renders and does nothing, so the resolution there was a
-                // disabled control whose note reads as the REASON. Same call here.
-                id: 'emotion', type: 'select', label: 'Emotion', default: 'none',
-                libraryVoiceOnly: 'audio1',
-                disabledNote: 'Emotion needs one of our own voices — a recording of your own has no range to match a performance to.',
-                options: [
-                    { v: 'none', label: 'None',
-                      info: 'Straight from the voice, no performance pass — the fastest route.' },
-                    { v: 'neutral', label: 'Neutral',
-                      info: 'Performed, but level. Use it to match the other emotions’ texture without their mood.' },
-                    { v: 'angry', label: 'Angry' },
-                    { v: 'sad', label: 'Sad' },
-                    { v: 'cheerful', label: 'Cheerful' },
-                    { v: 'whisper', label: 'Whisper' },
-                ],
-            },
-            // THERE IS NO "VOICE RANGE" CONTROL, and asking the user to pick one was the
-            // wrong idea (Fabio, 2026-08-28). A hand-picked register crosses the voice
-            // regularly — "sometimes it's a male voice and gives me the emotion of a
-            // female voice, and not just that, it turns out to be a very different voice
-            // in the end". The register is not a preference, it is a FACT about the
-            // chosen voice, so it is read off the library entry and never asked for.
         ],
         // The arm selector is computed, never shown. One shape, no predicate language:
         // read `from`, compare to `equals`, send `then` or `else` to `id`.
@@ -1582,15 +1542,6 @@ export const FLOWS = [
             { id: 'Input_Is_Multilingual', from: 'Input_Language.language',
               equals: 'English (en)', then: false, else: true },
         ],
-        // The emotion clip is materialised at RUN time onto the `audio2` role — the
-        // role that still exists in `mediaInputs` and reaches `Input_Audio_2`, but no
-        // longer has a slot the user can see. Same path `_deriveRunMedia` uses for a
-        // step's derived picture: fetch, decode to WAV, place in `.preview-assets`.
-        voiceEmotion: {
-            role: 'audio2',
-            emotionField: 'emotion',
-            clip: 'performance/perf_{register}_{emotion}.opus',
-        },
         // No `result.compare` — two waveforms have nothing to reveal between them.
     },
     // MPI-607 — "DramaBox". Type a line, optionally hand it a voice to match, get a
@@ -1716,8 +1667,12 @@ export const FLOWS = [
                 // `duration_multiplier` on the samplers is dead weight in this graph:
                 // generate.py:179 uses an explicit duration RAW, so the flat +2.0s then
                 // x1.10 that produced the trailing silence is bypassed entirely.
+                //
+                // WHOLE SECONDS, not halves (Fabio, 2026-08-28). A half-second is
+                // fiddly to land on, and a readout flipping between one and two
+                // digits resizes the slider mid-drag, which "looks like it's buggy".
                 id: 'Input_Duration', type: 'slider', label: 'Seconds',
-                min: 1, max: 30, step: 0.5, default: 5,
+                min: 1, max: 30, step: 1, default: 5,
             },
         ],
         // No `result.compare` — two waveforms have nothing to reveal between them, the

@@ -27,6 +27,12 @@
     "comfy_workflows/flow_chatter_box.json",
     "js/data/modelConstants/nodesDeps.js",
     "docs/playbooks/add-flow/existing-flows/drama-box.md",
-    "docs/playbooks/add-flow/existing-flows/chatter-box.md"
+    "docs/playbooks/add-flow/existing-flows/chatter-box.md",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/components/Compounds/MpiMediaPicker/MpiMediaPicker.js",
+    "js/utils/declaredFields.js",
+    "tests/flow-voice-emotion.test.cjs",
+    "tests/flow-derived-fields.test.cjs",
+    "docs/releases/UNRELEASED.md"
   ]
 }

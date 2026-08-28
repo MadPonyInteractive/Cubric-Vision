@@ -203,10 +203,11 @@ export function buildField(f, cur, onChange, unsubs, opts = {}) {
         unsubs.push(() => inst?.el?.destroy?.());
         wrap.appendChild(host);
         // A FIELD-level note, the always-visible twin of the radio's per-option one and
-        // reusing its class (MPI-607). It exists for the disabled case: a greyed-out
-        // control with no stated reason is the thing MPI-620 rejected, and the cure
-        // Fabio accepted there was a note that reads AS the reason rather than as fine
-        // print. Only rendered when a field asks for one.
+        // reusing its class. It exists for the disabled case: a greyed-out control with
+        // no stated reason is the thing MPI-620 rejected, and the cure Fabio accepted
+        // there was a note that reads AS the reason rather than as fine print. Its live
+        // caller is that card's own `canvasSize`, whose `note` sat unrendered from
+        // f1880430 until this branch existed. Only rendered when a field asks for one.
         if (f.note) {
             const fieldNote = ce('span', { className: cls('field-note') });
             fieldNote.textContent = f.note;
@@ -227,16 +228,9 @@ export function buildField(f, cur, onChange, unsubs, opts = {}) {
         // that shows one value while sending another is the worst outcome available.
         if (sel !== cur) onChange(sel);
         const host = ce('div');
-        // `disabled` widened from `select` to `radio` (MPI-607). The ponytail note on
-        // the select branch called this a one-line-per-branch job "the day a second
-        // type asks" — Text to Speech's voice-range picker is that day: it shows the
-        // register chosen from the library voice and is only editable when the user
-        // brought their own recording. MpiRadioGroup takes `disabled` PER OPTION, not
-        // group-wide, so a whole-group disable stamps every option.
         const inst = MpiRadioGroup.mount(host, {
             options: opts_.map(o => ({
                 label: o.label ?? String(o.v), value: String(o.v), info: o.info,
-                ...(f.disabled ? { disabled: true } : {}),
             })),
             value: String(sel ?? ''),
             name: `${namespace}-${f.id}`,

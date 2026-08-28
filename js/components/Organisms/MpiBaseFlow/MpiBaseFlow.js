@@ -25,11 +25,6 @@ import { flowModelSlots, flowModelIds, setFlowModel } from '../../../data/flowsR
 import { disambiguatedName } from '../../../data/modelRegistry.js';
 import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
 import { buildField, mapDeclaredValue, isInjectionParam } from '../../../utils/declaredFields.js';
-// The recorder's own WAV encoder, reached the same way MpiMediaPicker reaches it. A
-// performance clip ships as `.opus`, and `opus` is missing from four of the five
-// extension lists that classify a file as audio — so it is decoded here for exactly
-// the reason a library voice is (MPI-607).
-import { toWavFile } from '../../Compounds/MpiAudioRecorder/MpiAudioRecorder.js';
 
 /**
  * MpiBaseFlow — THE flow frame: a step carousel (MPI-306 Phase 1).
@@ -803,8 +798,8 @@ export const MpiBaseFlow = ComponentFactory.create({
                 // The picker's second source. It routes into the SAME _handleFiles as
                 // the slot's own input, so an imported file is placed, hashed and
                 // deduped identically no matter which surface the user reached it from.
-                onImport: (files, meta) => {
-                    _handleFiles(entry, idx, files, onDirty, meta).catch((err) => {
+                onImport: (files) => {
+                    _handleFiles(entry, idx, files, onDirty).catch((err) => {
                         clientLogger.error('MpiBaseFlow', `flow media import failed: ${err?.message || err}`);
                     });
                 },
@@ -871,7 +866,7 @@ export const MpiBaseFlow = ComponentFactory.create({
          * @param {File[]} files
          * @param {Function} onDirty
          */
-        async function _handleFiles(entry, startIdx, files, onDirty, meta) {
+        async function _handleFiles(entry, startIdx, files, onDirty) {
             const { group } = entry;
             if (files.length === 0) return;
 
@@ -912,12 +907,6 @@ export const MpiBaseFlow = ComponentFactory.create({
                     mediaType: group.type,
                     source: 'flow-upload',
                     role: group.roles[slotIdx],
-                    // Only a LIBRARY pick carries this, and only on the first file of
-                    // the batch — `meta` describes the one voice the user chose, so
-                    // stamping it onto a second dropped file would be a lie (MPI-607).
-                    // Absent means "the user brought their own", which is exactly the
-                    // signal `autoFromVoice` reads.
-                    ...(meta && i === 0 ? { voiceId: meta.voiceId, register: meta.register } : {}),
                 };
             }
             onDirty();
@@ -1284,22 +1273,8 @@ export const MpiBaseFlow = ComponentFactory.create({
                 className: 'mpi-base-flow__fields mpi-base-flow__fields--stacked',
             });
             fields.forEach((f) => {
-                // `libraryVoiceOnly` — the field is INERT unless the named role holds a
-                // voice from our own library (MPI-607). Text to Speech's Emotion is the
-                // case: a performance clip is chosen by the voice's REGISTER, and only a
-                // library pick carries one, so on a user's own recording the clip could
-                // only be guessed. Fabio measured what a guess costs — a male voice
-                // performed as a female one, and an output that was a different person.
-                //
-                // Disabled, not hidden: MPI-620 rejected `showWhen`, and the resolution
-                // Fabio accepted there was a disabled control whose note reads as the
-                // reason. `disabledNote` carries that reason.
-                let decl = f;
-                if (f.libraryVoiceOnly && !_libraryVoiceRegister()) {
-                    decl = { ...f, disabled: true, note: f.disabledNote };
-                }
                 const node = _buildField(
-                    decl,
+                    f,
                     _fieldValues[f.id] ?? f.default,
                     (val) => _onFlowField(f, val),
                     unsubs,
@@ -2602,76 +2577,6 @@ export const MpiBaseFlow = ComponentFactory.create({
             return out;
         }
 
-        /**
-         * Materialise the declared EMOTION reference onto its role (MPI-607).
-         *
-         * Text to Speech's VC arm exists to carry emotion, and emotion cannot be
-         * selected by text — MPI-622 measured a neutral reference plus angry words as
-         * soulless at exaggeration 0.5 and the wrong emotion at 1.0. So the emotion
-         * arrives as one of the library's 30 performance clips (5 registers x 6
-         * emotions), and the register is matched to the chosen voice because the
-         * conversion only travels about halfway: starting in the same range is the
-         * difference between landing on the voice and landing between two people.
-         *
-         * `none` returns the list UNTOUCHED, which leaves `Input_Audio_2` empty, which
-         * is what `MpiAnyChecker#57` reads to send `MpiIfElse#53` straight off the TTS.
-         * The bypass is the graph's existing routing — nothing here had to be added to
-         * it, and nothing here may assume it (Fabio, 2026-08-28).
-         *
-         * @param {Array<Object>} mediaItems
-         * @returns {Promise<Array<Object>|null>}  null = the clip was wanted and failed
-         */
-        async function _deriveVoiceEmotion(mediaItems) {
-            const ve = flow.voiceEmotion;
-            if (!ve?.role || !ve.clip) return mediaItems;
-
-            const emotion = String(_fieldValues[ve.emotionField] ?? 'none');
-            if (!emotion || emotion === 'none') return mediaItems;
-
-            const register = String(_libraryVoiceRegister() || '');
-            if (!register) {
-                clientLogger.warn('MpiBaseFlow', `${flow.id}: emotion "${emotion}" wanted but no voice range resolved`);
-                return mediaItems;
-            }
-
-            const project = state.currentProject;
-            if (!project?.folderPath || !project?.id) return mediaItems;
-
-            const rel = ve.clip.replace('{register}', register).replace('{emotion}', emotion);
-            const res = await fetch(`/voices/${rel}`);
-            if (!res.ok) throw new Error(`emotion clip ${rel} — HTTP ${res.status}`);
-            const file = await toWavFile(await res.blob(), `perf_${register}_${emotion}.wav`);
-            if (!file) throw new Error(`emotion clip ${rel} — decode returned null`);
-            const url = await _placePreviewAsset(file, 'audio', project);
-            if (!url) return null;
-
-            // Replace rather than append if something already holds the role, so a
-            // second run in one session cannot stack two references on it.
-            const target = mediaItems.find(m => m?.role === ve.role);
-            return target
-                ? mediaItems.map(m => (m === target ? { ...m, url, source: 'flow-derived' } : m))
-                : [...mediaItems, { url, mediaType: 'audio', source: 'flow-derived', role: ve.role }];
-        }
-
-        /**
-         * The register of the LIBRARY voice in the slot, or null.
-         *
-         * There is no fallback and there must not be one. A hand-picked register was
-         * tried and pulled the same day (Fabio, 2026-08-28): it crosses the voice —
-         * "sometimes it's a male voice and gives me the emotion of a female voice" — so
-         * a register we did not read off a real library entry is a guess, and null here
-         * means the emotion is skipped entirely rather than guessed at.
-         *
-         * A library pick carries `register` because `MpiMediaPicker._pickVoice` sends it
-         * through `onImport` — without that the voice becomes an anonymous WAV at the
-         * import boundary and this is unanswerable, which is why that thread exists.
-         */
-        function _libraryVoiceRegister() {
-            return _mediaGroups
-                .flatMap(e => e.items.filter(Boolean))
-                .find(m => m?.register)?.register || null;
-        }
-
         const _run = async () => {
             if (_running) return;
 
@@ -2735,10 +2640,6 @@ export const MpiBaseFlow = ComponentFactory.create({
             let runMediaItems;
             try {
                 runMediaItems = await _deriveRunMedia(mediaItems);
-                // AFTER the step deriver, not before: that one rewrites the user's own
-                // slots, this one adds a role no slot owns. Order matters only in that
-                // the emotion clip must not be visible to a step that walks roles.
-                if (runMediaItems) runMediaItems = await _deriveVoiceEmotion(runMediaItems);
             } catch (err) {
                 clientLogger.error('MpiBaseFlow', `step media derivation failed: ${err?.message || err}`);
                 runMediaItems = null;
