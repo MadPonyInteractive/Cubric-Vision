@@ -86,8 +86,12 @@ exactly** — including all five no-`.git` packs (`comfyui_controlnet_aux`, `com
 
 > Folder names do **not** match lock keys character-for-character —
 > `ComfyUI-UltimateSDUpscale` is on disk as `comfyui_ultimatesdupscale`, hyphens as
-> underscores. A name-equality sweep reports it MISSING. Match case- *and* separator-
-> insensitively, or read the marker file directly.
+> underscores. My first sweep matched names case-insensitively and reported it MISSING;
+> reading `.mpi_node_commit` gave 17/17. **The hand-rolled sweep was the mistake** —
+> `nodesDeps.js` declares `filename` beside `id`, and
+> `checkUniversalWorkflowDepsStatus()` (`routes/shared.js`) already walks every universal
+> dep and diffs the marker against the pin. Written up in
+> `docs/playbooks/bump-engine/02-local-upgrade.md` § Traps.
 
 ## Gate 5 — the LOCAL floor check ✅
 

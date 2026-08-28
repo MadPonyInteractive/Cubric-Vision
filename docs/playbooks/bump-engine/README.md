@@ -241,6 +241,8 @@ without it.
 | Pod-green says nothing about the Windows portable | Gate 5 is the local half; both are required |
 | A skipped model reading as a pass | [01](01-smoke-run.md) § What green prints |
 | The full wipe destroys a **symlinked** custom node | The dev machine symlinks `custom_nodes/ComfyUI-MpiNodes` to the node source repo — [02](02-local-upgrade.md) § Traps |
+| **Gate 4 on disk: lock keys are not folder names.** `ComfyUI-UltimateSDUpscale` lives at `custom_nodes/comfyui_ultimatesdupscale` — a hand-rolled name match reports a healthy pack MISSING. `checkUniversalWorkflowDepsStatus()` already does this check properly | [02](02-local-upgrade.md) § Traps |
+| **Nobody POSTs `/engine/upgrade` — the boot gate fires it, unattended and blocking.** So a bump reaches users with no button to click, and `skipLocalEngine`/`CUBRIC_E2E` silently skip it | [02](02-local-upgrade.md) § Nobody calls that POST |
 | An upgrade that restamps a version the tree did not move to conceals itself forever | MPI-419; [02](02-local-upgrade.md) § Traps |
 
 ## Checklist (copy per bump)
