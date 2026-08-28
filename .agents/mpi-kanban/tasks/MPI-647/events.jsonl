@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-647", "type": "task.created", "at": "2026-08-28T18:11:12Z", "actor": "claude", "summary": "Raised from MPI-630's close-out, approved by Fabio. De-flake flow-reuse-opens-without-model.spec.js — the stub loses a race"}

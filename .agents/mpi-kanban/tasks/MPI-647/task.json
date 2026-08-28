@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-647",
+  "title": "De-flake flow-reuse-opens-without-model.spec.js \u2014 the stub loses a race",
+  "description": "This test reddened master on 2026-08-28 (run 33196261338) and a rerun of the IDENTICAL commit came back green, so it is a race, not logic. Mechanism, traced: the spec stubs `state.s_installedModelIds` four times in one page and asserts on the toast each time. Case 1 (installed ['klein-4b'], recorded ['klein-9b']) PASSED and case 4 (installed ['klein-4b'], recorded undefined) FAILED in the same run \u2014 identical state, opposite outcomes, which is the proof it is timing. js/shell.js:1540 is the only writer of `s_installedModelIds` and refreshes it asynchronously from the backend; on a CI runner with nothing installed it resolves to [] and lands mid-suite, so flowAvailability (js/data/flowsRegistry.js:2163) then reports the model missing and _reuseModelToast (js/services/flowService.js:216) fires the danger toast case 4 asserts must not exist. It passes locally only because the real models ARE installed here, which is also why `npm test` cannot see it \u2014 this is the desktop Playwright suite. Fix by making the stub authoritative for the test's lifetime (suppress or await the refresh) rather than assigning and racing it; do NOT widen the 80ms sleep, that just moves the flake. Verify by running the spec against an EMPTY installed set, which is the CI condition and currently reproduces nothing locally.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-28T18:11:12Z",
+  "updated_at": "2026-08-28T18:11:12Z",
+  "links": {
+    "events": "events.jsonl"
+  }
+}

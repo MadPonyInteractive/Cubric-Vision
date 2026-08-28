@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-646", "type": "task.created", "at": "2026-08-28T18:11:12Z", "actor": "claude", "summary": "Raised from MPI-630's close-out, approved by Fabio. Delete installRequirementsCommand — the last of the dead per-node pip data"}
