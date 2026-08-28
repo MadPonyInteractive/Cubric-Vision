@@ -4,10 +4,10 @@
   "title": "Kill the console windows that flash open on app boot",
   "description": "On Windows, every app boot pops ~10 terminal windows for a second. Two causes: (1) Vision's own child_process calls omit windowsHide:true, and the server.js Electron fork has no console, so Windows allocates a conhost per console child - 4x wmic win32_videocontroller, 2x nvidia-smi --query-gpu=name, 2x bare nvidia-smi, plus the polled nvidia-smi VRAM read; (2) @cubric/connector spawns the broker CLI with BOTH detached:true and windowsHide:true, and Windows IGNORES CREATE_NO_WINDOW when DETACHED_PROCESS is set, so the broker node process shows a console regardless. Reads as malware to users. Connector half lives in c:/AI/Mpi/Cubric-Studio/packages/connector/src/.",
   "column": "doing",
-  "maturity": "in-progress",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-28T07:42:51+01:00",
-  "updated_at": "2026-08-28T07:42:51+01:00",
+  "updated_at": "2026-08-28T07:02:11Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
