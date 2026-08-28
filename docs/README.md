@@ -52,6 +52,7 @@ NOT mechanically split these):
 | Orientation hub (architecture, invariants) | [PROJECT.md](PROJECT.md) |
 | Dev setup / commands / reading `logs/app.log` | [DEVELOPMENT.md](DEVELOPMENT.md) |
 | Tests — both suites, the release gate, writing a desktop spec | [testing.md](testing.md) |
+| VPN / CivitAI region block / a suspicious timestamp — check the clock BEFORE blaming the VPN | [vpn-and-clock.md](vpn-and-clock.md) |
 | **Harnesses — running app code WITHOUT the app** (bare-Node registry imports + the absolute-path import boundary, `CUBRIC_ENGINE_ROOT` install harness, one router on a spare port, your own `app:isolated` instance, **measuring GPU memory** — which the standard desktop harness can never do) | [testing-harnesses.md](testing-harnesses.md) |
 | Workspaces / routing | [workspaces.md](workspaces.md) |
 | Data layer (registries, projectModel, resolver, persist whitelist, reuse/sidecar) | [data.md](data.md) |
@@ -106,7 +107,8 @@ NOT mechanically split these):
 |---|---|
 | **Playbook routing** (add-model, add-flow, shared invariants) | [playbooks/README.md](playbooks/README.md) |
 | **Per-model research** (Krea2, Klein, Chroma, SDXL, LTX, Wan, PiD) — authoring, tuning, measured data | [models/README.md](models/README.md) |
-| Builder operational loop | [builder/README.md](builder/README.md) |
+| Builder operational loop | [builder/README.md](builder/README.md) — read `builder/research/README.md` before re-testing anything |
+| Cloudflare R2 (upload/list/verify weights, builds, pod-runtime files) | `c:\AI\Mpi\MadPony-Identity\capabilities\cloudflare-r2\README.md` (sibling repo) |
 | Environments (ComfyUI portable, cu130) | [builder/01-environments.md](builder/01-environments.md) |
 | Pod image / mpi-ci / version-lock / rebuild | [builder/02-image-and-rebuild.md](builder/02-image-and-rebuild.md) |
 | Spin + install nodes/weights | [builder/03-spin-and-install.md](builder/03-spin-and-install.md) |

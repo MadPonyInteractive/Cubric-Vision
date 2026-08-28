@@ -8,6 +8,8 @@ sub-agents (`/mpi-brief-rule <name>`).
 | Task | Read |
 |---|---|
 | Any code at all (colors/icons/DOM/logging/imports/feedback conventions — baseline) | [dos_and_donts.md](dos_and_donts.md) |
+| **Any fix, every agent** — diagnose to the root, never symptom-patch (+ its Sub-Agent Briefing) | [root-cause.md](root-cause.md) |
+| Working in a sibling repo under `c:\AI\Mpi\` (incl. the Docs-site no-push block) | [sibling-repos.md](sibling-repos.md) |
 | Build / move / style / debug a component | [components.md](components.md) |
 | Cross-component communication (EventBus) | [events.md](events.md) |
 | Global state (`js/state.js` Proxy) | [state.md](state.md) |
