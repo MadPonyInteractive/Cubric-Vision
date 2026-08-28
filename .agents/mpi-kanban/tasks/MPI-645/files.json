@@ -1,0 +1,9 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/data/flowsRegistry.js",
+    "js/utils/declaredFields.js",
+    "docs/playbooks/add-flow/existing-flows/drama-box.md",
+    ".agents/mpi-kanban/tasks/MPI-645/"
+  ]
+}
