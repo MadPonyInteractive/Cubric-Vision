@@ -80,6 +80,64 @@
 
 Project mode: scalable-foundation.
 
+> ### 2026-08-28 (session 31) — 🟢 THE STRIP IS DONE AND PUSHED (`126cbdba`).
+>
+> **Text to Speech is now a line, a voice and a language**, verified in the real UI on an
+> isolated instance: the run slide renders `THE LINE` and `LANGUAGE` only, the Inputs
+> slide offers one voice slot, and the console is clean. DramaBox's range input reports
+> `step="1"` with the readout at `5`. `773/773` (two emotion cases deleted, one new) and
+> `npm run lint` green.
+>
+> **The eight-item list, item by item:**
+>
+> 1. ✅ `flowsRegistry.js` — `emotion` field, `voiceEmotion{}`, `libraryVoiceOnly` and
+>    `disabledNote` all gone; `derived[]` and the single `audio1` slot kept. The header
+>    comment now carries the measured reason the VC arm died, and the `cfg_weight` 0.5
+>    lesson survived the rewrite because it is about the TTS nodes, not the VC.
+> 2. ✅ `MpiBaseFlow.js` — `_deriveVoiceEmotion`, `_libraryVoiceRegister`, its `_run` call,
+>    the `libraryVoiceOnly` branch and the `toWavFile` import deleted. `derived[]` in
+>    `_collectInputs` untouched.
+> 3. ✅ `commandRegistry.js` — the `audio2` mediaInput dropped. **This is the load-bearing
+>    one:** `Input_Audio_2` is the only thing `MpiAnyChecker#57` reads, so an unmapped
+>    role IS the VC bypass. `flowVoiceChanger` keeps its own `audio2` — different flow.
+> 4. ⏸ **FABIO'S** — the dead graph nodes. Unreachable already; deletion is his re-export.
+> 5. ✅ `tests/flow-voice-emotion.test.cjs` → **`tests/flow-derived-fields.test.cjs`**. The
+>    derived-language case moved across intact; the two emotion cases are replaced by one
+>    that pins the strip — exactly one declared role and exactly one mapped `mediaInput`,
+>    so re-adding `audio2` anywhere fails a test rather than quietly re-arming the VC.
+> 6. ✅ The `voiceId`/`register` thread is gone from `MpiMediaPicker._pickVoice` and
+>    `MpiBaseFlow._handleFiles`. The emotion was its only consumer, and `autoFromVoice`
+>    — named in the comment that justified it — does not exist anywhere in the repo.
+> 7. ✅ DramaBox `Input_Duration` `step: 0.5` → `1`.
+> 8. ⏸ **FABIO'S** — `#54 MpiLoadAudio.block_if_empty` if the optional voice is wanted.
+>
+> **Two things beyond the list, both consequences of it:**
+>
+> - **`declaredFields.js`:** the radio `disabled` widening had exactly one consumer (the
+>   voice-range picker, already pulled) and went. The **select-branch `f.note` STAYS** — it
+>   reads as MPI-607 code but its live caller is **MPI-620's `canvasSize`**, whose `note`
+>   sat unrendered from `f1880430` until that branch existed. Deleting it with the rest of
+>   the emotion work would have silently un-fixed that. The comment now says so.
+> - **The docs were stale from session 30, not from this strip.** `chatter-box.md` still
+>   described the "Other languages" toggle and two audio slots; both sections rewritten
+>   (175 lines, under the 200 budget). `UNRELEASED.md`'s Text to Speech paragraph told
+>   users to turn on a switch that no longer exists, and promised the second voice slot.
+>
+> ### What is left on this card
+>
+> - **Fabio's re-export** of `flow_chatter_box.json` (items 4 and 8). Then re-bake with
+>   `COMFY_URL=http://127.0.0.1:48188 node scripts/sync-raw-workflows.mjs` and verify by
+>   SEMANTIC diff. ⚠️ **`tests/inject-params-titles.test.cjs` asserts the
+>   `FL_ChatterboxVC#31` ← `#52` wiring** (mutation-checked in session 29) — deleting the
+>   VC nodes will fail that case, and the case should go with them, not be worked around.
+> - **Fabio's own smoke test of both flows through the overlay.** Nothing has been
+>   generated end to end on the final shape; this session proved the UI renders, not that
+>   a run completes. DramaBox's voice-reference arm is still unexercised in the app.
+> - The three flagged-but-not-taken items from session 30 still stand: the global
+>   `[hidden]` rule (Fabio's call), the `diffusers` FutureWarning note in
+>   `python_deps.in`, and the unexplained Chatterbox mel-length warning — which concerns
+>   REFERENCE clip length and is probably moot now that VC is gone.
+
 > ### 2026-08-28 (session 30) — 🔴 FABIO KILLED THE EMOTION/VC FEATURE. Next session STRIPS it.
 >
 > **THE DECISION, and it is final:** *"I had enough of this. Even if we do that, it's still
