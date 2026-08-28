@@ -141,6 +141,35 @@ deliberately **not** a control. Do not re-test this.
 - Fabio's own VRAM fix is the one in the graph: a single `Mpi Clear Vram` at the end,
   our own node. Two unload nodes were tried and are not needed.
 
+## 🟢 The wall of "Uninitialized parameters" on every run is EXPECTED
+
+Every DramaBox generation logs a `WARNING Uninitialized parameters or buffers:`
+followed by a few hundred keys — `feature_extractor.video_aggregate_embed.*` and
+`video_connector.transformer_1d_blocks.*`. It looks exactly like a broken install.
+It is not, and it needs no action.
+
+**Every one of those keys is VIDEO, in an audio-only model.** The model class
+declares a video tower; the released audio checkpoint does not contain it, so the
+loader initialises those parameters and says so. They are never executed on the
+audio path.
+
+Checked on 2026-08-28, so it does not need checking again:
+
+- The safetensors headers of BOTH shipped weights carry **zero** video-named
+  tensors. `feature_extractor.video_aggregate_embed.weight` and
+  `video_connector.learnable_registers` are absent from each.
+- `ResembleAI/Dramabox` ships **exactly two** weight files, and both are declared
+  deps: `dramabox-dit` (6.12 GB) and `dramabox-audio-components` (1.81 GB). There
+  is no third file we failed to fetch — those weights do not exist in the release.
+
+🔴 **Why this is worth a section rather than a shrug.** It has the same SHAPE as
+the Chatterbox silence bug (`chatter-box.md`): a swallowed initialisation failure
+that still returns a plausible-looking result. What tells them apart is the OUTPUT,
+never the log — Chatterbox's tell was a real `.flac` of zero duration at −91 dB,
+while DramaBox produces real measured speech. So if this flow ever does go wrong,
+**measure the audio**; do not start from this warning, which will be there either
+way.
+
 ## FLAC, because `.opus` is a trap
 
 `.opus` is missing from **four of the five** extension lists that classify a file as audio
