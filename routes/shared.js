@@ -298,7 +298,7 @@ async function runPipCommand(args) {
     }
     logger.info('system', `Running: python -m pip ${args.join(' ')}`);
     return new Promise((resolve, reject) => {
-        const pip = spawn(pythonPath, ['-m', 'pip', ...args]);
+        const pip = spawn(pythonPath, ['-m', 'pip', ...args], { windowsHide: true });
         pip.stdout.on('data', (data) => logger.info('system', `[pip] ${data.toString().trim()}`));
         pip.stderr.on('data', (data) => logger.warn('system', `[pip-err] ${data.toString().trim()}`));
         pip.on('close', (code) => {
@@ -425,7 +425,7 @@ async function runCustomCommand(commandStr, cwd) {
     const args = parts.slice(1);
     logger.info('system', `Running custom command: ${commandStr} (cwd: ${cwd})`);
     return new Promise((resolve, reject) => {
-        const proc = spawn(exe, args, { cwd });
+        const proc = spawn(exe, args, { cwd, windowsHide: true });
         proc.stdout.on('data', (d) => logger.info('system', `[custom-cmd] ${d.toString().trim()}`));
         proc.stderr.on('data', (d) => logger.warn('system', `[custom-cmd-err] ${d.toString().trim()}`));
         proc.on('close', (code) => {

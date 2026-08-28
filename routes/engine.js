@@ -280,7 +280,7 @@ async function _provisionWindowsEngine(targetDir, engineInfo, missingDepIds) {
 function _runStreaming(cmd, args, { cwd, env, stage } = {}) {
     return new Promise((resolve, reject) => {
         logger.info('engine', `${stage}: ${cmd} ${args.join(' ')}`);
-        const child = spawn(cmd, args, { cwd, env: env || process.env });
+        const child = spawn(cmd, args, { cwd, env: env || process.env, windowsHide: true });
         const onLine = (level, buf) => {
             const text = buf.toString();
             for (const raw of text.split(/\r?\n/)) {

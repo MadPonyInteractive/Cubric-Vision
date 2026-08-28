@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    ".agents/mpi-kanban/tasks/MPI-637/**",
+    "routes/platformEngine.js",
+    "routes/system.js",
+    "routes/shared.js",
+    "routes/engine.js",
+    "routes/gitProvision.js",
+    "routes/comfy.js",
+    "services/brokerBoot.js",
+    "tests/windows-hide-spawn.test.cjs",
+    "docs/releases/UNRELEASED.md",
+    "packages/connector/src/ensureBroker.ts",
+    "c:/AI/Mpi/Cubric-Studio/packages/connector/src/ensureBroker.ts"
+  ]
+}

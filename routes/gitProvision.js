@@ -48,7 +48,7 @@ const LINUX_PACKAGE_MANAGERS = [
 /** True when `bin` resolves on PATH. */
 function _hasBinary(bin) {
     const probe = process.platform === 'win32' ? 'where' : 'which';
-    const res = spawnSync(probe, [bin], { stdio: 'ignore' });
+    const res = spawnSync(probe, [bin], { stdio: 'ignore', windowsHide: true });
     return res.status === 0;
 }
 
@@ -59,12 +59,12 @@ function _hasBinary(bin) {
 function findGit() {
     const candidates = ['git', ...COMMON_GIT_PATHS];
     for (const candidate of candidates) {
-        const res = spawnSync(candidate, ['--version'], { stdio: ['ignore', 'pipe', 'ignore'] });
+        const res = spawnSync(candidate, ['--version'], { stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true });
         if (res.status === 0) {
             // Resolve the bare name to an absolute path for GIT_PYTHON_GIT_EXECUTABLE.
             if (candidate === 'git') {
                 const probe = process.platform === 'win32' ? 'where' : 'which';
-                const found = spawnSync(probe, ['git'], { encoding: 'utf8' });
+                const found = spawnSync(probe, ['git'], { encoding: 'utf8', windowsHide: true });
                 const resolved = (found.stdout || '').split(/\r?\n/)[0].trim();
                 return resolved || 'git';
             }
@@ -105,7 +105,7 @@ function manualInstallHint(pm) {
 function _runInstall(cmd, args, onStatus) {
     return new Promise((resolve, reject) => {
         logger.info('engine', `[git-install] ${cmd} ${args.join(' ')}`);
-        const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+        const child = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
         const onLine = (level, buf) => {
             for (const raw of buf.toString().split(/\r?\n/)) {
                 const line = raw.trim();

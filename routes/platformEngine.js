@@ -124,10 +124,18 @@ function getComfyRepoRel() {
     return USES_COMFY_CLI ? [COMFY_DIR] : [COMFY_DIR, 'ComfyUI'];
 }
 
-/** Promisified execFile that resolves stdout/stderr and never rejects. */
+/**
+ * Promisified execFile that resolves stdout/stderr and never rejects.
+ *
+ * `windowsHide` is NOT cosmetic. This runs inside the forked server.js Electron
+ * child, which owns no console, so Windows hands every console-subsystem child
+ * (nvidia-smi, wmic, git, python) a fresh conhost — a terminal window that flashes
+ * open and shut on the user's desktop. Boot fired ten of them and read as malware
+ * (MPI-637). Every child_process call in the main process needs this flag.
+ */
 function _run(cmd, args, timeout = 5000) {
     return new Promise((resolve) => {
-        execFile(cmd, args, { timeout }, (error, stdout, stderr) => {
+        execFile(cmd, args, { timeout, windowsHide: true }, (error, stdout, stderr) => {
             resolve({ error, stdout: stdout || '', stderr: stderr || '' });
         });
     });
@@ -227,7 +235,7 @@ async function detectAmdGPU() {
     if (process.platform !== 'win32') return false;
 
     return new Promise((resolve) => {
-        execFile('wmic', ['path', 'win32_videocontroller', 'get', 'name'], { timeout: 5000 }, (error, stdout) => {
+        execFile('wmic', ['path', 'win32_videocontroller', 'get', 'name'], { timeout: 5000, windowsHide: true }, (error, stdout) => {
             if (error) return resolve(false);
             const hasAmd = /AMD|Radeon/i.test(stdout);
             if (hasAmd) logger.info('gpu-detect', 'AMD GPU detected via WMI');
@@ -244,7 +252,7 @@ async function detectIntelArcGPU() {
     if (process.platform !== 'win32') return false;
 
     return new Promise((resolve) => {
-        execFile('wmic', ['path', 'win32_videocontroller', 'get', 'name'], { timeout: 5000 }, (error, stdout) => {
+        execFile('wmic', ['path', 'win32_videocontroller', 'get', 'name'], { timeout: 5000, windowsHide: true }, (error, stdout) => {
             if (error) return resolve(false);
             const hasIntel = /Intel.*Arc|Intel.*Data\s+Center\s+GPU/i.test(stdout);
             if (hasIntel) logger.info('gpu-detect', 'Intel Arc GPU detected via WMI');

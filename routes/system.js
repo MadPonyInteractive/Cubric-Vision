@@ -24,7 +24,7 @@ const { COMFY_DIR, getComfyRepoRel, resolveDownloadConfig } = require('./platfor
 
 async function getVramStats() {
     return new Promise((resolve) => {
-        execFile('nvidia-smi', ['--query-gpu=memory.total,memory.used', '--format=csv,noheader,nounits'], (err, stdout) => {
+        execFile('nvidia-smi', ['--query-gpu=memory.total,memory.used', '--format=csv,noheader,nounits'], { windowsHide: true }, (err, stdout) => {
             if (err || !stdout) return resolve({ total: 0, used: 0 });
             const [total, used] = stdout.split(',').map(s => parseInt(s.trim(), 10));
             resolve({ total: total || 0, used: used || 0 });

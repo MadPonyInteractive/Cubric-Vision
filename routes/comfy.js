@@ -494,7 +494,10 @@ router.post('/comfy/start', async (req, res) => {
         processState.lastComfyExit = null;
         processState.comfyStopRequested = false;
 
-        processState.activeComfyProcess = spawn(pythonPath, args, { cwd: path.dirname(mainPath), env: spawnEnv });
+        // windowsHide: the server.js fork owns no console, so without it Windows
+        // gives the embedded python its own conhost — a terminal window sitting on
+        // the user's desktop for the whole life of the engine (MPI-637).
+        processState.activeComfyProcess = spawn(pythonPath, args, { cwd: path.dirname(mainPath), env: spawnEnv, windowsHide: true });
         // We own the engine now, so we are the one that can honour another
         // instance's restart request (MPI-484).
         _watchForRestartRequests(Date.now());

@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-637", "at": "2026-08-28T07:42:51+01:00", "actor": "claude", "column": "doing", "title": "Kill the console windows that flash open on app boot"}
