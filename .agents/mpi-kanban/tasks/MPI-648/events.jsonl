@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-648", "at": "2026-08-28T20:25:00+01:00", "actor": "claude", "column": "todo", "title": "Write down the stubbed-global-state race - a spec that assigns state and hopes"}
