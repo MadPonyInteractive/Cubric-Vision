@@ -1,0 +1,22 @@
+{
+ "schema": "mpi-kanban/file-claim/v1",
+ "id": "3b7d5e11-42a9-4c6f-9d80-6e1a2f5c8b47",
+ "task_card": "MPI-629",
+ "owner_session": ".agents/mpi-kanban/state/sessions/a755a5b9-b745-4e2f-aad2-9415de7ac5b9.json",
+ "owner_role": "implementer",
+ "status": "closed",
+ "claim_kind": "write",
+ "paths": [
+  ".agents/mpi-kanban/tasks/MPI-629/**",
+  "js/services/updateChecker.js",
+  "js/components/Compounds/MpiOkCancel/MpiOkCancel.js",
+  "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js",
+  "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.css",
+  "js/components/types.js",
+  "js/core/storage.js"
+ ],
+ "claimed_at": "2026-08-27T15:02:00Z",
+ "heartbeat_at": "2026-08-27T15:02:00Z",
+ "note": "MPI-629 update-prompt rework. types.js touched for ONE line in the MpiOkCancel typedef (cancel payload); it is listed in MPI-596 files.json but is NOT in that card's live claim 77c21420. CLOSED 2026-08-27T15:31:00Z - MPI-629 shipped in 0b8fbd33 + 5d1c8f1a.",
+ "released_at": "2026-08-27T15:31:00Z"
+}

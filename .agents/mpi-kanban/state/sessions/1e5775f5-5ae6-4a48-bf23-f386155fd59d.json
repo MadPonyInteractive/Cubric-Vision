@@ -10,14 +10,18 @@
     "verify",
     "implement"
   ],
-  "status": "active",
-  "heartbeat_at": "2026-08-26T01:06:18Z",
+  "status": "closed",
+  "heartbeat_at": "2026-08-26T03:06:05Z",
   "name": "MPI-622 session 18 - curation pass + full 228 import",
   "recent_events": [
     {
       "at": "2026-08-26T00:48:59Z",
       "event": "session_started",
       "note": "Resumed MPI-622 from handoff 234b1c22 for the curation pass."
+    },
+    {
+      "at": "2026-08-26T03:06:05Z",
+      "event": "session_closed"
     }
   ],
   "tasks": [

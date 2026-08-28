@@ -12,14 +12,18 @@
     "coordinate",
     "integrate"
   ],
-  "status": "active",
-  "heartbeat_at": "2026-08-25T18:29:42Z",
+  "status": "closed",
+  "heartbeat_at": "2026-08-26T00:36:48Z",
   "name": "MPI-622 session 17 - the Parallel Batch (import pipeline + MpiVoicePicker)",
   "task": ".agents/mpi-kanban/state/tasks/97be3bbb-5bee-4663-b3b1-53f7b6f043bc.json",
   "recent_events": [
     {
       "at": "2026-08-25T18:29:42Z",
       "event": "session_started"
+    },
+    {
+      "at": "2026-08-26T00:36:48Z",
+      "event": "session_closed"
     }
   ]
 }

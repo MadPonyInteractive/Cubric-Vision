@@ -22,6 +22,11 @@
     "js/data/commandRegistry.js",
     "routes/comfy.js",
     "tests/targetpath-dep-install-state.test.cjs",
-    "js/data/modelRegistry.js"
+    "js/data/modelRegistry.js",
+    "comfy_workflows/flow_drama_box.json",
+    "comfy_workflows/flow_chatter_box.json",
+    "js/data/modelConstants/nodesDeps.js",
+    "docs/playbooks/add-flow/existing-flows/drama-box.md",
+    "docs/playbooks/add-flow/existing-flows/chatter-box.md"
   ]
 }

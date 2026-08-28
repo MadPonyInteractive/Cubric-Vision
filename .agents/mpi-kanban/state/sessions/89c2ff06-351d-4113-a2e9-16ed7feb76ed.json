@@ -1,0 +1,31 @@
+{
+  "schema": "mpi-kanban/session/v1",
+  "id": "89c2ff06-351d-4113-a2e9-16ed7feb76ed",
+  "role": "implementer",
+  "claude_session_id": "89c2ff06-351d-4113-a2e9-16ed7feb76ed",
+  "started_at": "2026-08-26T18:18:31Z",
+  "allowed_actions": [
+    "read",
+    "edit",
+    "verify",
+    "implement"
+  ],
+  "status": "closed",
+  "heartbeat_at": "2026-08-27T08:21:25Z",
+  "recent_events": [
+    {
+      "at": "2026-08-26T18:39:44Z",
+      "event": "session_closed"
+    },
+    {
+      "at": "2026-08-27T07:36:00Z",
+      "event": "heartbeat_renewed"
+    },
+    {
+      "at": "2026-08-27T08:21:25Z",
+      "event": "session_closed"
+    }
+  ],
+  "task": ".agents/mpi-kanban/state/tasks/3889611c-f635-419f-a82d-43886026bb69.json",
+  "name": "MPI-596 stage-2 step kind (MpiStepPlace)"
+}
