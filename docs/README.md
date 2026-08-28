@@ -51,7 +51,8 @@ NOT mechanically split these):
 |---|---|
 | Orientation hub (architecture, invariants) | [PROJECT.md](PROJECT.md) |
 | Dev setup / commands / reading `logs/app.log` | [DEVELOPMENT.md](DEVELOPMENT.md) |
-| Tests — both suites, the release gate, writing a desktop spec | [testing.md](testing.md) |
+| Tests — both suites, the release gate, CI, running the desktop suite | [testing.md](testing.md) |
+| **WRITING a desktop spec** — the specs that exist + the five traps they paid for (flow overlays, the frame with no geometry, the stubbed-global-state race) | [testing-desktop-specs.md](testing-desktop-specs.md) |
 | VPN / CivitAI region block / a suspicious timestamp — check the clock BEFORE blaming the VPN | [vpn-and-clock.md](vpn-and-clock.md) |
 | **Harnesses — running app code WITHOUT the app** (bare-Node registry imports + the absolute-path import boundary, `CUBRIC_ENGINE_ROOT` install harness, one router on a spare port, your own `app:isolated` instance, **measuring GPU memory** — which the standard desktop harness can never do) | [testing-harnesses.md](testing-harnesses.md) |
 | Workspaces / routing | [workspaces.md](workspaces.md) |

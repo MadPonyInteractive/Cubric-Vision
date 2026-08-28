@@ -1,0 +1,11 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "id": "MPI-648",
+  "files": [
+    "docs/testing.md",
+    "docs/testing-desktop-specs.md",
+    "docs/README.md",
+    "docs/DEVELOPMENT.md",
+    "docs/testing-harnesses.md"
+  ]
+}

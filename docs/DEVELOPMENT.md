@@ -32,8 +32,9 @@ npm run build:portable:dry-run
 
 **Tests: `npm test` (unit) + `npm run test:desktop` (Playwright/Electron).** Both
 are a release gate; the desktop suite runs fine with the app open (it takes its own
-free port, MPI-448). The full suite contract, the green baseline and the
-spec-authoring traps live in [testing.md](testing.md).
+free port, MPI-448). The full suite contract and the green
+baseline live in [testing.md](testing.md); the spec-authoring traps are
+[testing-desktop-specs.md](testing-desktop-specs.md).
 
 The Electron app uses an Express server on `127.0.0.1:3000` — `CUBRIC_PORT`
 overrides it, which only the desktop suite does. Desktop tests use an isolated
