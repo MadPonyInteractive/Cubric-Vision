@@ -14,3 +14,5 @@
 
 - [ ] Ship a release without the dep - until a build is out, released 1.4.0 installs still fetch it
 - [ ] ONLY THEN delete from R2 and HF (`rclone deletefile --s3-no-check-bucket`, verify HTTP 404). Re-uploadable from `G:\CubricModels`.
+
+- [x] Character Sheet head-removal rework synced 2026-08-28 - API twin regenerated against 48188, `flow-model-choice` test re-pinned to properties, `existing-flows/character-sheet.md` written, stale LanPaint claims corrected (9400cc9b)

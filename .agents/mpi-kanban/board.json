@@ -140,7 +140,7 @@
       "MPI-198"
     ]
   },
-  "updated_at": "2026-08-28T15:49:27Z",
+  "updated_at": "2026-08-28T16:54:36Z",
   "events": [
     {
       "at": "2026-08-27T15:31:00Z",
@@ -3964,6 +3964,13 @@
       "task": "MPI-603",
       "actor": "claude",
       "note": "Step 3 DONE: 'klein-lora-outpaint' dropped from Klein 4B's dependencies in models.js (the loraDeps.js DEPS entry is KEPT - that is what lets the orphan sweep reclaim the 72MB from users who already have it). Proven with the real registry rather than the diff: Klein 4B is 21 deps, no model declares the weight, and the _orphanedDepIds predicate now returns SWEEPABLE ORPHAN true. Six stale 'Klein still lists it' statements healed (loraDeps, modelDeps, klein README/9b/removal) and one UNRELEASED.md bullet added - a user's disk loses 72MB on update. npm test 775/775. Card stays validating: REMAINING is step 4 ship a build without the dep, THEN step 5 delete from R2/HF. Do not close on step 3."
+    },
+    {
+      "at": "2026-08-28T16:54:36Z",
+      "type": "task.updated",
+      "task": "MPI-603",
+      "actor": "claude",
+      "note": "Character Sheet head-removal rework SYNCED and recorded (9400cc9b). Fabio replaced the BiRefNet subject matte with SAM3 'background:3' inverted, after the BiRefNet matte was proved to be what dropped a wizard's staff - a single-salient-subject segmenter handed a three-panel sheet, with the grey plate at the same 0x808080 as the backdrop so drops read as deliberate. API twin regenerated against 48188 (converter baseline proven byte-identical from the committed raw first), validated against live /object_info, all 15 Input_* titles intact. flow-model-choice.test.cjs no longer pins RemoveBackground by name; it now pins the properties, incl. the ':N' on the background vocabulary (max_detections defaults to 1 - a bare 'background' mattes one panel of three, silently). Mutation-checked. New docs/playbooks/add-flow/existing-flows/character-sheet.md carries the closed-world-vs-open-world lesson and the four-recipe history; validation.md and klein/9b.md no longer claim LanPaint is the current branch. 775/775, release:check green. MPI-603's own scope unchanged: steps 4-5 (ship, THEN delete from R2/HF) still open."
     }
   ]
 }
