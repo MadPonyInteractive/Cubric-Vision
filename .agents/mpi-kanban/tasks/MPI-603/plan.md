@@ -1,6 +1,43 @@
-# MPI-603 Plan — re-author the Character Sheet's head-removal branch onto LanPaint
+# MPI-603 Plan — retire the outpaint LoRA, and give the Character Sheet its own answer
 
-Scope for THIS session, per handoff `d02f766e`: the graph re-author plus the
+## Current State (2026-08-28, after `5edce1f2`)
+
+**The Character Sheet half is DONE and pushed.** Everything below the drift note describes
+a LanPaint branch that no longer exists — read this section and `validation.md`, not it.
+
+Shipped in `5edce1f2`: the whole-sheet backdrop repaint is gone, the composite is gated on
+`Input_Remove_Head` and fills only the head hole with a colour sampled from a 32×32 crop of
+the sheet, and the Anime + Cartoon recipes were rewritten. Fabio confirmed live on Anime at
+turbo and non-turbo. `npm test` 773/773; the `flow-model-choice` trip-wire was rewritten
+deliberately and mutation-checked (4/4 regressions caught).
+
+**The only thing left on this card is the deprecation's release-gated half, and the order
+is a correctness constraint, not a preference:**
+
+1. Ship a build that no longer lists `klein-lora-outpaint` in Klein 4B's deps (the dep
+   itself was dropped from `models.js` in `7d72f0b6`).
+2. **Only then** delete the weight from R2 and Hugging Face.
+
+Doing 2 before 1 turns every released 1.4.0 install into a 404 instead of a clean skip.
+The `loraDeps.js` `DEPS` entry must survive either way — `_orphanedDepIds` reads `DEPS`, so
+deleting it strands 72 MB on every existing user's disk.
+
+## Plan Drift
+
+- **2026-08-27 (`19ec571c`, Fabio):** the LanPaint head-removal branch this plan was written
+  to build was deleted outright. Head removal became pure compositing. Everything under
+  "The branch as it stands", "Target" and "Steps" below is history from that point.
+- **2026-08-28:** a BiRefNet subject matte, then a SAM3 `background:3` matte, then no matte
+  at all. Root cause of the visible defects was never the matte — it was a fixed `0x808080`
+  plate against a backdrop the model generates anywhere from RGB 137 to 200, plus the word
+  `flat` used 3–4× in the Anime and Cartoon recipes. Full write-up:
+  `docs/playbooks/add-flow/existing-flows/character-sheet.md`.
+
+---
+
+## Historical — the LanPaint re-author (superseded, kept for provenance)
+
+Scope for THAT session, per handoff `d02f766e`: the graph re-author plus the
 `loraDeps.js` comment heal. Steps 3–5 of `brief.md` (drop the dep from Klein's list in
 `models.js`, ship a release, delete from R2/HF) are the deprecation's *later* half and are
 deliberately NOT in this session — `js/data/modelConstants/models.js` is live-claimed by

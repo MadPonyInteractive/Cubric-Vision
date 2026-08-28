@@ -239,3 +239,44 @@ MPI-603's own scope is unaffected. The outpaint LoRA is still retired, still loa
 graph, still dropped from Klein 4B's dep list, and its `loraDeps.js` entry still stays for
 the orphan sweep. Steps 4 and 5 — ship a build without the dep, THEN delete from R2/HF —
 remain open in that order.
+
+
+---
+
+## 2026-08-28 — the Character Sheet half SHIPPED (`5edce1f2`)
+
+Supersedes every graph description above, including the 2026-08-23 LanPaint section and the
+SAM3 `background:3` matte that briefly replaced it.
+
+**What shipped.** The whole-sheet backdrop repaint is removed. `#883 ImageCompositeMasked`
+is gated behind `#742 MpiIfElse(Input_Remove_Head)` and fills only the head hole; its source
+is a 32x32 crop of the sheet (`#887`) scaled to sheet size (`#889`), so the fill tracks
+whatever backdrop the model generated. With Remove Head off, `#882 Output_Image` emits the
+sheet untouched. Anime and Cartoon recipes rewritten.
+
+**Why.** The plate was a fixed `0x808080`, documented as matching an "eighteen percent grey
+card". Measured across nine runs the model paints its card at RGB ~176 (turbo), ~137 (25
+steps) and ~200 (after the recipe rewrite) — up to 114 levels away. That mismatch, not the
+matte, is what made every masking error visible. The card is already flat (std 2.8), so the
+repaint bought nothing and cost the whole artefact class.
+
+**The recipe half.** Low silhouette contrast on Anime and Cartoon traced to the word `flat`
+used for several different targets in one paragraph; Krea 2 reads whole sentences, so it
+lands as one global flatness instruction. Use count predicted severity exactly — Photoreal
+2, 3D 2, Anime 3, Cartoon 4, against measured 2.6% / 14.3% / 21.2% of silhouette below
+contrast 30. Rewriting to zero uses took Cartoon 21.2% -> 7.8%.
+
+| check | result |
+|---|---|
+| converter baseline from `HEAD` raw vs committed twin | **0 diffs** — so the twin diff is purely the graph change |
+| generated twin structure | 63 prompt nodes, **no dangling links** |
+| app injection contract | **17/17** `Input_*`/`Output_*` titles preserved (node ids moved, titles did not) |
+| `flow-model-choice` trip-wire, rewritten deliberately | 22/22, and **4/4 mutations caught** |
+| `npm test` | **773/773** |
+| live app, Fabio | Anime turbo **and** non-turbo, both pass |
+
+**Still open on this card — release-gated, and the order is a correctness constraint.**
+Ship a build without `klein-lora-outpaint` in Klein 4B's deps (dropped from `models.js` in
+`7d72f0b6`), **then** delete the weight from R2 and Hugging Face. Reversing the order turns
+every released 1.4.0 install into a 404 instead of a clean skip. The `loraDeps.js` `DEPS`
+entry must survive either way — `_orphanedDepIds` reads `DEPS`.
