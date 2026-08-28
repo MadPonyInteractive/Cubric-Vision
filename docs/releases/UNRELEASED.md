@@ -50,6 +50,11 @@
   trick and nothing uses it any more, so Klein no longer downloads it and Vision clears it off
   your disk if you already had it.
 
+- The generation engine moves up three versions, and the update is a small one. Vision now
+  runs ComfyUI 0.34.0 instead of 0.31.0. Your engine updates itself in place the first time
+  you open this version — a handful of small packages, not the multi-gigabyte reinstall an
+  engine change used to mean, and none of your models are touched.
+
 ## What's new
 
 - **Flows are here, and they are the headline of this release.** A flow is a whole job in one

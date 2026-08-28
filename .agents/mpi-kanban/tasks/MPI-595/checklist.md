@@ -51,6 +51,32 @@ at pickup.
 - [ ] Engine pin in `dev_configs/node_lock.json` **compared against the last released tag** (do
       not assume it is unchanged — that assumption is from 2026-08-21). Unchanged → no smoke
       evidence owed; changed → smoke run + `dev_configs/smoke-evidence.json` present.
+- [ ] **THE PIN HAS CHANGED — the smoke is owed. MPI-649 bumped the engine `v0.31.0 → v0.34.0`
+      on 2026-08-28 and deliberately stopped at the free half.** `smoke-evidence.json` in the
+      tree still says `0.31.0`, so `release:check` will refuse the release until this clears.
+      Gates 6–9 of `docs/playbooks/bump-engine/README.md` all rent a RunPod GPU, which is why
+      they were parked here rather than paid for twice — run them as ONE block:
+      - [ ] Sync **both** files into `c:\AI\Mpi\mpi-ci\cubric-vision-pod\` — `node_lock.json`
+            AND `python_deps.txt` — and commit there with `git -C`. `python_deps.txt` moved only
+            its provenance comment (`…constraints-v0.31.0.txt` → `v0.34.0`), zero package
+            versions, but it still has to travel or the drift check fails.
+      - [ ] Re-run `node scripts/smoke-workflows.mjs --plan` **immediately before** the smoke —
+            both sync files are live working-tree state and a card landing in between re-drifts
+            them. `--plan` spends nothing and prints the matrix + volume size; show Fabio.
+      - [ ] Rebuild the **DEV** Pod image at the new lock (`/build-pod-image`), tag
+            `v<ver>-dev-<profile>`, bump ONLY `POD_IMAGE_VERSION_DEV`/`_CPU_DEV`. Then **restart
+            the default-profile app** — `routes/` does not hot-reload and a matrix driven by a
+            pre-edit app rents the OLD tag.
+      - [ ] Assert the Pod reports `0.34.0` before smoking anything.
+      - [ ] Run the matrix. **Must include a VIDEO op, not only an image op** — `av >=16.0.0 →
+            >=17.0.0` is a PyAV MAJOR bump and it is the one requirement line in the whole
+            v0.31.0→v0.34.0 diff that can break a video path (VideoHelperSuite, any
+            ffmpeg-backed node). That is the specific risk this smoke exists to retire.
+      - [ ] Promotion is **mandatory at this release, not optional**: ship the app at the new
+            pin while the released Pod image is still on the old one and every user gets a local
+            engine and a remote Pod on different ComfyUI versions, silently. A clean rebuild at
+            a real version — never a `-dev` tag renamed.
+      - Local half is **already green and needs no re-run**: see MPI-649's `validation.md`.
 
 ## Gate C — must decide
 

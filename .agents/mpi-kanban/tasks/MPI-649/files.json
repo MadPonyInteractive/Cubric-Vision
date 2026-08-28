@@ -1,0 +1,9 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "dev_configs/node_lock.json",
+    "dev_configs/system_dependencies.json",
+    "docs/releases/UNRELEASED.md",
+    ".agents/mpi-kanban/tasks/MPI-649/"
+  ]
+}
