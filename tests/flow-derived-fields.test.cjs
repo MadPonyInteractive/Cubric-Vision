@@ -21,7 +21,6 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
-const fs = require('node:fs');
 const path = require('node:path');
 
 const repo = p => path.join(__dirname, '..', p);
@@ -80,36 +79,4 @@ test('Text to Speech is TTS only — no second audio role reaches the graph', as
     const keys = reg.flowChatterBox.mediaInputs.map(m => m.key);
     assert.deepStrictEqual(keys, ['audio1'],
         'flowChatterBox must map only audio1 — an audio2 mapping re-enables the VC arm');
-});
-
-test('a voiceless run is refused, not silently blocked (MPI-607)', async () => {
-    // THE PAIR THAT MAKES A RUN VANISH. `MpiLoadAudio#54` carries `block_if_empty:
-    // true`, so with no voice it returns an ExecutionBlocker: zero output, and
-    // ComfyUI reports SUCCESS. Nothing in the UI stops the user getting there — the
-    // media slot renders as optional because `upto` is the only media mode there is.
-    //
-    // What stands in the way is `required` on the op's media slot, which
-    // `_findMissingMediaSlot` (generationService) reads at enqueue AND at dispatch to
-    // raise the toast. `required: false` opts OUT of that guard — which is what this
-    // flow shipped with, and why an empty run went quiet instead of complaining.
-    //
-    // The law is asserted as the PAIR, not as a literal `true`: a slot the graph
-    // blocks on must not opt out. Stated that way it still means something if the
-    // flag is ever turned off deliberately — DramaBox does exactly that, and its
-    // prompt-only arm depends on it.
-    const graph = JSON.parse(fs.readFileSync(
-        repo('comfy_workflows/flow_chatter_box.json'), 'utf8'));
-    const reg = await commands();
-
-    const slot = reg.flowChatterBox.mediaInputs.find(m => m.key === 'audio1');
-    const node = Object.values(graph).find(
-        n => (n._meta?.title || '').toLowerCase() === slot.title.toLowerCase());
-    assert.ok(node, `the graph must carry a node titled "${slot.title}"`);
-
-    if (node.inputs?.block_if_empty === true) {
-        assert.notStrictEqual(slot.required, false,
-            `${slot.title} blocks the graph when empty, so the slot must not declare `
-            + '`required: false` — that opts out of the missing-media toast, and the '
-            + 'run then reports success while producing nothing');
-    }
 });

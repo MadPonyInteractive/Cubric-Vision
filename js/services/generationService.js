@@ -118,8 +118,13 @@ function _findMissingMediaSlot(operation, mediaItems = []) {
 // dispatch so the message reads identically wherever the block lands.
 function _warnMissingMediaSlot(slot) {
     const noun = slot.mediaType === 'video' ? 'video' : slot.mediaType === 'audio' ? 'audio file' : 'image';
+    // The article is chosen from the NOUN, not by naming the one word that takes
+    // "an". It read `noun === 'image' ? 'an' : 'a'`, which said "Add a audio file"
+    // — latent until 2026-08-28, because every audio slot in the app declared
+    // `required: false` and so never reached this toast at all (MPI-607).
+    const article = /^[aeiou]/i.test(noun) ? 'an' : 'a';
     // sound:false — immediate feedback of pressing Cue; a click must not ring.
-    Events.emit('ui:warning', { message: `Add ${noun === 'image' ? 'an' : 'a'} ${noun} before generating — this operation needs one.`, sound: false });
+    Events.emit('ui:warning', { message: `Add ${article} ${noun} before generating — this operation needs one.`, sound: false });
 }
 
 // MPI-337: some ops (detail/inpaint — commandRegistry `requiresMask`) need

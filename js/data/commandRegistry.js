@@ -984,8 +984,8 @@ export const commands = {
         // suffix matches the image slot) carrying the head region in top-left SOURCE pixels;
         // boxes are injectionParams, not media, so they are not declared here.
         mediaInputs: [
-            { key: 'image1', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image',   required: false },
-            { key: 'image2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2', required: false },
+            { key: 'image1', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image',   required: true },
+            { key: 'image2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_2', required: true },
         ],
         // Fixed-prompt outcome app: the graph has NO Input_Positive/Input_Negative — both
         // prompts are BAKED. Do not add a prompt box for this app.
@@ -1010,7 +1010,7 @@ export const commands = {
         // (Input_Video's own outputs feed ImageResizeKJv2), which is why this flow
         // exposes no resolution control — the output matches the source by design.
         mediaInputs: [
-            { key: 'video1', mediaType: MEDIA_TYPE.VIDEO, title: 'Input_Video', required: false },
+            { key: 'video1', mediaType: MEDIA_TYPE.VIDEO, title: 'Input_Video', required: true },
         ],
         // Prompts are the flow's own declared controls, not the PromptBox's — the
         // prompt describes what happens in the NEW seconds.
@@ -1031,7 +1031,7 @@ export const commands = {
         mediaType: MEDIA_TYPE.VIDEO,        // OUTPUT type — video + its new audio
         requiresImages: 0,                  // media is never a hard requirement at the op layer
         mediaInputs: [
-            { key: 'video1', mediaType: MEDIA_TYPE.VIDEO, title: 'Input_Video', required: false },
+            { key: 'video1', mediaType: MEDIA_TYPE.VIDEO, title: 'Input_Video', required: true },
         ],
         // No 'audio' slot on purpose: Input_Audio#106 belongs to VOICE mode, which is
         // mutually exclusive with foley and has never been run (MPI-536 § v1 ships foley
@@ -1065,7 +1065,7 @@ export const commands = {
         mediaType: MEDIA_TYPE.IMAGE,        // OUTPUT type
         requiresImages: 0,                  // media is never a hard requirement at the op layer
         mediaInputs: [
-            { key: 'image1', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: false },
+            { key: 'image1', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
         ],
         promptRequired: false,
         universal: true,
@@ -1092,8 +1092,8 @@ export const commands = {
         mediaType: MEDIA_TYPE.IMAGE,        // OUTPUT type
         requiresImages: 0,                  // media is never a hard requirement at the op layer
         mediaInputs: [
-            { key: 'image1', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: false },
-            { key: 'image2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Paint', required: false },
+            { key: 'image1', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+            { key: 'image2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Paint', required: true },
         ],
         // The subject description IS the input — the drawing carries where, how big and
         // what pose, and nothing else. A blob is a silhouette a girl and a boy share.
@@ -1123,7 +1123,7 @@ export const commands = {
         mediaType: MEDIA_TYPE.IMAGE,        // OUTPUT type
         requiresImages: 0,                  // media is never a hard requirement at the op layer
         mediaInputs: [
-            { key: 'image1', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: false },
+            { key: 'image1', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
         ],
         // Same reasoning as Draw It In: strokes say where, how big and what pose, never
         // WHAT. Without it the model invents a subject from the hint alone. It also covers
@@ -1156,8 +1156,8 @@ export const commands = {
         mediaType: MEDIA_TYPE.IMAGE,        // OUTPUT type
         requiresImages: 0,                  // media is never a hard requirement at the op layer
         mediaInputs: [
-            { key: 'image1', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: false },
-            { key: 'image2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Paint', required: false },
+            { key: 'image1', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image', required: true },
+            { key: 'image2', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Paint', required: true },
         ],
         // FALSE, unlike Draw It In's `true`, and the difference is real rather than an
         // oversight: there the drawing is a silhouette and the words are the only thing
@@ -1190,8 +1190,8 @@ export const commands = {
         mediaType: MEDIA_TYPE.AUDIO,        // OUTPUT type
         requiresImages: 0,                  // media is never a hard requirement at the op layer
         mediaInputs: [
-            { key: 'audio1', mediaType: MEDIA_TYPE.AUDIO, title: 'Input_Audio',   required: false },
-            { key: 'audio2', mediaType: MEDIA_TYPE.AUDIO, title: 'Input_Audio_2', required: false },
+            { key: 'audio1', mediaType: MEDIA_TYPE.AUDIO, title: 'Input_Audio',   required: true },
+            { key: 'audio2', mediaType: MEDIA_TYPE.AUDIO, title: 'Input_Audio_2', required: true },
         ],
         // The graph has no text node at all — FL_ChatterboxVC converts a performance,
         // it does not read one. Deliberately no node titled `Input_Positive`: a
