@@ -5,6 +5,21 @@ notes in [research/](research/).
 
 ## Current State
 
+> **Session note 2026-08-29 (handoff).** **Phase 0 is COMPLETE and its gate PASSED** -
+> Brush trains SplatKit's COLMAP output and a held-out eval view at 5000 steps is
+> unmistakably the source room. Tiers measured (Draft 5000 / Scene 30000). Amendments
+> 6-10 below are new and supersede parts of decisions 2 and 3. Evidence:
+> [research/phase0-log.md](research/phase0-log.md),
+> [research/measurements.md](research/measurements.md), and the Phase 0/0b ticks in
+> [checklist.md](checklist.md).
+>
+> **IN FLIGHT at handoff: the Wan-inclusive 4-rail bake**, ComfyUI prompt
+> `da775af7-0261-4629-9a1f-bd4b411ce5f1` on the bench (port 8188), writing to
+> `C:\AI\MPI-623-out\mpi623_wan`. Rail 1 composited (coverage 0.61-0.91), rail 2's Wan
+> sample was loading. It is the last unmeasured term. **It may not have survived the
+> session** - the bench was launched as a background child of that session. Re-queue is
+> one command, see the handoff's `next_action`.
+
 **Project mode:** `scalable-foundation`.
 
 A user bakes a Gaussian-splat scene once from a 360 equirect image, then re-enters
@@ -352,7 +367,28 @@ geometry - far stronger than a still for v2v. Revisit once Phase 3 is in use.
 
 ## Plan Drift
 
-- None yet.
+- **2026-08-29 - Phase 0's gate was provable WITHOUT Wan, so it ran first and cheap.**
+  `SphereSfMDataset` accepts any equirect batch and `CameraPlotRenderControlGeo` produces
+  one from MoGe alone, so the gate needed no Wan 2.1 (16 GB), no LoRA and no umt5. Plan
+  assumed the full pipeline was a prerequisite. It is not.
+- **2026-08-29 - the progress-parsing task changed shape.** Brush writes zero bytes to
+  stdout off a TTY, so "strip ANSI, match `N/M Steps`" cannot work. Poll `--export-path`
+  instead. See amendment 9.
+- **2026-08-29 - a new prerequisite appeared for Phase 2**: `scripts/workflow-to-api.mjs`
+  cannot convert the shipped SplatKit workflow (portless annotation nodes; rgthree
+  Bundle/UnbundleByName virtual links). Worked around outside product code for Phase 0;
+  Phase 2 needs the real fix. Details in `research/phase0-log.md`.
+- **2026-08-29 - measuring one rail and multiplying is WRONG for this graph.** The shipped
+  workflow's SfM uses the `exhaustive` matcher over ~324 frames, so SfM scales roughly
+  quadratically while Wan and the composites scale linearly. Measure the 4-rail run whole.
+- **2026-08-29 - `coverage` is a number the pipeline already prints per frame** (0.61-0.91
+  on rail 1, decaying as the rail travels from the origin). Phase 3's camera constraint
+  (amendment 10) could key off it rather than a hand-tuned radius. Worth trying before
+  inventing a heuristic.
+- **2026-08-29 - filed [MPI-659](../MPI-659/brief.md)**: `guard-gpu` never fired for any
+  of this session's GPU work. Patterns match the raw command line, so a graph dispatched
+  from a script is invisible, and `brush_app.exe` matches nothing at all - which this card
+  is about to ship as a node.
 
 ## Verification
 
