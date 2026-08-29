@@ -120,6 +120,40 @@ registered type is not necessarily its class name - trust the workflow JSON.**
    resolution. Every renderer quality gap is a framerate compromise and capture is
    not framerate-bound. Without this the water loses its reflections.
 
+### Amendments from Phase 0 (2026-08-29) - user decisions and measured findings
+
+Evidence: [research/phase0-log.md](research/phase0-log.md),
+[research/measurements.md](research/measurements.md).
+
+6. **A Scene card is an IMAGE card that carries a `.ply`** (Fabio, 2026-08-29).
+   The gallery card shows a still rendered from the bake; OpenGL is only needed
+   once the user OPENS the card. This is strictly less work than decision 2 above:
+   most of the ~25-site media-type sweep exists to give a splat a thumbnail and a
+   viewer, and an image card already has both. The `.ply` still needs to survive
+   `routes/projects.js:1491/1552` (the zip-export loops) and the cross-project
+   copy, so the media-type work does not vanish - it shrinks to "an image card with
+   an attached asset" instead of "a fourth media type with its own viewer".
+   **Revisit decision 2 in that light before starting Phase 1.**
+7. **Ship the fp8 Wan 2.1 tier first, not the GGUF** (Fabio, 2026-08-29). Offload is
+   acceptable - this machine has run a 40 GB transformer at ~1 min per 2 s of video.
+   A long bake is expected and fine: a scene is a **durable asset**, closer to
+   training a LoRA than to a generation. So do not tier for speed by default, and
+   do not treat a slow local bake as a defect.
+8. **The Brush trainer node MUST hand Brush a clean dataset root.** A SplatKit
+   dataset contains four COLMAP models; the two under `_spheresfm_work/` use camera
+   model 11 (SPHERE) and Brush picks nondeterministically between them, failing with
+   `Invalid camera model` on some runs and training fine on others. Delete
+   `_spheresfm_work/` (disposable, 60% of the dataset) or copy `images/` +
+   `sparse/0/` to a clean dir before invoking the trainer.
+9. **Progress cannot be parsed from Brush's stdout** - it writes zero bytes when not
+   a TTY. Poll `--export-path` for `export_{iter}.ply` instead. Silence is normal;
+   the node must not treat it as failure.
+10. **The Scene workspace camera must be constrained to the bake rail's
+    neighbourhood.** 3DGS is only valid near its training poses - an unconstrained
+    fly-anywhere camera renders floaters, and that is inherent, not a renderer bug.
+    Measured: an outside-in orbit of an interior scene is pure soup while a held-out
+    training view of the same `.ply` is a clean room.
+
 ### Known trap
 
 Style LoRAs do **not** compose with the Krea2 edit LoRA (MPI-282). Phase 4's
