@@ -3,11 +3,11 @@
   "id": "MPI-655",
   "title": "Partly-installed model strands its weights: GC protects them, no Uninstall button",
   "description": "Lose one common dep and the model keeps exclusive evidence, so _localSharedDepsMap protects its whole universe and the orphan sweep skips it - while anyInstalled goes false and the card shows Install, never Uninstall. Bytes are held and unreachable. Reproducible today with one root.",
-  "column": "validating",
-  "maturity": "research",
-  "status": "validating",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
   "created_at": "2026-08-29T10:24:00+01:00",
-  "updated_at": "2026-08-29T11:07:40+01:00",
+  "updated_at": "2026-08-29T11:10:58+01:00",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -17,5 +17,10 @@
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "research": "research/"
+  },
+  "attention": {
+    "state": "required",
+    "reason": "Implementation done, pushed as cf28a816, and proven in a sandboxed isolated app (Boogu at 66% on disk offered Remove files and reclaimed the 19.17GB weight). Waiting on Fabio to confirm the affordance reads right in his own session.",
+    "updated_at": "2026-08-29T11:10:58+01:00"
   }
 }
