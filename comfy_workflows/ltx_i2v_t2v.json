@@ -72,7 +72,7 @@
   },
   "9": {
     "inputs": {
-      "string": "a woman having a shower, soaping her body. Sunlight from blinds paints her body. Sound of running water, Bathroom room noise.   "
+      "string": "she smiles at the camera and says in a British accent, \"Come with me babes.\" then she gets off the couch and walks towards the TV revealing her buttocks and G-string at the end of the room. The camera follow her closely "
     },
     "class_type": "MpiText",
     "_meta": {
@@ -302,7 +302,7 @@
   },
   "75": {
     "inputs": {
-      "int": 2
+      "int": 5
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -324,7 +324,7 @@
   },
   "77": {
     "inputs": {
-      "int": 984885690
+      "int": 984886278
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -1387,7 +1387,7 @@
     "inputs": {
       "preview_rate": 16,
       "model": [
-        "367",
+        "641",
         0
       ],
       "vae": [
@@ -1398,18 +1398,6 @@
     "class_type": "MpiVideoSamplingPreview",
     "_meta": {
       "title": "Mpi Video Sampling Preview"
-    }
-  },
-  "367": {
-    "inputs": {
-      "any": [
-        "4",
-        0
-      ]
-    },
-    "class_type": "MpiReroute",
-    "_meta": {
-      "title": "Model_Connect"
     }
   },
   "370": {
@@ -2168,6 +2156,19 @@
     "class_type": "VAELoader",
     "_meta": {
       "title": "Load VAE"
+    }
+  },
+  "641": {
+    "inputs": {
+      "attention": "comfy kitchen attention",
+      "model": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "ModelAttentionBackend",
+    "_meta": {
+      "title": "ModelAttentionBackend"
     }
   }
 }

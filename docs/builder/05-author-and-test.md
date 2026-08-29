@@ -56,8 +56,10 @@ our **`MpiVideoSamplingPreview`** node fed a `taeltx2_3` VAE — real decoded fr
 not the rgb-factors blob. It replaced KJNodes' `LTX2SamplingPreviewOverride` in
 MPI-575; see `docs/preview-decoders.md`. When authoring an LTX-class video workflow:
 
-- Wire the previewer AFTER the `Model_Connect` reroute so it wraps whichever loader
-  the engine-split keeps: `UNETLoader → Model_Connect → MpiVideoSamplingPreview → rest`.
+- Wire the previewer directly off the loader chain:
+  `UNETLoader → ModelAttentionBackend → MpiVideoSamplingPreview → rest`. (The
+  `Model_Connect` reroute that used to sit here was removed in MPI-605 — its two-loader
+  engine split is gone, so it selected between nothing.)
   Connect a plain `VAELoader` on `taeltx2_3.safetensors` to its `vae`. There is no
   `latent_upscale_model` input — the TAEHV path never used one.
 - The node is title-driven friendly — `generate_ltx.py` carries it into all 8

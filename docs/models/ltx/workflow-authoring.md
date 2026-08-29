@@ -20,9 +20,13 @@ context, so it unpacks the AV pack and decodes the video half for real. KJNodes'
 clip length in latent frames while a TAEHV streams 8x that many, and the app's ring believed
 it. `docs/preview-decoders.md` § "Both are now our node" carries the arithmetic.
 
-Wiring: insert AFTER `Model_Connect` reroute so it wraps whichever loader the engine-split
-keeps → `UNETLoader → Model_Connect → MpiVideoSamplingPreview → rest`. Title-driven
+Wiring: `UNETLoader → ModelAttentionBackend → MpiVideoSamplingPreview → rest`. Title-driven
 so `generate_ltx.py` carries it into all 8 output files untouched.
+
+The `Model_Connect` reroute that used to sit in this chain is **gone** (MPI-605, 2026-08-29).
+It existed for a two-loader engine split that no longer exists — `generate_ltx.py` stamps one
+`UNET_LOADER_TITLE` node's `unet_name`/`weight_dtype` per tier instead — so there is nothing
+left for a reroute to select between. Do not reinstate it.
 
 **The 28-byte header trap.** The node sends preview frames with VideoHelperSuite's 28-byte
 binary header (not core's 8-byte). The app handles this via
