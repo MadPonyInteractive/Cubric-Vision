@@ -13,12 +13,15 @@ notes in [research/](research/).
 > [research/measurements.md](research/measurements.md), and the Phase 0/0b ticks in
 > [checklist.md](checklist.md).
 >
-> **IN FLIGHT at handoff: the Wan-inclusive 4-rail bake**, ComfyUI prompt
-> `da775af7-0261-4629-9a1f-bd4b411ce5f1` on the bench (port 8188), writing to
-> `C:\AI\MPI-623-out\mpi623_wan`. Rail 1 composited (coverage 0.61-0.91), rail 2's Wan
-> sample was loading. It is the last unmeasured term. **It may not have survived the
-> session** - the bench was launched as a background child of that session. Re-queue is
-> one command, see the handoff's `next_action`.
+> **Session note 2026-08-29 (second handoff). PHASE 0b IS ALSO COMPLETE.** The Wan
+> 4-rail bake finished (2h18m) and stopped deliberately on `on_split='stop'`; re-queued
+> with `on_split='largest'` for 585s against the live bench cache. Brush re-run: 44.8min,
+> 1,641,469 splats, 387MB, growth still freezing at 15000. **The scene is a room** -
+> verified by held-out eval views, not by exit code. Amendments 11-14 are new. Committed
+> as `850cae78` and `ce884943`.
+>
+> **Nothing is in flight.** The GPU lease is free and the bench on 8188 has given up all
+> its cached value - it can be stopped. Next is Phase 1, which needs no GPU.
 
 **Project mode:** `scalable-foundation`.
 
