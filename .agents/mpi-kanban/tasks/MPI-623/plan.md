@@ -28,10 +28,29 @@ notes in [research/](research/).
 > follow from that; measurements.md now warns that its QUALITY observations measure a
 > mis-piloted bake while its COST numbers stand. Committed as `08ea0860`.
 >
+> **Session note 2026-08-29 (fourth). PHASE 1 IS COMPLETE - and it was a tenth of the
+> written size.** Revisiting decision 2 against amendment 6 against the actual code
+> collapsed it entirely: `'splat'` is NOT a media type, a Scene card is `type: 'image'`
+> with a `splatPath` field, and NONE of the ~50 media-type branch sites needed touching.
+> Two plan facts turned out to be wrong and are corrected below: **Vision has no zip
+> export at all** (`routes/projects.js:1491/1552` is the derivatives backfill, not an
+> export loop), and the `.ply` belongs in `.meta/` on the existing item-companion
+> convention rather than in `Media/`. Four files changed, 791/791 tests green.
+>
+> **Phase 1's `user-ux` check is DEFERRED INTO PHASE 2, by Fabio's decision.** It is not
+> blocking: Phase 2 depends on the Phase 1 *contract* (`splatPath` on an image item,
+> `.meta/<id>.splat.ply`), which is landed and unit-tested. Checking it now needs
+> hand-surgery on a sidecar to fake a Scene card; once Phase 2 emits a real one the same
+> five checks happen for free inside Phase 2's own verification. **Do not tick Phase 1's
+> last box until that happens.** One gap is worth closing sooner than that and needs no
+> app: `add-from-cards`'s splat copy is asserted from SOURCE TEXT only, never executed -
+> and its failure mode is a copied card silently pointing back into the source project.
+>
 > **Nothing is in flight, and the GPU is NOT available - Fabio is using it himself.** Do
 > not take a lease, do not start the bench on 8188, do not dispatch anything. Phase 1
-> needs no GPU. When Phase 1 finishes, or if something genuinely needs the GPU before
-> then, STOP and tell Fabio so he can check whether it is free.
+> needed no GPU. **Phase 1 is done, so the next unit - the `## Parallel Batch` bake path -
+> is now unblocked; the queued rail-scaling check DOES need the GPU.** Ask Fabio whether
+> the card is free before starting it.
 
 **Project mode:** `scalable-foundation`.
 
@@ -124,11 +143,11 @@ registered type is not necessarily its class name - trust the workflow JSON.**
    hundred bytes, stored as generation params like any other). This dissolves the
    folder problem: no companion directory, so no copy-route change, no archive
    packaging, no export-loop change.
-2. **`'splat'` becomes a real 4th media type**, not a video card in disguise.
-   Disguising it is the symptom-patch and it leaks at every media-type branch,
-   starting with `routes/projects.js:1491/1552` where the zip-export loops skip
-   anything that is not image or video - splats would be **silently excluded from
-   export**.
+2. ~~**`'splat'` becomes a real 4th media type**, not a video card in disguise.~~
+   **OVERTURNED 2026-08-29 by amendment 6 and then by the code itself - see
+   amendment 18.** A Scene card is `type: 'image'` carrying a `splatPath`. The
+   leak this decision feared does not exist: the cited `routes/projects.js:1491/1552`
+   is not a zip-export loop, and Vision has no zip export to be excluded from.
 3. **Brush runs as an MpiNodes ComfyUI node, not an app-side binary.** Decided on
    one fact: with a remote pod, app-side training would have to pull the entire
    COLMAP dataset - hundreds of images, GBs - back over the wire to train locally.
@@ -193,9 +212,13 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     the rail layout (the split is not rail-aligned). See measurements.md § Phase 0b.
 12. **A Scene costs ~3 h and ships 387 MB** (measured 2026-08-29 on a 16 GB 4060 Ti):
     2 h 18 m dataset bake + 45 min Brush, ~14 GB of disposable scratch, 1.64 M splats.
-    The `.ply` is 2.9x the Wan-free estimate, which lands on zip-export
-    (`routes/projects.js:1491/1552`), cross-project copy and sync. `--max-splats` is the
-    lever if it proves too heavy; the default 10 M cap was nowhere near binding.
+    The `.ply` is 2.9x the Wan-free estimate. ~~which lands on zip-export
+    (`routes/projects.js:1491/1552`), cross-project copy and sync.~~ **Corrected
+    2026-08-29 (Phase 1): there is no zip export** - see amendment 19. Where 387 MB
+    actually lands is **cross-project copy** (`add-from-cards`, now an explicit
+    `fs.copy` and the slow step of copying a Scene card) and any future sync.
+    `--max-splats` is the lever if it proves too heavy; the default 10 M cap was
+    nowhere near binding.
 
 13. **A Scene card's still must be rendered from a BAKE POSE, never a default orbit**
     (measured 2026-08-29). Core `RenderSplat` with no `camera_info` orbits outside-in and
@@ -250,6 +273,38 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     (b) **Sage Attention + Triton is the sanctioned speedup** for the Wan pass, which was
     76% of the 2h18m. It requires his Sage Attention patch - without it the workflow
     silently emits **black frames**. Neither is installed on the bench today.
+
+### Amendments from Phase 1 (2026-08-29) - the media-type sweep collapsed
+
+18. **There is no media-type sweep. `'splat'` is not a media type.** Amendment 6 said
+    the ~25-site sweep would "shrink"; checked against the code, it **vanishes**. A
+    Scene card is `type: 'image'` whose `filePath` is the bake-pose still and which
+    carries one extra field, `splatPath`. Grep finds ~50 media-type branches (audio's
+    own sweep, MPI-573) and **every one is already correct for an image**: filter tabs,
+    hover-play, duration badge, viewer selector, `MpiProjectCard` thumbnail,
+    `projectReconciler.js:165`, the derivatives backfill. Adding a fourth vocabulary
+    entry would buy fifty branches that must learn it, to describe a card that already
+    renders. `js/managers/projectReconciler.js` needs nothing either - it pushes the
+    whole sidecar as the item (`hydratedHistory.push(meta)`), so a new field reaches
+    the client for free. **Only the companion FILE needed work**, in three places:
+    `DERIVATIVE_RE`, `add-from-cards`, and the `open-group` intercept.
+19. **`routes/projects.js:1491/1552` are not the zip-export loops, and Vision has no
+    zip export.** Cited four times across this plan, amendment 12 and two handoffs. The
+    lines have drifted to `:1587/:1595` and are `/backfill-media-derivatives`, the
+    thumbnail/proxy backfill - whose `meta.type !== 'image' && !== 'video'` skip is
+    correct, and which would happily *process* a Scene card as the image it is. There
+    is no `archiver` / `jszip` / `adm-zip` anywhere and no export route;
+    `extract-zip` and `7zip-bin` are dependency-download plumbing. E2E criterion 5 was
+    testing a feature that does not exist and has been re-scoped.
+20. **The `.ply` lives at `.meta/<id>.splat.ply`, not in `Media/`.** It rides
+    `DERIVATIVE_RE`, whose own comment says it is matched by PREFIX precisely so a new
+    item-owned companion does not need three lists edited in lock-step. One word added
+    to one alternation buys the delete sweep (`removeItemThumbs`), the pass-2 orphan
+    GC, and the naming `add-from-cards` already copies against. Semantically inverted -
+    the still is the derivative of the `.ply`, not the reverse - but "file owned by an
+    item id, deleted with it" is exactly what that regex expresses. `Media/` was the
+    briefed assumption and would have needed new cleanup code in the delete route with
+    no orphan sweep behind it.
 
 ### Verified NOT drifted from the source workflow (checked 2026-08-29)
 
@@ -310,30 +365,41 @@ Nothing in this phase edits the Vision repo.
       minimum). **Verify:** tiers recorded in `research/measurements.md` with the
       timing each is based on.
 
-## Phase 1: Splat media type (Vision, no Flow yet)
+## Phase 1: Scene card as an image card carrying a `.ply` - COMPLETE (2026-08-29)
 
 Standalone and testable before any Flow exists: a `.ply` placed in a project by
-hand must produce a working gallery card.
+hand must produce a working gallery card. Delivered as amendments 18-20 describe -
+no media type, no sweep, four files.
 
 **Verify mode:** `user-ux` - the card must be seen in the running app.
 
-- [ ] Add `'splat'` to the media-type vocabulary in `js/data/projectModel.js`
-      (defined at :70/:98/:129/:155) and sweep **every** branch that switches on
-      media type - ~25 across 15 files. Classify each: needs splat awareness, or
-      correctly falls through to the image default. **Verify:** a written
-      classification of all 25 sites; `npm test` green.
-- [ ] Fix the sites that genuinely need it: `MpiGalleryGrid.js` (filter tabs,
-      hover-play, duration badge), `MpiGroupHistoryBlock.js:253` (viewer selector -
-      splat gets neither MpiCanvasViewer nor MpiVideoViewer),
-      `MpiProjectCard.js:94/104` (thumbnail third path),
-      `projectReconciler.js:165/183`, and **`routes/projects.js:1491/1552`**
-      (export loops - a splat must not be silently dropped from a zip).
-      **Verify:** a project containing a `.ply` exports to zip WITH the `.ply` in it.
-- [ ] Thumbnail/preview for a splat card. **Verify:** a splat card renders a
-      recognisable preview in the gallery grid, not a broken image.
-- [ ] Route `open-group` on a splat card away from Group History
-      (`MpiGalleryBlock.js:225-227`), for now to a placeholder.
-      **Verify:** clicking a splat card does not open Group History.
+- [x] **The sweep was classified and came back empty.** ~50 media-type branches, all
+      already correct for `type: 'image'`. `'splat'` was NOT added to
+      `js/data/projectModel.js`; `createImageItem` gained `splatPath: null` instead
+      (amendment 18). No change needed in `MpiGalleryGrid.js`,
+      `MpiGroupHistoryBlock.js`, `MpiProjectCard.js` or `projectReconciler.js`.
+- [x] `DERIVATIVE_RE` (`routes/projects.js:95`) extended `thumb|proxy` ->
+      `thumb|proxy|splat`, which buys the delete sweep and the pass-2 orphan GC for
+      the `.ply` in one word (amendment 20). Exported alongside `removeItemThumbs`
+      so it is testable rather than asserted from source text.
+- [x] `add-from-cards` copies the `.ply` companion and rewrites `splatPath` to the
+      destination. The sidecar is cloned wholesale, so the failure this prevents is
+      not a missing field - it is a copied card silently pointing back into the
+      SOURCE project.
+- [x] Thumbnail/preview: **nothing to build.** A Scene card is an image card; its
+      still is the thumbnail, and the derivatives backfill already renditions it.
+      Where the still comes FROM is amendment 13's problem, and it belongs to Phase 2.
+- [x] `open-group` on a card with `splatPath` is intercepted in
+      `MpiGalleryBlock.js`, one line below the audio guard it mirrors, and shows
+      "Scene viewer is not built yet." until `PAGE_SCENE` lands in Phase 3.
+- [x] `tests/splat-companion.test.cjs` - 4 tests over the regex both ways (claims the
+      `.ply`, does not swallow the sidecar or the media file), a real temp-dir delete
+      sweep, the `add-from-cards` rewrite, and the field being image-only.
+      **791/791 `npm test` green; `npm run lint` clean.**
+- [ ] **Left for the user:** see the card in the running app - hand-place a `.ply` +
+      still, confirm it reads as a normal image card, copies to a second project
+      *with* the `.ply`, deletes without leaking 387 MB, and does not open Group
+      History.
 
 ## Parallel Batch: Bake path
 
@@ -488,6 +554,14 @@ geometry - far stronger than a still for v2v. Revisit once Phase 3 is in use.
   on rail 1, decaying as the rail travels from the origin). Phase 3's camera constraint
   (amendment 10) could key off it rather than a hand-tuned radius. Worth trying before
   inventing a heuristic.
+- **2026-08-29 (Phase 1) - the whole Phase 1 sweep was a phantom.** Decision 2 assumed a
+  fourth media type; amendment 6 shrank it; the code erased it. The lesson generalises:
+  the sweep was sized by grepping for branch SITES, never by asking whether the default
+  branch was already right. ~50 sites, 0 changes.
+- **2026-08-29 (Phase 1) - a line reference repeated four times was never once checked.**
+  `routes/projects.js:1491/1552` rode from decision 2 into amendment 12 into two handoffs
+  as "the zip-export loops", and Vision has no zip export. A cited line number is a claim
+  like any other; it decays every commit. See amendment 19.
 - **2026-08-29 - filed [MPI-659](../MPI-659/brief.md)**: `guard-gpu` never fired for any
   of this session's GPU work. Patterns match the raw command line, so a graph dispatched
   from a script is invisible, and `brush_app.exe` matches nothing at all - which this card
@@ -510,8 +584,11 @@ End-to-end criteria:
 3. A capture from a new angle lands as an image card and can be used as an i2v
    input without any manual file handling.
 4. That splat card copies into a second project via the existing Add-to-project
-   flow and still opens there.
-5. A project containing a splat exports to zip with the `.ply` included.
+   flow, arrives with its OWN `.ply` (not a path back into the source project),
+   and still opens there.
+5. Deleting a Scene card removes its `.ply`. **Re-scoped from "exports to zip with
+   the `.ply` included" - Vision has no zip export (amendment 19).** Leaking 387 MB
+   per delete is the real risk that criterion was reaching for.
 6. `npm test` and `npm run test:desktop` green; `npm run release:check` passes.
 7. The Flow is hidden in a released build.
 
@@ -521,7 +598,10 @@ End-to-end criteria:
   no-dump-file rule it gets its own file, routed from `docs/README.md`. Candidate:
   `docs/splat-scenes.md`. Durable facts (the Brush CLI contract, the COLMAP layout,
   the camera-path text format, the coverage presets, the measured timings) belong
-  there, NOT in memory.
+  there, NOT in memory. **Add the Phase 1 contract to it:** a Scene card is an image
+  card carrying `splatPath`, the `.ply` is `.meta/<id>.splat.ply` on the
+  `DERIVATIVE_RE` convention, and it is deliberately NOT a media type (amendment 18).
+  A future agent's first instinct will be to add one.
 - `.claude/rules/workspaces.md` says "Three workspaces" - must be updated to four.
 - `.claude/rules/component-*.md` maps need refreshing after the new Block and
   Primitive land (`mpic-update-component-map`).

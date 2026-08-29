@@ -247,8 +247,16 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // Audio-only groups are not click-through (like preview cards) — they are
         // input assets played in-place via the card's native controls, not a
         // history workspace target.
+        // MPI-623: a 3D Scene card is an image card carrying a `.ply`, so it reaches
+        // here as a normal image group. Group History is the wrong target — it shows
+        // the still, not the scene — so it is intercepted here until PAGE_SCENE
+        // exists (Phase 3).
         grid.on('open-group', ({ group }) => {
             if (group?.type === 'audio') return;
+            if (getSelectedItem(group)?.splatPath) {
+                Events.emit('ui:info', { message: 'Scene viewer is not built yet.' });
+                return;
+            }
             navigate(PAGE_GROUP_HISTORY, { groupId: group.id });
         });
 

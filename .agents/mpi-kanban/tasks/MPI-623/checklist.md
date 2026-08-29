@@ -60,17 +60,38 @@ fp8 first per plan.md amendment 7. Weights land in folders the bench already sca
 - [x] `wan_2.1_vae.safetensors` (0.25 GB) -> `C:/AI/vae`
 - [x] `clip_vision_h.safetensors` (1.26 GB) -> bench `models/clip_vision`
 - [x] `umt5_xxl_fp8_e4m3fn_scaled.safetensors` (6.74 GB) -> `C:/AI/text_encoders`
-- [ ] `wan2.1_i2v_720p_14B_fp8_e4m3fn.safetensors` (16.4 GB) -> `C:/AI/diffusion_models`
-      (downloading)
+- [x] `wan2.1_i2v_720p_14B_fp8_e4m3fn.safetensors` (16.4 GB) -> `C:/AI/diffusion_models`
 - [x] `lightx2v_T2V_14B_cfg_step_distill_v2_lora_rank64_bf16` already present at
       `C:/AI/loras/Wan/`; `4x-UltraSharp.pth` already on the bench.
-- [ ] **BLOCKED ON USER** - `pano_video_gen_720p.bin` (Matrix-3D pano LoRA, 0.61 GB) is in
+- [x] **UNBLOCKED and used** - the 4-rail bake ran with the pano LoRA at 0.98
+      (measurements.md § Phase 0b). The redistribution route below still stands for the
+      shipped product: Matrix-3D is MIT, so convert and mirror to R2 rather than sending
+      users at the gated repo.
+      `pano_video_gen_720p.bin` (Matrix-3D pano LoRA, 0.61 GB) is in
       a **gated** HF repo. Fabio's token authenticates (403, not 401) but the account is
       not allow-listed: request access at `https://huggingface.co/Skywork/Matrix-3D`.
       **Matrix-3D is MIT**, so once fetched we convert with SplatKit's
       `tools/convert_pano_lora.py` and mirror the converted file to R2 - users never touch
       the gated repo. There is no substitute: without this LoRA, Wan emits ordinary
       perspective video, not equirect.
-- [ ] Run `1_generate-dataset-hires.json` with Wan, one rail. Measure the Wan pass and the
-      registered-frame count (Wan-free got 16 of 81).
-- [ ] Re-check the tier ladder against the Wan dataset.
+- [x] Ran `1_generate-dataset-hires.json` with Wan - **four rails, not one**: 2 h 18 m,
+      912 registered cube faces, 28 911 `points3D`, 14 GB dataset. Wan sampling is 76 % of
+      the cost. measurements.md § Phase 0b.
+- [x] Tier ladder re-checked against the Wan dataset (one run, `--export-every 5000`).
+      Draft 5 000 / Scene 30 000 stand; the Scene tier is 1 641 469 splats / 387 MB.
+
+## Phase 1 - Scene card as an image card carrying a `.ply` (2026-08-29)
+
+Delivered per plan.md amendments 18-20. `'splat'` is NOT a media type.
+
+- [x] Sweep classified: ~50 media-type branches, **0 needed changing** - all correct for
+      `type: 'image'` already. `createImageItem` gained `splatPath: null`.
+- [x] `DERIVATIVE_RE` -> `thumb|proxy|splat`, so delete + the pass-2 orphan GC cover the
+      `.ply` with no new cleanup code. `DERIVATIVE_RE` and `removeItemThumbs` exported
+      for the test.
+- [x] `add-from-cards` copies the `.ply` and rewrites `splatPath` at the destination -
+      without it the copy points back into the source project and reads as valid.
+- [x] `open-group` intercepted on `splatPath` in `MpiGalleryBlock.js` (placeholder toast
+      until Phase 3's `PAGE_SCENE`).
+- [x] `tests/splat-companion.test.cjs`, 4 tests. **791/791 `npm test`; lint clean.**
+- [ ] **User check in the running app** - the `user-ux` half of Phase 1's verification.

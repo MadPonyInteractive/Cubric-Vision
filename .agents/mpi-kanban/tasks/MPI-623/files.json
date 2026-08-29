@@ -4,6 +4,11 @@
     ".agents/mpi-kanban/tasks/MPI-623/research/measurements.md",
     ".agents/mpi-kanban/tasks/MPI-623/research/phase0-log.md",
     ".agents/mpi-kanban/tasks/MPI-623/plan.md",
-    ".agents/mpi-kanban/tasks/MPI-623/brief.md"
+    ".agents/mpi-kanban/tasks/MPI-623/brief.md",
+    ".agents/mpi-kanban/tasks/MPI-623/checklist.md",
+    "js/data/projectModel.js",
+    "routes/projects.js",
+    "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
+    "tests/splat-companion.test.cjs"
   ]
 }

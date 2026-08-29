@@ -45,6 +45,7 @@ const generateId = () => crypto.randomUUID();
 /**
  * @typedef {MediaItemBase & {
  *   pixelDimensions: {w: number, h: number},
+ *   splatPath?: string|null,
  * }} ImageItem
  */
 
@@ -61,6 +62,15 @@ const generateId = () => crypto.randomUUID();
 
 /**
  * Creates a new ImageItem.
+ *
+ * MPI-623: a 3D Scene card IS an image item — its `filePath` is a still rendered
+ * from a bake pose — that additionally carries `splatPath`, a `/project-file?path=`
+ * URL for its `.ply`. It is deliberately NOT a fourth media type: every branch that
+ * switches on `type` already does the right thing for an image, and a Scene card
+ * wants exactly the image card's thumbnail, filter tab and picker behaviour. Only
+ * the companion file needs handling, and it rides the same `<id>.<kind>.<ext>`
+ * derivative convention as the thumbs (see `DERIVATIVE_RE` in `routes/projects.js`).
+ *
  * @param {Partial<ImageItem>} overrides
  * @returns {ImageItem}
  */
@@ -83,6 +93,7 @@ export function createImageItem(overrides = {}) {
         flowInputs:        null,
         pixelDimensions:  { w: 0, h: 0 },
         generationMs:     null,
+        splatPath:        null,   // MPI-623 — set only on 3D Scene cards
         ...overrides,
     };
 }

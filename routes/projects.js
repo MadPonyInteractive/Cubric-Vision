@@ -86,13 +86,19 @@ function pathFromProjectFileUrl(value) {
 }
 
 /**
- * Every derivative an item id owns, as a filename test: `<id>.thumb.jpg` (video
+ * Every companion file an item id owns, as a filename test: `<id>.thumb.jpg` (video
  * poster, and the legacy image thumb), `<id>.thumb.webp` (the 512 rendition),
- * `<id>.thumb.1280.webp` and `<id>.proxy.mp4` (MPI-633). Matched by PREFIX, not by an
- * extension list — three separate lists had to be edited in lock-step every time a
- * derivative was added, and a missed one leaks a file per asset forever.
+ * `<id>.thumb.1280.webp` and `<id>.proxy.mp4` (MPI-633), `<id>.splat.ply` (MPI-623).
+ * Matched by PREFIX, not by an extension list — three separate lists had to be edited
+ * in lock-step every time one was added, and a missed one leaks a file per asset
+ * forever.
+ *
+ * `splat` is the one entry that is not a derivative of the item's `filePath` — the
+ * relationship inverts, the still is rendered FROM the `.ply`. It rides this
+ * convention anyway because "file owned by an item id, deleted with it" is exactly
+ * what this regex is for, and that buys delete, orphan-sweep and GC for free.
  */
-const DERIVATIVE_RE = /^(.*)\.(?:thumb|proxy)\..+$/;
+const DERIVATIVE_RE = /^(.*)\.(?:thumb|proxy|splat)\..+$/;
 
 function removeItemThumbs(metaDir, id) {
     let entries;
@@ -2252,6 +2258,19 @@ router.post('/project-media/:projectId/add-from-cards', async (req, res) => {
             } else {
                 delete meta.proxyPath;
             }
+            // MPI-623: a 3D Scene card is an image card carrying a `.ply`. The sidecar
+            // is cloned wholesale above, so without this the copy would arrive with a
+            // `splatPath` pointing back into the SOURCE project — a card that looks
+            // fine until it is opened, or until the source project is deleted.
+            // Hundreds of MB, so `fs.copy` is the slow step of copying a Scene card.
+            const srcSplat = pathFromProjectFileUrl(item?.splatPath) || pathFromProjectFileUrl(meta.splatPath);
+            if (srcSplat && await fs.pathExists(srcSplat)) {
+                const destSplat = path.join(metaDir, `${id}.splat${path.extname(srcSplat)}`);
+                await fs.copy(srcSplat, destSplat);
+                meta.splatPath = `/project-file?path=${encodeURIComponent(destSplat)}`;
+            } else {
+                delete meta.splatPath;
+            }
 
             await fs.writeJson(path.join(metaDir, `${id}.json`), meta, { spaces: 2 });
 
@@ -2916,3 +2935,5 @@ module.exports.materializeGenerationFrameSnapshots = materializeGenerationFrameS
 module.exports.placeContentAsset = placeContentAsset;
 module.exports.computeFileSha256 = computeFileSha256;
 module.exports.migratePreviewAssetsStore = migratePreviewAssetsStore;
+module.exports.DERIVATIVE_RE = DERIVATIVE_RE;
+module.exports.removeItemThumbs = removeItemThumbs;
