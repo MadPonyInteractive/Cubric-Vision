@@ -275,6 +275,15 @@
 > History workspace and the minimised preview window. The last two are real released bugs and
 > the entry is worth keeping; the Flow clause is the part to drop when folding.
 
+- Clicking away closes a panel now, wherever you are. Settings, Hotkeys and About stayed
+  open until you found the X or pressed Escape, while other panels in the app closed the
+  moment you clicked outside them — the same gesture did two different things depending on
+  where you were. Clicking anywhere behind a panel now closes it. The Cue queue panel is the
+  one deliberate exception: it sits above the prompt bar so you can keep prompting with the
+  queue open, and closing it on every prompt-bar click would defeat the point. Escape and
+  the X are unchanged, and opening a dropdown or a dialog from inside a panel still leaves
+  the panel where it is.
+
 - No more terminal windows flashing open when Vision starts. On Windows, launching the app
   popped up to ten black console windows for a moment each - one for every background check
   Vision runs at boot to find your graphics card and start the Cubric services. They did

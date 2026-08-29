@@ -18,10 +18,24 @@
  *
  * STOPPING IT NEEDS THE PROCESS TREE. TaskStop (or killing the shell) reaps the
  * wrapper and LEAVES THE ELECTRON RUNNING — measured 2026-08-08, an instance kept
- * serving its port long after its task was "stopped". Find the listener and kill its
- * tree, and check the parent chain first so you cannot walk into the user's app:
- *   (Get-NetTCPConnection -LocalPort <port> -State Listen).OwningProcess
- *   taskkill /PID <root-of-that-tree> /T /F
+ * serving its port long after its task was "stopped".
+ *
+ * KILL THE LISTENER'S PARENT, NOT THE LISTENER. The pid that owns the port is the
+ * `electron.exe <repo>\server.js` fork; the app root is its PARENT. Killing the fork
+ * fires main.js's `serverProcess.on('exit')` with a non-zero code while `isQuitting`
+ * is false, which calls `reportFatal` → a MODAL `dialog.showErrorBox` ON THE USER'S
+ * SCREEN that blocks until someone clicks OK (measured 2026-08-29: fork killed
+ * 08:33:24, process finally exited 08:44:12 — eleven minutes of the user sitting in
+ * front of an agent's error box, then an ERR_IPC_CHANNEL_CLOSED as the closing window
+ * sent to the fork that was already dead). The guard that suppresses that dialog is
+ * CUBRIC_E2E, and this script does NOT set it — only CUBRIC_BACKGROUND.
+ *
+ * Take the ParentProcessId, and check the parent chain so you cannot walk into the
+ * user's app — an agent instance and theirs both run `electron.exe .`, so never
+ * select by command-line pattern:
+ *   $l    = (Get-NetTCPConnection -LocalPort <port> -State Listen).OwningProcess
+ *   $root = (Get-CimInstance Win32_Process -Filter "ProcessId=$l").ParentProcessId
+ *   taskkill /PID $root /T /F
  */
 import net from 'node:net';
 import os from 'node:os';
