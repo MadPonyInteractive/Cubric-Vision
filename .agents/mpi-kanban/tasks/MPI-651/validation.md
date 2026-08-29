@@ -35,8 +35,18 @@ video proxy — which is the burst Fabio saw: ~20 terminals right after boot on
   `{"fps":30,"duration":6.4,...,"width":1280,"height":800,...}` — the added
   option does not disturb the call.
 
-## Open
+## Closed by Fabio, 2026-08-29
 
-Window-count on a real user boot is Fabio's — the burst only fires on a project
-whose renditions are missing, and his live `:3000` session must not be driven.
-Card stays in `doing` until he relaunches and reports.
+Fresh `cmd` window, `npm start`: **no console windows at all** — "opened nice and
+clean". Card closed on that.
+
+One caveat kept for the next person, not a doubt about the close: the boot burst
+only fires on renditions that are still missing, and the backfill converges (a
+proxy is written once), so a clean second boot is never proof on its own. The
+proof that the flag lands is the mutation check above.
+
+Fabio's own read was that yesterday's false pass came from relaunching in the
+SAME terminal. That is not the mechanism — a GUI parent launched from a console
+inherits it either way, so reusing the window changes nothing. Yesterday's launch
+was clean because MPI-637 really had hidden the ten boot-time spawns it swept;
+the ffmpeg burst is a different set of call sites and needed this card.
