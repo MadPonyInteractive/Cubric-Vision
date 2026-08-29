@@ -206,3 +206,195 @@ raise the registered-frame count well above 16/81, which changes splat counts an
 these timings. Re-check the ladder after the Wan pass; the *shape* of the finding (growth
 stops at 15 000, refinement is free on disk) is a Brush property and will hold.
 
+
+---
+
+# Phase 0b — the Wan-inclusive 4-rail bake (2026-08-29)
+
+Same box (RTX 4060 Ti 16 GB), same bench, same 8192x4096 Poly Haven pano. This is the
+**real graph**: 4 camera rails, Wan 2.1 I2V 14B fp8 + `lightx2v` 8-step distill + the
+Matrix-3D pano LoRA @ 0.98, HiRes Composite at 8192x4096, exhaustive SfM.
+
+**`Prompt executed in 02:18:16`** — 2 h 18 m for one scene, unattended, on a 16 GB card.
+Per plan.md amendment 7 that is expected and acceptable: a scene is a durable asset.
+
+## Where the 2 h 18 m actually goes
+
+| Stage | x4 rails | Share |
+|---|---|---|
+| **Wan sampling** (8 steps, 1440x720, 81 frames) | 25:15 + 29:26 + 24:55 + 26:22 = **1 h 45 m** | **76 %** |
+| HiRes Composite (41 of 81 frames @ 8192x4096) | 335 + 292 + 288 + 292 s = **20 m** | 15 % |
+| SfM total (extract 7.2 s + exhaustive match 14.3 s + mapper 142.3 s) | **2 m 44 s** | **2 %** |
+| MoGe, mesh render, camera plots, VAE decode, writes | remainder | ~7 % |
+
+Wan rate: **182–225 s/it**, i.e. ~3 min per distilled step. Wan is the entire cost.
+
+Per-rail HiRes coverage (fraction of each frame taken from the source rather than Wan):
+mean 0.84 / 0.43 / 0.70 / 0.91. The 0.43 rail is the one leaning hardest on Wan.
+
+### Correction to a Phase 0 prediction
+
+`phase0-log.md` predicted SfM would "cost vastly more than the 0.7 s sequential run" because
+the matcher is `exhaustive` and O(n²). **It does not.** Exhaustive matching of 164 frames
+took **14.3 s** (vs 0.7 s sequential on 81). SfM is 2 % of the bake and is not a tiering
+lever — the warning against extrapolating it was right, but in the opposite direction. The
+dual-res node feeds SfM **41 frames per rail (164 total)**, not all 81 (324).
+
+## Registered frames — Wan's actual payoff
+
+| Run | Pano frames in the final model |
+|---|---|
+| Wan-free (1 rail, MoGe reprojection only) | **16 of 81** → 96 cube faces |
+| Wan 4-rail | **164 fed, 164 registered** (split 152 + 12, see below) |
+
+This is the number that justified the Wan pass: MoGe reprojection alone kept 16 frames;
+with Wan filling the disocclusions, every fed frame registers.
+
+## FINDING — the trajectories split SfM into two reconstructions
+
+The bake ran to completion and then **stopped on purpose**. Not a crash:
+
+```
+[dualres] mapper produced 2 model(s):
+    model 0: 152 images, frames [(0, 69), (82, 163)]
+    model 1: 12 images, frames [(70, 81)]
+RuntimeError: [dualres] SfM did NOT merge into one model -- 2 separate reconstructions
+formed (trajectories don't share enough overlap). STOPPING before reprojection/training
+as requested.
+```
+
+The shipped workflow sets `on_split='stop'` (node enum is `['stop','largest']`, default
+`stop`). A 12-frame island broke off — frames 70–81 failed to tie back to the other 152.
+
+**Product consequence for Phase 2:** Vision's camera *coverage presets must be authored to
+overlap*, or a user's Flow run hits this on real input. The node's own remedies, in
+preference order: overlapping trajectories (fixes the cause), raise `max_num_features` /
+`max_num_matches`, or `on_split='largest'` to train the biggest model and discard the
+island (the node calls this "legacy behaviour"). Only the first is a real fix; the third is
+what Phase 0b used to get an unblocked measurement.
+
+**Re-queue is cheap; restarting the bench is not.** ComfyUI caches node outputs by input
+hash inside the live process, so flipping only node 84's `on_split` re-ran SfM alone — the
+four Wan samples and four HiRes composites were cache hits. Killing the bench would have
+thrown away 2 h 18 m of compute.
+
+## The dataset Wan actually produced
+
+| | Wan-free (1 rail) | Wan 4-rail |
+|---|---|---|
+| Registered images (cube faces) | 96 | **912** |
+| Cameras | 2 | 1 |
+| `points3D` | 4 676 | **28 911** |
+| `images/` on disk | 49 MB | **3.3 GB** |
+| Whole dataset dir | 143 MB | **14 GB** |
+
+`_spheresfm_work/` is 5.3 GB of that 14 GB and is still disposable — the same 60 %-ish
+share as Phase 0. Confirms plan.md decision 1 at production scale: a Scene bake needs
+~14 GB of scratch it can throw away, and that is a real disk-headroom requirement for the
+Flow, not a rounding error.
+
+## Brush on the Wan dataset — the re-run tier ladder
+
+One training run, `--export-every 5000`, so each row is a model trained that many steps
+(an export at iteration N *is* the N-step model — no need to train six times).
+
+```
+brush_app.exe G:/MPI-623-spike/wan_clean --total-steps 30000 \
+              --export-path <out> --export-name wan_{iter}.ply --export-every 5000
+```
+
+**Exit 0, 2 690 s (44.8 min)** for 30 000 steps on 912 images — vs 468 s on 96 images.
+
+| Steps | Splats | Size | Cumulative wall clock |
+|---|---|---|---|
+| 5 000 | 201 806 | 47.6 MB | 312 s |
+| 10 000 | 843 925 | 199.2 MB | 691 s |
+| **15 000** | **1 641 469** | **387.4 MB** | 1 170 s |
+| 20 000 | 1 641 469 | 387.4 MB | 1 685 s |
+| 25 000 | 1 641 469 | 387.4 MB | 2 192 s |
+| 30 000 | 1 641 469 | 387.4 MB | 2 689 s |
+
+**The Phase 0 shape held exactly.** Growth freezes at 15 000 (`--growth-stop-iter`) —
+identical splat count and byte-identical size from 15 000 on, so steps past it buy
+refinement at zero disk cost. That is a Brush property, not a dataset property, and it
+survived a 9.5x bigger dataset. After the freeze the rate is flat at ~505 s per 5 000 steps.
+
+**The counts did not hold, as predicted.** Every figure is far larger:
+
+| | Wan-free | Wan 4-rail | Ratio |
+|---|---|---|---|
+| Splats at 30 000 | 566 820 | **1 641 469** | 2.9x |
+| `.ply` size | 133.8 MB | **387.4 MB** | 2.9x |
+| Train time, 30 000 steps | 468 s | **2 690 s** | 5.7x |
+
+### Tiers, restated for the real pipeline
+
+| Tier | Steps | Train time | Size | For |
+|---|---|---|---|---|
+| Draft | 5 000 | ~5 min | 48 MB | Validating a coverage path before committing |
+| **Scene (default)** | **30 000** | **~45 min** | **387 MB** | The durable asset |
+
+The two-tier decision (plan.md amendment 7) survives: a 15 000 middle tier would ship a
+softer scene for the *identical* 387 MB, saving 25 minutes on a job whose dataset pass
+already cost 2 h 18 m. Still a bad trade.
+
+**387 MB per scene is the number the product has to live with**, and it is 2.9x what
+Phase 0's Wan-free measurement suggested. It lands on project zip-export
+(`routes/projects.js:1491/1552`), cross-project copy, and any sync. `--max-splats` is the
+lever if that proves too heavy — untouched here (default cap 10 M, actual 1.64 M), so there
+is room to cap without hitting the ceiling.
+
+### Total cost of one scene, end to end
+
+| | |
+|---|---|
+| Wan 4-rail dataset bake | 2 h 18 m |
+| Brush, Scene tier | 45 m |
+| **Total, unattended, on a 16 GB card** | **~3 h** |
+| Scratch disk consumed | ~14 GB (disposable) |
+| Delivered asset | 387 MB `.ply` |
+
+## Controlled test — matcher limits are NOT the cause of the split
+
+The node offers three remedies for a split. Two were testable against the live cache for
+165 s, so the guess did not have to stand. Only node 84's two limits changed, leaving the
+Wan samples and composites as cache hits:
+
+| | Run A | Run B |
+|---|---|---|
+| `max_num_features` | 8 192 | **32 768** (4x) |
+| `max_num_matches` | 32 768 | **131 072** (4x) |
+| Models formed | 2 | **2** |
+| model 0 | 152 frames, `[(0,69), (82,163)]` | **152 frames, `[(0,69), (82,163)]`** |
+| model 1 | 12 frames, `[(70,81)]` | **12 frames, `[(70,81)]`** |
+
+**Byte-for-byte the same split.** Not a near-miss the matcher could be coaxed past — 4x the
+features and 4x the matches changed nothing at all, down to the frame ranges. Frames 70–81
+do not fail to match for want of features; they have **no overlapping geometry to match
+against**.
+
+### What this settles for Phase 2
+
+Of the node's three suggested remedies, one is real:
+
+1. **Overlapping trajectories — the only actual fix.** Vision's camera coverage presets
+   must be authored so consecutive rails see shared geometry.
+2. ~~Raise `max_num_features` / `max_num_matches`~~ — **measured, does not work.** Do not
+   ship this as a retry, a fallback, or an "advanced setting"; it costs SfM time and buys
+   nothing.
+3. `on_split='largest'` — silently discards the island (the node's own word for it is
+   "legacy behaviour"). Acceptable as a Phase 0 measuring device. As product behaviour it
+   means a user's scene quietly loses a chunk of what they asked to cover.
+
+The shipped workflow's four independent rails radiating from the origin are exactly the
+shape that splits, and Phase 2's plan is to ship four canned rails. **Authoring the presets
+to overlap is a Phase 2 requirement, not a nice-to-have** — with the graph's default
+`on_split='stop'`, a user hitting this gets a hard error instead of a scene.
+
+Note the split is *not* rail-aligned: model 0 spans `(0,69)` and `(82,163)`, so it holds
+parts of several rails and the island is a 12-frame stretch *within* one. Whatever preset
+work happens must be verified by re-running SfM, not by eyeballing the rail layout.
+
+**Cost of getting this answer: 165 s**, because the bench process was left alive and its
+node cache still held the 2 h 18 m of Wan sampling. Restarting the bench to "clean up"
+would have made the same question cost 2 h 18 m.

@@ -168,6 +168,21 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     fly-anywhere camera renders floaters, and that is inherent, not a renderer bug.
     Measured: an outside-in orbit of an interior scene is pure soup while a held-out
     training view of the same `.ply` is a clean room.
+11. **Camera coverage presets MUST be authored to overlap** (measured 2026-08-29,
+    Phase 0b). Four independent rails radiating from the origin split SfM into two
+    reconstructions — a 152-frame model plus a 12-frame island — and the shipped graph's
+    default `on_split='stop'` turns that into a hard error rather than a scene. Proven
+    by controlled test that this is **geometry, not matcher tuning**: 4x
+    `max_num_features` and 4x `max_num_matches` reproduce the identical split down to the
+    frame ranges. `on_split='largest'` is not a fix either — it silently discards the
+    island, so a user loses part of what they asked to cover. Phase 2 plans to ship four
+    canned rails; they must overlap, and the check is a re-run of SfM, not an eyeball of
+    the rail layout (the split is not rail-aligned). See measurements.md § Phase 0b.
+12. **A Scene costs ~3 h and ships 387 MB** (measured 2026-08-29 on a 16 GB 4060 Ti):
+    2 h 18 m dataset bake + 45 min Brush, ~14 GB of disposable scratch, 1.64 M splats.
+    The `.ply` is 2.9x the Wan-free estimate, which lands on zip-export
+    (`routes/projects.js:1491/1552`), cross-project copy and sync. `--max-splats` is the
+    lever if it proves too heavy; the default 10 M cap was nowhere near binding.
 
 ### Known trap
 

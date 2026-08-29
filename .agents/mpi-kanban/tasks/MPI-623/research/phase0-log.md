@@ -157,8 +157,34 @@ fix in `workflow-to-api.mjs` when Phase 2 starts.
 - [x] Both packs installed, commits recorded, licences confirmed, zero pip installs.
 - [x] Brush downloaded, SHA verified, CLI contract read (3 corrections above).
 - [x] Poly Haven 8K equirect JPG acquired -> `G:\ComfyUi\ComfyUI\input\mpi623_pano.jpg`.
-- [ ] Wan-free dataset pass on the bench (MoGe + SphereSfM).
-- [ ] THE GATE: Brush trains that dataset to a `.ply`.
-- [ ] Brush stdout ANSI-strip / `N/M Steps` parse check.
-- [ ] `RenderSplat` loads the Brush `.ply`.
-- [ ] Full Wan pass + real measurements — pending the local-vs-RunPod decision above.
+- [x] Wan-free dataset pass on the bench (MoGe + SphereSfM) — 139 s, 143 MB.
+- [x] THE GATE: Brush trains that dataset to a `.ply` — passed, 566 820 splats.
+- [x] Brush stdout ANSI-strip / `N/M Steps` parse check — **impossible, and that is the
+      finding**: Brush writes zero bytes when not a TTY. Poll the export dir instead
+      (plan.md amendment 9).
+- [x] `RenderSplat` loads the Brush `.ply` — 4 frames at 1024x1024 in 16 s.
+- [x] Full Wan pass + real measurements — **done 2026-08-29**, run locally on the 4060 Ti.
+      `Prompt executed in 02:18:16`; Wan is 76 % of it, SfM 2 %. See measurements.md
+      § Phase 0b.
+
+## Phase 0b (2026-08-29)
+
+- [x] Wan-inclusive 4-rail bake, end to end, 2 h 18 m. 164 frames registered vs 16
+      Wan-free.
+- [x] Brush re-run against the Wan dataset — exit 0, 44.8 min, 1 641 469 splats, 387 MB.
+      Growth still freezes at 15 000, so the Phase 0 *shape* held and only the counts moved.
+- [x] Tier ladder re-measured on the real dataset: Draft 5 000 (48 MB) / Scene 30 000
+      (387 MB). Two tiers still the right call.
+- [x] **SfM split diagnosed by controlled test, not by guess.** 4x `max_num_features` and
+      4x `max_num_matches` reproduce the split byte-for-byte, so the matcher is not the
+      cause and overlapping coverage presets are a hard Phase 2 requirement.
+
+### Not done, and deliberately so
+
+- [ ] A held-out eval render of the **Wan** `.ply`. Phase 0's gate already proved a Brush
+      `.ply` renders as the source room, and the gate does not need re-proving; the open
+      question was cost and frame count, which is now measured.
+- [ ] A merged single-model bake. Cannot be tested against the cache — fixing the overlap
+      means changing the camera rails, which invalidates the Wan samples and costs a fresh
+      2 h 18 m. That belongs to Phase 2, with the preset work it is testing.
+- [ ] RunPod comparison. Every number here is a 4060 Ti floor (see the caveat at the top).
