@@ -35,6 +35,10 @@ const { probeVideo } = require('../services/ffprobeVideo');
 const { writeVideoDerivatives } = require('../services/ffmpegThumb');
 const { nextSequence } = require('./projects');
 
+// windowsHide on EVERY execFileP call below: the forked server.js owns no console,
+// so a console-subsystem ffmpeg/ffprobe gets its own conhost - a terminal that flashes
+// open on the user's desktop. /backfill-media-derivatives fires one per missing
+// rendition, so a project open popped ~20 of them (MPI-651, the tail of MPI-637).
 const execFileP = promisify(execFile);
 
 function _resolveInput(raw) {
@@ -117,7 +121,7 @@ router.post('/api/video/reverse', async (req, res) => {
         args.push(outputPath);
 
         logger.info('project', `video-reverse (mode=${mode}) ffmpeg: ${ffmpegPath} ${args.join(' ')}`);
-        await execFileP(ffmpegPath, args, { maxBuffer: 8 * 1024 * 1024 });
+        await execFileP(ffmpegPath, args, { maxBuffer: 8 * 1024 * 1024, windowsHide: true });
 
         const outMeta = await probeVideo(outputPath) || {};
 

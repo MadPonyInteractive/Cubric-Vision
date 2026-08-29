@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-651", "at": "2026-08-29T08:26:37+01:00", "actor": "claude", "column": "doing", "title": "Every ffmpeg/ffprobe call still pops a console window - the MPI-637 guard test cannot see a promisified call site"}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-651", "at": "2026-08-29T08:28:32+01:00", "actor": "claude", "from": "doing", "to": "doing", "reason": "flag + scanner landed, mutation-checked; awaiting Fabio's own launch"}

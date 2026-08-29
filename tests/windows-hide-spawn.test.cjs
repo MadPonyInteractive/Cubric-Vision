@@ -51,11 +51,23 @@ function stripComments(src) {
         .replace(/(?<!:)\/\/[^\n]*/g, blank);
 }
 
+/**
+ * Names a file binds to a child_process function through `promisify`, e.g.
+ * `const execFileP = promisify(execFile)`. MPI-651: nine ffmpeg/ffprobe calls
+ * went through such an alias, so the callee-name scan below never saw them and
+ * every one of them spawned a visible console window with this test green.
+ */
+function promisifiedAliases(src) {
+    const re = /\b(?:const|let|var)\s+(\w+)\s*=\s*(?:util\.)?promisify\(\s*(?:child_process\.)?(?:spawn|exec|execFile)\s*\)/g;
+    return [...src.matchAll(re)].map((m) => m[1]);
+}
+
 /** Extract the full argument text of each child_process call in `src`. */
 function callSites(rawSrc) {
     const src = stripComments(rawSrc);
     const sites = [];
-    const re = /\b(spawnSync|spawn|execFileSync|execFile|execSync)\s*\(/g;
+    const names = ['spawnSync', 'spawn', 'execFileSync', 'execFile', 'execSync', 'exec', ...promisifiedAliases(src)];
+    const re = new RegExp(`\\b(${names.join('|')})\\s*\\(`, 'g');
     let m;
     while ((m = re.exec(src)) !== null) {
         // `.exec(` on a regex literal is not child_process — require a preceding
@@ -129,4 +141,9 @@ test('the scanner actually catches a bare call (it would pass on a broken regex)
     assert.strictEqual(callSites('const m = /a(b)/.exec(text);').length, 0);
     // A call named only in a comment is prose, not a call site.
     assert.strictEqual(callSites("require('child_process'); // spawn(x, y) below").length, 0);
+    // MPI-651: the bug this test missed once — the call goes through an alias.
+    const aliased = "const execFileP = promisify(execFile);\nexecFileP(ffmpeg, args, { maxBuffer: 4 });\n";
+    const aliasSites = callSites(aliased).filter((s) => s.fn === 'execFileP');
+    assert.strictEqual(aliasSites.length, 1);
+    assert.ok(!aliasSites[0].args.includes('windowsHide'));
 });

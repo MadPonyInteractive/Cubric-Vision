@@ -1,0 +1,13 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "id": "MPI-651",
+  "files": [
+    "routes/videoCrop.js",
+    "routes/videoGif.js",
+    "routes/videoReverse.js",
+    "routes/videoTrimInput.js",
+    "services/ffmpegThumb.js",
+    "services/ffprobeVideo.js",
+    "tests/windows-hide-spawn.test.cjs"
+  ]
+}

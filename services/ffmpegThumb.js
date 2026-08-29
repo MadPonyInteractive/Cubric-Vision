@@ -32,6 +32,10 @@ const { promisify } = require('util');
 const { ffmpegPath } = require('./ffmpegBinary');
 const logger = require('../routes/logger');
 
+// windowsHide on EVERY execFileP call below: the forked server.js owns no console,
+// so a console-subsystem ffmpeg/ffprobe gets its own conhost - a terminal that flashes
+// open on the user's desktop. /backfill-media-derivatives fires one per missing
+// rendition, so a project open popped ~20 of them (MPI-651, the tail of MPI-637).
 const execFileP = promisify(execFile);
 
 async function extractVideoThumb(inputPath, outPath, { atSeconds = 0 } = {}) {
@@ -45,7 +49,7 @@ async function extractVideoThumb(inputPath, outPath, { atSeconds = 0 } = {}) {
             '-q:v', '4',
             outPath,
         ];
-        await execFileP(ffmpegPath, args, { maxBuffer: 4 * 1024 * 1024 });
+        await execFileP(ffmpegPath, args, { maxBuffer: 4 * 1024 * 1024, windowsHide: true });
         return outPath;
     } catch (err) {
         logger.warn('ffmpegThumb', `thumb extract failed for ${inputPath}: ${err.message}`);
@@ -97,7 +101,7 @@ async function extractImageThumb(inputPath, outPath, { width = IMAGE_RENDITION_P
             '-quality', '82',
             webpPath,
         ];
-        await execFileP(ffmpegPath, args, { maxBuffer: 4 * 1024 * 1024 });
+        await execFileP(ffmpegPath, args, { maxBuffer: 4 * 1024 * 1024, windowsHide: true });
         return webpPath;
     } catch (err) {
         logger.warn('ffmpegThumb', `image thumb failed for ${inputPath}: ${err.message}`);
@@ -153,7 +157,7 @@ async function extractVideoProxy(inputPath, outPath, { sourceHeight } = {}) {
             '-movflags', '+faststart',
             proxyPath,
         ];
-        await execFileP(ffmpegPath, args, { maxBuffer: 4 * 1024 * 1024 });
+        await execFileP(ffmpegPath, args, { maxBuffer: 4 * 1024 * 1024, windowsHide: true });
         return proxyPath;
     } catch (err) {
         logger.warn('ffmpegThumb', `video proxy failed for ${inputPath}: ${err.message}`);

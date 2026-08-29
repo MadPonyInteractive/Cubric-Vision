@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-651",
+  "title": "Every ffmpeg/ffprobe call still pops a console window - the MPI-637 guard test cannot see a promisified call site",
+  "description": "Reported 2026-08-29: ~20 terminals flashed on a normal 'npm start' boot, after MPI-637 was closed as fixed. MPI-637 added windowsHide:true to every LITERAL child_process call in routes/ and services/, and a guard test (tests/windows-hide-spawn.test.cjs) to keep it that way. The scanner matches the call by CALLEE NAME - /(spawnSync|spawn|execFileSync|execFile|execSync)\\s*\\(/ - so the nine sites that call the promisified alias 'execFileP(...)' are invisible to it and none of them passes windowsHide: routes/videoCrop.js:129, routes/videoGif.js:114, routes/videoReverse.js:120, routes/videoTrimInput.js:94, services/ffmpegThumb.js:48,100,156, services/ffprobeVideo.js:36,93. ffmpeg and ffprobe are console-subsystem, the forked server.js owns no console, so each call gets its own conhost. The boot burst is POST /backfill-media-derivatives, which runs on project open and shells out once per missing thumb/rendition/proxy - one flashing terminal each. Fix both halves: the flag on all nine, and a scanner that resolves promisify(execFile) aliases so the next one cannot hide the same way.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "created_at": "2026-08-29T08:26:37+01:00",
+  "updated_at": "2026-08-29T08:28:32+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
