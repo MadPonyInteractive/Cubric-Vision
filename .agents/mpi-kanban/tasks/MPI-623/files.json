@@ -1,0 +1,9 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    ".agents/mpi-kanban/tasks/MPI-623/research/measurements.md",
+    ".agents/mpi-kanban/tasks/MPI-623/research/phase0-log.md",
+    ".agents/mpi-kanban/tasks/MPI-623/plan.md",
+    ".agents/mpi-kanban/tasks/MPI-623/brief.md"
+  ]
+}

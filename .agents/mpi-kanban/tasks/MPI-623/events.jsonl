@@ -1,2 +1,3 @@
 {"schema": "mpi-kanban/event/v1", "id": "MPI-623", "type": "task.created", "at": "2026-08-26T00:58:36Z", "actor": "claude", "summary": "Captured from brainstorm: 3D scene generation"}
 {"schema": "mpi-kanban/event/v1", "id": "MPI-623", "type": "task.updated", "at": "2026-08-26T02:20:00Z", "actor": "claude", "summary": "Large plan attached; 4 investigations preserved to research/. Maturity idea -> planned."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-623", "type": "task.moved", "at": "2026-08-29T09:45:00Z", "actor": "claude", "summary": "todo -> doing. Starting Phase 0 spike (bench only, no product code). Ownership declared."}
