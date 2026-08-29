@@ -19,18 +19,10 @@ last step needs eyes on a running generation. Everything short of that is verifi
 | Lint | `eslint` on the two touched js files | clean |
 | Curated pip set | `compile-node-deps.mjs --check` (node_lock was touched) | OK, no drift |
 
-## NOT verified — the open question
+## Verified by Fabio — the live run
 
-Nobody has watched a real LTX generation since the change. It needs an **engine
-restart first**: the installed `ComfyUI-MpiNodes` is still the old pin, and Python
-does not reload a module in a running ComfyUI.
-
-**The one question for Fabio:** on one LTX run, does the live preview loop the whole
-clip continuously instead of flashing frame 0 and then the tail?
-
-Fabio said "No more headaches, thank you" when ending the session. Read in context
-that is probably the confirmation — it answers the headache he opened with — but he
-had also said he would restart and test *and let me know when it's done*, and no such
-message arrived. Closing the card on the ambiguity would be recording a run nobody
-can point to, so the card stays in `doing`/`validating` with the question above.
-One "yes" closes it.
+2026-08-29, Fabio, after restarting the engine and running a generation in the app:
+"I did test. When I said no more headaches, I had just finished testing a generation
+in the app." The headache he opened the session with — the LTX preview snapping to the
+first frame and then flashing only the last frames — is gone. That is the user-ux
+verification this card was waiting on, and it closes it.
