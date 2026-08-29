@@ -22,6 +22,13 @@
  * A submit runs in whatever project the app has open, so an agent that created a
  * project used to generate into the previous one and be told `ok: true`.
  *
+ * MPI-658 adds `flowId` to the same submit. It is not a convenience: a Flow runs
+ * with `model.id: null`, so `modelId` could never reach one and EVERY Flow was
+ * unreachable from an agent — including both text-to-speech surfaces, which are
+ * Flows and not models. It also carries `media: [{role, url}]`, staged by the
+ * caller through place-preview-asset, which is what lets an agent supply the voice
+ * sample Text to Speech requires.
+ *
  * `POST /connector/generate` IS THE CONTRACT. Dispatch lives in the renderer
  * (`generationService` / `commandExecutor` import components and the DOM), so v1
  * relays the job there over SSE — but callers never see that. If dispatch is ever
@@ -172,29 +179,46 @@ router.get('/connector/jobs/stream', (req, res) => {
 
 /**
  * POST /connector/generate
- * Body: { modelId, operation, positive, negative?, injectionParams? }
+ * Body, EITHER a model op:  { modelId, operation, positive, negative?, injectionParams? }
+ *       OR a Flow (MPI-658): { flowId, fields?, media? }
+ *
+ * The two are not variants of one shape. A Flow has no model — it dispatches with
+ * `model.id: null` — so `modelId` can never name one, and its controls are DECLARED
+ * (`flowsRegistry` § fields) rather than free-form injection params. Sending both is
+ * a caller error rather than a merge: whichever won would run something the caller
+ * did not fully describe.
+ *
+ * `media` is `[{ role, url }]`, by reference. Bytes never come through here — the
+ * caller stages its own file with `POST /project-media/:id/place-preview-asset`
+ * (which accepts a plain absolute path) and passes back the url that returns.
  *
  * Resolves when the generation reaches a terminal state, so the caller gets the
  * output it asked for rather than a job id to poll. Runs in whatever project the
  * app currently has open.
  */
 router.post('/connector/generate', async (req, res) => {
-  const { modelId, operation, positive, negative, injectionParams } = req.body || {};
+  const { modelId, operation, positive, negative, injectionParams, flowId, fields, media } = req.body || {};
 
-  if (!modelId || !operation) {
-    return res.status(400).json({
-      ok: false,
-      error: { code: 'BAD_REQUEST', message: 'body.modelId and body.operation are required.' },
-    });
+  const _bad = (message) => res.status(400).json({ ok: false, error: { code: 'BAD_REQUEST', message } });
+
+  if (flowId && modelId) {
+    return _bad('body.flowId and body.modelId are alternatives — send one, not both.');
+  }
+  if (!flowId && (!modelId || !operation)) {
+    return _bad('body.flowId, or body.modelId and body.operation, are required.');
   }
 
-  const result = await _dispatchToRenderer('generation.submit', {
-    modelId: String(modelId),
-    operation: String(operation),
-    positive: positive || '',
-    negative: negative || '',
-    injectionParams: injectionParams || {},
-  });
+  const input = flowId
+    ? { flowId: String(flowId), fields: fields || {}, media: Array.isArray(media) ? media : [] }
+    : {
+      modelId: String(modelId),
+      operation: String(operation),
+      positive: positive || '',
+      negative: negative || '',
+      injectionParams: injectionParams || {},
+    };
+
+  const result = await _dispatchToRenderer('generation.submit', input);
 
   if (!result.ok) {
     logger.warn('system', `connector generate failed: ${result.error?.code} ${result.error?.message}`);

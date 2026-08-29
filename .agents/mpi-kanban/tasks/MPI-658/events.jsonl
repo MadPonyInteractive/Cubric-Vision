@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-658", "at": "2026-08-29T12:00:00+01:00", "actor": "claude", "summary": "Created MPI-658: flow dispatch + supplied audio over the connector, so an agent can run text-to-speech."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-658", "at": "2026-08-29T12:00:00+01:00", "actor": "claude", "from": "todo", "to": "doing", "summary": "Straight to doing: Fabio has a MadPony-Identity agent holding a voice sample and blocked on this."}

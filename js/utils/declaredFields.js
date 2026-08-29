@@ -146,6 +146,58 @@ export function splitDeclaredValues(fields = [], values = {}) {
 }
 
 /**
+ * Every declared field a FlowDef owns, flow-level and step-level together.
+ *
+ * A field declared on a STEP reaches the op exactly as a flow-level one does
+ * (flowsRegistry § FlowStepField), so a reader that walked only `flow.fields`
+ * would drop half of a stepped flow's controls and run it on baked defaults.
+ * `button` is excluded: it is an ACTION, and a click must never arrive as a value.
+ *
+ * @param {Object} flow  a FlowDef
+ * @returns {Object[]}
+ */
+export function flowDeclaredFields(flow) {
+    return [...(flow?.fields || []), ...(flow?.steps || []).flatMap(s => s?.fields || [])]
+        .filter(f => f?.id && f.type !== 'button');
+}
+
+/**
+ * Resolve a caller's field values against a FlowDef into the payload the op takes
+ * — declared defaults first, the caller's values over them, `derived` last.
+ *
+ * DERIVED IS COMPUTED AFTER THE OVERRIDES, which is the whole point of it: Text to
+ * Speech's `Input_Is_Multilingual` follows the language the caller actually picked,
+ * so the one state the pair could disagree in (English audio from a non-English
+ * pick) stays unreachable off the agent path exactly as it is in the UI (MPI-607).
+ *
+ * Built for the agent connector (MPI-658), which has no widgets to collect from and
+ * so would otherwise re-implement this dialect a third time — the duplication
+ * MPI-580 extracted this module to stop.
+ *
+ * An undeclared id is REPORTED, never silently dropped: a typo'd field on a paid
+ * generation must come back as an error, not as a run on the default.
+ *
+ * @param {Object} flow    a FlowDef
+ * @param {Object} values  caller values keyed by declared field id
+ * @returns {{inputs: Object, injectionParams: Object, unknown: string[]}}
+ */
+export function resolveFlowFieldValues(flow, values = {}) {
+    const decls = flowDeclaredFields(flow);
+    const declared = new Set(decls.map(f => f.id));
+    const unknown = Object.keys(values || {}).filter(k => !declared.has(k));
+
+    const resolved = {};
+    decls.forEach((f) => { if (f.default !== undefined) resolved[f.id] = f.default; });
+    Object.entries(values || {}).forEach(([k, v]) => { if (declared.has(k)) resolved[k] = v; });
+    (flow?.derived || []).forEach((d) => {
+        if (!d?.id || !d.from) return;
+        resolved[d.id] = String(resolved[d.from]) === String(d.equals) ? d.then : d.else;
+    });
+
+    return { ...splitDeclaredValues(decls, resolved), unknown };
+}
+
+/**
  * Render ONE declared field.
  *
  * @param {Object} f      a FlowStepField

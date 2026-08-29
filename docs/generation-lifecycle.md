@@ -148,6 +148,22 @@ jobs — `commandExecutor` opens it per generation, so it is not always-on. And 
 `agentDispatch` are not duplicates of `commandExecutor`'s: an agent cannot see a toast, so a
 refusal has to come back as a named error code, not a `ui:warning` nobody reads.
 
+**A Flow reaches the same route by `flowId`, never by `modelId` (MPI-658).** A Flow dispatches
+with `model.id: null` — it is an operation, not a model — so `modelId` could not name one, and
+EVERY Flow was unreachable from an agent, including both text-to-speech surfaces, which are
+Flows and not models. `flowId` resolves the FlowDef, pre-flights `flowAvailability` (which
+otherwise reports through a toast and returns a bare `null`), and reads the caller's `fields`
+through `resolveFlowFieldValues` — the same declared-field dialect the flow frame renders from,
+so `derived` is computed after the caller's overrides exactly as it is under a click. The
+producer count does not change: it still hands off to `flowService.submitFlowGeneration`.
+
+**Media on that path is BY REFERENCE, and that is the seam holding rather than cracking.** The
+caller stages its own file through `POST /project-media/:id/place-preview-asset` — server-side,
+and it already accepted a plain absolute path — then passes the returned `/project-file?path=…`
+url back as `media: [{role, url}]`. So an agent supplies the voice sample Text to Speech requires
+without a byte crossing the relay, and "media staging belongs in the route, server-side" stays
+true instead of becoming the exception that makes the throwaway load-bearing.
+
 ## Mask detects are a UTILITY LANE — never a queue job (MPI-421)
 
 An auto-mask detect (Detect / Points / Text) is a real ComfyUI workflow, but it does **not**
