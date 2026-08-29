@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-652", "type": "task.created", "at": "2026-08-29T08:03:30Z", "actor": "claude", "summary": "Investigated why some slide-overs close on click-away and some do not. Two root causes found (unstyled Flow Library scrim; MPI-79 handler removal whose reason expired in the same commit). Plan attached, ready to implement."}
