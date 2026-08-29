@@ -100,6 +100,25 @@
     text-align: center;
 }
 
+/* ══ DETAIL DRAWER SCRIM ══════════════════════════════════════════
+   The drawer's geometry class `.mpi-detail` is shared — defined once in
+   MpiModelManager.css and borrowed across the component boundary. The scrim is
+   NOT: it kept this block's own name, inherited nothing, and shipped with no rule
+   at all — an unpositioned, zero-height div, which is why `on(scrim, 'click', …)`
+   in the JS could never fire (MPI-652). Kept identical to
+   `.mpi-model-library__scrim` so both libraries dim the same. z-30 sits between
+   the grid and the z-40 drawer. */
+.mpi-flow-library__scrim {
+    position: absolute;
+    inset: 0;
+    background: oklch(0.14 0.02 350 / 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--t-base) var(--ease);
+    z-index: 30;
+}
+.mpi-flow-library__scrim.is-open { opacity: 1; pointer-events: auto; }
+
 /* Required-models list in the detail drawer */
 .mpi-detail__models {
     list-style: none;

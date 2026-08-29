@@ -59,6 +59,20 @@ export const MpiSlideOver = ComponentFactory.create({
             el.classList.add(...String(props.extraClasses).split(/\s+/).filter(Boolean));
         }
 
+        // MPI-652 — click-away scrim. A SIBLING of the panel, never a child: the
+        // factory template has one root, so a child would sit inside the panel box.
+        // Transparent — this is a behaviour change with no visual one. Inset from
+        // --titlebar-h so the custom OS bar stays clickable, the same convention
+        // .mpi-modal-backdrop and .mpi-overlay already follow.
+        //
+        // Cue (`--queue`) opts out by decision: it docks above the prompt bar so its
+        // controls stay usable mid-generation (38355fff), and a scrim there would
+        // close the queue on every prompt-bar click.
+        const scrim = String(props.extraClasses || '').includes('mpi-slide-over--queue')
+            ? null
+            : document.createElement('div');
+        if (scrim) scrim.className = 'mpi-slide-over__scrim';
+
         // Mount the content component into the body slot
         let _contentInstance = null;
         if (props.component) {
@@ -74,6 +88,7 @@ export const MpiSlideOver = ComponentFactory.create({
         const _doClose = () => {
             if (_closed) return;
             _closed = true;
+            scrim?.classList.remove('is-open');
             _unsubs.forEach(fn => fn());
             // MPI-177: tear down the content component. Without this, content
             // el.destroy() never ran — every Settings open leaked its 5s RunPod
@@ -87,6 +102,7 @@ export const MpiSlideOver = ComponentFactory.create({
                 _removed = true;
                 el.removeEventListener('transitionend', onEnd);
                 if (el.parentNode) el.parentNode.removeChild(el);
+                if (scrim?.parentNode) scrim.parentNode.removeChild(scrim);
             };
             el.addEventListener('transitionend', onEnd);
             // Throttled/background windows can skip the CSS transition entirely
@@ -97,10 +113,12 @@ export const MpiSlideOver = ComponentFactory.create({
         };
 
         el.open = () => {
+            if (scrim) document.body.appendChild(scrim);
             document.body.appendChild(el);
             // Force reflow so transition fires
             void el.offsetWidth;
             el.setAttribute('aria-expanded', 'true');
+            scrim?.classList.add('is-open');
         };
 
         el.close = _doClose;
@@ -108,6 +126,14 @@ export const MpiSlideOver = ComponentFactory.create({
 
         // Close button
         _unsubs.push(on(closeBtn, 'click', _doClose));
+
+        // Click-away. No closest()-based exemption list is needed here, unlike the
+        // document-click route MpiPromptBox has to run: every portaled child renders
+        // far above both panel and scrim (.mpi-dropdown__list z-11000, .mpi-popup
+        // z-9999, MpiModal z-10009/10010), so their clicks never reach the scrim.
+        // That is what makes MPI-79's complaint — the Settings device dropdown
+        // dismissing the panel — structurally impossible to reintroduce.
+        if (scrim) _unsubs.push(on(scrim, 'click', _doClose));
 
         // ui:close-all-popups → close, EXCEPT when fired by an overlay/modal opening.
         // A child pop-up (MpiOkCancel / showError / etc.) opening on top of the panel

@@ -24,6 +24,20 @@
     pointer-events: all;
 }
 
+/* ── Click-away scrim (MPI-652) ───────────────────────────────────
+   Body-portaled sibling of the panel, one z below it. Deliberately transparent:
+   this catches the click, it does not dim. Top inset = titlebar height so the
+   custom OS bar stays clickable, same as .mpi-modal-backdrop. Cue opts out in
+   JS and never gets one. */
+.mpi-slide-over__scrim {
+    position: fixed;
+    inset: var(--titlebar-h, 36px) 0 0 0;
+    z-index: 99;
+    background: transparent;
+    pointer-events: none;
+}
+.mpi-slide-over__scrim.is-open { pointer-events: auto; }
+
 /* ── Header ──────────────────────────────────────────────────── */
 .mpi-slide-over__header {
     padding: 16px 20px;
