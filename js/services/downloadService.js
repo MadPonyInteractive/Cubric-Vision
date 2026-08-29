@@ -11,6 +11,7 @@ import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { ce } from '../utils/dom.js';
 import { reSyncInstalledModels, getModelById, MODELS } from '../data/modelRegistry.js';
 import { clientLogger } from './clientLogger.js';
+import { Storage } from '../core/storage.js';
 import { getModelLicence, hasAcceptedLicence, recordLicenceAcceptance } from '../data/modelConstants/licences.js';
 import { showLicenceGate } from '../components/Compounds/MpiLicenceGate/MpiLicenceGate.js';
 import { remoteEngineClient } from './remoteEngineClient.js';
@@ -400,10 +401,14 @@ const downloadService = {
     },
 
     async uninstall(modelId, dependencies, deleteFiles = true) {
+        // MPI-500: the Recycle Bin preference is a renderer-side localStorage pref and
+        // downloadManager.js is server-side, so it rides on the request. The server
+        // defaults it OFF when absent — which is also what keeps tests and agent
+        // sandboxes (no renderer at all) out of the developer's Recycle Bin.
         const res = await fetch('/comfy/models/uninstall', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ modelId, dependencies, deleteFiles }),
+            body: JSON.stringify({ modelId, dependencies, deleteFiles, useRecycleBin: Storage.getRecycleBinDelete() }),
         });
         if (!res.ok) {
             const err = await res.json().catch(() => ({ error: 'Uninstall failed' }));

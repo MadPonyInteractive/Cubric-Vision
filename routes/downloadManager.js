@@ -32,6 +32,38 @@ async function _trash(p) {
     }
     return _trashFn(p);
 }
+// MPI-500 — a test must be able to exercise the Recycle Bin branch WITHOUT putting a
+// real entry in the developer's bin (the whole reason MPI-499 rewrote the fixture).
+function _setTrashFnForTests(fn) { _trashFn = fn; }
+
+// MPI-500 — the ONE place a managed file is removed from disk, so both callers
+// (the uninstall loop and the orphan sweep) obey the same preference.
+//
+// `useRecycleBin` is the renderer's Settings toggle, threaded down the uninstall
+// request because downloadManager.js is server-side and the pref lives in
+// localStorage. **Absent means permanent delete** — that default is deliberate:
+// a test harness or an agent sandbox has no renderer, and before this the sweep
+// silently filled the developer's Recycle Bin on every run.
+//
+// With the bin ON, the trash-then-delete fallback survives untouched: Windows
+// refuses to recycle a file bigger than the drive's Recycle Bin QUOTA (the bin
+// cap, not free space — a 6.9GB weight failed with 37GB free), windows-trash.exe
+// exits 255 and throws, and an uninstall that silently no-ops frees nothing.
+// (MPI-258)
+async function _removeManagedFile(p, useRecycleBin, logPrefix) {
+    if (!useRecycleBin) {
+        await fs.remove(p);
+        logger.info('download', `${logPrefix}: permanently deleted ${p}`);
+        return;
+    }
+    try {
+        await _trash(p);
+        logger.info('download', `${logPrefix}: moved to trash ${p}`);
+    } catch (trashErr) {
+        await fs.remove(p);
+        logger.warn('download', `${logPrefix}: trash failed (${trashErr.message}) — permanently deleted ${p}`);
+    }
+}
 const crypto = require('crypto');
 const nodeStream = require('stream'); // MPI-296 — Writable hash-sink for streaming SHA256
 const { createRequire } = require('module');
@@ -282,10 +314,11 @@ function _orphanedDepIds(protectedMap) {
     });
 }
 
-// Trash every orphaned dep that is really on disk inside the managed models root.
-// Same trash-then-permanent-delete fallback as the uninstall loop (a 25GB weight
-// exceeds the Recycle Bin quota, and a sweep that silently no-ops frees nothing).
-async function _sweepOrphanedDeps(managedModelsRoot, defaultModelsRoot, customRoot) {
+// Remove every orphaned dep that is really on disk inside the managed models root.
+// Goes through _removeManagedFile, so it honours the same Recycle Bin preference as
+// the uninstall that triggered it — and defaults to a permanent delete when no
+// preference reaches it (MPI-500).
+async function _sweepOrphanedDeps(managedModelsRoot, defaultModelsRoot, customRoot, useRecycleBin = false) {
     const { DEPS } = _require('../js/data/modelConstants/dependencies.js');
     const protectedMap = await _localSharedDepsMap(null);
     const swept = [];
@@ -301,13 +334,7 @@ async function _sweepOrphanedDeps(managedModelsRoot, defaultModelsRoot, customRo
         if (!_isInsidePath(managedModelsRoot, localPath)) continue;
         if (!(await fs.pathExists(localPath))) continue;
         try {
-            try {
-                await _trash(localPath);
-                logger.info('download', `sweep: moved to trash ${localPath}`);
-            } catch (trashErr) {
-                await fs.remove(localPath);
-                logger.warn('download', `sweep: trash failed (${trashErr.message}) — permanently deleted ${localPath}`);
-            }
+            await _removeManagedFile(localPath, useRecycleBin, 'sweep');
             await cleanEmptyDirs(localPath, managedModelsRoot);
             await clearDownloadMarker(localPath).catch(() => {});
             _depJobs.delete(depId);
@@ -2828,7 +2855,10 @@ router.post('/comfy/models/download/cancel', async (req, res) => {
 // ── Uninstall ─────────────────────────────────────────────────────────────────
 
 router.post('/comfy/models/uninstall', async (req, res) => {
-    const { modelId, dependencies: wireDeps, deleteFiles = true } = req.body;
+    // MPI-500: useRecycleBin is the renderer's Settings toggle. Defaulting it FALSE
+    // here is what makes a caller with no renderer (a test harness, an agent sandbox)
+    // delete permanently instead of filling the developer's Recycle Bin.
+    const { modelId, dependencies: wireDeps, deleteFiles = true, useRecycleBin = false } = req.body;
     if (!modelId || !Array.isArray(wireDeps)) {
         return res.status(400).json({ error: 'modelId + dependencies required' });
     }
@@ -3067,19 +3097,9 @@ router.post('/comfy/models/uninstall', async (req, res) => {
             // A missing path now lands in keptModelFiles(reason:'already-absent').
             const existed = await fs.pathExists(localPath);
             if (existed) {
-                // Try Recycle Bin first (undo-safety). But model weights are large
-                // (6-25GB) and Windows refuses to recycle a file bigger than the
-                // drive's Recycle Bin quota — windows-trash.exe exits 255 and the
-                // file survives. Since uninstall exists to FREE disk space, parking a
-                // 25GB weight in the bin wouldn't free it anyway: fall back to a
-                // permanent delete so uninstall never silently no-ops. (MPI-258)
-                try {
-                    await _trash(localPath);
-                    logger.info('download', `uninstall: moved to trash ${localPath}`);
-                } catch (trashErr) {
-                    await fs.remove(localPath);
-                    logger.warn('download', `uninstall: trash failed (${trashErr.message}) — permanently deleted ${localPath}`);
-                }
+                // Recycle Bin vs permanent delete is the user's Settings toggle, and
+                // the quota fallback lives in _removeManagedFile. (MPI-500 / MPI-258)
+                await _removeManagedFile(localPath, useRecycleBin, 'uninstall');
                 await cleanEmptyDirs(localPath, dep.type === 'custom_nodes' ? defaultCustomNodesRoot : managedModelsRoot);
             }
             await clearDownloadMarker(localPath).catch(() => {});
@@ -3106,7 +3126,7 @@ router.post('/comfy/models/uninstall', async (req, res) => {
     let sweptOrphans = [];
     if (deleteFiles) {
         try {
-            sweptOrphans = await _sweepOrphanedDeps(managedModelsRoot, defaultModelsRoot, customRoot);
+            sweptOrphans = await _sweepOrphanedDeps(managedModelsRoot, defaultModelsRoot, customRoot, useRecycleBin);
         } catch (err) {
             logger.error('download', `orphan sweep after ${modelId} uninstall failed: ${err.message}`);
         }
@@ -3427,6 +3447,7 @@ module.exports = {
     _remoteSharedDepIds, // MPI-464 — exported for unit test (remote twin of the above)
     _orphanedDepIds, // MPI-462 — exported for unit test (orphan sweep)
     _sweepOrphanedDeps, // MPI-462 — exported for unit test (orphan sweep)
+    _setTrashFnForTests, // MPI-500 — exported for unit test only; never call outside tests
     _sweepOrphanedDepsRemote, // MPI-464 — exported for unit test (orphan sweep, remote twin)
     _startRemoteDownload, // MPI-481 — exported for unit test (stale attach guard)
     _remoteDepIds, // MPI-481 — exported for unit test only; never mutate outside tests

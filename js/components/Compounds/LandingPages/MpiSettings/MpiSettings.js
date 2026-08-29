@@ -66,6 +66,13 @@ export const MpiSettings = ComponentFactory.create({
                         </div>
                         <div class="mpi-settings__plate-ctrl" id="mpiSettingsAutoStartSlot"></div>
                     </div>
+                    <div class="mpi-settings__plate" id="mpiSettingsRecycleBinPlate">
+                        <div class="mpi-settings__plate-main">
+                            <span class="mpi-settings__plate-label">Uninstall to the Recycle Bin</span>
+                            <span class="mpi-settings__plate-desc">Off, uninstalling deletes a model's files for good. On, they are recoverable from the bin, but the disk space comes back only when you empty it &mdash; and a weight over the bin's quota is deleted anyway. Models on a remote Pod are always deleted.</span>
+                        </div>
+                        <div class="mpi-settings__plate-ctrl" id="mpiSettingsRecycleBinSlot"></div>
+                    </div>
                 </section>
 
                 <section class="mpi-settings__section">
@@ -428,6 +435,10 @@ export const MpiSettings = ComponentFactory.create({
             // ── Auto-start toggle ────────────────────────────────────────────
             _mountSwitchPlate('#mpiSettingsAutoStartSlot', Storage.getAutoStartComfy(),
                 (v) => Storage.setAutoStartComfy(v));
+
+            // ── MPI-500: uninstall to the Recycle Bin (default OFF) ──────────
+            _mountSwitchPlate('#mpiSettingsRecycleBinSlot', Storage.getRecycleBinDelete(),
+                (v) => Storage.setRecycleBinDelete(v));
 
             // ── Desktop notification prefs (per-type OS opt-out) ─────────────
             const _saveNotifyPref = (key, checked) => {

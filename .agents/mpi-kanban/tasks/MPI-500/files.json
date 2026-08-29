@@ -1,0 +1,12 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/core/storageKeys.js",
+    "js/core/storage.js",
+    "js/state.js",
+    "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js",
+    "js/services/downloadService.js",
+    "routes/downloadManager.js",
+    "tests/orphan-sweep.test.cjs"
+  ]
+}

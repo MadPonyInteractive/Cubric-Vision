@@ -99,4 +99,53 @@ test('refuses to touch anything outside the managed models root', async () => {
     fs.rmSync(outside, { recursive: true, force: true });
 });
 
+// ── MPI-500: the Recycle Bin toggle ─────────────────────────────────────────
+// Both modes are checked through a STUBBED trash fn. Exercising the real one would
+// put entries in the developer's Recycle Bin on every test run, which is the exact
+// pollution MPI-499 was raised to stop.
+
+test('default (no preference) deletes permanently and never reaches the bin', async () => {
+    reset();
+    place([ORPHAN]);
+    let trashed = 0;
+    dm._setTrashFnForTests(() => { trashed += 1; return Promise.resolve(); });
+    try {
+        const swept = await dm._sweepOrphanedDeps(ROOT, ROOT, null);
+        assert.ok(swept.some(s => s.depId === ORPHAN), 'orphan should still be swept');
+        assert.equal(trashed, 0, 'trash must not be called when no preference is supplied');
+        assert.equal(onDisk(ORPHAN), false, 'orphan file should be gone');
+    } finally {
+        dm._setTrashFnForTests(null);
+    }
+});
+
+test('useRecycleBin routes the same file to the bin instead', async () => {
+    reset();
+    place([ORPHAN]);
+    const binned = [];
+    dm._setTrashFnForTests((p) => { binned.push(p); fs.rmSync(p); return Promise.resolve(); });
+    try {
+        const swept = await dm._sweepOrphanedDeps(ROOT, ROOT, null, true);
+        assert.ok(swept.some(s => s.depId === ORPHAN), 'orphan should still be swept');
+        assert.deepEqual(binned, [path.join(ROOT, DEPS[ORPHAN].filename)], 'the orphan is what got trashed');
+    } finally {
+        dm._setTrashFnForTests(null);
+    }
+});
+
+test('a bin refusal (over quota) still frees the disk', async () => {
+    reset();
+    place([ORPHAN]);
+    // Windows refuses a file bigger than the Recycle Bin quota: windows-trash.exe
+    // exits 255 and throws. The uninstall must NOT silently no-op. (MPI-258)
+    dm._setTrashFnForTests(() => Promise.reject(new Error('windows-trash.exe exited 255')));
+    try {
+        const swept = await dm._sweepOrphanedDeps(ROOT, ROOT, null, true);
+        assert.ok(swept.some(s => s.depId === ORPHAN), 'a bin refusal must not abandon the sweep');
+        assert.equal(onDisk(ORPHAN), false, 'the fallback delete must really free the file');
+    } finally {
+        dm._setTrashFnForTests(null);
+    }
+});
+
 test.after(() => fs.rmSync(ROOT, { recursive: true, force: true }));

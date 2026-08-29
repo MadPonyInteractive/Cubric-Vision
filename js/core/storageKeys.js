@@ -49,6 +49,9 @@ export const STORAGE_KEYS = {
   // MPI-270: OS floating latent window when minimized (opt-in, default on)
   FLOAT_LATENT_WINDOW: 'mpi_float_latent_window',
 
+  // MPI-500: send uninstalled weights to the Recycle Bin (opt-in, default off)
+  RECYCLE_BIN_DELETE:  'mpi_recycle_bin_delete',
+
   // Gallery UI (card size level + info-mode toggle)
   GALLERY_SIZE_LEVEL:  'mpi_gallery_size_level',
   GALLERY_SHOW_INFO:   'mpi_gallery_show_info',

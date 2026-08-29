@@ -227,6 +227,11 @@ export const Storage = {
   getFloatLatentWindow: () => get(STORAGE_KEYS.FLOAT_LATENT_WINDOW, true),
   setFloatLatentWindow: (v) => set(STORAGE_KEYS.FLOAT_LATENT_WINDOW, !!v),
 
+  // MPI-500: uninstall sends weights to the Recycle Bin instead of deleting them.
+  // Default OFF — an uninstall exists to free disk, and the bin frees nothing.
+  getRecycleBinDelete: () => get(STORAGE_KEYS.RECYCLE_BIN_DELETE, false),
+  setRecycleBinDelete: (v) => set(STORAGE_KEYS.RECYCLE_BIN_DELETE, !!v),
+
   // Gallery card-size level (1–4) + info-mode toggle — cross-session.
   getGallerySizeLevel: () => Math.min(4, Math.max(1, get(STORAGE_KEYS.GALLERY_SIZE_LEVEL, 3))),
   setGallerySizeLevel: (v) => set(STORAGE_KEYS.GALLERY_SIZE_LEVEL, v),
