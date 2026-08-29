@@ -65,11 +65,24 @@ notes in [research/](research/).
 > `brush_path` and skip the download). Batch task 2 (dep declarations + R2 uploads) is
 > untouched and needs Fabio - it uploads multi-GB weights.
 >
-> **Nothing is in flight, and the GPU is NOT available - Fabio is using it himself.** Do
-> not take a lease, do not start the bench on 8188, do not dispatch anything. Phase 1
-> needed no GPU. **Phase 1 is done, so the next unit - the `## Parallel Batch` bake path -
-> is now unblocked; the queued rail-scaling check DOES need the GPU.** Ask Fabio whether
-> the card is free before starting it.
+> **Session note 2026-08-29 (sixth). THE BENCH RAN. Batch task 1 is CLOSED, and the rail
+> question is ANSWERED - with a correction to amendment 15.** `MpiBrushTrain` trained the
+> Phase 0 dataset end to end (2000 steps, 23 s, `export_2000.ply`), and all three unproven
+> assumptions held: the progress bar moves, the staged single-model root is what Brush
+> consumes, and a cancelled prompt really does kill `brush_app.exe` - amendment 24.
+> **Then the queued rail check, and it did not go as amendment 15 predicted.** The room was
+> measured (horizontal radius p90 2.77; the shipped rails reach 2.95 and 2.60, so they DO
+> leave it) - but scaling them x0.5 to fit still split SfM into 2 models. What merges it is
+> a **shared look target**: same rails, `look_at_target` instead of `look_forward`, one
+> model, 912 images. **That is Phase 2's preset rule** - amendments 25 and 26.
+>
+> **GPU: the bench ComfyUI on 8188 was launched under `gpu_lease.py run --`, which is how
+> MPI-659's gap gets covered** (`guard-gpu` matches nothing for `brush_app.exe`, so the
+> lease has to be taken by hand). Kill that process to release it.
+>
+> **Next:** batch task 2 (dependency declarations) is untouched and needs Fabio - it uploads
+> multi-GB weights to R2. Task 3 (pin `5e07043` in `node_lock.json`) runs after it. Phase
+> 1's `user-ux` box still stays unticked until Phase 2 emits a real Scene card.
 
 **Project mode:** `scalable-foundation`.
 
@@ -368,6 +381,67 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     (amendment 19). Two files in that repo now carry a stale registry status; they belong
     to whoever owns that repo, so they are reported, not edited.
 
+### Amendments from the Parallel Batch bench run (2026-08-29)
+
+24. **`MpiBrushTrain` is bench-verified, and all three unproven assumptions held.** A graph
+    of `MpiBrushTrain` -> `PreviewAny` (the node has no `OUTPUT_NODE`, so a *literally*
+    single-node graph never executes - the sink is required, not scope creep), pointed at
+    the raw Phase 0 dataset `G:\MPI-623-spike\out\mpi623_gate` with
+    `brush_path=G:\MPI-623-spike\brush\extracted\brush_app.exe`, 2000 steps / export every
+    250. **Full pass in 23 s**, returning
+    `output/splats/mpi623_gate_88guot2p/export_2000.ply` (2.4 MB, 8 exports). What each
+    watch-item actually showed:
+    - **The progress bar moves.** Websocket `progress` events - what drives the UI bar -
+      arrived 250 -> 500 -> 750 -> 1000 -> 1250 -> 1500 -> 1750, one per 2 s poll. The
+      export-dir poll is a working progress source, not a theory.
+    - **Staging works and Brush consumes it.** `_mpi_clean/` was created with `sparse/0`
+      only (one model) and 96 images at `st_nlink=2` - hardlinked, not copied, as designed.
+      No `Invalid camera model` on either run.
+    - **Cancel really kills Brush.** `POST /interrupt` 12 s into a 30000-step bake:
+      `execution_interrupted` at +0.1 s and `brush_app.exe` **gone from the task list**.
+      The `BaseException` fix in amendment 22 is what makes this true.
+    Two incidental confirmations: Brush zero-pads its exports (`export_0250.ply`), which
+    `exported_step`'s `isdigit()` parse handles; and 2000 steps taking 23 s means a Draft
+    tier is minutes, not the 45 minutes the 30000-step Scene tier costs.
+
+25. **Scaling the rails into the room does NOT fix the SfM split - amendment 15 was only
+    half right.** Measured Wan-free (MoGe reprojections only, the split was already shown
+    to be geometry-driven, not Wan- or matcher-driven), holding everything at Phase 0b's
+    values except the anchor scale: same four rail shapes, 81 frames each, `frame_stride=2`
+    (164 fed), `exhaustive`, `on_split='stop'`. **The room's real extent, measured** by
+    computing the MoGe scene-reference cloud (`SplatKit_CameraPlotSceneReference`, 40 000
+    points, served by SplatKit's own `/splatkit/scene_points` route): horizontal radius from
+    the start camera p50 **1.66**, p90 **2.77**, p98 **3.34**; y spans -0.62 to 1.05. The
+    shipped rails reach r=2.95 (rail 2) and r=2.60 (rail 3) - past p90, i.e. into the wall,
+    exactly as amendment 15 said. SplatKit's own `/splatkit/suggest_paths` proposes nothing
+    beyond r=1.6, which is a second, independent read of what "fits".
+    **Scaled x0.5 (max reach r=1.48, comfortably inside p50) it still split into 2 models:**
+    `model 0: 134 frames [(0,93),(122,161)]`, `model 1: 27 frames [(95,121)]`. Cost: 305 s
+    (151 s for four rail renders, 154 s for SfM).
+    The island is again **inside a single rail** (rail 3 spans 82-122 at stride 2), as it
+    was in Phase 0b at (70,81) - so it is not "one rail flew somewhere else", it is a
+    stretch of one rail whose views share geometry with nothing, including the rest of its
+    own rail. **Fitting inside the room is necessary but NOT sufficient. The remedy that
+    matters is the one measurements.md already ranked first - trajectories must OVERLAP -
+    and Phase 2 cannot ship canned rails on scale alone.**
+26. **A SHARED LOOK TARGET merges the reconstruction - measured, and it is Phase 2's rule.**
+    Same four scaled rails, same 164 frames, same matcher, `on_split='stop'`; the only
+    change is `orientation='look_at_target'` with `look_at_target="0, 0.3, 0"` on all four
+    (rail 4's `per_point_look` 6-float rows truncated to their positions). **One model.**
+    `execution_success` in 325 s, `num_images=912` (= 152 registered frames x 6 cube faces),
+    `sparse/` holding `0/` alone. Under `on_split='stop'` a merged run is the only way to
+    reach success, so this is a positive result, not an absence of an error.
+    Why it works is the mechanism, not luck: `look_forward` aims each camera down its own
+    path tangent, so four rails radiating from one origin look four different ways and share
+    almost nothing; aiming them all at one point makes every frame on every rail image the
+    same region. **Phase 2's canned presets must therefore carry `look_at_target` (or
+    `per_point_look` targets that converge), not `look_forward`** - and per amendment 6b a
+    preset must ship its orientation with its anchors, which this makes load-bearing rather
+    than tidy. Caveats to carry forward, neither of them blocking: this is the Wan-free
+    dataset, and a shared target is not automatically the best COVERAGE of the walls - it is
+    the shape that reconstructs. Not yet trained; the merged dataset is at
+    `D:\WORK\Images\Outputs\mpi623_railshare` if a bake is wanted.
+
 ### Verified NOT drifted from the source workflow (checked 2026-08-29)
 
 Both LoRAs at his strengths (`pano_video_gen_720p_comfy` 0.98, `lightx2v_T2V_14B_cfg_step_distill_v2`
@@ -475,13 +549,15 @@ no media type, no sweep, four files.
 Disjoint ownership; the node lives in a different repo entirely. Run with
 `mpi-execute-parallel` once Phase 0's gate has passed and Phase 1 has landed.
 
-- [~] **AUTHORED 2026-08-29, NOT YET BENCH-VERIFIED** (`c:\AI\Mpi\ComfyUi-MpiNodes\splat.py`,
+- [x] **AUTHORED AND BENCH-VERIFIED 2026-08-29** - the `**Verify:**` below passed on the
+      bench: 2000 steps in 23 s, a real `.ply`, a progress bar that moves, and a cancel that
+      kills the process (amendment 24). (`c:\AI\Mpi\ComfyUi-MpiNodes\splat.py`,
       `MpiBrushTrain`, registered in `__init__.py` + README + changelog under V1.2.8;
-      `sha256_file` added to `help_funcs.py`; `bin/` gitignored). Its `**Verify:**`
-      below needs the bench, so the box stays open. Three corrections to the bullet as
+      `sha256_file` added to `help_funcs.py`; `bin/` gitignored). Committed there as
+      `5e07043`. Three corrections to the bullet as
       written, and two bugs the self-check caught - amendment 22. Proof with no GPU:
       `check_splat.py` in the pack, 12 assertions, run with the ComfyUI portable python.
-- [ ] Add a Brush trainer node to the first-party pack. It downloads the
+- [x] Add a Brush trainer node to the first-party pack. It downloads the
       per-platform Brush binary on first use with SHA-256 verification (mirror
       SplatKit's `colmap_sphere` approach), takes a COLMAP dir + iteration count,
       shells out headless, strips ANSI and reports `N/M Steps` through ComfyUI's

@@ -105,16 +105,23 @@ Delivered per plan.md amendments 18-20. `'splat'` is NOT a media type.
 
 ## Parallel Batch - Bake path (2026-08-29)
 
-- [~] **Task 1: `MpiBrushTrain` AUTHORED, not bench-verified.**
+- [x] **Task 1: `MpiBrushTrain` AUTHORED AND BENCH-VERIFIED (2026-08-29).**
       `c:\AI\Mpi\ComfyUi-MpiNodes\splat.py` + `__init__.py` (3 places) + README +
       changelog (V1.2.8) + `sha256_file` in `help_funcs.py` + `bin/` gitignored.
-      Followed that repo's own `new-node.md` inline. Uncommitted there.
+      Followed that repo's own `new-node.md` inline. Committed there as `5e07043`.
       Every CLI flag verified against `brush_app.exe --help`; two bugs caught and fixed
       (`BaseException` cancel, non-unique export dir) - plan.md amendment 22.
       **No-GPU proof:** `check_splat.py` in the pack, 12 assertions, all passing under
       the ComfyUI portable python.
-      **Still open:** the bench run (a graph of just this node turning the Phase 0
-      dataset into a `.ply` with a moving progress bar). Needs the GPU.
+      **Bench run PASSED** - `MpiBrushTrain` -> `PreviewAny` on 8188, `dataset_path` the
+      raw Phase 0 dataset, `brush_path` the extracted binary (no download). 2000 steps in
+      **23 s**, `export_2000.ply` 2.4 MB returned as `ply_path`. All three unproven
+      assumptions held - amendment 24.
+- [x] **Rail-scaling check (queued from Phase 0b) - DONE, and it corrects amendment 15.**
+      Room extent measured from the MoGe cloud (radius p90 2.77); the shipped rails reach
+      2.95 / 2.60, so they do leave the room - but scaling them x0.5 STILL split SfM into
+      2 models. A shared `look_at_target` merges it: one model, 912 images. plan.md
+      amendments 25-26. Phase 2's presets must carry a converging look target.
 - [ ] **Task 2: dependency declarations** - untouched. Uploads multi-GB weights to R2;
       needs Fabio.
 - [ ] **Task 3: pin the MpiNodes commit** - blocked, runs after 1 and 2.
