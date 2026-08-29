@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-653", "at": "2026-08-29T09:51:05+01:00", "actor": "claude", "summary": "Created MPI-653: R2-primary for the H3 Qwen3-VL encoder, ethanfel HF as mirror."}
