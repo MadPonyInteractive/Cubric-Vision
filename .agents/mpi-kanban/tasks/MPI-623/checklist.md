@@ -48,8 +48,10 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
 - [x] **macOS has no `colmap_sphere` build.** On Mac the 3D Scene Flow is remote-pod only.
       Not in brief.md; must reach the Flow's stated requirements.
 - [x] Corrections to the plan: binary is `brush_app.exe`; flag is `--total-steps`; Brush
-      ships no NOTICE (LICENSE alone discharges Apache-2.0); camera anchors are 3 floats
-      per line with a separate `look_at_target`, not 6.
+      ships no NOTICE (LICENSE alone discharges Apache-2.0). **Anchors: brief.md was right
+      about 6 floats** - `look_forward` takes 3 (`x,y,z`), `per_point_look` takes 6
+      (`x,y,z,lookx,looky,lookz`); the shipped workflow uses both, so a coverage preset
+      must carry its orientation with its anchor text.
 
 ## Phase 0b - the Wan-inclusive pass (the last unmeasured term)
 

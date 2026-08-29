@@ -47,6 +47,15 @@ Disk at start: **G: 23 GB free of 239 GB (91% used)** — the binding constraint
    R2; do not make users run a script.
 6. **The shipped workflow is `1_generate-dataset-hires.json`**, not `3DGS-Dataset-Creator`.
    `0_generate_360_panorama-upscale.json` is the panorama graph (Phase 4).
+6b. **Anchor format depends on `orientation` — brief.md was RIGHT, an earlier note in this
+   file saying "3 floats, not 6" was wrong and is retracted.** Both forms are real and the
+   shipped workflow uses both:
+   - `look_forward` / `look_at_target` -> **3 floats** per line, `x, y, z`
+     (rails 1-3 of `1_generate-dataset-hires.json`).
+   - `per_point_look` -> **6 floats** per line, `x, y, z, lookx, looky, lookz`
+     (rail 4). `look_at_target` is a separate widget used only by that mode.
+   Phase 2's coverage presets are literally these strings, so a preset must carry its
+   orientation alongside its anchor text - the two cannot be chosen independently.
 7. SplatKit ships an **interactive in-graph camera path editor** (`web/camera_plot_geo.js`)
    that drags anchors over the panorama with the MoGe cloud behind it. The
    "canned presets, no spline editor" decision still stands for the Vision UI, but the
@@ -96,6 +105,52 @@ Disk and VRAM both bind before the full Wan pass can run here:
 Measurements (plan.md's "no number exists anywhere — measure it") therefore split in two:
 the local run measures a 4060 Ti, which is a useful *floor* for the user-GPU story but is
 not the number a RunPod bake would produce.
+
+## The real graph, read from the converted API JSON
+
+`1_generate-dataset-hires.json` -> 51 API nodes. Shape:
+
+**4 rails**, each: `CameraPlotRenderControlGeo` -> `WanI2VMaskedConditioning` -> `KSampler`
+-> `VAEDecode` -> `HiResComposite`, all four feeding one `SphereSfMDatasetDualRes`.
+
+Settings that decide the cost:
+
+| Setting | Value | Why it matters |
+|---|---|---|
+| Wan sampling | **8 steps, cfg 1, euler/normal** | `lightx2v_T2V_14B_cfg_step_distill_v2` is loaded at strength 1. This is a **distilled 8-step** sample, not a 30-step one - Wan is far cheaper here than a naive estimate |
+| Pano LoRA | `pano_video_gen_720p_comfy` @ **0.98** | the Matrix-3D LoRA, the gated one |
+| Wan output | 1440x720, **81 frames**, x4 rails | |
+| `ModelSamplingSD3` shift | 5 | |
+| HiRes Composite | `output_width` **8192**, proxy 2048, `frames 0-80/2` (= 41 of 81), `base_mode=geometry` | `geometry` is the splat-correct mode per docs/HIRES_COMPOSITE.md |
+| SfM matcher | **`exhaustive`**, not `sequential` | 4x81 = 324 equirect frames plus 4x41 hires views. Exhaustive is O(n^2) pairs, so SfM will cost vastly more than the 0.7 s the Wan-free single-rail sequential run took. Do not extrapolate SfM from Phase 0's number |
+| `on_split` | `stop` | |
+
+**Consequence for measuring:** "one rail and multiply" is wrong for this graph. Wan and the
+HiRes composite scale linearly with rails, but SfM scales roughly quadratically with total
+frames because the matcher is exhaustive. Measure the 4-rail run as a whole.
+
+## Two gaps in Vision's own tooling, found converting this graph
+
+`scripts/workflow-to-api.mjs` could not convert the shipped workflow. Neither is a SplatKit
+bug; both will recur in Phase 2 and Phase 4.
+
+1. **Frontend-only annotation nodes are rejected.** `MickmumpitzLabel` (and
+   `MickmumpitzMultilineLabel`) are registered in the pack's `web/js/label.js` via
+   `LiteGraph.registerNodeType` and have **no `NODE_CLASS_MAPPINGS` entry** - no backend,
+   0 inputs, 0 outputs, never executes. The converter treats them as unknown node types and
+   aborts. It already skips `Note`/`MarkdownNote`; it needs to skip any node absent from
+   `/object_info` that has no ports at all.
+2. **rgthree `Bundle` / `UnbundleByName` cannot be followed.** The shipped graph uses one
+   `Bundle` feeding **11** `UnbundleByName` nodes as wire tidying. rgthree carries the
+   bundle over a virtual link (`Bundle`'s output `links` is `null` in the export), so a
+   plain graph walk sees every `UnbundleByName` as missing its required `bundle` input.
+
+Worked around for Phase 0 **without touching product code** (both scripts are outside this
+card's ownership): strip the label nodes, then short-circuit the bundle by resolving each
+`Bundle` input to its real origin and repointing every link that originates on an
+`UnbundleByName` output to that origin, by slot NAME. 72 links rewired, 12 nodes dropped,
+conversion then clean. Scripts kept in the session scratchpad; they should become a proper
+fix in `workflow-to-api.mjs` when Phase 2 starts.
 
 ## Status
 
