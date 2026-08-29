@@ -51,8 +51,12 @@ notes in [research/](research/).
 > destination sidecar read back - and both its branches were watched go red before being
 > believed (amendment 21). 793/793, lint clean, `routes/projects.js` byte-identical.
 > **The `## Parallel Batch`'s task 1 is now AUTHORED** - `MpiBrushTrain` in
-> `c:\AI\Mpi\ComfyUi-MpiNodes\splat.py`, uncommitted in that repo, following its own
-> `new-node.md` inline. It is NOT bench-verified: that needs the GPU. Amendment 22 has
+> `c:\AI\Mpi\ComfyUi-MpiNodes\splat.py`, following that repo's own `new-node.md` inline.
+> **Committed and pushed there by the MPI-575 agent, not by this session** - it swept
+> both sets of changes into `5e07043` while this session was still writing. Verified
+> afterwards that nothing was lost: changelog line present, all three `__init__.py`
+> registrations, both bug fixes, `bin/` ignored, `check_splat.py` green on the committed
+> tree. Vision's half is `6a65e7ec`. It is NOT bench-verified: that needs the GPU. Amendment 22 has
 > the CLI corrections and the two bugs the self-check caught; **amendment 23 is an open
 > question for Fabio** about publishing a binary-downloading node to a registry whose
 > `latest_version` is still stuck. **Next when the GPU frees: run a graph containing only
