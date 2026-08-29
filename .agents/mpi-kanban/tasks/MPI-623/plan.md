@@ -84,6 +84,24 @@ notes in [research/](research/).
 > multi-GB weights to R2. Task 3 (pin `5e07043` in `node_lock.json`) runs after it. Phase
 > 1's `user-ux` box still stays unticked until Phase 2 emits a real Scene card.
 
+> **Session note 2026-08-29 (seventh). THE BATCH IS RE-ORDERED - quality gates the uploads.**
+> Fabio pushed back on task 2: nothing goes to R2 before a bake has been looked at. Correct,
+> and task 2 is parked until then. Two findings that move the work: **task 3 is already
+> done in the file** - `node_lock.json` carries MpiNodes `5e070436` from `6c35be5b` (the
+> MPI-575 agent), so only its `**Verify:**` remains, and it is no longer gated by task 2.
+> And **amendment 27**: the amendment 26 merged dataset trained at Draft in 30 s and its
+> held-out renders are the room across the whole 0->160 range with no island gap. That
+> proves the merge, not the look.
+>
+> **Next: the Wan re-run with the amendment 26 piloting** (scaled rails + `look_at_target`),
+> which is the run that judges quality. **Fabio's decision: download Q4_K_M and run the test
+> on it. fp8 is only reconsidered if Q4's hole-filling is wrong** - the thing being judged is
+> whether Wan fills the unseen black regions correctly, NOT how sharp it is, because per
+> amendment 28 the resolution comes from the HiRes composite after Wan, not from Wan. **G: has 5.6 GB free - the
+> GGUF weight goes to `C:\AI\diffusion_models\` (131 GB free), which `ComfyUI-GGUF` does
+> list: `unet_gguf` aliases to `diffusion_models` (`nodes.py:32`).** The bench on 8188 is
+> Fabio's own instance (PID 3784) - use it, do not spawn another.
+
 **Project mode:** `scalable-foundation`.
 
 A user bakes a Gaussian-splat scene once from a 360 equirect image, then re-enters
@@ -442,6 +460,36 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     the shape that reconstructs. Not yet trained; the merged dataset is at
     `D:\WORK\Images\Outputs\mpi623_railshare` if a bake is wanted.
 
+27. **The merged dataset TRAINS, and the room survives the merge - the converging-look fix is
+    now visible, not just an exit code.** Amendment 26's `mpi623_railshare` (912 images,
+    `sparse/0` alone) Brush-trained at Draft: **5000 steps in 30 s**, `railshare_5000.ply`
+    28.6 MB, `--eval-split-every 8 --eval-every 5000 --eval-save-to-disk` giving 114 held-out
+    renders in `D:\WORK\Images\Outputs\mpi623_railshare_brush\eval_5000\`. Compared
+    like-for-like on face `perspective_00000000` (face 4 is the blank-ceiling confound) at
+    frames 0 / 56 / 110 / 158: **every one is the room** - yellow wall and counter, red window
+    frames with boarded panes, tiled debris floor, correct ceiling line - and frame 110 tracks
+    its ground truth closely. **The eval frame indices run 0 -> 160 with no jump**, unlike the
+    Phase 0b run where a `0...69` then `82` gap was the discarded island sitting in the
+    filenames. One model in, no data thrown away.
+    **What this does and does not prove.** It proves the merge is real and trainable, at a
+    quality equal to its input. It does NOT answer "does it look nice": this dataset is MoGe
+    reprojections only, so its detail ceiling is the warped panorama, and the black patches in
+    the renders are unseen regions present in the ground truth too. The quality verdict needs
+    a Wan run piloted with the amendment 26 fix. **Do not upload anything to R2 before that
+    run has been looked at** - Fabio's call, and the reason batch task 2 is parked.
+
+28. **The upscale is AFTER Wan, and it is `SplatKit_HiResComposite` - read off the graph that
+    ran, not from memory.** Per rail: `SplatKit_WanI2VMaskedConditioning` -> `KSampler` ->
+    `VAEDecode` -> `SplatKit_HiResComposite` -> `SplatKit_SphereSfMDatasetDualRes`. The
+    composite takes three inputs - the decoded `wan_frames`, the ORIGINAL `panorama`, and an
+    `upscale_model` (`UpscaleModelLoader`, `4x-UltraSharp.pth`) - and emits at
+    `output_width=8192` from a `proxy_width=2048` working res, `base_mode='geometry'`.
+    So Wan runs at its 720p ceiling and the composite is what buys the resolution back; there
+    is no upscale before Wan. **Consequence for the Q4 test:** resolution is not what the GGUF
+    run is judging. The question is whether Wan FILLS THE HOLES correctly - the black unseen
+    regions amendment 27 shows in both render and ground truth - and Q4 is enough to answer
+    that. fp8 only gets considered if Q4's fill is wrong, not if it is merely soft.
+
 ### Verified NOT drifted from the source workflow (checked 2026-08-29)
 
 Both LoRAs at his strengths (`pano_video_gen_720p_comfy` 0.98, `lightx2v_T2V_14B_cfg_step_distill_v2`
@@ -569,7 +617,16 @@ Disjoint ownership; the node lives in a different repo entirely. Run with
       Briefings: read the sibling repo's command files. **Verify:** on the bench,
       a graph containing only the new node turns the Phase 0 dataset into a `.ply`,
       with a moving progress bar in the ComfyUI UI.
-- [ ] Declare the dependencies: SplatKit + ComfyUI-Mickmumpitz-Nodes pinned in
+- [ ] **PARKED 2026-08-29 until a Wan bake with the amendment 26 piloting has been looked
+      at** - Fabio's call, and the right one: this uploads ~18.6 GB. The four files are
+      already on disk, nothing needs re-fetching:
+      `C:\AI\diffusion_models\wan2.1_i2v_720p_14B_fp8_e4m3fn.safetensors` (16.40 GB),
+      `C:\AI\loras\pano_video_gen_720p_comfy.safetensors` (307 MB, CONVERTED by us, so it is
+      the one dep with no upstream mirror), `C:\AI\loras\Wan\lightx2v_T2V_14B_cfg_step_distill_v2_lora_rank64_bf16.safetensors`
+      (631 MB), `G:\ComfyUi\ComfyUI\models\MoGe\model.pt` (1.26 GB). Node pins:
+      SplatKit `f59de252`, Mickmumpitz-Nodes `4d5ff7c4`. The fp8-vs-GGUF tier choice is
+      answered by the Wan re-run, not guessed.
+      Declare the dependencies: SplatKit + ComfyUI-Mickmumpitz-Nodes pinned in
       `dev_configs/node_lock.json` at the Phase 0 commits, node-pack entries in
       `nodesDeps.js`, and the Wan 2.1 I2V 14B 720p checkpoint + Matrix-3D LoRA in
       `modelDeps.js`/`loraDeps.js` (upload to R2, record SHA256, set `url` +
@@ -580,7 +637,11 @@ Disjoint ownership; the node lives in a different repo entirely. Run with
       `js/data/modelConstants/modelDeps.js`, `js/data/modelConstants/loraDeps.js`.
       Briefings: `downloads`, `comfy_engine`. **Verify:** a clean profile installs
       every new dep and the drift check passes; SHA256 verified on each.
-- [ ] Pin the MpiNodes commit carrying the Brush node into
+- [ ] **THE EDIT IS ALREADY DONE - only the `**Verify:**` remains, and task 2 does not gate
+      it.** `dev_configs/node_lock.json` carries `ComfyUI-MpiNodes` at
+      `5e070436fc90ab84fdd66c2fe702572d3d04f7e2`, landed by the MPI-575 agent in `6c35be5b`
+      (2026-08-29 17:47), not by this line of work.
+      Pin the MpiNodes commit carrying the Brush node into
       `dev_configs/node_lock.json`. Ownership: none exclusively - this is a
       one-line follow-up to the two tasks above and must run AFTER both.
       **Verify:** app engine installs the pinned commit; drift check clean.
