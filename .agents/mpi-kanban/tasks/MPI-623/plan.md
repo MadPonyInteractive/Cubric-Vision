@@ -205,6 +205,51 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     `perspective_00000004` faces a blank ceiling and renders as mush on *good* frames too —
     compare like face with like face.
 
+15. **The Phase 0b bake flew MICKMUMPITZ'S VILLAGE PATHS THROUGH OUR ROOM** (found
+    2026-08-29 by watching the source video against the graph that ran). The four rail
+    anchor strings in `hires_api_largest.json` are byte-identical to the shipped
+    workflow's defaults - the paths he hand-piloted for his Bavarian village demo. They
+    were never re-drawn for an interior. Rail 2 reaches 2.44 units and rail 3 -2.27; in a
+    street that is a stroll, in an abandoned games room it is **through the wall**, and
+    the video states at 06:25 that flying through a wall makes Wan "generate a new fitting
+    scene on the other side" - a DIFFERENT room. That single fact explains both open
+    findings: the SfM split into 152 frames + a 12-frame island is two disjoint spaces
+    (consistent with the controlled test - geometry, not matcher), and amendment 14's soft
+    rails are the ones leaning hardest on invented space (the 0.43-coverage rail).
+    **Amendment 11 is right but not deep enough:** rails must not merely overlap, they
+    must FIT INSIDE THE SCENE. The source workflow never intended otherwise - 12:00-13:40
+    of the video is nothing but piloting, previewing and fixing ("I'm crashing into this
+    building here, so let me fix that"), and it ships an in-graph path editor plus a
+    preview-video node for exactly that. Phase 2 presets in absolute units are therefore
+    unshippable as-is; see the revised Phase 2.
+16. **More coverage is an incremental RE-RUN, not a re-bake** (video 13:40, confirmed in
+    the graph). `SplatKit_DatasetProject` runs with `reset=false` and the workflow ships a
+    fifth, muted rail group that APPENDS its clip to the existing dataset on every run.
+    The author's own answer to uneven quality is this, verbatim at 16:38: "the areas where
+    we sent our drone to look better than the rest of the scene ... just send in a few more
+    drones and map out this area even more." So per-rail softness (amendment 14) is
+    expected behaviour with a known lever, not a defect to tune out. Product shape: a Scene
+    should be extendable by adding coverage to an existing dataset, without paying the
+    2h18m again.
+17. **Two external references that are not currently ours** (video 15:45, 14:24).
+    (a) **The splats showcased in the video were largely trained with LichtFeld, not
+    Brush** - "we used a lot of LichtFeld for training ... but the easiest one is probably
+    Brush". LichtFeld is GPL-3.0 so it can never ship in Vision, but it is the right BENCH
+    yardstick to separate "our dataset is weak" from "Brush is weaker than the alternative".
+    Do not benchmark our output against the video's without noting this.
+    (b) **Sage Attention + Triton is the sanctioned speedup** for the Wan pass, which was
+    76% of the 2h18m. It requires his Sage Attention patch - without it the workflow
+    silently emits **black frames**. Neither is installed on the bench today.
+
+### Verified NOT drifted from the source workflow (checked 2026-08-29)
+
+Both LoRAs at his strengths (`pano_video_gen_720p_comfy` 0.98, `lightx2v_T2V_14B_cfg_step_distill_v2`
+1.00) on `wan2.1_i2v_720p_14B_fp8_e4m3fn`; `base_mode=geometry` on all four
+`SplatKit_HiResComposite` nodes (that IS the shipped default, not a mistake);
+`output_width=8192`; Wan at 1440x720 - the 720p ceiling the video calls out at 06:32 as the
+source of softness, which the HiRes reproject exists to fix; Brush at stock settings, as he
+runs it at 16:15. **The video's pipeline also emits no still image** - amendment 13 stands.
+
 ### Known trap
 
 Style LoRAs do **not** compose with the Krea2 edit LoRA (MPI-282). Phase 4's
@@ -334,11 +379,23 @@ Sequential - depends on the media type AND the bake path. One graph, one dispatc
       preset dropdown + quality tier + scene name. **Verify:**
       `tests/inject-params-titles.test.cjs` covers every `Input_*`/`Output_*` title
       and passes.
-- [ ] Author the four coverage presets as canned waypoint strings (format:
-      `x, y, z, lookx, looky, lookz` per line, plus mode and frame count). Suggested
-      set: forward-corridor, orbit-centre, high-then-dive, perimeter.
-      **Verify:** each preset produces a distinct, non-crashing camera rail on a
-      test panorama.
+- [ ] Author the coverage presets as **scene-relative** waypoints, NOT absolute
+      units (amendment 15). The shipped defaults are village-scale and punch through
+      the walls of a room. A preset is authored in normalised space and multiplied by
+      the scene's own extent, taken from the MoGe geometry the graph already computes
+      (`SplatKit_CameraPlotRenderControlGeo` produces it before any rail is rendered).
+      Waypoint format stays `x, y, z, lookx, looky, lookz` per line plus mode and
+      frame count. Suggested set: forward-corridor, orbit-centre, high-then-dive,
+      perimeter - all of them overlapping (amendment 11).
+      **Verify:** on BOTH a room panorama and an outdoor panorama, every waypoint
+      lands inside the geometry, and SfM returns ONE model - not a model plus an
+      island. Eyeballing the rail layout does not count; the split is not
+      rail-aligned.
+- [ ] **Bounds check before the bake, not after.** ~3 h and 387 MB is too expensive
+      to discover a wall-punch at the end. The graph knows the MoGe extent and the
+      waypoints before Wan runs; reject or clamp a path that leaves the scene, and
+      surface it as a Flow-level error. **Verify:** a deliberately oversized path is
+      refused in seconds rather than baking for three hours.
 - [ ] Dev-gate the Flow and add its tile still. **Do not declare the preview
       filename until the file exists** - a declared name with no file 404s and
       reds CI. **Verify:** `npm run release:check` passes; the Flow is hidden in a

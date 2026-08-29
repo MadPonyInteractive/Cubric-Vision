@@ -218,6 +218,14 @@ Matrix-3D pano LoRA @ 0.98, HiRes Composite at 8192x4096, exhaustive SfM.
 **`Prompt executed in 02:18:16`** — 2 h 18 m for one scene, unattended, on a 16 GB card.
 Per plan.md amendment 7 that is expected and acceptable: a scene is a durable asset.
 
+> **Read every quality number below with plan.md amendment 15 in hand.** This bake used the
+> shipped workflow's DEFAULT anchor strings, which are Mickmumpitz's hand-piloted village
+> paths, flown unchanged through an interior. Rails leave the room. The timings, sizes and
+> splat counts here are sound — they measure the pipeline's cost, which does not depend on
+> where the rails point. The **quality** observations (the SfM split, the soft rails in
+> § amendment 14) are measurements of a mis-piloted bake and must not be treated as the
+> pipeline's ceiling. Re-measure quality once Phase 2 authors scene-relative paths.
+
 ## Where the 2 h 18 m actually goes
 
 | Stage | x4 rails | Share |
