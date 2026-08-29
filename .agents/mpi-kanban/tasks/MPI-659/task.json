@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-659",
+  "title": "guard-gpu misses script-wrapped dispatches and non-Comfy GPU jobs",
+  "description": "gpu_command_patterns match the RAW COMMAND LINE, so a graph dispatched from a script (URL inside the .py, command line just `python foo.py`) takes the GPU with no lease and no block. Measured live on MPI-623. Separately, brush_app.exe matches nothing at all - a wgpu trainer MPI-623 is about to ship as a node.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-29T12:45:00+01:00",
+  "updated_at": "2026-08-29T12:45:00+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-659", "type": "task.created", "at": "2026-08-29T12:45:00+01:00", "actor": "claude", "summary": "Filed from MPI-623: the GPU lease guard did not fire for a whole session of GPU work."}
