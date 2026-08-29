@@ -11,7 +11,7 @@ members turn out to be the better unit, delete this umbrella instead.
 
 | Card | What it is |
 |---|---|
-| MPI-500 | Stop trashing model weights — delete them permanently (user decision, 2026-08-09) |
+| MPI-500 | Recycle Bin or permanent delete — a Settings toggle (scope settled 2026-08-29, superseding the 2026-08-09 "delete everywhere" call; see tasks/MPI-500/plan.md) |
 | MPI-499 | `npm test` leaks ~10 GB of real disk per run — `ftruncate` is not sparse on NTFS, and the code under test trashes the fixture |
 
 ## Current State
