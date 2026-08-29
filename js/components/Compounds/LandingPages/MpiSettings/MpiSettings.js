@@ -69,7 +69,8 @@ export const MpiSettings = ComponentFactory.create({
                     <div class="mpi-settings__plate" id="mpiSettingsRecycleBinPlate">
                         <div class="mpi-settings__plate-main">
                             <span class="mpi-settings__plate-label">Uninstall to the Recycle Bin</span>
-                            <span class="mpi-settings__plate-desc">Off, uninstalling deletes a model's files for good. On, they are recoverable from the bin, but the disk space comes back only when you empty it &mdash; and a weight over the bin's quota is deleted anyway. Models on a remote Pod are always deleted.</span>
+                            <span class="mpi-settings__plate-desc"><b class="mpi-settings__plate-desc-key">Off</b> &mdash; uninstalled model weights are deleted right away.</span>
+                            <span class="mpi-settings__plate-desc"><b class="mpi-settings__plate-desc-key">On</b> &mdash; acts like a normal deletion on your file system: weights land in your Recycle Bin or Trash.</span>
                         </div>
                         <div class="mpi-settings__plate-ctrl" id="mpiSettingsRecycleBinSlot"></div>
                     </div>

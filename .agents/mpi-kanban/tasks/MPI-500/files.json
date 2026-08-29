@@ -7,6 +7,7 @@
     "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js",
     "js/services/downloadService.js",
     "routes/downloadManager.js",
-    "tests/orphan-sweep.test.cjs"
+    "tests/orphan-sweep.test.cjs",
+    "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.css"
   ]
 }

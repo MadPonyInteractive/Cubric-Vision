@@ -91,6 +91,12 @@
     max-width: 60ch;
 }
 
+/* Lifts the state word out of a two-line off/on description so the pair scans. */
+.mpi-settings__plate-desc-key {
+    color: var(--ink-1);
+    font-weight: inherit;
+}
+
 .mpi-settings__plate-ctrl {
     flex-shrink: 0;
 }
