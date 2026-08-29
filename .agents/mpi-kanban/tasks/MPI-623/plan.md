@@ -20,8 +20,18 @@ notes in [research/](research/).
 > verified by held-out eval views, not by exit code. Amendments 11-14 are new. Committed
 > as `850cae78` and `ce884943`.
 >
-> **Nothing is in flight.** The GPU lease is free and the bench on 8188 has given up all
-> its cached value - it can be stopped. Next is Phase 1, which needs no GPU.
+> **Session note 2026-08-29 (third handoff). NO NEW MEASUREMENT - a REVISION.** Fabio
+> pushed back that the bake looked far worse than the source video. Watching that video
+> against the graph that actually ran found the cause: the four rail anchor strings are
+> byte-identical to the shipped workflow defaults, i.e. paths Mickmumpitz hand-piloted for
+> his village, flown unchanged through an interior. Amendments 15-17 and a revised Phase 2
+> follow from that; measurements.md now warns that its QUALITY observations measure a
+> mis-piloted bake while its COST numbers stand. Committed as `08ea0860`.
+>
+> **Nothing is in flight, and the GPU is NOT available - Fabio is using it himself.** Do
+> not take a lease, do not start the bench on 8188, do not dispatch anything. Phase 1
+> needs no GPU. When Phase 1 finishes, or if something genuinely needs the GPU before
+> then, STOP and tell Fabio so he can check whether it is free.
 
 **Project mode:** `scalable-foundation`.
 
