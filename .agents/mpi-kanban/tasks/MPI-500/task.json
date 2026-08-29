@@ -7,7 +7,7 @@
   "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-09T01:57:49Z",
-  "updated_at": "2026-08-29T12:32:10+01:00",
+  "updated_at": "2026-08-29T13:22:40+01:00",
   "labels": [
     "download",
     "ux",
@@ -23,5 +23,11 @@
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "research": "research/"
+  },
+  "attention": {
+    "state": "required",
+    "reason": "Code and UI shipped and are verified (d3d475a9, ae6f10b0). Two items keep the card open, neither of them code: docs/download-manager.md:479 still describes the old size-decided behaviour and belongs to MPI-653 (message dc873940 filed), and docs/releases/UNRELEASED.md owes an entry that close-out may not write without Fabio's per-file yes.",
+    "actor": "claude",
+    "at": "2026-08-29T13:22:40+01:00"
   }
 }
