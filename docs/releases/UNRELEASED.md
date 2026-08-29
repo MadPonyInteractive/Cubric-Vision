@@ -275,6 +275,15 @@
 > History workspace and the minimised preview window. The last two are real released bugs and
 > the entry is worth keeping; the Flow clause is the part to drop when folding.
 
+- MiniMax H3 installs far faster. Both H3 models share one very large file - a 24.55 GB
+  text encoder - and it was the slowest thing in the app by a wide margin, arriving at well
+  under 1 MB/s. On a normal connection that alone ran for hours, and installs could give up
+  before it finished. It now comes from our own servers and downloads at tens of megabytes a
+  second. If our copy is ever unreachable the app falls back to the original source on its
+  own, so nothing breaks. The rest of H3's files are unchanged and still come from
+  HuggingFace: those are MiniMax's own model weights, and their licence does not let us
+  host copies.
+
 - A half-installed model can give its disk space back. If a model lost one of its files —
   you tidied the models folder by hand, or an install stopped near the end — the library
   showed it as not installed and offered only Install, while the rest of its weights, often
