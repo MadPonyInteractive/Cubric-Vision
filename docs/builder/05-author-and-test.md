@@ -51,15 +51,15 @@ MPI-4 spec §1 (`ltx-integration-spec.md`) — read it before re-wiring.
 
 LTXAV (and any patch-packed video latent) shows NO live preview by default: the
 in-loop sampler latent is packed transformer tokens, not a `[B,C,F,H,W]` grid, so
-core ComfyUI's previewer (matmul OR taesd) produces nothing. Don't chase a taeltx
-decoder — the working path is the KJNodes **`LTX2SamplingPreviewOverride`** node
-with its own built-in LTXAV rgb-factors (cheap matmul, no extra model, zero added
-per-step cost). When authoring an LTX-class video workflow:
+core ComfyUI's previewer (matmul OR taesd) produces nothing. The working path is
+our **`MpiVideoSamplingPreview`** node fed a `taeltx2_3` VAE — real decoded frames,
+not the rgb-factors blob. It replaced KJNodes' `LTX2SamplingPreviewOverride` in
+MPI-575; see `docs/preview-decoders.md`. When authoring an LTX-class video workflow:
 
-- Wire the override AFTER the `Model_Connect` reroute so it wraps whichever loader
-  the engine-split keeps: `UNETLoader → Model_Connect → LTX2SamplingPreviewOverride → rest`.
-  Leave `vae`/`latent_upscale_model` for optional preview upscaling; do NOT connect
-  a `taeltx` VAE (taeltx mode only triggers on a `TAEHV` vae and isn't needed).
+- Wire the previewer AFTER the `Model_Connect` reroute so it wraps whichever loader
+  the engine-split keeps: `UNETLoader → Model_Connect → MpiVideoSamplingPreview → rest`.
+  Connect a plain `VAELoader` on `taeltx2_3.safetensors` to its `vae`. There is no
+  `latent_upscale_model` input — the TAEHV path never used one.
 - The node is title-driven friendly — `generate_ltx.py` carries it into all 8
   output files untouched.
 - The node sends previews with VideoHelperSuite's **28-byte** binary header, not

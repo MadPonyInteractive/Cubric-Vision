@@ -712,15 +712,6 @@
       "title": "Output_Video"
     }
   },
-  "47": {
-    "inputs": {
-      "model_name": "ltx-2.3-spatial-upscaler-x2-1.1.safetensors"
-    },
-    "class_type": "LatentUpscaleModelLoader",
-    "_meta": {
-      "title": "Load Latent Upscale Model"
-    }
-  },
   "49": {
     "inputs": {
       "preview_rate": 16,
@@ -728,18 +719,14 @@
         "1",
         0
       ],
-      "latent_upscale_model": [
-        "47",
-        0
-      ],
       "vae": [
         "50",
         0
       ]
     },
-    "class_type": "LTX2SamplingPreviewOverride",
+    "class_type": "MpiVideoSamplingPreview",
     "_meta": {
-      "title": "LTX2 Sampling Preview Override"
+      "title": "Mpi Video Sampling Preview"
     }
   },
   "50": {

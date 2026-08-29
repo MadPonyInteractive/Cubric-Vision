@@ -62,7 +62,7 @@ So both are consumed by **nodes inside the graph**, not by the engine:
 | dep | file | read by | how it is selected |
 |---|---|---|---|
 | `taeh3-decoder` | `vae/taeh3.safetensors` | our own `MpiVideoSamplingPreview` | **`MpiTinyVaeLoader`** wired to its `vae` input — a plain `VAELoader` **cannot load this file**, see below |
-| `ltx23-preview-taehv` | `vae/taeltx2_3.safetensors` | KJNodes `LTX2SamplingPreviewOverride` | a plain `VAELoader` wired to its `vae` input |
+| `ltx23-preview-taehv` | `vae/taeltx2_3.safetensors` | our own `MpiVideoSamplingPreview` | a plain `VAELoader` wired to its `vae` input — core builds a `TAEHV` from this one, unlike `taeh3` |
 
 #### `taeh3` needs `MpiTinyVaeLoader` — core's `VAELoader` raises on it (MPI-508)
 
@@ -116,13 +116,23 @@ Consequences, all deliberate:
 - **The #13366 landmine below does not reach them.** That corruption happens inside core's
   previewer loading a whole VAE; core never touches these files.
 
-The LTX one is a **rewire, not an addition**: `LTX2SamplingPreviewOverride` was always in
-the graph, fed the full video VAE. It branches on
-`vae.first_stage_model.__class__.__name__ == "TAEHV"` and silently falls back to
+The LTX one started as a **rewire, not an addition**: KJNodes'
+`LTX2SamplingPreviewOverride` was always in the graph, fed the full video VAE. It branches
+on `vae.first_stage_model.__class__.__name__ == "TAEHV"` and silently falls back to
 `latent_rgb_factors` for anything else — which is why LTX previews were blocky for so long
-while a preview-override node sat right there. Feeding it the tiny TAEHV flips the branch.
-The trade: that path also nulls `latent_upscale_model`, so previews go from sharp-but-blocky
-to soft-but-real, and playback speed becomes honest.
+while a preview-override node sat right there. Feeding it the tiny TAEHV flipped the branch:
+previews went from sharp-but-blocky to soft-but-real, and that path nulls
+`latent_upscale_model`, so the loader it was wired to did nothing from then on.
+
+**Both are now our node (MPI-575).** Flipping that branch also armed a bug in it: with a
+TAEHV attached, one latent frame decodes to 8 pixel frames, but
+`ltxv_nodes.py:646` still announces `VHS_latentpreview.length` as the **latent** count while
+`ltxv_nodes.py:688` steps the frame index around the real `(N-1)*8+1` ring. The consumer
+sizes its ring by the announced length (`previewClipPlayer`, MPI-535), so it held only the
+tail of each burst — measured on a 72-frame LTX run: announced **10**, streamed **73**,
+which is the "flashes frame 0 then the tail" report. `MpiVideoSamplingPreview` announces the
+decoded count, which is why H3 never had it, so the four LTX graphs use it now and
+`latent_upscale_model` left with the node that ignored it.
 
 ### The `lighttaew*` decoders are a landmine — do not "fix" the blob previews with them
 

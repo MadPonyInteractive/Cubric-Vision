@@ -1865,8 +1865,7 @@
           "name": "LATENT_UPSCALE_MODEL",
           "type": "LATENT_UPSCALE_MODEL",
           "links": [
-            136,
-            660
+            136
           ]
         }
       ],
@@ -8668,41 +8667,6 @@
       "bgcolor": "#593930"
     },
     {
-      "id": 368,
-      "type": "Reroute",
-      "pos": [
-        -5928.170537988834,
-        4194.840196014309
-      ],
-      "size": [
-        208,
-        26
-      ],
-      "flags": {},
-      "order": 82,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "",
-          "type": "*",
-          "link": 660
-        }
-      ],
-      "outputs": [
-        {
-          "name": "LATENT_UPSCALE_MODEL",
-          "type": "LATENT_UPSCALE_MODEL",
-          "links": [
-            661
-          ]
-        }
-      ],
-      "properties": {
-        "showOutputText": true,
-        "horizontal": false
-      }
-    },
-    {
       "id": 88,
       "type": "MpiInt",
       "pos": [
@@ -10734,14 +10698,14 @@
     },
     {
       "id": 366,
-      "type": "LTX2SamplingPreviewOverride",
+      "type": "MpiVideoSamplingPreview",
       "pos": [
         -5653.077117604576,
         4174.758640962449
       ],
       "size": [
         316.7017578125,
-        98
+        78
       ],
       "flags": {},
       "order": 116,
@@ -10753,21 +10717,14 @@
           "link": 750
         },
         {
-          "name": "latent_upscale_model",
-          "shape": 7,
-          "type": "LATENT_UPSCALE_MODEL",
-          "link": 661
-        },
-        {
           "name": "vae",
-          "shape": 7,
           "type": "VAE",
           "link": 1079
         }
       ],
       "outputs": [
         {
-          "name": "MODEL",
+          "name": "model",
           "type": "MODEL",
           "links": [
             1102
@@ -10775,9 +10732,9 @@
         }
       ],
       "properties": {
-        "cnr_id": "comfyui-kjnodes",
-        "ver": "7f43f2ce910a27971bdbbf3fb5a52081457f32e2",
-        "Node name for S&R": "LTX2SamplingPreviewOverride"
+        "Node name for S&R": "MpiVideoSamplingPreview",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "5e070436fc90ab84fdd66c2fe702572d3d04f7e2"
       },
       "widgets_values": [
         16
@@ -11601,22 +11558,6 @@
       349,
       1,
       "LATENT"
-    ],
-    [
-      660,
-      125,
-      0,
-      368,
-      0,
-      "LATENT_UPSCALE_MODEL"
-    ],
-    [
-      661,
-      368,
-      0,
-      366,
-      1,
-      "LATENT_UPSCALE_MODEL"
     ],
     [
       668,
@@ -13087,7 +13028,7 @@
       632,
       0,
       366,
-      2,
+      1,
       "VAE"
     ],
     [

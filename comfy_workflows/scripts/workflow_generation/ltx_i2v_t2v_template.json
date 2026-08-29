@@ -1390,18 +1390,14 @@
         "367",
         0
       ],
-      "latent_upscale_model": [
-        "125",
-        0
-      ],
       "vae": [
         "632",
         0
       ]
     },
-    "class_type": "LTX2SamplingPreviewOverride",
+    "class_type": "MpiVideoSamplingPreview",
     "_meta": {
-      "title": "LTX2 Sampling Preview Override"
+      "title": "Mpi Video Sampling Preview"
     }
   },
   "367": {

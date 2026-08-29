@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "comfy_workflows/raw/flow_ltx_foley.json",
+    "comfy_workflows/raw/flow_ltx_extend.json",
+    "comfy_workflows/raw/ltx_i2v_t2v_template.json",
+    "comfy_workflows/scripts/workflow_generation/ltx_i2v_t2v_template.json",
+    "comfy_workflows/flow_ltx_foley.json",
+    "comfy_workflows/flow_ltx_extend.json",
+    "comfy_workflows/ltx_i2v_t2v.json",
+    "comfy_workflows/ltx_i2v_t2v_int8.json",
+    "dev_configs/node_lock.json",
+    "docs/preview-decoders.md",
+    "docs/models/ltx/workflow-authoring.md",
+    "docs/builder/05-author-and-test.md",
+    "js/data/modelConstants/assetDeps.js",
+    "js/data/modelConstants/models.js",
+    "C:/AI/Mpi/ComfyUi-MpiNodes/preview.py",
+    "C:/AI/Mpi/ComfyUi-MpiNodes/changelog.md"
+  ]
+}

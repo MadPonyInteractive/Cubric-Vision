@@ -135,10 +135,9 @@ export const assetDeps = {
     // comfy/sd.py:868 recognises a TAEHV from `decoder.22.bias`, so a plain VAELoader
     // produces the right object for both.
     //
-    // LTX: `LTX2SamplingPreviewOverride` branches on
-    // `vae.first_stage_model.__class__.__name__ == 'TAEHV'` — fed the full video VAE it
-    // silently falls back to latent_rgb_factors (the blocky preview we shipped until
-    // now), fed this it decodes real frames.
+    // LTX: read by our own `MpiVideoSamplingPreview`, same as H3 below. KJNodes'
+    // `LTX2SamplingPreviewOverride` read it until MPI-575, where it turned out to
+    // announce its clip length in LATENT frames while a TAEHV streams 8x that many.
     'ltx23-preview-taehv': {
         id: 'ltx23-preview-taehv',
         name: 'LTX-2.3 Preview Decoder (TAEHV)',

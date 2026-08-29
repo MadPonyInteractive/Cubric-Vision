@@ -2416,53 +2416,33 @@
     },
     {
       "id": 49,
-      "type": "LTX2SamplingPreviewOverride",
+      "type": "MpiVideoSamplingPreview",
       "pos": [
         595.9451014710359,
         -270.98715036133274
       ],
       "size": [
         316.7017578125,
-        98
+        78
       ],
       "flags": {},
       "order": 13,
       "mode": 0,
       "inputs": [
         {
-          "localized_name": "model",
           "name": "model",
           "type": "MODEL",
           "link": 83
         },
         {
-          "localized_name": "latent_upscale_model",
-          "name": "latent_upscale_model",
-          "shape": 7,
-          "type": "LATENT_UPSCALE_MODEL",
-          "link": 85
-        },
-        {
-          "localized_name": "vae",
           "name": "vae",
-          "shape": 7,
           "type": "VAE",
           "link": 82
-        },
-        {
-          "localized_name": "preview_rate",
-          "name": "preview_rate",
-          "type": "FLOAT,INT",
-          "widget": {
-            "name": "preview_rate"
-          },
-          "link": null
         }
       ],
       "outputs": [
         {
-          "localized_name": "MODEL",
-          "name": "MODEL",
+          "name": "model",
           "type": "MODEL",
           "links": [
             84
@@ -2470,9 +2450,9 @@
         }
       ],
       "properties": {
-        "cnr_id": "comfyui-kjnodes",
-        "ver": "7f43f2ce910a27971bdbbf3fb5a52081457f32e2",
-        "Node name for S&R": "LTX2SamplingPreviewOverride"
+        "Node name for S&R": "MpiVideoSamplingPreview",
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "5e070436fc90ab84fdd66c2fe702572d3d04f7e2"
       },
       "widgets_values": [
         16
@@ -2525,71 +2505,6 @@
       },
       "widgets_values": [
         "taeltx2_3.safetensors"
-      ],
-      "color": "#323",
-      "bgcolor": "#535"
-    },
-    {
-      "id": 47,
-      "type": "LatentUpscaleModelLoader",
-      "pos": [
-        78.45765805357664,
-        -269.2266389859464
-      ],
-      "size": [
-        432.43552874193483,
-        58.98474402005377
-      ],
-      "flags": {},
-      "order": 7,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "model_name",
-          "name": "model_name",
-          "type": "COMBO",
-          "widget": {
-            "name": "model_name"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "LATENT_UPSCALE_MODEL",
-          "name": "LATENT_UPSCALE_MODEL",
-          "type": "LATENT_UPSCALE_MODEL",
-          "links": [
-            85
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.7.0",
-        "Node name for S&R": "LatentUpscaleModelLoader",
-        "models": [
-          {
-            "name": "ltx-2-spatial-upscaler-x2-1.0.safetensors",
-            "url": "https://huggingface.co/Lightricks/LTX-2/resolve/main/ltx-2-spatial-upscaler-x2-1.0.safetensors",
-            "directory": "latent_upscale_models"
-          }
-        ],
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "version": "7.5.2",
-          "input_ue_unconnectable": {}
-        },
-        "enableTabs": false,
-        "tabWidth": 65,
-        "tabXOffset": 10,
-        "hasSecondTab": false,
-        "secondTabText": "Send Back",
-        "secondTabOffset": 80,
-        "secondTabWidth": 65
-      },
-      "widgets_values": [
-        "ltx-2.3-spatial-upscaler-x2-1.1.safetensors"
       ],
       "color": "#323",
       "bgcolor": "#535"
@@ -4778,7 +4693,7 @@
       50,
       0,
       49,
-      2,
+      1,
       "VAE"
     ],
     [
@@ -4796,14 +4711,6 @@
       5,
       0,
       "MODEL"
-    ],
-    [
-      85,
-      47,
-      0,
-      49,
-      1,
-      "LATENT_UPSCALE_MODEL"
     ],
     [
       86,

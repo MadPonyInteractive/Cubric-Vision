@@ -1392,9 +1392,8 @@ export const MODELS = [
             'ltx23-video-vae',
             'ltx23-audio-vae',
             // 22MB tiny TAEHV, live previews only (MPI-508). It feeds the `vae` input of
-            // LTX2SamplingPreviewOverride, which decodes real frames — handed the full
-            // video VAE instead, that node silently falls back to latent_rgb_factors,
-            // which is the blocky preview we shipped until now.
+            // MpiVideoSamplingPreview, which decodes real frames instead of the blocky
+            // latent_rgb_factors fallback (MPI-575 moved this off KJNodes' node).
             'ltx23-preview-taehv',
             'ltx23-text-projection',
             'ltx23-gemma-clip',
