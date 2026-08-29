@@ -29,6 +29,10 @@ const _installEngine = () => (remoteEngineClient.isRemote() ? 'remote' : 'local'
 // MPI-276 G2 — how long an optimistic 'pending' click waits for a backend ack
 // before it reverts the card to Install + a warning toast.
 const PENDING_ACK_MS = 10_000;
+// MPI-657 — how long the serial install chain tolerates SILENCE from a model
+// before assuming its terminal event was lost and releasing (see
+// _awaitDownloadDone). Idle time, never total download time.
+const IDLE_CEILING_MS = 30 * 60 * 1000;
 
 function _isOutOfSpaceError(error) {
     const s = String(error || '').toLowerCase();
@@ -207,6 +211,7 @@ const downloadService = {
         let cancel = () => {};
         const promise = new Promise((resolve) => {
             let done = false;
+            let timer;
             const finish = () => {
                 if (done) return;
                 done = true;
@@ -216,24 +221,41 @@ const downloadService = {
             };
             cancel = finish;
             const match = (d) => !d || d.modelId === modelId;
+            // MPI-657 — the ceiling is IDLE time, not total time. It used to be a flat
+            // 30 minutes "longer than any single model download", which stopped being
+            // true the moment we shipped 20GB+ deps: a healthy 24.55GB clip at the
+            // 0.66-2.8 MB/s node-downloader-helper manages against HF needs 2.5-10h, so
+            // the net fired on a download that was still streaming and released the
+            // chain early — the opposite of its job. Deriving a budget from the dep's
+            // bytes only moves the guess into an assumed transfer rate (measured 0.66-5
+            // MB/s, an 8x spread) AND makes a genuinely lost signal take proportionally
+            // longer to release. Progress ticks carry modelId, so silence is the honest
+            // signal: re-arm on every tick and the size of the dep stops mattering.
+            const arm = () => {
+                clearTimeout(timer);
+                timer = setTimeout(() => {
+                    clientLogger.warn('downloadService',
+                        `no progress for ${modelId} within 30min — releasing the install queue on the safety ceiling`);
+                    finish();
+                }, IDLE_CEILING_MS);
+            };
             // Download-done signals — network idle, verify/extract now runs:
             const offInstalling = Events.on('download:installing', (d) => match(d) && finish());
-            const offProgress = Events.on('download:progress', (d) =>
-                match(d) && d && d.phase === 'verifying' && finish());
+            const offProgress = Events.on('download:progress', (d) => {
+                if (!match(d)) return;
+                if (d && d.phase === 'verifying') return finish();
+                arm();
+            });
             // Terminal signals — fast install with no separate verify phase, or end:
             const offComplete = Events.on('download:complete', (d) => match(d) && finish());
             const offFailed = Events.on('download:failed', (d) => match(d) && finish());
             const offCancelled = Events.on('download:cancelled', (d) => match(d) && finish());
-            // 30 min ceiling — longer than any single model download; a lost signal
-            // releases the queue instead of stalling it. MPI-395: say so. This firing
-            // means every install queued behind it has been frozen for half an hour,
-            // which is exactly what made the wedge above impossible to diagnose from a
-            // log — it recovered silently, so it read as "install just never started".
-            const timer = setTimeout(() => {
-                clientLogger.warn('downloadService',
-                    `no terminal event for ${modelId} within 30min — releasing the install queue on the safety ceiling`);
-                finish();
-            }, 30 * 60 * 1000);
+            // The safety net itself (MPI-395): a LOST terminal event must release the
+            // chain rather than wedge it. This firing means every install queued behind
+            // it has been frozen for half an hour, which is exactly what made the wedge
+            // above impossible to diagnose from a log — it recovered silently, so it
+            // read as "install just never started".
+            arm();
         });
         return { promise, cancel };
     },

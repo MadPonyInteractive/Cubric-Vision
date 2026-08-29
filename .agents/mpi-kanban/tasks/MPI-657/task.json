@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-657",
+  "title": "The install queue's 30-minute ceiling is a fixed constant, not size-derived - it fires on real downloads",
+  "description": "downloadService.js's safety timeout calls itself 'longer than any single model download'. That is false for the 20-26GB deps we ship: it fired on the live minimax-h3-ref2va install on 2026-08-29 and released the chain mid-download. Make it an IDLE ceiling - reset on every progress tick.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "completed",
+  "created_at": "2026-08-29T10:40:52+01:00",
+  "updated_at": "2026-08-29T11:45:00+01:00",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl",
+    "checklist": "checklist.md",
+    "files": "files.json",
+    "validation": "validation.md"
+  }
+}

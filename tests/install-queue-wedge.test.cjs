@@ -55,13 +55,54 @@ test('the terminal listener is armed BEFORE the POST, not after it', async () =>
 
 test('the 30-minute safety ceiling is not silent', async () => {
     const code = stripComments(await fs.readFile(DL_SERVICE, 'utf8'));
-    const ceilingAt = code.indexOf('30 * 60 * 1000');
-    assert.ok(ceilingAt > -1, 'expected the 30-minute safety ceiling');
+    assert.match(code, /const IDLE_CEILING_MS = 30 \* 60 \* 1000;/,
+        'expected the 30-minute safety ceiling');
     // It firing means every queued install was frozen for half an hour. Recovering
     // silently is what made this undiagnosable from a log.
-    const window = code.slice(Math.max(0, ceilingAt - 400), ceilingAt);
+    const armAt = code.indexOf('IDLE_CEILING_MS);');
+    assert.ok(armAt > -1, 'expected the ceiling to be armed from a timer');
+    const window = code.slice(Math.max(0, armAt - 400), armAt);
     assert.match(window, /clientLogger\.warn/,
         'the safety ceiling must log when it releases the queue (MPI-395)');
+});
+
+test('the safety ceiling measures SILENCE, not total download time (MPI-657)', async () => {
+    // A flat ceiling "longer than any single model download" stopped being true at
+    // 20GB+ deps: it fired on minimax-h3-ref2va at 07:57:06Z on 2026-08-29 while its
+    // 24.55GB clip was still streaming, releasing the chain early. The dep's size must
+    // not be able to trip it — only silence — so the timer re-arms on every progress
+    // tick for this model.
+    const code = stripComments(await fs.readFile(DL_SERVICE, 'utf8'));
+    // The method DEFINITION, not the call site in _start() that precedes it.
+    const fn = code.slice(code.indexOf('_awaitDownloadDone(modelId) {'));
+    const body = fn.slice(0, fn.indexOf('return { promise, cancel };'));
+    assert.ok(body.length > 0, 'expected to find the _awaitDownloadDone body');
+
+    // Re-arming must CLEAR the previous timer, or every tick leaks one and the first
+    // one still fires on schedule — the bug, plus a pile of dead timers.
+    assert.match(body, /const arm = \(\) => \{\s*clearTimeout\(timer\);\s*timer = setTimeout\(/,
+        'arm() must clear the outstanding timer before setting the next one (MPI-657)');
+
+    // The progress handler is what makes it idle-based. Without this call the ceiling
+    // is a flat total-time budget again.
+    const progressAt = body.indexOf("Events.on('download:progress'");
+    assert.ok(progressAt > -1, 'expected a download:progress listener');
+    const handler = body.slice(progressAt, body.indexOf("Events.on('download:complete'"));
+    assert.match(handler, /arm\(\)/,
+        'a progress tick must re-arm the ceiling, or a slow big dep trips it (MPI-657)');
+    // The remote path's download-done signal still has to resolve the chain.
+    assert.match(handler, /phase === 'verifying'[\s\S]*finish\(\)/,
+        'the verifying phase must still finish the wait — it is a download-done signal');
+
+    // Nothing size-derived: a bytes budget just relocates the guess into an assumed
+    // transfer rate, and slows a genuinely lost signal in proportion to the dep.
+    assert.doesNotMatch(body, /\bbytes\b|totalBytes|dependencies/,
+        'the ceiling must not be derived from the dep size (MPI-657)');
+
+    // The ceiling is a chain release, not a canceller: it must not touch job state or
+    // files. The partial that vanished on 2026-08-29 went to a user cancel 52min later.
+    assert.doesNotMatch(body, /this\.cancel\(|downloadJobs|job\.status/,
+        'the safety ceiling releases the chain only — it must not cancel or restate a job');
 });
 
 test('the backend really does start the job before responding', async () => {
