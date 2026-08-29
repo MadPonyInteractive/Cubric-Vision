@@ -55,6 +55,29 @@ run downloaded nothing.
 (`tests/plugin-dep-gc.test.cjs`, `tests/shared-dep-uninstall-direction.test.cjs`) and
 `tests/dep-path-agreement.test.cjs` from MPI-654. `npx eslint` clean on both changed files.
 
+## Fabio confirmed it on his own machine (2026-08-29)
+
+Better than the sandbox, because it used a state he arrived at by accident. He had
+uninstalled models to make room; the post-uninstall orphan sweep then collected MiniMax
+H3's ownerless weights to the Recycle Bin, so H3 read as having nothing on disk and the
+card correctly offered no removal affordance. Restoring ONE file — the 2.95GB
+`vae/minimax_h3_video_vae_int8_convrot.safetensors`, which clears the 1GB partial floor on
+its own and is not excluded because neither H3 card is installed — put the model straight
+into the MPI-655 state:
+
+- both `MiniMax H3` and `MiniMax H3 Reference` tiles: `6% ON DISK`;
+- detail footer: **INSTALL** + **REMOVE FILES**.
+
+Two dead ends ruled out along the way, both worth not re-chasing:
+
+- The H3 weights vanishing mid-session was NOT this bug and NOT the agent. The sandbox
+  instance ran with `CUBRIC_MODELS_ROOT` on a temp tree, so `_isInsidePath` could never
+  match a `G:` path, and its log reads `swept 0 orphaned`. It was Fabio's own uninstall
+  plus the MPI-462 sweep, working as designed.
+- `diffusion_models/minimax_h3_fl2va_pruned_w4a8_mixed.safetensors` (12.5GB) looked like a
+  rename-orphan the sweep could never see. It is not an orphan: it is the H3 **Low** tier
+  weight, staged on disk for a tier that has not been implemented yet.
+
 ## Left for Fabio
 
 The confirm dialog still reads "Uninstall Boogu Image Edit?" when the model was never
