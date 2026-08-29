@@ -1012,13 +1012,26 @@ export const assetDeps = {
     // Publisher-hosted for the licence reason spelled out on
     // `minimax-h3-fl2va-transformer` in modelDeps.js — NOT on R2, deliberately.
     //
-    // ONE EXCEPTION: `vae-minimax-h3-video-int8` below is R2-primary (MPI-517). Not a
-    // softening of the licence position — a supply decision that outranked it. Its only
-    // publisher is a repo named "experimental", and these deps generate no mirrors
-    // (`_mirrorUrlsFor` only rewrites URLs under the R2 prefix), so a delete or a silent
-    // re-export would break every new H3 install with nothing to fall back to. Do NOT
-    // generalise it to the transformers or the encoder: those have a stable publisher
-    // (Comfy-Org, 6M downloads) and the §III argument still governs them.
+    // TWO EXCEPTIONS are R2-primary, and they are exceptions of DIFFERENT KINDS. Neither
+    // one softens the licence position; read which is which before citing either as
+    // precedent.
+    //
+    //   1. `vae-minimax-h3-video-int8` (MPI-517) — the licence argument APPLIES and was
+    //      OUTRANKED by supply risk. Its only publisher is a repo named "experimental",
+    //      and a publisher-hosted dep generates no mirrors (`_mirrorUrlsFor` only rewrites
+    //      URLs under the R2 prefix), so a delete or a silent re-export would break every
+    //      new H3 install with nothing to fall back to.
+    //   2. `h3-qwen3vl-32b-clip` (MPI-653) — the licence argument does not REACH it, so
+    //      there was nothing to outrank. The encoder is Alibaba's Qwen3-VL-32B-Instruct
+    //      trimmed to the layers H3 reads and int8-quantised: apache-2.0 down the whole
+    //      chain, and carrying no MiniMax weights, parameters, operational patterns or
+    //      Outputs. That makes it neither a §I.11 Model Derivative nor §I.10 Materials
+    //      (which is MiniMax H3 *as made available by MiniMax* — this never was).
+    //      H3-*shaped* is not H3-*derived*. Chain walked in MPI-653's brief.
+    //
+    // Do NOT generalise either one to the TRANSFORMERS. Those are MiniMax's own weights
+    // from a stable publisher (Comfy-Org, 6M downloads) and §III redistribution still
+    // governs them — that is the position recorded on `minimax-h3-fl2va-transformer`.
     //
     // SHARED with the ref2va model (minimax-h3-ref2va): the second DiT is a different
     // transformer but takes the SAME encoder and the SAME two VAEs, which is why these
@@ -1030,9 +1043,27 @@ export const assetDeps = {
     'h3-qwen3vl-32b-clip': {
         id: 'h3-qwen3vl-32b-clip',
         name: 'Qwen3-VL 32B text encoder for MiniMax H3 (uncensored, int8_convrot)',
-        origin: 'ethanfel/Qwen3-VL-32B-Ultra-Heretic-H3-ComfyUI-INT8-ConvRot',
+        origin: 'ethanfel/Qwen3-VL-32B-Ultra-Heretic-H3-ComfyUI-INT8-ConvRot (Apache-2.0)',
         filename: 'text_encoders/qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors',
-        url: 'https://huggingface.co/ethanfel/Qwen3-VL-32B-Ultra-Heretic-H3-ComfyUI-INT8-ConvRot/resolve/main/qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors',
+        // R2-primary (MPI-653) — exception 2 in the section header above. The publisher
+        // stays reachable as the fallback rather than being replaced.
+        //
+        // The explicit `mirrorUrl` is LOAD-BEARING, not decoration: `_mirrorUrlsFor`
+        // short-circuits on it (downloadManager.js:1156) and returns it as the ONLY
+        // alternate, which suppresses the generic /vision/models/ -> our-HF rewrite. So
+        // this dep implies NO second re-host into Mad-Pony-Interactive/cubric-studio;
+        // failover goes straight back to ethanfel.
+        url: 'https://models.cubric.studio/vision/models/text_encoders/qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors',
+        mirrorUrl: 'https://huggingface.co/ethanfel/Qwen3-VL-32B-Ultra-Heretic-H3-ComfyUI-INT8-ConvRot/resolve/main/qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors',
+        // Apache-2.0 attribution (§4). Neither this repo nor Qwen/Qwen3-VL-32B-Instruct
+        // ships a LICENSE or NOTICE file, so §4(c) does not bite — what remains is naming
+        // the author, which MpiAbout renders from this block. Not a gated model: no
+        // `licences/` folder and no consent gate.
+        credit: {
+            author: 'ethanfel',
+            work: 'Qwen3-VL-32B-Ultra-Heretic-H3-ComfyUI-INT8-ConvRot',
+            url: 'https://huggingface.co/ethanfel/Qwen3-VL-32B-Ultra-Heretic-H3-ComfyUI-INT8-ConvRot',
+        },
         // int8, NOT int4. The 14.95GB int4 encoder was rejected with evidence in
         // MPI-449 § 4/§ 5. Comfy-Org's own stock encoder is 27.14GB, so this is not the
         // large option — it is the same size class, already trimmed of the Qwen3-VL

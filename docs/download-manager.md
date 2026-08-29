@@ -1021,12 +1021,29 @@ it and that line becomes a no-op.
 - It is a **subprocess**, not an in-process call: cancel is a kill (huggingface_hub has no
   cancellation hook), and an hf_xet segfault cannot take the wrapper down with it.
 
-### Why H3 cannot just move to R2 like everything else
+### Why the H3 TRANSFORMERS cannot just move to R2 like everything else
 
 The MiniMax H3 Community Licence's trigger covers "reproducing, modifying, distributing",
 so pointing the dep at Comfy-Org's own repo is what kills the §III redistribution claim
-(`modelDeps.js:425-433`, MPI-449 `research.md` § 0). H3 is HF-primary permanently and by
-design. **Do not "fix" a slow H3 download by re-hosting it on R2.**
+(the comment on `minimax-h3-fl2va-transformer` in `modelDeps.js`, MPI-449 `research.md`
+§ 0). **Do not "fix" a slow transformer download by re-hosting it on R2.**
+
+**That argument is about MiniMax's OWN weights, and it does not generalise to every file
+an H3 install pulls.** This section used to end "H3 is HF-primary permanently and by
+design", which was already untrue when it was written and is the kind of line an agent
+quotes to block correct work. Three H3-install deps are R2-primary today:
+
+| dep | why it is allowed on R2 |
+|---|---|
+| `minimax-h3-turbo-lora` (`loraDeps.js`) | Apache-2.0 upstream — no licences.js record at all |
+| `vae-minimax-h3-video-int8` (`assetDeps.js`, MPI-517) | The licence argument APPLIES and was OUTRANKED: the sole publisher is a repo named "experimental", and a publisher-hosted dep generates no mirrors, so a delete would break every new install |
+| `h3-qwen3vl-32b-clip` (`assetDeps.js`, MPI-653) | The licence argument does not REACH it — the encoder is Alibaba's Qwen3-VL-32B-Instruct, apache-2.0 down the whole chain, holding no MiniMax weights, parameters or Outputs. Neither a §I.11 Model Derivative nor §I.10 Materials |
+
+The test is **whose weights are in the file**, not which model install pulls it.
+H3-*shaped* is not H3-*derived*. The transformers are MiniMax's work and stay HF-primary;
+a support weight from a different vendor under a permissive licence is judged on its own
+chain. MPI-451's licence gate (`licences.js`, keyed `minimax-h3`) fires per INSTALL, not
+per dep, so it covers the user either way and is not an argument about hosting.
 
 ### Dead ends — do not re-tread
 

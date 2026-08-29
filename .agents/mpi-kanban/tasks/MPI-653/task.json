@@ -3,13 +3,14 @@
   "id": "MPI-653",
   "title": "Serve the H3 Qwen3-VL encoder from R2, ethanfel HF as the fallback",
   "description": "The 24.55GB h3-qwen3vl-32b-clip pulls at ~1.2MB/s off HF's Xet bridge. It is Apache-2.0 and outside the MiniMax CLA, so it can be R2-primary. Measurements + licence verdict in brief.md.",
-  "column": "todo",
-  "maturity": "planned",
+  "column": "doing",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-29T09:51:05+01:00",
-  "updated_at": "2026-08-29T09:51:05+01:00",
+  "updated_at": "2026-08-29T15:27:53+01:00",
   "links": {
     "brief": "brief.md",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "files": "files.json"
   }
 }

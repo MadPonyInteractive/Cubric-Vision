@@ -1,0 +1,7 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/data/modelConstants/assetDeps.js",
+    "docs/download-manager.md"
+  ]
+}
