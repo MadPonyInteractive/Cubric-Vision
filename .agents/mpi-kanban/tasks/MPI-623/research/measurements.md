@@ -165,11 +165,44 @@ neighbourhood of the bake rail. An unconstrained fly-anywhere camera will show s
 that is inherent to 3DGS, not a renderer bug. brief.md already says "a capture looks bad
 when you fly where the drones never mapped" — this is the measured form of that.
 
-## Tiering — pending
+## Tiering — measured
 
-One Brush run with `--export-every 5000` emits the whole 5k/10k/15k/20k/25k/30k ladder, so
-the fast-vs-standard split costs one run, not six. In flight against the clean dataset.
+One Brush run with `--export-every 5000` emitted the whole ladder, so this cost one run,
+not six. Clean dataset, 4060 Ti, 96 views.
 
-Still needed before tiers are real: a **Wan-inclusive** dataset pass. Wan is the dominant
-unmeasured term and everything above excludes it.
+| Steps | Splats | `.ply` | Reached at | Quality |
+|---|---|---|---|---|
+| 5 000 | 41 219 | 9 MB | +1m00s | Recognisably the room, but soft and washed |
+| 10 000 | 242 699 | 57 MB | +1m57s | — |
+| 15 000 | **535 661** | **126 MB** | +3m19s | Growth complete |
+| 20 000 | 535 661 | 126 MB | +4m49s | refinement only |
+| 25 000 | 535 661 | 126 MB | +6m17s | refinement only |
+| 30 000 | 535 661 | 126 MB | +7m47s | Markedly sharper — ceiling staining, wall texture, floor debris, window frames all resolve |
+
+**The non-obvious result: splat count freezes at 15 000 and never moves again.** That is
+Brush's `--growth-stop-iter` default. So:
+
+- **Below 15 000 you are buying splats** (and disk: 9 MB -> 57 MB -> 126 MB).
+- **Above 15 000 you are buying sharpness for free** — identical file size, identical splat
+  count, ~90 s per additional 5 000 steps. 15 000 -> 30 000 costs 4.5 minutes and no disk.
+
+### Recommended tiers
+
+| Tier | Steps | Cost | For |
+|---|---|---|---|
+| Draft | 5 000 | ~1 min | Checking a coverage path actually covered the room, before committing to a bake |
+| **Scene (default)** | **30 000** | **~8 min** | The durable asset |
+
+Only two tiers are justified by this data. A "standard 15 000" middle tier would ship a
+visibly softer scene for the same 126 MB and a saving of four minutes — bad trade for a
+durable asset (see plan.md amendment 7). Draft earns its place because it is 13x smaller
+and 8x faster, which is the right shape for validating a camera path.
+
+`--max-splats` is the lever if 126 MB per scene turns out too heavy; it was not needed here
+(default cap is 10 M, actual 536 k).
+
+**Caveat unchanged: this is the Wan-free dataset.** Wan filling the disocclusions should
+raise the registered-frame count well above 16/81, which changes splat counts and probably
+these timings. Re-check the ladder after the Wan pass; the *shape* of the finding (growth
+stops at 15 000, refinement is free on disk) is a Brush property and will hold.
 
