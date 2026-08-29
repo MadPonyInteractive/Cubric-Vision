@@ -1,0 +1,19 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-654",
+  "title": "Models library and installer disagree on where a dep lives",
+  "description": "_localModelsCheck searches recursively and falls back to the default root; the install route's dep-exists check resolves ONE path. A weight in the default root while a custom root is set reads Installed in the library while the installer re-downloads it.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "completed",
+  "created_at": "2026-08-29T10:23:54+01:00",
+  "updated_at": "2026-08-29T11:55:00+01:00",
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  }
+}

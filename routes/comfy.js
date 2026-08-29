@@ -23,7 +23,7 @@ const fs = require('fs-extra');
 const path = require('path');
 const { exec, spawn } = require('child_process');
 const logger = require('./logger');
-const { isCompleteOnDisk, isDepInstalledOnDisk, getPartialBytes } = require('./downloadCompletion');
+const { isDepInstalledOnDisk, getPartialBytes } = require('./downloadCompletion');
 const {
     COMFYUI_PORT,
     processState,
@@ -828,8 +828,6 @@ router.post('/comfy/models/check-local', async (req, res) => {
  */
 async function _localModelsCheck(models) {
     const customRoot = await getCustomRoot();
-    const defaultModelsRoot = getDefaultModelsRoot();
-    const defaultCustomNodesRoot = getComfyPath(ENGINE_ROOT, 'custom_nodes');
 
     const results = {};
 
@@ -841,45 +839,15 @@ async function _localModelsCheck(models) {
 
         for (const dep of model.deps) {
             if (!dep.filename) { depResults.push({ id: dep.id || null, installed: false }); continue; }
-            let depPath;
-            // MPI-607: `targetPath` FIRST, exactly as resolveComfyPath (routes/shared.js)
-            // does. This branch was missing here, so this function and resolveComfyPath
-            // disagreed about the one dep kind whose whole purpose is to live OUTSIDE the
-            // models root — the download manager wrote the file to <engine>/<targetPath>/
-            // while this check looked for it under the models root, found nothing, and
-            // reported it not-installed FOREVER. Deterministic, so a restart never helped:
-            // the flow's badge never flipped and its install bar stuck at 100% with Cancel
-            // still showing (`depsDone` false while the finished job lingers).
-            //
-            // It stayed hidden because RIFE — the only targetPath dep until now — is an
-            // `engineAsset`, so its install state comes from the engine boot gate
-            // (checkUniversalWorkflowDepsStatus, which DOES use resolveComfyPath) and never
-            // reaches this function. The chatterbox weights are the first targetPath deps
-            // owned by a FLOW, and flow deps are resolved here.
-            if (dep.targetPath) {
-                depPath = getComfyPath(ENGINE_ROOT, ...dep.targetPath.split(/[\\/]+/), dep.filename);
-            } else if (dep.type === 'custom_nodes') {
-                // custom_nodes: YAML does not remap this type — always use engine default
-                depPath = path.join(defaultCustomNodesRoot, dep.filename);
-            } else if (customRoot) {
-                const baseFilename = path.basename(dep.filename);
-                const subDir = path.dirname(dep.filename);
-                const directPath = path.join(customRoot, dep.filename);
-                if (await isCompleteOnDisk(directPath)) {
-                    depPath = directPath;
-                } else {
-                    // Search the custom root, then fall back to the default root:
-                    // the YAML keeps the default folder searchable, so engine deps
-                    // installed there before a path change must still count as present.
-                    const found = await _findFile(path.join(customRoot, subDir.split('/')[0] || ''), baseFilename);
-                    depPath = found
-                        || (await isCompleteOnDisk(path.join(defaultModelsRoot, dep.filename))
-                            ? path.join(defaultModelsRoot, dep.filename)
-                            : directPath);
-                }
-            } else {
-                depPath = path.join(defaultModelsRoot, dep.filename);
-            }
+
+            // MPI-654: ONE resolver for both readers. This function used to carry its own
+            // copy of the targetPath / custom_nodes / custom-root / default-root ladder,
+            // and every copy drifted: MPI-607 was the missing `targetPath` branch (flow
+            // deps read not-installed FOREVER), and the search scope drifted next — this
+            // copy searched the dep's bucket while resolveComfyPath searched the whole
+            // custom root, so a same-named weight in another bucket read installed to the
+            // installer and not-installed here. Both are fixed by there being one ladder.
+            const { localPath: depPath } = await resolveComfyPath(dep, customRoot, {});
 
             // MPI-387 F1: type-aware — a custom_nodes folder holding only a `targetPath`
             // weight's subdir is not an installed node, and must not report as one.
@@ -893,22 +861,6 @@ async function _localModelsCheck(models) {
     }
 
     return results;
-}
-
-async function _findFile(dir, filename) {
-    if (!(await fs.pathExists(dir))) return null;
-    const entries = await fs.readdir(dir);
-    for (const entry of entries) {
-        const full = path.join(dir, entry);
-        const stat = await fs.stat(full);
-        if (stat.isDirectory()) {
-            const found = await _findFile(full, filename);
-            if (found) return found;
-        } else if (entry === filename && await isCompleteOnDisk(full)) {
-            return full;
-        }
-    }
-    return null;
 }
 
 // ── Model / Workflow Management ───────────────────────────────────────────────

@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "id": "MPI-654",
+  "owns": [
+    "routes/comfy.js",
+    "routes/downloadManager.js",
+    "routes/shared.js"
+  ],
+  "reads": [
+    "routes/downloadCompletion.js",
+    "routes/engine.js"
+  ],
+  "notes": "Dep path resolution only. MPI-655 (partly-installed model) and MPI-656 (multiple model roots) must not hold these files at the same time."
+}

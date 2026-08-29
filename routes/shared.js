@@ -479,7 +479,17 @@ async function resolveComfyPath(dep, customRoot, config) {
             localPath = directPath;
         } else if (dep.filename) {
             const baseFilename = path.basename(dep.filename);
-            const found = await findFileRecursive(customRoot, baseFilename);
+            // MPI-654: search the dep's OWN bucket, never the whole custom root. The first
+            // segment of `filename` IS the ComfyUI folder-type key (yamlHelper.js derives
+            // the yaml from it), so a same-named file in another bucket is a DIFFERENT
+            // weight the consuming node can never load. Adopting it made this resolver
+            // report the dep installed and the installer skip the download, while the
+            // models library — bucket-scoped since it was written — still read
+            // not-installed: the badge never flipped and Install did nothing. Recursive
+            // INSIDE the bucket stays; users nest (diffusion_models/vendor/x.safetensors).
+            const bucket = path.dirname(dep.filename).split(/[\\/]/)[0];
+            const searchRoot = bucket === '.' ? customRoot : path.join(customRoot, bucket);
+            const found = await findFileRecursive(searchRoot, baseFilename);
             if (found) {
                 localPath = found;
             } else {

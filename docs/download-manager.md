@@ -122,6 +122,22 @@ store, never the dead flag:
   the check throws. Plus any dep held by a live in-flight job (`_inFlightDepIds`,
   store SOT — MPI-276).
 
+**One resolver answers "where does this dep live?" — `resolveComfyPath`
+(`routes/shared.js`), MPI-654.** The download manager, the uninstall delete loop,
+the engine boot gate and `localModelsCheck` all call it; nothing re-implements the
+targetPath → custom_nodes → custom-root → default-root ladder. Two copies existed
+until MPI-654 and both drifts they produced were invisible: MPI-607 (the library
+copy lacked the `targetPath` branch — flow deps read not-installed forever) and
+MPI-654 itself (the copies searched different scopes, so a same-named weight in
+another bucket read installed to the installer and not-installed to the library —
+badge stuck, Install downloading nothing). **The search is scoped to the dep's own
+bucket** — the first segment of `filename` IS the ComfyUI folder-type key
+(`yamlHelper.js` derives the yaml from it), so a same-named file in another bucket
+is a different weight the consuming node can never load. Recursive INSIDE the
+bucket stays (users nest). Widening it back to the whole custom root also aims the
+uninstall delete at a user's unrelated same-named file. Pinned by
+`tests/dep-path-agreement.test.cjs`.
+
 **"Is this model installed?" is answered from its EXCLUSIVE deps (MPI-310).**
 A model protects every dep it *declares*, and it counts as installed when any dep
 that **no other model declares** is on disk. Both earlier rules conflated shared
