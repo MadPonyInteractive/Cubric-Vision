@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "id": "MPI-655",
+  "updated_at": "2026-08-29T10:06:53Z",
+  "owns": [
+    "tests/partial-install-strands-weights.test.cjs",
+    "js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js",
+    "docs/model-library.md",
+    "docs/releases/UNRELEASED.md"
+  ],
+  "reads": [
+    "routes/downloadManager.js",
+    "js/data/modelConstants/resolveModelDeps.js",
+    "js/data/modelRegistry.js"
+  ]
+}

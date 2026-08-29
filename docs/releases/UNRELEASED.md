@@ -275,6 +275,13 @@
 > History workspace and the minimised preview window. The last two are real released bugs and
 > the entry is worth keeping; the Flow clause is the part to drop when folding.
 
+- A half-installed model can give its disk space back. If a model lost one of its files —
+  you tidied the models folder by hand, or an install stopped near the end — the library
+  showed it as not installed and offered only Install, while the rest of its weights, often
+  tens of gigabytes, stayed on disk with no way to reclaim them. The model's detail panel
+  now offers **Remove files** next to Install whenever it is holding files, and removing
+  them still keeps anything another installed model needs.
+
 - Clicking away closes a panel now, wherever you are. Settings, Hotkeys and About stayed
   open until you found the X or pressed Escape, while other panels in the app closed the
   moment you clicked outside them — the same gesture did two different things depending on

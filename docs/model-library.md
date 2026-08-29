@@ -230,3 +230,24 @@ The fix belongs where the bytes are, not where the bar is: the post-uninstall or
 sweep collects them (`docs/download-manager.md` § The orphan sweep). If you see a phantom
 chip on a never-touched model, check for ownerless weights on disk BEFORE touching
 `_computePartial` — MPI-314 and MPI-462 were both this, and neither was a display bug.
+
+## The partial chip is also the REMOVAL affordance (MPI-655)
+
+Lose ONE shared common dep of an otherwise-complete model (a hand-tidied models root, a
+repointed folder, an install that died on its last file) and its remaining weights used to
+be unreachable: `anyInstalled` goes false (`deriveInstalledOps` requires `commonComplete`)
+so the footer offered Install and nothing else, while the orphan sweep skipped the bytes
+because `_localSharedDepsMap` still counts the model installed on its exclusive weight and
+protects its whole universe. Both halves are right — the GC is right that the weight is
+this model's, the chip is right that the model is unusable. The bug was `anyInstalled`
+answering two questions with one boolean: *usable* (correct — it drives the chip) and *may
+the user reclaim the bytes* (wrong). The footer now answers the second from
+`partial.hasPartialProgress` and renders a secondary **Remove files** beside Install,
+routed to the same `_confirmWholeUninstall`, so the shared-dep guard still keeps a
+sibling's files.
+
+**Do not "fix" this in the decision layer.** Making the evidence gate require
+`commonComplete` too is the `fullyInstalled` gate that destroyed 5.24 GB in MPI-310 — a
+missing shared dep would stop every model needing it from defending its own weights.
+`tests/partial-install-strands-weights.test.cjs` pins the shape: weight stays protected,
+model stays not-installed, only the affordance changed.

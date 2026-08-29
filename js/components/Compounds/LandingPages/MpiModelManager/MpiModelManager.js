@@ -1016,6 +1016,25 @@ export const MpiModelManager = ComponentFactory.create({
                 });
                 install.on('click', () => { _install(model); });
                 detailActions.appendChild(install.el); _detailActionBtns.push(install);
+                // MPI-655 — a model can hold bytes it cannot be asked to give back. Lose
+                // ONE shared common dep (a hand-tidied models root, a repointed folder, a
+                // failed install) and `anyInstalled` goes false while the model's own
+                // exclusive weight stays on disk. The orphan sweep will not take it either:
+                // the sweep asks `_localSharedDepsMap`, which by the MPI-310 exclusive-
+                // evidence rule still counts this model as installed and defends its whole
+                // universe. That rule is correct and must not be touched — narrowing it is
+                // the gate that destroyed 5.24GB. What was wrong is that `anyInstalled`
+                // answered TWO questions with one boolean: "is this model usable" (right —
+                // it drives the Installed chip) and "may the user reclaim its bytes"
+                // (wrong). Only the second is answered here, and `partial` already computes
+                // it: ≥1GB of this model's OWN deps (shared deps an installed sibling owns
+                // are excluded) on disk, not all of them. Uninstall is unchanged and still
+                // honours the backend shared-dep guard, so a sibling's files stay put.
+                if (st.partial.hasPartialProgress) {
+                    const reclaim = MpiButton.mount(ce('div'), { text: 'Remove files', variant: 'secondary', size: 'md' });
+                    reclaim.on('click', () => _confirmWholeUninstall(model));
+                    detailActions.appendChild(reclaim.el); _detailActionBtns.push(reclaim);
+                }
             }
 
             scrim.classList.add('is-open');
