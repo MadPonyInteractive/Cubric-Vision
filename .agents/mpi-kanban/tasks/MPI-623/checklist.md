@@ -94,4 +94,30 @@ Delivered per plan.md amendments 18-20. `'splat'` is NOT a media type.
 - [x] `open-group` intercepted on `splatPath` in `MpiGalleryBlock.js` (placeholder toast
       until Phase 3's `PAGE_SCENE`).
 - [x] `tests/splat-companion.test.cjs`, 4 tests. **791/791 `npm test`; lint clean.**
+- [x] The `add-from-cards` test EXECUTES the route (2026-08-29). Was a source-text
+      `assert.match` over the route body; now mounts the router on `app.listen(0)`,
+      POSTs a real Scene card between two temp project dirs and reads the destination
+      sidecar back. Proven red both ways by mutation: drop the rewrite -> "must name
+      the DESTINATION companion"; drop the `delete` -> "must leave no URL behind".
+      **793/793 `npm test`; lint clean; `routes/projects.js` restored byte-identical.**
 - [ ] **User check in the running app** - the `user-ux` half of Phase 1's verification.
+      Deferred into Phase 2 by Fabio; do not tick until a real Scene card exists.
+
+## Parallel Batch - Bake path (2026-08-29)
+
+- [~] **Task 1: `MpiBrushTrain` AUTHORED, not bench-verified.**
+      `c:\AI\Mpi\ComfyUi-MpiNodes\splat.py` + `__init__.py` (3 places) + README +
+      changelog (V1.2.8) + `sha256_file` in `help_funcs.py` + `bin/` gitignored.
+      Followed that repo's own `new-node.md` inline. Uncommitted there.
+      Every CLI flag verified against `brush_app.exe --help`; two bugs caught and fixed
+      (`BaseException` cancel, non-unique export dir) - plan.md amendment 22.
+      **No-GPU proof:** `check_splat.py` in the pack, 12 assertions, all passing under
+      the ComfyUI portable python.
+      **Still open:** the bench run (a graph of just this node turning the Phase 0
+      dataset into a `.ply` with a moving progress bar). Needs the GPU.
+- [ ] **Task 2: dependency declarations** - untouched. Uploads multi-GB weights to R2;
+      needs Fabio.
+- [ ] **Task 3: pin the MpiNodes commit** - blocked, runs after 1 and 2.
+- [x] ~~Decision for Fabio: registry exposure.~~ **Not a real question** - the registry
+      has been unstuck for a long time and is on 1.2.x (Fabio, 2026-08-29). The two files
+      in `ComfyUi-MpiNodes` that say otherwise are stale. plan.md amendment 23.

@@ -62,18 +62,87 @@ test('deleting an item sweeps its splat and leaves every other item alone', asyn
     }
 });
 
-test('add-from-cards re-points splatPath at the copy, never the source project', () => {
-    const src = fs.readFileSync(path.join(__dirname, '..', 'routes', 'projects.js'), 'utf8');
-    const route = src.slice(src.indexOf("add-from-cards', async"));
-    const block = route.slice(0, route.indexOf('newGroups.push'));
+test('add-from-cards re-points splatPath at the copy, never the source project', async (t) => {
+    const express = require('express');
+    const projectsRouter = require('../routes/projects.js');
 
-    // The sidecar is cloned wholesale, so a missing rewrite is not a missing field —
-    // it is a stale absolute path into another project that reads as valid.
-    assert.match(block, /srcSplat/, 'the copy loop handles the splat companion');
-    assert.match(block, /meta\.splatPath = `\/project-file\?path=\$\{encodeURIComponent\(destSplat\)\}`/,
-        'splatPath is rewritten to the destination copy');
-    assert.match(block, /delete meta\.splatPath/,
-        'a card with no reachable .ply must not inherit the source URL');
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'mpi623-copy-'));
+    const app = express();
+    app.use(express.json());
+    app.use(projectsRouter);
+    const server = await new Promise(r => { const s = app.listen(0, '127.0.0.1', () => r(s)); });
+
+    // A Scene card in the SOURCE project: the still is the card, the `.ply` its companion.
+    const srcRoot = path.join(root, 'src');
+    const srcMeta = path.join(srcRoot, 'Media', '.meta');
+    const dstRoot = path.join(root, 'dst');
+    const dstMeta = path.join(dstRoot, 'Media', '.meta');
+    await fs.ensureDir(srcMeta);
+    await fs.ensureDir(dstMeta);
+    await fs.writeJson(path.join(dstRoot, 'project.json'), { id: 'dst', itemGroups: [] });
+
+    const url = (p) => `/project-file?path=${encodeURIComponent(p)}`;
+    const srcStill = path.join(srcRoot, 'Media', 'scene_001.png');
+    const srcPly = path.join(srcMeta, `${ID}.splat.ply`);
+    await fs.writeFile(srcStill, 'still-bytes');
+    await fs.writeFile(srcPly, 'ply-bytes-387mb-in-real-life');
+    await fs.writeJson(path.join(srcMeta, `${ID}.json`),
+        { id: ID, type: 'image', filePath: url(srcStill), splatPath: url(srcPly) });
+
+    const copy = async () => {
+        const res = await fetch(
+            `http://127.0.0.1:${server.address().port}/project-media/dst/add-from-cards`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    folderPath: dstRoot,
+                    cards: [{ type: 'image', name: 'Scene', item: { id: ID, filePath: url(srcStill), splatPath: url(srcPly) } }],
+                }),
+            });
+        return res.json();
+    };
+    // The copy is the sidecar carrying a freshly-minted id, never the source's.
+    const copiedMeta = async () => {
+        const written = (await fs.readdir(dstMeta)).filter(f => f.endsWith('.json') && !f.startsWith(ID));
+        assert.equal(written.length, 1, 'exactly one sidecar per copied card');
+        return fs.readJson(path.join(dstMeta, written[0]));
+    };
+    const destOf = (fileUrl) => decodeURIComponent(String(fileUrl).replace(/^.*[?&]path=/, ''));
+
+    try {
+        await t.test('the .ply travels and the copy owns it', async () => {
+            assert.deepEqual(await copy(), { success: true, added: 1 });
+
+            const meta = await copiedMeta();
+            assert.notEqual(meta.id, ID, 'the copy is a new item, not the source id');
+
+            const landed = destOf(meta.splatPath);
+            assert.equal(landed, path.join(dstMeta, `${meta.id}.splat.ply`),
+                'splatPath must name the DESTINATION companion, on the id the copy was given');
+            assert.equal(await fs.readFile(landed, 'utf8'), 'ply-bytes-387mb-in-real-life',
+                'the .ply was copied, not merely re-pointed at');
+            // The failure this whole test exists for: a path that reads as perfectly
+            // valid right up until the source project is deleted.
+            assert.equal(landed.startsWith(srcRoot), false,
+                'the copy must not point back into the source project');
+            assert.equal(await fs.pathExists(srcPly), true, 'copy, not move — the source keeps its .ply');
+        });
+
+        await t.test('a splatPath whose .ply is gone is dropped, not inherited', async () => {
+            await fs.emptyDir(dstMeta);
+            await fs.remove(srcPly);
+
+            assert.deepEqual(await copy(), { success: true, added: 1 });
+
+            const meta = await copiedMeta();
+            assert.equal('splatPath' in meta, false,
+                'an unreachable .ply must leave no URL behind — the sidecar is cloned wholesale');
+        });
+    } finally {
+        await new Promise(r => server.close(r));
+        await fs.remove(root);
+    }
 });
 
 test('only an image item carries splatPath', async () => {

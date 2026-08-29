@@ -9,6 +9,11 @@
     "js/data/projectModel.js",
     "routes/projects.js",
     "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
-    "tests/splat-companion.test.cjs"
+    "tests/splat-companion.test.cjs",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/splat.py",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/help_funcs.py",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/__init__.py",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/README.md",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/changelog.md"
   ]
 }

@@ -46,6 +46,21 @@ notes in [research/](research/).
 > app: `add-from-cards`'s splat copy is asserted from SOURCE TEXT only, never executed -
 > and its failure mode is a copied card silently pointing back into the source project.
 >
+> **Session note 2026-08-29 (fifth). The last no-GPU gap is CLOSED.** The
+> `add-from-cards` splat copy is now a real executed test - router mounted, POST driven,
+> destination sidecar read back - and both its branches were watched go red before being
+> believed (amendment 21). 793/793, lint clean, `routes/projects.js` byte-identical.
+> **The `## Parallel Batch`'s task 1 is now AUTHORED** - `MpiBrushTrain` in
+> `c:\AI\Mpi\ComfyUi-MpiNodes\splat.py`, uncommitted in that repo, following its own
+> `new-node.md` inline. It is NOT bench-verified: that needs the GPU. Amendment 22 has
+> the CLI corrections and the two bugs the self-check caught; **amendment 23 is an open
+> question for Fabio** about publishing a binary-downloading node to a registry whose
+> `latest_version` is still stuck. **Next when the GPU frees: run a graph containing only
+> `MpiBrushTrain` against the Phase 0 dataset** (`G:\MPI-623-spike\`, binary already
+> extracted at `G:\MPI-623-spike\brush\extracted\brush_app.exe`, so pass it as
+> `brush_path` and skip the download). Batch task 2 (dep declarations + R2 uploads) is
+> untouched and needs Fabio - it uploads multi-GB weights.
+>
 > **Nothing is in flight, and the GPU is NOT available - Fabio is using it himself.** Do
 > not take a lease, do not start the bench on 8188, do not dispatch anything. Phase 1
 > needed no GPU. **Phase 1 is done, so the next unit - the `## Parallel Batch` bake path -
@@ -306,6 +321,49 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     briefed assumption and would have needed new cleanup code in the delete route with
     no orphan sweep behind it.
 
+21. **A source-text assertion is not a test.** Phase 1's `add-from-cards` check matched
+    `/srcSplat/` and the rewrite line against the route's own source. It would have
+    passed on a route whose copy loop was reordered, whose `destSplat` was built from
+    the SOURCE meta dir, or whose `fs.copy` never ran - every failure mode it was
+    written to catch. Replaced with a mounted-router POST between two temp project
+    dirs. The route is cheap to drive: `app.use(express.json()); app.use(router)` and
+    `app.listen(0)`, the pattern `tests/settings-models-root-guard.test.cjs` already
+    uses. **A new test is only proven when it has been seen to FAIL** - both branches
+    were mutated in `routes/projects.js`, watched go red on their own assertion, and
+    the file restored byte-identical (`git diff --exit-code`).
+
+22. **The Brush trainer node, as authored - three corrections and two caught bugs.**
+    The batch bullet said "strips ANSI and reports `N/M Steps`"; amendment 9 had already
+    killed that, and the node polls the export dir instead. It also said `--total-train-iters`;
+    the real flag is `--total-steps`. **Every flag the node passes was verified against
+    `brush_app.exe --help` on the bench binary** - `--total-steps`, `--export-path`,
+    `--export-every`, `--sh-degree`, `--max-splats` all exist with the defaults assumed.
+    Two real bugs the self-check found, both of which would have been invisible until a
+    45-minute bake went wrong:
+    - **`except Exception` never catches a ComfyUI cancel.** `InterruptProcessingException`
+      derives from **`BaseException`**, so the poll loop's kill branch would not have run
+      and Brush would have kept the GPU for the rest of the bake with nothing left to
+      collect it. Now `except BaseException`.
+    - **A timestamped export dir is not a unique one.** Keying it on
+      `<dataset>_<unix seconds>` let a second bake land in the first one's directory,
+      where stale `export_*.ply` files read as this run's output - so a run that exported
+      NOTHING reported success and returned a path from the previous bake. Now
+      `tempfile.mkdtemp`.
+    Also: **`bin/` had to be gitignored.** The node caches the 152 MB Brush binary there,
+    and it was sitting untracked, one `git add` away from being published in the pack.
+23. **Registry exposure - RESOLVED, and the docs that raised it are stale.** This was
+    written up as an open question on the strength of `ComfyUi-MpiNodes`'s own
+    `.claude/rules/registry-safety.md` and `CLAUDE.md`, which both still say
+    `latest_version` is **stuck at 1.0.4** and the flag unresolved. **Fabio, 2026-08-29:
+    that has been untrue for a long time - the registry is on 1.2.x and moving.** So there
+    is no publishing hazard to weigh, and decision 3 stands unchanged. Two things were
+    done anyway because they cost nothing: the subprocess is VHS-shaped (fixed arg list,
+    no shell, no user string interpolated), and `brush_path` lets an installer manage the
+    binary so the download path is never taken. **The lesson is the one this plan keeps
+    relearning** - a rule file is a claim that decays exactly like a line number
+    (amendment 19). Two files in that repo now carry a stale registry status; they belong
+    to whoever owns that repo, so they are reported, not edited.
+
 ### Verified NOT drifted from the source workflow (checked 2026-08-29)
 
 Both LoRAs at his strengths (`pano_video_gen_720p_comfy` 0.98, `lightx2v_T2V_14B_cfg_step_distill_v2`
@@ -392,10 +450,17 @@ no media type, no sweep, four files.
 - [x] `open-group` on a card with `splatPath` is intercepted in
       `MpiGalleryBlock.js`, one line below the audio guard it mirrors, and shows
       "Scene viewer is not built yet." until `PAGE_SCENE` lands in Phase 3.
-- [x] `tests/splat-companion.test.cjs` - 4 tests over the regex both ways (claims the
+- [x] `tests/splat-companion.test.cjs` - tests over the regex both ways (claims the
       `.ply`, does not swallow the sidecar or the media file), a real temp-dir delete
       sweep, the `add-from-cards` rewrite, and the field being image-only.
-      **791/791 `npm test` green; `npm run lint` clean.**
+      **793/793 `npm test` green; `npm run lint` clean.**
+- [x] **The `add-from-cards` test now EXECUTES the route** (2026-08-29, the gap the
+      previous handoff left open). It mounts the router on `app.listen(0)`, POSTs a
+      Scene card between two temp project dirs, and reads the DESTINATION sidecar:
+      `splatPath` names `.meta/<newId>.splat.ply` under the destination, the bytes
+      actually copied, the path does not start with the source root, and the source
+      keeps its own `.ply`. Second case: an unreachable `.ply` leaves no URL behind.
+      Both proven red by mutating the route, then restored byte-identical - amendment 21.
 - [ ] **Left for the user:** see the card in the running app - hand-place a `.ply` +
       still, confirm it reads as a normal image card, copies to a second project
       *with* the `.ply`, deletes without leaking 387 MB, and does not open Group
@@ -406,6 +471,12 @@ no media type, no sweep, four files.
 Disjoint ownership; the node lives in a different repo entirely. Run with
 `mpi-execute-parallel` once Phase 0's gate has passed and Phase 1 has landed.
 
+- [~] **AUTHORED 2026-08-29, NOT YET BENCH-VERIFIED** (`c:\AI\Mpi\ComfyUi-MpiNodes\splat.py`,
+      `MpiBrushTrain`, registered in `__init__.py` + README + changelog under V1.2.8;
+      `sha256_file` added to `help_funcs.py`; `bin/` gitignored). Its `**Verify:**`
+      below needs the bench, so the box stays open. Three corrections to the bullet as
+      written, and two bugs the self-check caught - amendment 22. Proof with no GPU:
+      `check_splat.py` in the pack, 12 assertions, run with the ComfyUI portable python.
 - [ ] Add a Brush trainer node to the first-party pack. It downloads the
       per-platform Brush binary on first use with SHA-256 verification (mirror
       SplatKit's `colmap_sphere` approach), takes a COLMAP dir + iteration count,
