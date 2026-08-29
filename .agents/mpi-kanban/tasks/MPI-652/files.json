@@ -1,0 +1,9 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "id": "MPI-652",
+  "files": [
+    "js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.css",
+    "js/components/Compounds/MpiSlideOver/MpiSlideOver.js",
+    "js/components/Compounds/MpiSlideOver/MpiSlideOver.css"
+  ]
+}
