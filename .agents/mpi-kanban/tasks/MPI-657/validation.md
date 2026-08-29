@@ -32,11 +32,12 @@ if nothing else catches a stall. Neither holds:
 
 - `downloader.onProgress` is byte-driven (`routes/downloadManager.js` `_wireProgress`), not
   timer-driven — no ticks without bytes.
-- `_startStallWatchdog` (MPI-291) sweeps every 15s on `_lastByteTs` and calls `forceStall()`
-  on a quiet socket, which routes into the existing `'error'` → `_setDepStatus('failed')`
-  path and broadcasts `download:failed` — which `finish()`es this wait. NDH's own
-  `timeout:30000` does not fire on a mid-stream quiet socket (v2.1.11), which is why that
-  watchdog exists.
+- `_startStallWatchdog` (MPI-291) calls `forceStall()` on a socket that has not moved a byte
+  in `STALL_MS` (60s, `routes/downloadManager.js:1020`), swept every 15s
+  (`:1029`) — so detection takes up to ~75s, not 15s. It routes into the existing `'error'`
+  → `_setDepStatus('failed')` path and broadcasts `download:failed`, which `finish()`es this
+  wait. NDH's own `timeout:30000` does not fire on a mid-stream quiet socket (v2.1.11),
+  which is why that watchdog exists.
 
 So the renderer ceiling is left doing only its MPI-395 job: releasing the chain when the
 terminal EVENT is lost.
@@ -75,7 +76,19 @@ multi-hour real download.
 The brief was corrected before any code was written. Two errors in the original evidence:
 the ceiling fired on the MODEL `minimax-h3-ref2va`, not the dep `h3-qwen3vl-32b-clip`
 (`_awaitDownloadDone` is keyed by model id); and it deleted nothing — the partial went to a
-user cancel at 08:49:36Z, 52 minutes later, proven by the five deps that rejected that same
-cancel as already `complete`. Nothing was queued behind the install, so the firing cost the
-user nothing on the day; the harm it fixes is the broken one-stream-at-a-time invariant and
-the false wedge report.
+user cancel at 08:49:36Z, 52 minutes later, proven by the six entries that rejected that same
+cancel as already `complete` (five weight deps plus the `ComfyUI-MpiNodes` pack, app.log
+176-181). Nothing was queued behind the install, so the firing cost the user nothing on the
+day; the harm it fixes is the broken one-stream-at-a-time invariant and the false wedge
+report.
+
+## Corrections after the claim audit
+
+The close-out audit caught two claims that were wrong when b15c179e was written. Both are
+corrected above; neither changes the fix, and both are recorded here because the COMMIT
+MESSAGE still carries them and cannot be amended — it is pushed to a shared master.
+
+| claim as committed | truth |
+|---|---|
+| "five deps rejected that cancel" (also in the first draft of this file and of brief.md) | SIX entries rejected it, app.log 176-181: five weight deps plus the `ComfyUI-MpiNodes` pack. `h3-qwen3vl-32b-clip` is still correctly absent, so the reasoning it supports is unaffected. |
+| commit body: "a quiet socket is still caught in 15s by _startStallWatchdog (MPI-291)" | 15s is the SWEEP INTERVAL (`:1029`). The threshold is `STALL_MS = 60_000` (`:1020`), so detection takes up to ~75s. Still orders of magnitude under the ceiling, so the belt argument holds. |

@@ -14,5 +14,6 @@
       re-arm and dropping the `clearTimeout` each fail the suite.
 - [x] `node --test tests/install-*.test.cjs tests/download-*.test.cjs` — 20 pass, 0 fail.
 - [x] Checked the belt this leans on: backend progress ticks are byte-driven, and
-      `_startStallWatchdog` (MPI-291, 15s) still catches a quiet socket. See
+      `_startStallWatchdog` (MPI-291) still catches a quiet socket in up to ~75s
+      (`STALL_MS` 60s, swept every 15s). See
       `validation.md`.

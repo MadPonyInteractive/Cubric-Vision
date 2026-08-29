@@ -47,7 +47,8 @@ promise and decrements `_inFlight`. It writes no job status, issues no cancel, u
 file. The partial that vanished from `G:/CubricModels/text_encoders/` that morning went to
 a USER CANCEL at 08:49:36Z — 52 minutes after the ceiling — which is the MPI-317 resume
 contract working as designed (cancel is intent, partial deleted). The log proves the two
-are separate: five deps rejected that cancel because they had already finished
+are separate: six entries rejected that cancel because they had already finished — five
+weight deps plus the `ComfyUI-MpiNodes` pack
 (`Illegal transition …: complete → cancelled (cancel) — rejected`), and the clip is absent
 from that list because it was still downloading, so its cancel succeeded.
 
