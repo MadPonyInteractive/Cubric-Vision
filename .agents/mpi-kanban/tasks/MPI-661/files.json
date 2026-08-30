@@ -1,0 +1,9 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "README.md",
+    "docs/releases/UNRELEASED.md",
+    "dev_configs/python_deps.in",
+    ".agents/mpi-kanban/tasks/MPI-661/**"
+  ]
+}

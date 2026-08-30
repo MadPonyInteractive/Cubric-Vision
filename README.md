@@ -114,6 +114,9 @@ not a paywall.
 
 ### What you'll need
 
+**Windows 10/11**, **Linux**, or **macOS 14 (Sonoma) or later on Apple Silicon** — every
+Mac with an M-series chip can run macOS 14 or newer.
+
 | Workflow | GPU VRAM | System RAM |
 | --- | --- | --- |
 | Images | 8 GB+ | 16–32 GB |

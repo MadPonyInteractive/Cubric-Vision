@@ -35,6 +35,11 @@
 
 ## Important changes
 
+- Mac users need macOS 14 (Sonoma) or later. Vision has always been Apple Silicon only, and
+  every M-series Mac can run macOS 14 or newer, so this asks for an update rather than newer
+  hardware. Some of the components the engine installs no longer publish a build for older
+  macOS versions, and setup cannot finish without them.
+
 - FLUX.2 Klein is now called FLUX.2 Klein 4B, since Klein 9B arrived beside it — the two are
   told apart by name instead of by a small size letter.
 

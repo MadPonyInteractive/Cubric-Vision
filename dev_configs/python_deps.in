@@ -186,5 +186,13 @@ onnxruntime-gpu; platform_system != "Darwin"
 #
 # UNVERIFIED, and tracked on MPI-249 (verify a portable build on Linux + macOS): a wheel
 # existing is not a working backend, so whether nf4 4-bit actually runs on MPS is unknown.
-# Same trip should check an arm64 Mac on macOS < 14, which the wheel does not cover.
+#
+# THE macOS < 14 HALF IS NOW MEASURED — it does not resolve, and the app declares macOS 14+
+# because of it (MPI-661, README § What you'll need). Do NOT "fix" that by bounding this
+# marker on platform_release: tried on 2026-08-30, and the resolve then fails on `embreex`
+# instead, which needs macosx_13_0 and has been in this file since MPI-413 — its
+# `platform_machine != 'aarch64'` marker never excluded Apple Silicon, because macOS reports
+# `arm64`. Two packages set the floor, so a bound on one buys nothing. Electron's own floor is
+# Ventura (13); ours is one release stricter and THIS FILE is the reason.
+#   uv pip install --dry-run --no-deps --python-platform aarch64-apple-darwin -r dev_configs/python_deps.txt
 bitsandbytes>=0.45.0; platform_system != "Darwin" or platform_machine == "arm64"

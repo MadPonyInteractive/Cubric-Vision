@@ -1,0 +1,3 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-661", "at": "2026-08-30T11:10:11+01:00", "actor": "claude", "column": "todo", "title": "Declare macOS 14+ as the supported floor - the pip set already requires it"}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-661", "at": "2026-08-30T11:10:24+01:00", "actor": "claude", "from": "todo", "to": "doing", "reason": "Fabio approved 14+ on 2026-08-30; docs only."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-661", "at": "2026-08-30T11:11:55+01:00", "actor": "claude", "from": "doing", "to": "done", "reason": "macOS 14+ declared in README + UNRELEASED, with the reason recorded in python_deps.in. 798/798."}
