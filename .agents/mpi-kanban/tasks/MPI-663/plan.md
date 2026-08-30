@@ -2,6 +2,56 @@
 
 ## Current State
 
+**SHIPPED AND PUSHED (2026-08-30).** Code, tests and docs are on master, CI green:
+`6ceaf661` (the flow), `8fbfb185` (icons), `b3266f65` (red-CI fix), `ebe929cb` (clip trim).
+815 tests pass, lint clean. What remains is a live app run and the flow's art.
+
+The graph was RE-EXPORTED after the notes below were written: four `MpiBlocker` gates titled
+`Input_Get_<Stem>` now sit between the separator and each save, so the user picks which stems
+he wants. Everything from "Proven graph" down describes the FIRST version and is kept only for
+the constraint table, which still holds.
+
+What the flow does now:
+
+- Four stem toggles (`Input_Get_*`, graph) + `combine` (unprefixed, APP-side).
+- `Output_Audio_1..4`, each landing its own gallery card. Card names come from each save's
+  `filename_prefix` (`stems/Bass` -> `Bass_00001.flac` -> a card called "Bass").
+- Combine sums the selected stems into ONE card, server-side, via `save-generation`'s new
+  `mixViewUrls` -> `mixAudioFiles`.
+
+The three things that needed building rather than wiring, all documented in
+`docs/playbooks/add-flow/existing-flows/stems.md`:
+
+1. **Multi-audio capture never existed.** MPI-259 built multi-output for image and video and
+   explicitly excluded audio (`if (t === 'output_audio') return false`), because at that point
+   audio was only the video mux side-channel. Added `outputAudioMultiNodeIds`.
+2. **App-side combine.** A subset combine is not expressible in the graph: a blocked
+   `MpiBlocker` cannot feed an `AudioCombine` (it blocks the combine too).
+3. **Cross-field constraints** (`group`/`minActive`, `enabledWhen`) so the last stem cannot be
+   turned off and Combine is dead below two. Declarative, so a third-party Flow can use them.
+
+Proven on the user's own track (`D:\WORK\Images\Outputs\audio\audio_minimax_music3_00008.mp3`),
+bench run under a GPU lease, 10s for 40s of audio. The user has heard the four stems and the
+combined files and signed off: "They sound good. I'm happy."
+
+## Plan Drift
+
+- **The graph gained per-stem gates and the outputs were renumbered.** `Output_Bass/Drums/...`
+  capture NOTHING (the executor matches `output_image*` / `output_video*` / `output_audio*`), and
+  the bare `Output_Audio` is the mux side-channel, so they are `Output_Audio_1..4`, numbered from
+  `_1`. **The BENCH canvas still has the old titles and the author's test scene** — the repo raw
+  is the corrected copy. Re-exporting from ComfyUI without retitling re-breaks capture.
+- **Combining moved OUT of the graph**, reversing the usual "express it in the graph" rule, for
+  the `MpiBlocker`/`AudioCombine` reason above.
+- **A subset stem sum CLIPS**, which the code originally asserted was impossible. Stems sum back
+  to the original only when ALL are present; drop one and you remove what was pulling the
+  waveform down. Measured drums+vocals at +0.63 dB over full scale on a track mastered to 0 dBFS.
+  `mixAudioFiles` now measures in float and applies one static trim.
+- **I turned master red once**: declared `preview: 'flow-stems.webp'` before the art existed, so
+  the Flow Library 404'd. Fixed, plus a guard so it now fails in `npm test` rather than in CI.
+- Preview art is deliberately NOT declared until it exists.
+
+
 Project mode: scalable-foundation.
 
 The graph is **prototyped and accepted on the bench** (127.0.0.1:8188, `G:\ComfyUi\ComfyUI`,
@@ -30,24 +80,31 @@ user generates several songs, listens, and stems only the keeper.
 
 ## Implementation
 
-- [ ] Wire the Flow end to end per `docs/playbooks/add-flow/` — `FlowDef` in `flowsRegistry.js`,
-      the op in its 4 files, the audio input slot, the runtime workflow + its `raw/` twin, and the
-      preview assets. No-model flow, so skip the model-guard sections; follow `02-media-io.md` for
-      the audio slot and multi-output capture.
-      **Verify:** inject test, `node --check`, then a live run in an isolated app that produces
-      four playable stem cards from one gallery audio card.
+- [x] Wire the Flow end to end per `docs/playbooks/add-flow/`.
+- [ ] Live run in the app, then the flow's preview art.
 
 ## Completed
 
-- [ ] Nothing yet.
+- [x] Raw + runtime workflow (`comfy_workflows/raw/flow_stems.json` -> `flow_stems.json`), with
+      the author's test scene scrubbed.
+- [x] Op in the 4 files; `FlowDef` with the audio slot, four stem toggles and `combine`.
+- [x] Multi-audio capture (`outputAudioMultiNodeIds`) + per-card naming from `filename_prefix`.
+- [x] App-side combine: `mixViewUrls` on `save-generation` -> `mixAudioFiles`, with a clip trim.
+- [x] Cross-field constraints in `declaredFields` + the frame paint.
+- [x] Node pack pinned, `installRequirements: false`, `compile-node-deps --check` green.
+- [x] Three stem icons + guards for icon names and preview assets.
+- [x] Tests (815 pass) and docs. Bench run proven on a real track; user signed off on the audio.
 
 ## Remaining Work
 
-- Wire the Flow end to end (above).
-
-## Plan Drift
-
-- None yet.
+1. **Live app run** — nothing has ever exercised this in a running app. Everything so far is
+   bench dispatch + offline tests, so the UI is UNVERIFIED: the four toggles, the last-stem lock,
+   Combine greying below two stems, and whether four cards actually land in the gallery.
+   Needs the GPU, which is shared — take the lease.
+2. **Flow graphics** (`/mpi-flow-graphics`) — the user's brief: five waveforms, the input plus
+   the four stems, "something simple". Done from scratch like the other audio flows. The four
+   real stems are on disk (see the handoff). Then declare `preview`/`video` on the FlowDef,
+   which the guard currently keeps honest.
 
 ## Verification
 
