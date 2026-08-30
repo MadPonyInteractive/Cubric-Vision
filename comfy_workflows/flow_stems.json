@@ -1,0 +1,95 @@
+{
+  "11": {
+    "inputs": {
+      "chunk_fade_shape": "half_sine",
+      "chunk_length": 16,
+      "chunk_overlap": 0.1,
+      "audio": [
+        "32",
+        0
+      ]
+    },
+    "class_type": "AudioSeparation",
+    "_meta": {
+      "title": "AudioSeparation"
+    }
+  },
+  "25": {
+    "inputs": {
+      "filename_prefix": "stems/Bass",
+      "format": "flac",
+      "audio": [
+        "28",
+        0
+      ]
+    },
+    "class_type": "SaveAudioAdvanced",
+    "_meta": {
+      "title": "Output_Audio_1"
+    }
+  },
+  "28": {
+    "inputs": {
+      "passthrough": [
+        "11",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "29": {
+    "inputs": {
+      "filename_prefix": "stems/Drums",
+      "format": "flac",
+      "audio": [
+        "11",
+        1
+      ]
+    },
+    "class_type": "SaveAudioAdvanced",
+    "_meta": {
+      "title": "Output_Audio_2"
+    }
+  },
+  "30": {
+    "inputs": {
+      "filename_prefix": "stems/Other",
+      "format": "flac",
+      "audio": [
+        "11",
+        2
+      ]
+    },
+    "class_type": "SaveAudioAdvanced",
+    "_meta": {
+      "title": "Output_Audio_3"
+    }
+  },
+  "31": {
+    "inputs": {
+      "filename_prefix": "stems/Vocals",
+      "format": "flac",
+      "audio": [
+        "11",
+        3
+      ]
+    },
+    "class_type": "SaveAudioAdvanced",
+    "_meta": {
+      "title": "Output_Audio_4"
+    }
+  },
+  "32": {
+    "inputs": {
+      "string": "",
+      "block_if_empty": true
+    },
+    "class_type": "MpiLoadAudio",
+    "_meta": {
+      "title": "Input_Audio"
+    }
+  }
+}
