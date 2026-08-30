@@ -18,7 +18,7 @@ import { truncateCardName } from '../utils/displayHelpers.js';
 import { activeGenerations } from './activeGenerations.js';
 import { trackConcatJob } from './concatProgress.js';
 import { extractFilenameFromPath } from '../utils/mediaActions.js';
-import { getCommand, getCommandMediaInputs } from '../data/commandRegistry.js';
+import { getCommand, getCommandMediaInputs, getFilePrefix } from '../data/commandRegistry.js';
 import { getFlowById } from '../data/flowsRegistry.js';
 import { pluginForOperation } from '../data/pluginsRegistry.js';
 import { usesOrientation } from '../utils/ratios.js';
@@ -1120,9 +1120,10 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         audioViewUrl: (i === 0 && model.mediaType === 'video') ? (outputInfo.audioUrl || null) : null,
                         itemId: thisItemId,
                         operation,
-                        // Filename only. The op key is the default prefix; a Flow whose key
-                        // does not read as its Library title overrides it (MPI-660).
-                        filePrefix: getCommand(operation)?.filePrefix ?? null,
+                        // Filename only — the card's name, never the op identity below it.
+                        // See getFilePrefix: the strip code wins over the internal key
+                        // (MPI-660).
+                        filePrefix: getFilePrefix(operation),
                         meta: { prompt: positive, negativePrompt: negative, negativeAudioPrompt: negativeAudio, modelId: model.id, seed: exec.seed ?? -1, generationSettings },
                         generationMs: elapsedMs,
                         pixelDimensions: resolvedDims,

@@ -4,6 +4,7 @@
     "js/data/commandRegistry.js",
     "js/services/generationService.js",
     "js/services/projectService.js",
-    "routes/projects.js"
+    "routes/projects.js",
+    "tests/flow-output-filename.test.cjs"
   ]
 }

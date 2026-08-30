@@ -1595,6 +1595,30 @@ export function getCommand(key) {
 }
 
 /**
+ * The prefix a saved output is filed under — `<prefix>_NNN.<ext>`, which is also the
+ * gallery card's name. NOT the op key: that is an internal id the user never picked.
+ * MPI-660.
+ *
+ *   `filePrefix`  — an explicit override, for a Flow whose key is not its title.
+ *   `short`       — the op strip's OWN code, and therefore the name the user chose it
+ *                   by. This is what folds the four model-specific edit keys
+ *                   (edit/krea2Edit/qwenEdit/kleinEdit) onto `edit`, `pid` onto
+ *                   `upscale` and the `_ms` video keys onto `t2v`/`i2v`/`ref2v`.
+ *   the key       — universal/tool ops carry no `short` because they never reach the
+ *                   strip; their keys already read as their labels.
+ *
+ * The sequence counter is per-prefix and monotonic, so ops that now share a prefix
+ * share one counter — numbers stay unique, they just interleave.
+ *
+ * @param {string} key
+ * @returns {string}
+ */
+export function getFilePrefix(key) {
+    const cmd = commands[key];
+    return cmd?.filePrefix || cmd?.short || key;
+}
+
+/**
  * Returns a command's declared media input slots, falling back to the legacy
  * requiresImages/requiresVideo counters for operations not yet migrated.
  * @param {string} key
