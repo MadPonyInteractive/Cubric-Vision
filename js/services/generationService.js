@@ -22,7 +22,8 @@ import { getCommand, getCommandMediaInputs, getFilePrefix } from '../data/comman
 import { getFlowById } from '../data/flowsRegistry.js';
 import { pluginForOperation } from '../data/pluginsRegistry.js';
 import { usesOrientation } from '../utils/ratios.js';
-import { resolveControlDefaults } from '../components/Organisms/MpiPromptBox/PromptBoxControls.js';
+import { resolveControlDefaults, reconcileControlsFromInjection } from '../components/Organisms/MpiPromptBox/PromptBoxControls.js';
+import { ratioSettingsFromParams } from '../utils/promptReuse.js';
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { ce } from '../utils/dom.js';
 
@@ -425,12 +426,17 @@ function _dispatchNextCue() {
  * and the Flow s_flowInputs snapshot). `operations` is excluded — it is the perOp store,
  * carried by the `op` bucket; merging it back on reuse would clobber sibling ops.
  *
- * ponytail: cloned from the (300ms-debounced) modelSettings, so a control changed
- * <300ms before dispatch can still snapshot one stale value; the ratio/batch reconcile
- * below covers those two. Upgrade path if it ever bites: snapshot from control
- * getValue() (Flow-style), which needs a ratioSelector compound-key remap.
+ * Cloned from the (300ms-debounced) modelSettings, so the project's copy of a control can
+ * be stale — or, on an agent dispatch, never have been what ran at all. Everything the
+ * run injected is therefore reconciled against `injectionParams` (MPI-556): ratio and
+ * batch explicitly below, every other injecting control through
+ * `reconcileControlsFromInjection`, and `qualityTier` — which injects nothing — from the
+ * size that shipped.
+ *
+ * Exported for `tests/control-snapshot-injection.test.cjs`; nothing else calls it from
+ * outside this module.
  */
-function _snapshotControlState(model, operation, injectionParams = {}, ctx = {}) {
+export function _snapshotControlState(model, operation, injectionParams = {}, ctx = {}) {
     if (!state.currentProject || !model?.id) return undefined;
     const width  = injectionParams.Width  || injectionParams.width  || 0;
     const height = injectionParams.Height || injectionParams.height || 0;
@@ -461,6 +467,23 @@ function _snapshotControlState(model, operation, injectionParams = {}, ctx = {})
     const _op = { ..._defaults.op, ..._clonePlain(getOpSettings(state.currentProject, model.id, operation)) };
     const _model = { ..._defaults.model, ..._clonePlain(_ms) };
     delete _model.operations;
+    // MPI-556: everything above still describes the PROJECT. Raw injectionParams is the
+    // documented escape hatch and always wins over resolved values, so an agent dispatch
+    // can differ from the open project on any control — and the sidecar then describes a
+    // generation that did not happen. Ask each control what the run's own injection means
+    // and correct the buckets. A PromptBox dispatch injects exactly what these controls
+    // produced, so this is a no-op there; only a contradicted control moves.
+    reconcileControlsFromInjection({ shared: _shared, op: _op, model: _model },
+        injectionParams, model, operation, ctx);
+    // qualityTier is the one control the pass above cannot reach: it injects nothing, so
+    // only the run's own pixels place it. The per-model bucket is what both the tier radio
+    // and Reuse read (SCHEMA 4), and it is exactly the copy that carried the PROJECT's 2k
+    // into a run that came out at 1k. Record both places from the size that shipped.
+    const _runTier = ratioSettingsFromParams(injectionParams, {}, model)?.qualityTier;
+    if (_runTier) {
+        _model.qualityTier = _runTier;
+        if (_shared.ratioSelector) _shared.ratioSelector = { ..._shared.ratioSelector, qualityTier: _runTier };
+    }
     const controlState = {};
     if (Object.keys(_shared).length) controlState.shared = _shared;
     if (Object.keys(_op).length) controlState.op = _op;

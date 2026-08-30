@@ -1803,8 +1803,108 @@ export function resolveControlDefaults(model, operation, ctx = {}) {
         if (ctrl.snapshotDefault === false) continue;
         const value = _resolveDefault(ctrl, id, opts);
         if (value === undefined) continue;
-        const bucket = ctrl.scope === 'perOp' ? 'op' : ctrl.scope === 'perModel' ? 'model' : 'shared';
-        buckets[bucket][id] = value;
+        buckets[_bucketOf(ctrl)][id] = value;
+    }
+    return buckets;
+}
+
+/** Which reuse bucket a control's value belongs in. */
+function _bucketOf(ctrl) {
+    return ctrl.scope === 'perOp' ? 'op' : ctrl.scope === 'perModel' ? 'model' : 'shared';
+}
+
+/**
+ * What `value` WOULD inject, as a pure function of the value — the control's own
+ * `getInjectionParams` called against a copy of itself with `value` swapped in and the
+ * mounted element removed (the two live-reading controls, ratio and batch, prefer
+ * `_instance.el.getValue()` over `this.value`, which would make the probe read the DOM
+ * instead of the value asked about). Everything else on the control rides along, so a
+ * mount-time flag the injection depends on — `audioMode`/`useAudio`'s `_audioPresent` —
+ * still answers for the run that actually happened.
+ */
+function _probeInjection(ctrl, value) {
+    try {
+        const out = ctrl.getInjectionParams.call({ ...ctrl, value, _instance: null });
+        return out && Object.keys(out).length ? out : null;
+    } catch {
+        return null;
+    }
+}
+
+/** Injected values compare by identity, with a float tolerance. */
+function _sameInjected(a, b) {
+    if (typeof a === 'number' && typeof b === 'number') return Math.abs(a - b) < 1e-6;
+    return a === b;
+}
+
+/**
+ * The control value that would produce the run's injected keys, or `undefined` when
+ * none can be found. Search space is the injected values themselves: every passthrough
+ * control (`v` → `{ Key: v }`, with clamps and coercions) inverts on the first try, and
+ * a control that MAPS its value to something else (`controlType`'s id → index) fails the
+ * round-trip and is reported unrecoverable rather than guessed at.
+ */
+function _invertInjection(ctrl, asRun, injectionParams) {
+    const candidates = Object.keys(asRun)
+        .filter(k => k in injectionParams)
+        .map(k => injectionParams[k]);
+    for (const candidate of candidates) {
+        const out = _probeInjection(ctrl, candidate);
+        if (!out) continue;
+        const agrees = Object.entries(out)
+            .every(([k, v]) => !(k in injectionParams) || _sameInjected(injectionParams[k], v));
+        if (agrees) return candidate;
+    }
+    return undefined;
+}
+
+/**
+ * Correct a control snapshot against what the run ACTUALLY injected (MPI-556). Mutates
+ * and returns `buckets`.
+ *
+ * The buckets `resolveControlDefaults` + the project stores produce describe the OPEN
+ * PROJECT. Raw `injectionParams` is the documented escape hatch and always wins over
+ * resolved values, so an agent dispatch (`generation.submit`, `/connector/generate`) can
+ * differ from the project on every control — and the sidecar then describes a generation
+ * that did not happen, which Reuse faithfully restores. Proven live 2026-08-13 on a
+ * klein-4b run with raw `Input_Style_Selector.selector=7`: the image was visibly styled,
+ * the sidecar said Style=None.
+ *
+ * No hand-maintained key list: each control already owns its injection map, so the run's
+ * value is recovered by asking the control itself. Only a control the run CONTRADICTS is
+ * touched — a PromptBox dispatch injects exactly what these controls produced, so it
+ * reconciles to a no-op. A contradiction that cannot be inverted deletes the key: a
+ * missing value leaves Reuse on the current one, a wrong value fabricates history.
+ *
+ * `ratio` and `batch` are excluded here (`snapshotDefault: false`) — the snapshot
+ * reconciles their compound/live shapes from `injectionParams` directly. `qualityTier`
+ * opts out too and injects nothing at all; only the run's own pixels place it, which is
+ * generationService's job.
+ *
+ * @param {{shared: Object, op: Object, model: Object}} buckets
+ * @param {Object} injectionParams the run's own frozen injection record
+ * @param {object|null} model
+ * @param {string} operation
+ * @param {{historyMode?: boolean}} [ctx]
+ * @returns {{shared: Object, op: Object, model: Object}} the same buckets, corrected
+ */
+export function reconcileControlsFromInjection(buckets, injectionParams = {}, model = null, operation = '', ctx = {}) {
+    if (!injectionParams || !Object.keys(injectionParams).length) return buckets;
+    for (const id of visibleControlIds(model, operation, ctx)) {
+        const ctrl = PROMPT_BOX_CONTROLS[id];
+        if (!ctrl?.getInjectionParams || ctrl.snapshotDefault === false) continue;
+        const bucket = buckets[_bucketOf(ctrl)];
+        if (!bucket || !(id in bucket)) continue;
+
+        const asRecorded = _probeInjection(ctrl, bucket[id]);
+        if (!asRecorded) continue;
+        const contradicted = Object.entries(asRecorded)
+            .some(([k, v]) => k in injectionParams && !_sameInjected(injectionParams[k], v));
+        if (!contradicted) continue;
+
+        const asRun = _invertInjection(ctrl, asRecorded, injectionParams);
+        if (asRun !== undefined) bucket[id] = asRun;
+        else delete bucket[id];
     }
     return buckets;
 }

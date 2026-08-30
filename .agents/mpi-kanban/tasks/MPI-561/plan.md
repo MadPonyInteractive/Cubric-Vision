@@ -17,9 +17,21 @@ members turn out to be the better unit, delete this umbrella instead.
 
 ## Current State
 
-Both `planned`, neither started. **MPI-547 is BLOCKED BY MPI-556**, found 2026-08-13 during
-MPI-546's live verification and recorded on both cards. That dependency is the reason this
-umbrella exists; it is not a soft preference about ordering.
+**Phase 1 is DONE and closed (2026-08-30). MPI-556 is `done`, verified live.** A krea2 run
+dispatched with raw `Input_Style_Selector` keys and forced to 1k, in a project seeded to 2k,
+records the RUN in its sidecar and reuses as Soft Water Color / 0.65 / 1k — evidence in
+`tasks/MPI-556/validation.md`.
+
+**MPI-547 is unblocked.** Phase 2 can start: the named-parameter layer now inherits a
+snapshot that describes what ran, so a phase-2 generation survives a Reuse round trip.
+One thing to carry into it: a control that MAPS its value rather than passing it through
+(`controlType`: id → index) is DROPPED from the snapshot rather than recorded wrong. If
+phase 2 wants that one reused, it needs a named parameter of its own, not more snapshot
+machinery.
+
+Original framing, kept because it is why this umbrella exists: **MPI-547 is BLOCKED BY
+MPI-556**, found 2026-08-13 during MPI-546's live verification and recorded on both cards.
+That dependency is not a soft preference about ordering.
 
 MPI-556 is proven live, both halves, on 2026-08-13:
 
@@ -90,4 +102,23 @@ ownership from each member's `files.json` at dispatch time, not from this list.
 
 ## Plan Drift
 
-(none yet)
+- **2026-08-30 — phase 1 took neither of the two designs this plan weighed.** "Snapshot from
+  `getValue()`" and "reconcile per injected key" both assume the snapshot has to KNOW the
+  mapping. It does not: every control already owns its injection map, so
+  `reconcileControlsFromInjection` asks the control what its recorded value would have
+  injected, and round-trips the run's injected value back through the same function to
+  recover what actually ran. No hand-maintained list, no `ratioSelector` compound-key remap,
+  and a PromptBox dispatch reconciles to a provable no-op. A control that MAPS its value
+  rather than passing it through (`controlType`: id → index) cannot be inverted and is
+  DROPPED — absent leaves Reuse on the current value, wrong fabricates history.
+- **2026-08-30 — the `qualityTier` half was diagnosed backwards on the card.** The card says
+  the SHARED copy is live and `modelSettings.qualityTier` is leftover. As of SCHEMA 4 /
+  MPI-133 it is the other way round: the tier control mounts from the per-model bucket and
+  only falls back to `shared.ratioSelector.qualityTier` for unmigrated projects, and
+  `buildPromptReuseSettings` prefers the model bucket too — which is why the project's 2k
+  won over the run's 1k. `js/data/projectModel.js:402` still documents the old shape and is
+  the stale comment. Neither copy is leftover in practice, so the snapshot now writes BOTH
+  from the size the run shipped at.
+- **2026-08-30 — `_snapshotControlState` is now exported** from `js/services/generationService.js`,
+  for `tests/control-snapshot-injection.test.cjs` only. It is what lets the two live-proven
+  cases be checked end to end without a GPU.

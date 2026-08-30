@@ -52,6 +52,18 @@ is **no key-list to edit** anywhere. Concretely:
    is the one gate, shared with the PromptBox's own mount loop. That matters most for
    `shared`, which is cross-model: recording a hidden `motionIntensity` on an LTX run and
    reusing it would reset the value the user set on Wan.
+   **Then the buckets are reconciled against what the run INJECTED** (MPI-556,
+   `reconcileControlsFromInjection`). Everything above still describes the open PROJECT, and
+   raw `injectionParams` — the agent escape hatch — always wins over resolved values, so an
+   agent dispatch can differ from the project on any control. The reconcile asks each control
+   what its recorded value WOULD have injected and, where the run disagrees, round-trips the
+   injected value back through the same function to recover what actually ran. **Your
+   `getInjectionParams()` is therefore run in reverse**, against a copy of the control with
+   `value` swapped in and `_instance` nulled — so keep it a pure function of `this.value`
+   (mount-time flags on `this` are fine, they ride along; reading `_instance.el` is not, and
+   `ratio`/`batch` prefer the live element only because they opt out here). A control that
+   MAPS its value rather than passing it through (`controlType`: id → index) cannot be
+   inverted and is dropped from the sidecar rather than recorded wrong.
 3. **Reuse restore.** `buildPromptReuseSettings`' fast path clones `controlState.model`
    wholesale back into `modelUpdates`; `applyPromptReuseSettings → setModelSettings`
    shallow-merges it (leaving sibling ops untouched). Your control comes back.

@@ -259,7 +259,14 @@ export function buildGalleryPromptReusePayloads(group = {}) {
     };
 }
 
-function _ratioSettingsFromParams(params = {}, item = {}, model = {}) {
+/**
+ * Recover {selectedRatio, orientation, qualityTier} from a run's own params/pixels.
+ *
+ * Exported for generationService (MPI-556): `qualityTier` injects NOTHING, so the only
+ * evidence of the tier a run used is the size it came out at — and the snapshot must
+ * record the run's tier, not the project's. One table walk, one caller each side.
+ */
+export function ratioSettingsFromParams(params = {}, item = {}, model = {}) {
     const width = _number(params.Width ?? params.width ?? item.pixelDimensions?.w);
     const height = _number(params.Height ?? params.height ?? item.pixelDimensions?.h);
     let label = params.Ratio_Label ?? params.ratioLabel ?? item.ratioLabel ?? '';
@@ -370,7 +377,7 @@ export function buildPromptReuseSettings(payload = {}, model = {}) {
     const sharedUpdates = {};
     const opUpdates = {};
 
-    const ratioSelector = _ratioSettingsFromParams(params, payload.item, model);
+    const ratioSelector = ratioSettingsFromParams(params, payload.item, model);
     if (ratioSelector) {
         sharedUpdates.ratioSelector = ratioSelector;
     } else if (_hasComponent(components, 'ratio') || _hasComponent(components, 'qualityTier')) {

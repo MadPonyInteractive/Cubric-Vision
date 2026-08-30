@@ -58,7 +58,7 @@ Say what changed in one line *after* the blocks, never instead of them.
 | POST | `/list-projects` | Every known project with id, name, folder path |
 | POST | `/get-project` | One project's full record including `itemGroups` |
 | POST | `/create-project` | New project |
-| POST | `/update-project` | Write a project record back |
+| POST | `/update-project` | Write a project record back — body is `{folderPath, updates}` |
 | POST | `/update-project-settings` | Settings only |
 | POST | `/validate-project` | Integrity check |
 | POST | `/delete-project` | Remove a project |
@@ -68,6 +68,12 @@ Say what changed in one line *after* the blocks, never instead of them.
 | POST | `/project-notes`, `/project-notes/save` | Read and write `project.md` |
 
 Start with `/list-projects` to get an id, then `/get-project` for its contents.
+
+**`/update-project` merges `updates`, not a whole project.** The body is
+`{folderPath, updates}` and the route spreads `updates` over the record. Send the
+project under any other key — `project`, say — and it spreads `undefined`, writes
+nothing, and still answers `{"success": true}`. Read the field back from
+`project.json` before trusting a write.
 
 ### Creating a project
 
@@ -438,10 +444,13 @@ float). The authority is each control's `getInjectionParams()` in
 `js/components/Organisms/MpiPromptBox/PromptBoxControls.js`.
 
 Raw `injectionParams` always wins over anything the app resolves, which makes
-it the escape hatch for a parameter with no named form yet. **It does not
-reach the sidecar's `controlState`**, so a generation steered this way records
-the project's saved controls instead of the ones it ran with, and Reuse
-restores the wrong thing (MPI-556).
+it the escape hatch for a parameter with no named form yet. **It now reaches the
+sidecar's `controlState`** (MPI-556): the snapshot reconciles every control
+against what the run actually injected, so a generation steered this way is
+reused with the settings it ran with, not the project's. A control that maps its
+value rather than passing it through — `controlType`'s id → index — cannot be
+recovered from the injected value and is left out of the sidecar rather than
+recorded wrong, so Reuse leaves that one control where it currently sits.
 
 Success returns the item, so a follow-up run can consume it:
 

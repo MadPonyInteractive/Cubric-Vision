@@ -2,6 +2,10 @@
   "schema": "mpi-kanban/files/v1",
   "files": [
     "js/services/generationService.js",
-    "js/utils/promptReuse.js"
+    "js/utils/promptReuse.js",
+    "js/components/Organisms/MpiPromptBox/PromptBoxControls.js",
+    "tests/control-snapshot-injection.test.cjs",
+    ".claude/skills/cubric-vision/SKILL.md",
+    "docs/playbooks/common/prompt-box-controls.md"
   ]
 }
