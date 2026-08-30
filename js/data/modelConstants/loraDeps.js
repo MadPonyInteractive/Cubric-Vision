@@ -40,14 +40,23 @@ export const loraDeps = {
         // 128`, per-layer ranks averaging 31) so it weighs 0.41GB instead of 1.82GB.
         // Bench-judged better on the turbo path: less noise, cleaner picture.
         //
-        // **THE STRENGTH SCALE CHANGED AND THE NUMBER DID NOT.** v0.1 baked
-        // `peft alpha/r=0.125` into lora_B; v1.0 bakes a flat `scale 1.0` (alpha 128,
-        // folded into lora_B). The graph still applies `0.75 if a else 0.2`
-        // (`MpiMath` #343 fl2va / #453 r2va), so the same 0.75 now delivers EIGHT TIMES
-        // the delta it did on v0.1. That is deliberate on the turbo path — 0.75 on v1.0
-        // is what was bench-tested and adopted. The non-turbo 0.2 rode along unretuned
-        // and is 8x its old effective value on the 25-step path; equal-effect would be
-        // 0.025. Do not read either number as carried over: they are on a new curve.
+        // **STRENGTHS ARE NOT PORTABLE BETWEEN THE TWO, AND THERE IS NO CONVERSION.**
+        // The graph applies `0.75 if a else 0.2` (`MpiMath` #343 fl2va / #453 r2va),
+        // unchanged across the swap. Measured `||B@A||_F` per module, all 50 blocks,
+        // 208 pairs: v1.0 applies a **median 4.75x** the perturbation v0.1 did at the
+        // same strength — but p10 1.17, p90 10.87, range 0.74-19.9. It is a different
+        // distill with its own per-layer profile, NOT a rescale, so no single number
+        // converts a v0.1 strength into a v1.0 one. Do not compute one.
+        //
+        // Read the metadata `baked_scale` (0.125 on v0.1, 1.0 here) as bookkeeping about
+        // what was folded into lora_B, never as a strength ratio: it predicts 8x and the
+        // measurement says 4.75x median with a 27x spread across layers.
+        //
+        // Magnitude is not quality here and that is the whole point: 0.75 on v1.0 moves
+        // the weights ~4.7x further than 0.75 on v0.1 and looks CLEANER. Both shipped
+        // numbers are bench-judged, not derived — 0.75 on v1.0 was tested and adopted
+        // 2026-08-30; 0.2 is MPI-550's tuned non-turbo value, carried over deliberately.
+        // The 25-step path has not been re-judged on this weight; one run settles it.
         //
         // v0.1's other findings stand until re-measured on v1.0: at strength 1.0 the AUDIO
         // degrades badly (audio breaks before the picture does on H3), and 4 steps — what

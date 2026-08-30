@@ -7,7 +7,11 @@
 - [x] Swap the dep in loraDeps.js (filename, size, bytes, sha256, url, mirrorUrl)
 - [x] Update docs/models/h3/turbo.md
 - [x] Release note in docs/releases/UNRELEASED.md
-- [ ] DECISION (user): non-turbo strength - 0.2 is 8x its old effective value on this weight
+- [x] Non-turbo strength stays 0.2. The 8x I derived from baked_scale was WRONG: measured
+      ||B@A||_F over 208 module pairs gives median 4.75x with a 0.74-19.9x spread, so no
+      conversion factor exists and 0.025 was never the equal-effect value. 0.2 is MPI-550s
+      bench-tuned number and stands. OPEN, not blocking: the 25-step path has not been
+      re-judged on this weight - one non-turbo run closes it.
 - [ ] DECISION (user): whether to delete the v0.1 weight from R2 (breaks older releases)
 
 ## Verified

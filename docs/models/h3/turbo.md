@@ -42,11 +42,29 @@ Same publisher, same conversion author, same 416-tensor coverage (`diffusion_mod
 
 Adopted on a bench read: less noise, cleaner picture, at a quarter of the download.
 
-**The scale moved and the strength number did not — so 0.75 is now 8x what it was.** The
-graph still applies `0.75 if a else 0.2` (`MpiMath` #343 fl2va, #453 r2va). On the turbo
-branch that is the intended, tested value: 0.75-on-v1.0 is what was judged good. **The
-non-turbo 0.2 was NOT retuned** and is likewise 8x its old effective delta on the 25-step
-path; equal-effect against v0.1 would be 0.025. Untested at the time of the swap.
+**Strengths do not port between the two, and no conversion factor exists.** The graph
+applies `0.75 if a else 0.2` (`MpiMath` #343 fl2va, #453 r2va), unchanged across the swap.
+
+Measured rather than inferred — `||B@A||_F` per module (the quantity a strength multiplier
+scales), every block, 208 matched pairs:
+
+| | vs v0.1 at the same strength |
+|---|---|
+| **v1.0 4-step (shipped)** | median **4.75x**, mean 5.66, p10 1.17, p90 10.87, range 0.74–19.9 |
+| v1.0 8-step (rejected) | median **0.40x** |
+
+The spread is the finding: this is a different distill with its own per-layer profile, not
+a rescale, so **no single number converts a v0.1 strength into a v1.0 one.** Do not compute
+one. In particular do not read the metadata `baked_scale` (0.125 → 1.0) as a strength
+ratio — it predicts 8x, and the measurement says 4.75x median across a 27x spread. That
+mistake was made and corrected here on 2026-08-30.
+
+**Magnitude is not quality, and this weight is the proof:** 0.75 on v1.0 moves the weights
+~4.7x further than 0.75 on v0.1 did, and the picture is *cleaner*. Both shipped strengths
+are bench-judged, never derived — 0.75 tested and adopted with this weight; 0.2 is
+MPI-550's tuned non-turbo value, deliberately left alone. What is genuinely open is that
+the 25-step path now sees ~4.7x the perturbation MPI-550 tuned against (about 1.3x what the
+old *turbo* path applied), and has not been re-judged on it. One non-turbo run closes that.
 
 The 8-step v1.0 sibling (`..._8step_v1.0_resized_avg_rank_24_bf16`, `baked_scale` 0.0625)
 was tested the same day and **rejected: same quality, more time.**
