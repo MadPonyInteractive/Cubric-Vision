@@ -24,6 +24,7 @@ import { pluginForOperation } from '../data/pluginsRegistry.js';
 import { usesOrientation } from '../utils/ratios.js';
 import { resolveControlDefaults, reconcileControlsFromInjection } from '../components/Organisms/MpiPromptBox/PromptBoxControls.js';
 import { ratioSettingsFromParams } from '../utils/promptReuse.js';
+import { labelFromComfyOutputUrl } from '../utils/comfyOutputUrls.js';
 import { MpiToast } from '../components/Primitives/MpiToast/MpiToast.js';
 import { ce } from '../utils/dom.js';
 
@@ -1111,6 +1112,32 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
             }
         }
 
+        // MPI-663 — a multi-audio run (Stems) lands four otherwise identical cards, and
+        // the only thing telling Bass from Vocals is the name the GRAPH gave each file
+        // (`filename_prefix: stems/Bass` → `Bass_00001_.flac`). Carry that label into the
+        // card name; every other run keeps the op's own prefix. Gated on the audio +
+        // multi-output shape so an image batch (one node, N files, `Cubric_00012_.png`)
+        // is untouched.
+        // MPI-663 — Stems' "Combine into one file". The run saved N stems and the user
+        // asked for one track, so the N urls collapse to a SINGLE card whose file is their
+        // sum; save-generation does the mixing (`mixViewUrls` → ffmpeg amix, normalize=0).
+        //
+        // Gated on what actually LANDED, not on the toggle alone. The control keeps its
+        // value while the frame has it disabled — greying a control must not decide for
+        // the user — so a run that ends up with one output has nothing to combine and is
+        // just a normal single card. This is also what makes the card NAME come out right:
+        // with one url left, `_wantsPerOutputLabel` is false and the card takes the op's
+        // own prefix rather than being named after whichever stem happened to be first.
+        const _mixUrls = (model.mediaType === 'audio'
+            && config.flowInputs?.combine === true
+            && urls.length > 1)
+            ? urls.slice()
+            : null;
+        if (_mixUrls) urls = [_mixUrls[0]];
+
+        const _wantsPerOutputLabel = model.mediaType === 'audio' && urls.length > 1;
+        const _multiAudioLabel = (url) => (_wantsPerOutputLabel ? labelFromComfyOutputUrl(url) : null);
+
         // Build one item per output URL. Each item gets its own uuid (first reuses
         // the pre-allocated itemId so existing telemetry stays consistent).
         const builtItems = [];
@@ -1141,12 +1168,16 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         // (video is master). Only on the first/primary video item;
                         // null when the source had no audio. Ignored for images.
                         audioViewUrl: (i === 0 && model.mediaType === 'video') ? (outputInfo.audioUrl || null) : null,
+                        // MPI-663: the stems to sum into THIS file, when the run is a
+                        // combine. Null on every other run, and there is only ever one
+                        // item in the loop when it is set.
+                        mixViewUrls: _mixUrls,
                         itemId: thisItemId,
                         operation,
                         // Filename only — the card's name, never the op identity below it.
                         // See getFilePrefix: the strip code wins over the internal key
                         // (MPI-660).
-                        filePrefix: getFilePrefix(operation),
+                        filePrefix: _multiAudioLabel(url) || getFilePrefix(operation),
                         meta: { prompt: positive, negativePrompt: negative, negativeAudioPrompt: negativeAudio, modelId: model.id, seed: exec.seed ?? -1, generationSettings },
                         generationMs: elapsedMs,
                         pixelDimensions: resolvedDims,

@@ -1696,6 +1696,18 @@ export function runCommand(payload) {
                 workflow[id]._meta?.title?.toLowerCase() === 'output_audio'
             )
         );
+        // MPI-663 (Stems): a workflow whose PRODUCT is several audio files — one card
+        // each, exactly like Output_Image_2 / Output_video_2. `_collectComfyOutputUrls`
+        // only reads images/gifs/videos, so these need the audio reader and their own
+        // set. Numbered from `_1`, NOT base + `_2`, because the bare `Output_Audio` is
+        // taken: it is the video mux side-channel above, and an audio-output op has its
+        // single-file case promoted from that side channel (MPI-573). Keeping the two
+        // titles disjoint is what stops a stem being swallowed by the mux path.
+        const outputAudioMultiNodeIds = new Set(
+            Object.keys(workflow).filter(id =>
+                workflow[id]._meta?.title?.toLowerCase().startsWith('output_audio_')
+            )
+        );
 
         // `Output_prompt` capture (MPI-242) — a `PreviewAny` node carrying the exact
         // string the text encoder saw. A workflow that has one is declaring "the
@@ -2150,6 +2162,10 @@ export function runCommand(payload) {
                 }
                 if (outputAudioNodeIds.has(nodeId)) {
                     audioOutputUrl = _collectComfyAudioUrl(nodeOutput, workingPayload.forceLocal === true) || audioOutputUrl;
+                }
+                if (outputAudioMultiNodeIds.has(nodeId)) {
+                    const _audioUrl = _collectComfyAudioUrl(nodeOutput, workingPayload.forceLocal === true);
+                    if (_audioUrl) outputUrls.push(_audioUrl);
                 }
                 if (outputPromptNodeIds.has(nodeId)) {
                     promptTextOutput = readComfyOutputText(nodeOutput) || promptTextOutput;

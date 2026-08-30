@@ -98,7 +98,11 @@ test('the tool routes name their output in the same convention as the ops', () =
 // silently falls back to the op key — the exact bug this fixes, back again.
 test('the prefix survives the trip from the registry to the sequence allocator', () => {
     const gen = read('js/services/generationService.js');
-    assert.match(gen, /filePrefix: getFilePrefix\(operation\)/,
+    // MPI-663 put a per-output label in FRONT of this as a `||` fallback (a multi-audio
+    // run names each card for the stem the graph saved), so the op prefix is no longer
+    // the whole expression — but it must stay the fallback, or every non-stems run loses
+    // its name again.
+    assert.match(gen, /filePrefix: (?:\w+\(url\) \|\| )?getFilePrefix\(operation\)/,
         'generationService must resolve the prefix for the op it is running');
 
     const svc = read('js/services/projectService.js');

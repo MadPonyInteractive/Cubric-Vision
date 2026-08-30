@@ -127,6 +127,54 @@ export function mapDeclaredValue(f, v) {
 export const isInjectionParam = (id) => /^input_/i.test(String(id));
 
 /**
+ * Which declared fields must render DISABLED right now, given the current values.
+ *
+ * MPI-663 — Stems is the first flow whose toggles CONSTRAIN EACH OTHER: at least one
+ * stem must stay selected (a run with none selected blocks every branch, succeeds, and
+ * lands nothing — the silent-nothing trap 02-media-io.md § Self-gating is not the same
+ * as HANDLED), and "combine into one file" means nothing until two are. Both are said
+ * declaratively so a third-party Flow can express them too — a predicate in a FlowDef
+ * would be a thing only a first-party flow can ship.
+ *
+ * Two clauses, one shared `group`:
+ *   `{ group: 'stems', minActive: 1 }`      — on each member. A member that is ON and is
+ *                                             the LAST one on is disabled: turning it off
+ *                                             would break the floor. The others stay live,
+ *                                             because turning one ON never can.
+ *   `{ enabledWhen: { group: 'stems', atLeast: 2 } }`
+ *                                           — on a field OUTSIDE the group. Disabled while
+ *                                             fewer than N members are on.
+ *
+ * A disabled field keeps its VALUE — greying a control is not the same as deciding for
+ * the user, and the value comes back the moment the constraint clears. Anything acting on
+ * one must therefore re-check the condition rather than trust the flag (generationService
+ * only combines when more than one file actually landed).
+ *
+ * @param {Object[]} fields  the declarations
+ * @param {Object} values    current values keyed by field id
+ * @returns {Set<string>}    ids to render disabled
+ */
+export function disabledFieldIds(fields = [], values = {}) {
+    const decls = (fields || []).filter(f => f?.id);
+    const activeIn = (group) => decls
+        .filter(f => f.group === group && values[f.id] === true)
+        .map(f => f.id);
+
+    const out = new Set();
+    decls.forEach((f) => {
+        if (f.group && Number.isFinite(f.minActive)) {
+            const on = activeIn(f.group);
+            if (values[f.id] === true && on.length <= f.minActive) out.add(f.id);
+        }
+        const rule = f.enabledWhen;
+        if (rule?.group && Number.isFinite(rule.atLeast)) {
+            if (activeIn(rule.group).length < rule.atLeast) out.add(f.id);
+        }
+    });
+    return out;
+}
+
+/**
  * Split one surface's declared values into `{inputs, injectionParams}`, applying
  * any hidden `mapTo` range on the way through.
  *

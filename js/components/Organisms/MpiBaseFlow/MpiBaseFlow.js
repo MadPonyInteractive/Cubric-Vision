@@ -24,7 +24,7 @@ import { getCommand } from '../../../data/commandRegistry.js';
 import { flowModelSlots, flowModelIds, setFlowModel } from '../../../data/flowsRegistry.js';
 import { disambiguatedName } from '../../../data/modelRegistry.js';
 import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
-import { buildField, mapDeclaredValue, isInjectionParam } from '../../../utils/declaredFields.js';
+import { buildField, mapDeclaredValue, isInjectionParam, disabledFieldIds } from '../../../utils/declaredFields.js';
 
 /**
  * MpiBaseFlow — THE flow frame: a step carousel (MPI-306 Phase 1).
@@ -1093,9 +1093,31 @@ export const MpiBaseFlow = ComponentFactory.create({
         }
 
         /** onChange for a flow-level field: an `action` runs, everything else stores. */
+        /**
+         * Grey the toggles the CURRENT VALUES forbid (MPI-663).
+         *
+         * Stems is the first flow whose toggles constrain each other — one stem must
+         * stay on, and Combine means nothing until two are. The rule itself is declared
+         * (`group`/`minActive`, `enabledWhen`) and evaluated in `disabledFieldIds`; this
+         * only paints the answer, through the primitive's own `setDisabled`, exactly as
+         * `_paintEnhance` does for the enhance button.
+         *
+         * Values are never rewritten here. A disabled control keeps what it holds and
+         * comes back live the moment the constraint clears.
+         */
+        function _paintFieldConstraints() {
+            const ids = disabledFieldIds(_fields, _fieldValues);
+            _fields.forEach((f) => {
+                const wrap = _liveFields.get(f.id);
+                if (!wrap) return;
+                qs('.mpi-base-flow__field-toggle-btn', wrap)?.setDisabled?.(ids.has(f.id));
+            });
+        }
+
         function _onFlowField(f, val) {
             if (f.action === 'enhance') { _runEnhance(f); return; }
             _writeDeclaredField(f.id, val);
+            _paintFieldConstraints();
         }
 
         // The `settings` action and its `_openSettings()` lived here (MPI-504) and were
@@ -1283,6 +1305,10 @@ export const MpiBaseFlow = ComponentFactory.create({
                 _liveFields.set(f.id, node);
                 stack.appendChild(node);
             });
+            // Paint the constraints on the FIRST render too, not only after a change:
+            // a flow reopened from Reuse can mount straight into a constrained state
+            // (one stem selected, so that toggle is already locked). MPI-663.
+            _paintFieldConstraints();
             return stack;
         }
 

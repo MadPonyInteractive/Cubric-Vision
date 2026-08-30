@@ -182,6 +182,28 @@ A multi-output flow captures every `Output_<Type>*` node's result as its own gal
 The capture filter is **prefix-match**: `Output_Image` / `Output_Image_2` / `Output_video_2` all
 qualify; `output_preview` (multi-stage) and `output_audio` (side-channel) stay EXACT.
 
+### 🔴 Multiple AUDIO outputs number from `_1`, not from the base (MPI-663)
+
+Audio is the one type whose base title is already taken. `Output_Audio` is the **video mux
+side-channel** — the executor matches it EXACTLY, collects it into `audioOutputUrl` (not into
+`outputUrls`), and `generationService` promotes it to the run's product only when the op
+declares `mediaType: 'audio'` and nothing else landed (MPI-573). So a flow saving N audio
+files titles them **`Output_Audio_1 … Output_Audio_N`**: numbered from `_1`, keeping the bare
+title out of the graph entirely, because a stem carrying it would be swallowed by the mux path
+instead of becoming a card.
+
+They also need their own collector. `collectComfyOutputUrls` reads `images` / `gifs` /
+`videos` and knows nothing about `audio`, so `outputAudioMultiNodeIds` in `commandExecutor`
+matches `output_audio_` by prefix and pushes each node's file through the audio reader.
+
+**Naming the cards is part of the job, not polish.** N outputs of one op share one
+`getFilePrefix(operation)`, so four stems arrive as four cards with the same name and the user
+has to open each to find the vocal. The graph is the only thing that knows: give each save a
+`filename_prefix` naming what it is (`stems/Bass` → `Bass_00001_.flac`) and
+`labelFromComfyOutputUrl` reads it back off the /view URL
+(`js/utils/comfyOutputUrls.js`, pinned by `tests/multi-audio-card-label.test.cjs`). The
+fallback to the op prefix stays — the label only wins on a multi-output audio run.
+
 **The kept count is only known at completion** — outputs self-gate on input presence, so the flow
 declares NO fixed N. `submitFlowGeneration` allocates exactly ONE "Generating…" placeholder (the
 engine emits one live latent at a time, so one in-progress card is all that's honest), and the

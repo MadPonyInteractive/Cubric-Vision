@@ -101,6 +101,11 @@ export const UNIVERSAL_WORKFLOWS = {
     flowChatterBox: {
         workflow: 'flow_chatter_box.json',
     },
+    // MPI-663 — Stems. Seven nodes, no model loader: an MpiLoadAudio path into
+    // AudioSeparation (Hybrid Demucs v3), out through four SaveAudioAdvanced saves.
+    flowStems: {
+        workflow: 'flow_stems.json',
+    },
     // MPI-504 — Krea2 t2i, plus a SAM3 + Klein 4B pass that removes the head from the
     // front body panel. Both run on models the flow declares in `requiredModels`, so
     // this op adds no download of its own beyond the `face-yolov8n` dep.

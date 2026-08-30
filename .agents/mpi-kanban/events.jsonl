@@ -3628,3 +3628,4 @@
 {"schema": "mpi-kanban/event/v1", "id": "MPI-663", "type": "task.updated", "at": "2026-08-30T16:26:29Z", "actor": "claude", "summary": "Compact plan and brief attached. Graph prototyped and accepted on the bench; card is ready to pick up."}
 {"schema": "mpi-kanban/event/v1", "id": "MPI-664", "type": "task.updated", "at": "2026-08-30T16:27:28Z", "actor": "claude", "summary": "Brief and capability research attached. Model verified working locally at fp16."}
 {"schema": "mpi-kanban/event/v1", "id": "MPI-664", "type": "attention.required", "at": "2026-08-30T16:27:28Z", "actor": "claude", "summary": "Needs a product call on how the Flow composes the caption from dropdowns, and where an LLM would run."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-663", "type": "task.moved", "at": "2026-08-30T16:32:30Z", "actor": "claude", "from": "todo", "to": "doing", "summary": "Picked up: wiring the Stems flow end to end."}

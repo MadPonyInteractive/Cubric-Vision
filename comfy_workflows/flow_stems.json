@@ -31,7 +31,7 @@
   "28": {
     "inputs": {
       "passthrough": [
-        "11",
+        "36",
         0
       ]
     },
@@ -45,8 +45,8 @@
       "filename_prefix": "stems/Drums",
       "format": "flac",
       "audio": [
-        "11",
-        1
+        "33",
+        0
       ]
     },
     "class_type": "SaveAudioAdvanced",
@@ -59,8 +59,8 @@
       "filename_prefix": "stems/Other",
       "format": "flac",
       "audio": [
-        "11",
-        2
+        "34",
+        0
       ]
     },
     "class_type": "SaveAudioAdvanced",
@@ -73,8 +73,8 @@
       "filename_prefix": "stems/Vocals",
       "format": "flac",
       "audio": [
-        "11",
-        3
+        "35",
+        0
       ]
     },
     "class_type": "SaveAudioAdvanced",
@@ -90,6 +90,94 @@
     "class_type": "MpiLoadAudio",
     "_meta": {
       "title": "Input_Audio"
+    }
+  },
+  "33": {
+    "inputs": {
+      "passthrough": [
+        "37",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "34": {
+    "inputs": {
+      "passthrough": [
+        "38",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "35": {
+    "inputs": {
+      "passthrough": [
+        "39",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "36": {
+    "inputs": {
+      "boolean": true,
+      "input": [
+        "11",
+        0
+      ]
+    },
+    "class_type": "MpiBlocker",
+    "_meta": {
+      "title": "Input_Get_Bass"
+    }
+  },
+  "37": {
+    "inputs": {
+      "boolean": true,
+      "input": [
+        "11",
+        1
+      ]
+    },
+    "class_type": "MpiBlocker",
+    "_meta": {
+      "title": "Input_Get_Drums"
+    }
+  },
+  "38": {
+    "inputs": {
+      "boolean": true,
+      "input": [
+        "11",
+        2
+      ]
+    },
+    "class_type": "MpiBlocker",
+    "_meta": {
+      "title": "Input_Get_Other"
+    }
+  },
+  "39": {
+    "inputs": {
+      "boolean": true,
+      "input": [
+        "11",
+        3
+      ]
+    },
+    "class_type": "MpiBlocker",
+    "_meta": {
+      "title": "Input_Get_Vocals"
     }
   }
 }

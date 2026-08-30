@@ -35,7 +35,7 @@ const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const { probeVideo, probeAudio } = require('../services/ffprobeVideo');
 const { extractImageThumb, extractVideoProxy, writeVideoDerivatives, imageThumbPath, videoProxyPath, IMAGE_RENDITION_PX, VIDEO_PROXY_HEIGHT } = require('../services/ffmpegThumb');
 const { ffmpegPath, ffprobePath, quote } = require('../services/ffmpegBinary');
-const { muxAudioIntoVideo } = require('../services/ffmpegMux');
+const { muxAudioIntoVideo, mixAudioFiles } = require('../services/ffmpegMux');
 const { SCHEMA_VERSION } = require('../js/migrations/projectMigrations');
 
 const projectJsonQueues = new Map();
@@ -1836,7 +1836,7 @@ router.post('/project-media/:projectId/extract', async (req, res) => {
  */
 router.post('/project/save-generation', async (req, res) => {
     try {
-        const { folderPath, comfyViewUrl, audioViewUrl, itemId, operation = 'generated', filePrefix = null, meta = {}, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId, flowId = null, flowInputs = null } = req.body;
+        const { folderPath, comfyViewUrl, audioViewUrl, mixViewUrls = null, itemId, operation = 'generated', filePrefix = null, meta = {}, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId, flowId = null, flowInputs = null } = req.body;
         if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
         if (!comfyViewUrl) return res.status(400).json({ success: false, error: 'comfyViewUrl required' });
         const isVideo = mediaType === 'video';
@@ -1905,8 +1905,30 @@ router.post('/project/save-generation', async (req, res) => {
         const filename = await nextSequence(normalizedFolderPath, mediaDir, prefix, ext);
         const filePath = path.join(mediaDir, filename);
 
-        // Download from ComfyUI server-side
-        await streamDownload(comfyViewUrl, filePath);
+        // Download from ComfyUI server-side.
+        //
+        // MPI-663: `mixViewUrls` is the Stems flow's "Combine into one file" — the run
+        // produced N stem files and the user asked for one track, so they are summed here
+        // instead of landing as N cards. It goes through THIS route rather than a route of
+        // its own because everything after the bytes arrive is identical: the monotonic
+        // sequence, the sidecar, the flow provenance, the project.json write. Only where
+        // the file comes from differs. `comfyViewUrl` stays the first of them, so the
+        // extension derivation above and every failure path below are untouched.
+        if (isAudio && Array.isArray(mixViewUrls) && mixViewUrls.length > 1) {
+            const tmp = [];
+            try {
+                for (let i = 0; i < mixViewUrls.length; i++) {
+                    const p = path.join(mediaDir, `.tmp_mix_${id}_${i}.${ext}`);
+                    await streamDownload(mixViewUrls[i], p);
+                    tmp.push(p);
+                }
+                await mixAudioFiles(tmp, filePath);
+            } finally {
+                await Promise.all(tmp.map(p => fs.remove(p).catch(() => {})));
+            }
+        } else {
+            await streamDownload(comfyViewUrl, filePath);
+        }
 
         // ComfyUI stamps the full API graph into the PNG's `prompt` tEXt chunk.
         // Every user-facing output funnels through this one save, so scrub here.

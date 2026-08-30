@@ -124,6 +124,13 @@
       "filename": "ComfyUI_Fill-ChatterBox",
       "installRequirements": true
     },
+    "audio-separation-nodes-comfyui": {
+      "source": "git-commit",
+      "repo": "christian-byrne/audio-separation-nodes-comfyui",
+      "commit": "ac339561973f0c1e56db2f9d40f11b0fddda6763",
+      "filename": "audio-separation-nodes-comfyui",
+      "installRequirements": false
+    },
     "ComfyUI-MelodramaBox": {
       "source": "git-commit",
       "repo": "MadPonyInteractive/ComfyUI-MelodramaBox",

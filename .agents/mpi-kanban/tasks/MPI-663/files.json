@@ -1,0 +1,32 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "comfy_workflows/raw/flow_stems.json",
+    "comfy_workflows/flow_stems.json",
+    "js/data/flowsRegistry.js",
+    "js/data/commandRegistry.js",
+    "js/data/modelConstants/universal_workflows.js",
+    "js/data/modelConstants/nodesDeps.js",
+    "js/core/operationRegistry.js",
+    "operation_registry.json",
+    "dev_configs/node_lock.json",
+    "scripts/compile-node-deps.mjs",
+    "js/services/commandExecutor.js",
+    "js/services/generationService.js",
+    "js/services/projectService.js",
+    "js/utils/comfyOutputUrls.js",
+    "js/utils/declaredFields.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "routes/projects.js",
+    "services/ffmpegMux.js",
+    "tests/inject-params-titles.test.cjs",
+    "tests/flow-output-filename.test.cjs",
+    "tests/multi-audio-card-label.test.cjs",
+    "tests/flow-field-constraints.test.cjs",
+    "tests/audio-mix-levels.test.cjs",
+    "docs/playbooks/add-flow/02-media-io.md",
+    "docs/playbooks/add-flow/ui/carousel-frame/fields.md",
+    "docs/playbooks/add-flow/existing-flows/stems.md",
+    "docs/releases/UNRELEASED.md"
+  ]
+}

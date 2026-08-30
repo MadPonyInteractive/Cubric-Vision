@@ -1,2 +1,3 @@
 {"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-663", "at": "2026-08-30T17:25:21+01:00", "actor": "claude", "column": "todo", "title": "Flow: Stems (audio separation)"}
 {"schema": "mpi-kanban/event/v1", "id": "MPI-663", "type": "task.updated", "at": "2026-08-30T16:26:29Z", "actor": "claude", "summary": "Compact plan and brief attached. Graph prototyped and accepted on the bench; card is ready to pick up."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-663", "type": "task.moved", "at": "2026-08-30T16:32:30Z", "actor": "claude", "from": "todo", "to": "doing", "summary": "Picked up: wiring the Stems flow end to end."}

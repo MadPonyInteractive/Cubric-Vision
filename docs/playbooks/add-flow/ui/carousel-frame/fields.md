@@ -64,6 +64,30 @@ never reached the payload, defaults were never seeded, and Reuse read only `step
 - Anything else logs a warning and renders nothing. A silently-missing control is the failure
   mode this whole file exists to avoid.
 
+## Fields that constrain each other (MPI-663)
+
+Two DECLARATIVE clauses, evaluated by `disabledFieldIds` (`js/utils/declaredFields.js`) and
+painted by the frame through the primitive's own `setDisabled`. Declarative on purpose: a
+predicate in a FlowDef is a thing only a first-party flow can ship.
+
+| clause | on | means |
+|---|---|---|
+| `group: '<name>', minActive: N` | every member | a member that is ON and would take the group below N is **locked**. Members that are OFF stay live — turning one on can never break a floor |
+| `enabledWhen: { group: '<name>', atLeast: N }` | a field OUTSIDE the group | disabled while fewer than N members are on |
+
+Stems declares both: its four stem toggles are `{ group: 'stems', minActive: 1 }`, and its
+`combine` toggle is `{ enabledWhen: { group: 'stems', atLeast: 2 } }`.
+
+**The floor is not cosmetic.** A flow whose every branch gates off runs, reports SUCCESS and
+lands no card at all — no error, no toast, nothing logged ([../../02-media-io.md](../../02-media-io.md)
+§ Self-gating is not the same as HANDLED). Locking the last toggle is what keeps a user out of
+that state, so any flow whose toggles gate graph branches wants a floor.
+
+🔴 **A disabled field KEEPS ITS VALUE.** Greying a control is not the same as deciding for the
+user, and the value must come back when the constraint clears. So whatever consumes it re-checks
+the real condition instead of trusting the flag — Stems only combines when more than one file
+actually landed, never on the toggle alone.
+
 ## Where a value lands is decided by its id
 
 | id | goes to | why |

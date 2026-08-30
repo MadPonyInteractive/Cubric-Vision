@@ -78,6 +78,7 @@ const DROPPED = {
     'sam2': 'needs `git clone`, which no portable engine has (MPI-387); Impact-Pack nodes we never exercise',
     'cupy': 'unreachable from the one FI node we ship (RIFE VFI); absent from every engine today',
     'cupy-wheel': 'source-only shim whose setup.py imports pkg_resources — fails to build on every platform',
+    'moviepy': 'costs exactly one audio-separation node we never use (AudioVideoCombine); that pack try/excepts each import, so the other 6 register regardless (MPI-663)',
 };
 
 // Every node in node_lock declares its deps in `requirements.txt` except this one:

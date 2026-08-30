@@ -1266,6 +1266,24 @@ export const commands = {
         universal: true,
     },
 
+    // MPI-663 — Stems. One track in, four stem files out (Bass / Drums / Other /
+    // Vocals) through Hybrid Demucs. The only multi-output op in the fleet: its four
+    // SaveAudioAdvanced nodes are titled `Output_Audio_1..4`, each landing its own
+    // gallery card (commandExecutor § outputAudioMultiNodeIds). No prompt and no text
+    // node anywhere — deliberately, so `_buildParams`' unconditional `Input_Positive: ''`
+    // has nothing to wipe (the outpaint trap).
+    flowStems: {
+        label: 'Flow: Stems',
+        progressLabel: 'Separating the stems',
+        mediaType: MEDIA_TYPE.AUDIO,        // OUTPUT type
+        requiresImages: 0,
+        mediaInputs: [
+            { key: 'audio1', mediaType: MEDIA_TYPE.AUDIO, title: 'Input_Audio', required: true },
+        ],
+        promptRequired: false,
+        universal: true,
+    },
+
     flowCharacterSheet: {
         label: 'Flow: Character Sheet',
         progressLabel: 'Drawing the sheet',

@@ -57,4 +57,50 @@ function muxAudioIntoVideo(videoPath, audioPath, outPath) {
     });
 }
 
-module.exports = { muxAudioIntoVideo };
+/**
+ * Sum N audio files into one, sample for sample, and write it to `outPath`.
+ *
+ * MPI-663 (Stems, "Combine into one file") — the separator splits a track into stems
+ * that ADD back to the original, so putting a subset back together is a sum, not a
+ * crossfade or a concat.
+ *
+ * 🔴 `normalize=0` IS THE WHOLE RECIPE. `amix` normalizes by default, dividing every
+ * input by N — mixing drums + vocals would come back at half the level they had in the
+ * track, and mixing all four at a quarter. The sum cannot clip beyond the original
+ * either, because these stems came OUT of one file. `dropout_transition=0` stops amix
+ * ducking the remaining inputs when a shorter stem ends.
+ *
+ * FLAC in, FLAC out, and the codec is named rather than inferred: `outPath` is written
+ * before the caller renames it into place, so ffmpeg must not pick a container's default
+ * lossy encoder. Lossless throughout is the point — the source is already lossy from the
+ * music model, and re-encoding on the way to a DAW stacks artifacts.
+ *
+ * @param {string[]} inputPaths  two or more source audio files
+ * @param {string} outPath       destination
+ * @returns {Promise<void>}      resolves on success; rejects with the ffmpeg stderr tail
+ */
+function mixAudioFiles(inputPaths, outPath) {
+    if (!Array.isArray(inputPaths) || inputPaths.length < 2) {
+        return Promise.reject(new Error('mixAudioFiles needs at least two inputs'));
+    }
+    const args = ['-y'];
+    inputPaths.forEach(p => args.push('-i', p));
+    args.push(
+        '-filter_complex', `amix=inputs=${inputPaths.length}:normalize=0:dropout_transition=0`,
+        '-c:a', 'flac',
+        outPath,
+    );
+    return new Promise((resolve, reject) => {
+        logger.info('project', `ffmpeg mix: ${ffmpegPath} ${args.join(' ')}`);
+        const proc = spawn(ffmpegPath, args, { windowsHide: true });
+        let stderrBuf = '';
+        proc.stderr.on('data', (d) => { stderrBuf += d.toString(); if (stderrBuf.length > 8000) stderrBuf = stderrBuf.slice(-8000); });
+        proc.on('error', (err) => reject(err));
+        proc.on('close', (code) => {
+            if (code === 0) return resolve();
+            reject(new Error(`ffmpeg mix exited ${code}: ${stderrBuf.slice(-600)}`));
+        });
+    });
+}
+
+module.exports = { muxAudioIntoVideo, mixAudioFiles };

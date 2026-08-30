@@ -39,6 +39,28 @@ export function collectComfyOutputUrls(buildOne, nodeOutput, target) {
 }
 
 /**
+ * The label a save node gave its own file, read back off a /view URL.
+ *
+ * MPI-663 — a multi-output run lands N otherwise identical cards, and the only thing
+ * telling them apart is the name the GRAPH chose: Stems titles its four saves
+ * `filename_prefix: stems/Bass` … `stems/Vocals`, so ComfyUI writes `Bass_00001_.flac`.
+ * Strips the extension and ComfyUI's `_00001_` counter, leaving `Bass`.
+ *
+ * Returns null when the URL carries no filename, or when nothing survives the strip —
+ * the caller falls back to the op's own prefix.
+ *
+ * @param {string} url  a ComfyUI /view URL
+ * @returns {string|null}
+ */
+export function labelFromComfyOutputUrl(url) {
+    const m = /[?&]filename=([^&]+)/.exec(String(url || ''));
+    if (!m) return null;
+    let name;
+    try { name = decodeURIComponent(m[1]); } catch (_) { name = m[1]; }
+    return name.replace(/\.[^.]+$/, '').replace(/_\d+_?$/, '') || null;
+}
+
+/**
  * Reads the string a `PreviewAny` node emits. `PreviewAny.main` returns
  * `{"ui": {"text": (value,)}}` (comfy_extras/nodes_preview_any.py) and is an
  * OUTPUT_NODE, so the value arrives on the `executed` message as `text: [str]`.

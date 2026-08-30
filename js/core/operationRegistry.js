@@ -89,6 +89,7 @@ export const OPERATION_REGISTRY = {
     // MPI-607 — the two TTS flows that join Voice Changer. Same stamping reason.
     flowDramaBox: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
     flowChatterBox: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
+    flowStems: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
 };
 
 /**

@@ -236,6 +236,40 @@ export const nodesDeps = {
         installRequirements: false,
         size: '186MB',
     },
+    // MPI-663 — `AudioSeparation` (Hybrid Demucs v3) for the Stems flow. MIT, pinned
+    // upstream at christian-byrne/audio-separation-nodes-comfyui. Flow-only: no model
+    // declares it, same reasoning as head-swap declaring comfyui-inpaint-cropandstitch.
+    //
+    // 🔴 `installRequirements: false` DESPITE having a requirements.txt, and every one of
+    // its four lines is why:
+    //   librosa>=0.10.2,<1  — a stale cap. The engine runs librosa 1.0.0 (curated in
+    //                         python_deps.in), so installing this would DOWNGRADE it for
+    //                         every other pack. Separation never touches librosa anyway —
+    //                         only AudioGetTempo / AudioTempoMatch do (src/utils.py:77,83),
+    //                         and both were tested working on 1.0.0.
+    //   torchaudio>=2.3.0   — engine-owned, never ours to move.
+    //   numpy               — already curated (2.5.1).
+    //   moviepy             — deliberately NOT installed. It costs exactly one node:
+    //                         `AudioVideoCombine`, which we do not use. Every import in
+    //                         the pack's __init__.py is individually try/except-wrapped,
+    //                         so 6 of its 7 nodes register regardless.
+    // There is no source-patch mechanism (routes/engine.js "patching" only rewrites .bat
+    // flags), so pin-around is the answer, not patch.
+    //
+    // FIRST RUN DOWNLOADS ~320MB — `hdemucs_high_trained.pt` into the torch hub cache, by
+    // torchaudio, outside the download manager (no progress, no sha, no GC). Same class as
+    // RIFE (MPI-222) and Chatterbox, and NOT fixable with `targetPath`: the path comes from
+    // torch.hub, which reads no ComfyUI config. An interrupted download raises BadZipFile
+    // and the node's own error names the cache dir to delete.
+    'audio-separation-nodes-comfyui': {
+        id: 'audio-separation-nodes-comfyui',
+        name: 'Audio Separation Nodes (stem splitting)',
+        type: 'custom_nodes',
+        filename: 'audio-separation-nodes-comfyui',
+        url: lockUrl('audio-separation-nodes-comfyui'),
+        installRequirements: false,
+        size: '1.6MB',
+    },
     // Preprocessors (DepthAnythingV2Preprocessor via AIO_Preprocessor) for the Krea2
     // depth ControlNet (MPI-242). HAS a requirements.txt ⇒ installRequirements:true
     // ⇒ BAKED into the Pod image (needs POD_IMAGE_VERSION bump + rebuild).

@@ -1709,6 +1709,89 @@ export const FLOWS = [
         // No `result.compare` — two waveforms have nothing to reveal between them, the
         // same call Voice Changer makes.
     },
+    // MPI-663 — "Stems". One track in, four stem files out, and the ONLY multi-output
+    // flow in the Library: its four `Output_Audio_1..4` SaveAudioAdvanced nodes each land
+    // their own gallery card. It is the export bridge — generate several songs, listen,
+    // stem the keeper, finish it in a DAW — and it works just as well on audio the user
+    // brought in, which is probably the wider use.
+    //
+    // A SEPARATE FLOW FROM MUSIC GENERATION (MPI-664), not a second stage of it. One Flow
+    // is one dispatch and there is no second Run button; stemming every candidate would
+    // also spend GPU on tracks that get binned.
+    //
+    // Hybrid Demucs v3 (`HDEMUCS_HIGH_MUSDB_PLUS`) — a generation behind htdemucs_ft and
+    // BS-Roformer, so expect vocal bleed into Other and reverb tails following the vocal.
+    // The user has heard it and accepted it ("bleeds can be fixed in the mix"). No
+    // instrumental output in v1: it is two `AudioCombine` nodes on `add` away if wanted,
+    // and `add` is not optional — chained `mean` silently weights bass .25 / drums .25 /
+    // other .5.
+    //
+    // FLAC, never MP3. The source is already lossy from MiniMax; separating, re-encoding
+    // and then mastering stacks artifacts three deep. Output is always 44.1 kHz whatever
+    // went in — `sources_to_tuple` stamps the model's own rate, so a 32 kHz MiniMax track
+    // is upsampled on the way in and never brought back down.
+    {
+        id: 'stems',
+        title: 'Stems',
+        preview: 'flow-stems.webp',
+        video: 'flow-stems.mp4',
+        description: 'Pull a track apart. Drop in a song — one you made here or one you brought — and get bass, drums, vocals and everything else back as four separate files, ready to take into a DAW and mix properly.',
+        requiredModels: [],
+        // Flow-only node pack: no model declares it, same reasoning as head-swap and
+        // `comfyui-inpaint-cropandstitch`. `ComfyUI-MpiNodes` stays OUT even though the
+        // graph runs MpiLoadAudio and MpiClearVram — see voice-changer above for why
+        // declaring a registry-wide dep on a flow breaks the MPI-258 B1 invariant.
+        requiredDeps: [
+            'audio-separation-nodes-comfyui',   // AudioSeparation (Hybrid Demucs)
+        ],
+        operation: 'flowStems',
+        workflow: 'flow_stems.json',
+        mediaType: 'audio',
+        inputSchema: {
+            media: [
+                { type: 'audio', mode: 'upto', max: 1, roles: ['audio1'] },
+            ],
+        },
+        // FOUR STEM TOGGLES + COMBINE. The four `Input_Get_*` ids name `MpiBlocker` gates
+        // in the graph, whose `input` is LAZY — an off gate skips the work feeding it, so
+        // an all-off run would not even load the separator. That is also why they carry
+        // `group`/`minActive`: a run with every stem off blocks every branch, reports
+        // SUCCESS, and lands nothing at all (02-media-io.md § Self-gating is not the same
+        // as HANDLED). The frame locks the last one on rather than letting the user reach
+        // that state. Note the cost is all-or-nothing anyway: any single stem selected
+        // runs the full separation, so picking fewer saves save-time, not GPU.
+        //
+        // `combine` carries NO `Input_` prefix, and that is the whole design. Prefixed ids
+        // route into `injectionParams` and name a graph node; this one names no node —
+        // combining is done APP-SIDE with ffmpeg after the run, because combining a SUBSET
+        // in-graph is not expressible: a blocked `MpiBlocker` branch cannot feed an
+        // `AudioCombine` (it blocks the combine too), so the graph would need a silence
+        // source, three chained combines and a separated/combined switch. Unprefixed, it
+        // lands in `flowInputs` where generationService reads it. A prefixed id here would
+        // be SILENTLY skipped at injection and the toggle would do nothing.
+        //
+        // AudioSeparation's own three knobs (chunk_fade_shape, chunk_length, chunk_overlap)
+        // are chunking plumbing, not choices about the result, so they stay baked at the
+        // values proven on the bench.
+        fields: [
+            { id: 'Input_Get_Bass',   type: 'toggle', label: 'Bass',   icon: 'audio', default: true, group: 'stems', minActive: 1 },
+            { id: 'Input_Get_Drums',  type: 'toggle', label: 'Drums',  icon: 'audio', default: true, group: 'stems', minActive: 1 },
+            { id: 'Input_Get_Other',  type: 'toggle', label: 'Other',  icon: 'audio', default: true, group: 'stems', minActive: 1 },
+            { id: 'Input_Get_Vocals', type: 'toggle', label: 'Vocals', icon: 'mic',   default: true, group: 'stems', minActive: 1 },
+            {
+                id: 'combine', type: 'toggle', label: 'Combine into one file', icon: 'merge',
+                default: false,
+                // Nothing to combine until two stems are selected. Greyed, not hidden — a
+                // control that appears and disappears reads as a bug. It KEEPS its value
+                // while disabled, so generationService re-checks that more than one file
+                // actually landed rather than trusting the flag.
+                enabledWhen: { group: 'stems', atLeast: 2 },
+                info: 'Mix the selected stems back into a single track instead of one card each.',
+            },
+        ],
+        // No `result.compare` — the shared surface is a reveal bar over two images, and
+        // the output is new files, not a changed version of the input.
+    },
     // MPI-596 — "Object Stamp". Take an object out of one photo and put it into
     // another. Draw It In's architecture with the scribble swapped for a real object:
     // the object is composited onto the user's scene, a crop is taken around it, Klein

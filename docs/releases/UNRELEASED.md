@@ -67,7 +67,7 @@
   finished result — no workspace to assemble, no settings to know. Open the Flow Library from
   the Flows button at the top of the gallery, from the landing page, or with Tab, which cycles
   the gallery, your last card and the flow you have open, so you can step out to check a
-  picture and land back where you left off. Twelve to start with:
+  picture and land back where you left off. Thirteen to start with:
 
   - **Head Swap** — put one picture's head on another
   - **Extend Video** — carry on past the last frame
@@ -81,13 +81,14 @@
   - **Object Stamp** — take an object out of one photo and put it into another
   - **DramaBox** — describe a speaker and a performance, and hear your line delivered
   - **Text to Speech** — read your text aloud in a voice you pick, in any of 23 languages
+  - **Stems** — pull a song apart into bass, drums, vocals and everything else
 
   Each flow tells you which models it needs and installs them for you, and most of them run on a
   model the Library already offers — so once you own the model, the flow costs you nothing extra.
   The three video flows all run on LTX 2.3 Balanced, so installing it for one gives you the other
-  two. Four flows are the exception and say so on their card: Head Swap adds a head-swap LoRA on
-  top of Qwen Image Edit, and Voice Changer, DramaBox and Text to Speech all bring their own voice
-  weights and need no model from the Library at all. The three voice flows share weights where
+  two. Five flows are the exception and say so on their card: Head Swap adds a head-swap LoRA on
+  top of Qwen Image Edit, and Voice Changer, DramaBox, Text to Speech and Stems all bring their
+  own weights and need no model from the Library at all. The three voice flows share weights where
   they can, so owning one makes the next one smaller.
 
 - **Head Swap** takes a head from one picture and puts it on another. Load the picture you want
@@ -216,6 +217,18 @@
 
   A note on Portuguese: it comes out Brazilian. That is the model, not a setting, and it is
   flagged on the option itself so it is not a surprise halfway through a project.
+
+- **Stems** pulls a song apart. Drop in a track — one you made in Vision or one you brought from
+  anywhere — and get the bass, the drums, the vocals and everything else back as separate files,
+  ready to open in a DAW and mix properly. Pick which parts you want before you run; you can also
+  ask for them combined into one track instead of one card each, which is how you get an
+  instrumental (everything except the vocal) or just the rhythm section. It brings its own
+  separator, needs no model from the Library, and saves everything as FLAC, so nothing is thrown
+  away on the way to your mix.
+
+  The separation is good, not surgical: expect a little vocal to bleed into the "other" track,
+  and reverb tails to follow the voice rather than stay behind. That is normal for stem
+  splitting, and it is the kind of thing a mix hides.
 
 - FLUX.2 Klein now comes in two sizes. The 9B card sits beside the 4B one and does the same
   seven things — generate, reshape, follow a depth reference, edit with up to three reference

@@ -617,6 +617,56 @@ test('the Text to Speech Flow carries both TTS arms (MPI-607)', () => {
         `${file}: baked language ${JSON.stringify(lang)} is not among the FlowDef's options`);
 });
 
+test('the Stems Flow carries its audio input and all FOUR numbered captures (MPI-663)', () => {
+    const file = 'flow_stems.json';
+    const have = titlesOf(file);
+    assert.ok(have.has('input_audio'), `${file} must carry a node titled "input_audio"`);
+
+    // One MpiBlocker per stem, and the FlowDef's four toggles name them. A title that
+    // does not exist is silently skipped at injection, so the toggle would move and the
+    // gate would stay at whatever the graph baked — every run returning all four stems
+    // with nothing anywhere reporting it.
+    for (const stem of ['bass', 'drums', 'other', 'vocals']) {
+        assert.ok(have.has(`input_get_${stem}`),
+            `${file} must carry a gate titled "Input_Get_${stem}"`);
+    }
+
+    // FOUR captures, numbered from _1 — the whole product of this flow is that there are
+    // four of them, one card each. They are NOT `output_audio`: that title is matched
+    // EXACTLY by the executor as the video mux side-channel, so a stem carrying it would
+    // be swallowed by that path instead of landing as a card. Numbered from _1 rather
+    // than base + _2 for the same reason — the bare title is taken.
+    for (const n of [1, 2, 3, 4]) {
+        assert.ok(have.has(`output_audio_${n}`),
+            `${file} must carry a capture node titled "output_audio_${n}"`);
+    }
+    assert.ok(!have.has('output_audio'),
+        `${file}: a bare "output_audio" node would be captured as the mux side-channel, not as a card`);
+
+    // No text node anywhere, and it must stay that way: `_buildParams` emits
+    // `Input_Positive: ''` on every run whether or not the flow collects a prompt.
+    assert.ok(!have.has('input_positive'),
+        `${file} takes no prompt — a node titled Input_Positive would be written with ''`);
+
+    const graph = JSON.parse(
+        fs.readFileSync(path.join(__dirname, '..', 'comfy_workflows', file), 'utf8'));
+    // Each save keeps the stem's NAME in its filename_prefix. That is not cosmetic: it is
+    // the only thing telling four otherwise identical cards apart, and generationService
+    // reads it back off the /view filename to name them (`_multiAudioLabel`).
+    const prefixes = Object.values(graph)
+        .filter(n => (n._meta?.title || '').toLowerCase().startsWith('output_audio_'))
+        .map(n => n.inputs.filename_prefix);
+    assert.deepEqual(prefixes.slice().sort(),
+        ['stems/Bass', 'stems/Drums', 'stems/Other', 'stems/Vocals'],
+        `${file}: each stem save must name its own file — the card name is read back from it`);
+    // FLAC, never MP3 — the source is already lossy, and separate-then-re-encode-then-
+    // master stacks artifacts three deep.
+    for (const n of Object.values(graph)) {
+        if (!(n._meta?.title || '').toLowerCase().startsWith('output_audio_')) continue;
+        assert.equal(n.inputs.format, 'flac', `${file}: stems ship as flac`);
+    }
+});
+
 test('the prompt enhancer graph carries the seed node its caller drives (MPI-504)', () => {
     // MpiBaseFlow._runEnhance sends `injectionParams: { Input_Seed: <random> }` on every
     // press, because step 3's loop is Enhance -> Generate -> Enhance and a fixed seed
