@@ -32,8 +32,15 @@ at pickup.
 - [ ] **MPI-515** — remove the `nvidia-pid` ModelDef. Dep entries stay.
 - [x] **MPI-531** — Flow authoring shape. **Done 2026-08-21**: zero `uiComponent` in
       `flowsRegistry.js`, `MpiFlowHeadSwap` deleted by `64279953`. Port surface is now zero.
-- [ ] **MPI-522** — CI-Windows dangling-symlink guard + its false-green test.
-- [ ] **MPI-523** — in-place update refreshes the installed `update-manifest.json`.
+- [x] **MPI-522** — CI-Windows dangling-symlink guard + its false-green test. **Done
+      2026-08-30 as OVERTAKEN**: both defects were fixed on 2026-08-11 by `07b8e8b2` under
+      MPI-542's id, which is why `overtaken-cards.py` never flagged it (it keys on the card's
+      own id). Re-ran: 8 pass, 0 skipped.
+- [x] **MPI-523** — in-place update refreshes the installed `update-manifest.json`. **Done
+      2026-08-30** (`daf6c70c`): the applier copies the manifest explicitly — it can never be
+      in its own `files[]`. Mutation-checked test, 798/798.
+- [x] **MPI-527** — the umbrella over both, closed with them. **Gate A's release-pipeline row
+      is clear.**
 - [ ] **MPI-516** — port the three-signal destroyed-prompt detector, WITH its false-positive guard.
 - [ ] **MPI-575** — measure the LTX preview junk-frame path on a live foley/extend run, then fix.
 - [ ] Every Gate A card that did not clear has a known-issue bullet written.
@@ -57,9 +64,22 @@ at pickup.
       Gates 6–9 of `docs/playbooks/bump-engine/README.md` all rent a RunPod GPU, which is why
       they were parked here rather than paid for twice — run them as ONE block:
       - [ ] Sync **both** files into `c:\AI\Mpi\mpi-ci\cubric-vision-pod\` — `node_lock.json`
-            AND `python_deps.txt` — and commit there with `git -C`. `python_deps.txt` moved only
-            its provenance comment (`…constraints-v0.31.0.txt` → `v0.34.0`), zero package
-            versions, but it still has to travel or the drift check fails.
+            AND `python_deps.txt` — and commit there with `git -C`.
+            **CORRECTED 2026-08-30 — the old note here ("`python_deps.txt` moved only its
+            provenance comment, zero package versions") is no longer true and was measured
+            again:** the Pod's copy is now missing real packages — `accelerate`,
+            `bitsandbytes`, `conformer`, `soundfile`'s new edge — and the Pod lock is behind on
+            **two whole nodes as well as core**: `ComfyUI_Fill-ChatterBox` and
+            `ComfyUI-MelodramaBox` (they arrived with MPI-607's Chatterbox/MelodramaBox work,
+            after this line was written). A lock-only sync would bake an engine whose nodes and
+            Python set disagree — the MPI-472 failure shape exactly. Re-measure the drift at
+            pickup; do not trust this list either.
+      - [ ] **TIMING — Fabio, 2026-08-30: do NOT smoke until the remaining models and Flows
+            have landed.** A matrix run now measures a model list that is still moving, and
+            every model added after it re-opens the gate. This is the same call MPI-649 made
+            ("if we're gonna do them, might as well do them when needed"). `release:check` stays
+            RED until then, by design — that is not a regression to chase, and the two failing
+            lines are the engine-pin mismatch and the stale evidence, nothing else.
       - [ ] Re-run `node scripts/smoke-workflows.mjs --plan` **immediately before** the smoke —
             both sync files are live working-tree state and a card landing in between re-drifts
             them. `--plan` spends nothing and prints the matrix + volume size; show Fabio.
