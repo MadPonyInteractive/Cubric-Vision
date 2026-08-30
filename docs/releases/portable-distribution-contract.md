@@ -223,6 +223,17 @@ folder's README for the per-release restamp step and the extraction recipe.
 
 `scripts/build-portable.mjs --from-manifest <path>` emits a true delta bundle (only changed/added files). Diff is file-level SHA256 only — never binary delta (contract forbids it). A file is included iff its sha256 is absent or different vs baseline; paths gone from the new set go in `manifest.delete[]`. `delete[]` always excludes PRESERVE prefixes (engine/, models/, user-data/, Documents). `alwaysKeep` = update-manifest.json + connector-manifest.json + launchers. Omitting `--from-manifest` = FULL bundle (`fromVersion:null`, first-release safe).
 
+**A bundle carries one more member than its `files[]` lists, and always will (MPI-523).**
+`createUpdateManifest` builds the file list, then writes the manifest into that same stage
+root — a manifest cannot contain its own hash, so it can never appear in its own list. That
+means the applier cannot get the installed manifest right by walking `files[]`:
+`apply-update.cjs` copies `resources/cubric/update-manifest.json` **explicitly**, after the
+`files[]` loop. Without that copy the install keeps whatever the last FULL extract left there
+and reports the version it was BEFORE the update — a 1.3.1 -> 1.4.0 delta left it reading
+`toVersion 1.3.0`, contradicting `appVersion.js`. Nothing reads the installed manifest at
+runtime (`findManifestRoot` inspects the BUNDLE; the next delta's baseline comes from
+`release-baselines/`), so the cost was diagnosis time, not a broken update.
+
 ## Portable Root Layout
 
 **There are two layouts, and the split is deliberate.** Linux and macOS keep the
