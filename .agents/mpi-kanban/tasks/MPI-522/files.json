@@ -1,0 +1,6 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    ".agents/mpi-kanban/tasks/MPI-522/**"
+  ]
+}

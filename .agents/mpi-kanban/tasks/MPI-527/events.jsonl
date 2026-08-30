@@ -1,1 +1,3 @@
 {"schema": "mpi-kanban/event/v1", "id": "mpi-527-created", "type": "task.created", "at": "2026-08-10T22:10:00Z", "task": "MPI-527", "summary": "Umbrella created by the consolidation sweep over MPI-522, MPI-523."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-527", "at": "2026-08-30T10:26:54+01:00", "actor": "claude", "from": "todo", "to": "doing", "reason": "Both members closed; closing the umbrella."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-527", "at": "2026-08-30T10:26:55+01:00", "actor": "claude", "from": "doing", "to": "done", "reason": "MPI-522 overtaken, MPI-523 fixed. Gate A row on MPI-595 is clear."}

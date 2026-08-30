@@ -17,10 +17,23 @@ members turn out to be the better unit, delete this umbrella instead.
 
 ## Current State
 
-Not started. **MPI-522 is CI-red right now** — `tests/portable-win-layout.test.cjs:157`
-fails `Missing expected rejection` on every push, and has been red all day 2026-08-10
-across unrelated commits. That is the priority signal in this umbrella; MPI-523 is
-cosmetic-but-costly (it contradicted `appVersion.js` during the 1.4.0 close-out).
+**COMPLETE, 2026-08-30. Both members are `done`.**
+
+- **MPI-522 — overtaken, closed on evidence.** Both defects were fixed on 2026-08-11 by
+  `07b8e8b2` (`fix(MPI-542)`), which is why `scripts/overtaken-cards.py` never flagged it:
+  the fix carries MPI-542's id, not this one. The unknown root cause is now known and
+  recorded — `fs.access` SUCCEEDS on a dangling Windows reparse point, so the guard was
+  inert; it uses `stat()` now. The false green is gone too: the test falls back to a
+  **junction** instead of skipping on EPERM. Re-ran here: 8 pass, **0 skipped**.
+- **MPI-523 — fixed.** `apply-update.cjs` now copies `resources/cubric/update-manifest.json`
+  explicitly after the `files[]` loop. The cause is permanent by construction (a manifest
+  cannot contain its own hash), so the build side could never have fixed it; that is written
+  into `docs/releases/portable-distribution-contract.md` § Delta update details so it is not
+  "fixed" there later. New mutation-checked test, `npm test` 798/798.
+
+This clears the **MPI-527 row on MPI-595's Gate A**.
+
+The 2026-08-10 state this replaces: not started, MPI-522 CI-red on every push.
 
 Neither affected the shipped 1.4.0 bytes — MPI-522 verified that directly on the published
 artifacts (linux tar.gz 0 symlinks, windows zip 0, macOS zip 31 symlinks and 0 dangling).

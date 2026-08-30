@@ -1,0 +1,9 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "scripts/portable/apply-update.cjs",
+    "tests/portable-update-apply.test.cjs",
+    "docs/releases/portable-distribution-contract.md",
+    ".agents/mpi-kanban/tasks/MPI-523/**"
+  ]
+}

@@ -1,1 +1,3 @@
 {"schema":"mpi-kanban/event/v1","id":"MPI-522","type":"task.created","at":"2026-08-10T19:46:56Z","actor":"claude","summary":"Filed at 1.4.0 close-out: The dangling-symlink build guard misses on CI Windows, and its test passes while"}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-522", "at": "2026-08-30T10:23:10+01:00", "actor": "claude", "from": "todo", "to": "doing", "reason": "Taken to verify; found already fixed by 07b8e8b2 under MPI-542 id."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-522", "at": "2026-08-30T10:23:12+01:00", "actor": "claude", "from": "doing", "to": "done", "reason": "Overtaken by 07b8e8b2 (MPI-542). Both defects fixed; suite 8/8, 0 skipped on this box."}
