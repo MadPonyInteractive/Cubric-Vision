@@ -1733,11 +1733,12 @@ export const FLOWS = [
     {
         id: 'stems',
         title: 'Stems',
-        // NO `preview`/`video` YET — the art is still to be made (five waveforms: the
-        // input and the four stems). Declaring the filenames early 404s the Flow Library
-        // on open, which the desktop suite catches as a console error; MpiTileSheet
-        // renders its placeholder gradient for an absent preview, so the tile is honest
-        // in the meantime. Add both the moment /mpi-flow-graphics produces them.
+        // Five lanes, real waveforms off a real run: the frost SOURCE over the four heat
+        // stems. The hero draws the stems in left to right under a heat playhead, holds,
+        // then lifts them back off — so it returns to the source alone and the loop point
+        // is invisible. The tile is the same layout with every lane filled.
+        preview: 'flow-stems.webp',
+        video: 'flow-stems.mp4',
         description: 'Pull a track apart. Drop in a song — one you made here or one you brought — and get bass, drums, vocals and everything else back as four separate files, ready to take into a DAW and mix properly.',
         requiredModels: [],
         // Flow-only node pack: no model declares it, same reasoning as head-swap and

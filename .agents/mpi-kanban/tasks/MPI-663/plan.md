@@ -2,6 +2,16 @@
 
 ## Current State
 
+**LIVE RUN DONE (2026-08-30, agent instance on :55689 under a GPU lease).** Four cards land
+named per stem and play; a drums+vocals combine run lands ONE `flowStems_001` card with the
+clip trim firing for real (+0.71 dB measured, `volume=-0.705dB` written); the last stem
+toggle locks and Combine greys below two; the Flow Library opens with zero console errors.
+Evidence and the two screenshots: `validation.md`. **One thing the handoff did not know:
+the separation node pack was never in the APP engine, only on the bench** — boot's UW deps
+repair installed it, but an attached instance cannot restart an engine it did not spawn, so
+the restart goes through `POST /comfy/start {"isUserRestart": true}`. Next: the flow art,
+then declare `preview`/`video`.
+
 **SHIPPED AND PUSHED (2026-08-30).** Code, tests and docs are on master, CI green:
 `6ceaf661` (the flow), `8fbfb185` (icons), `b3266f65` (red-CI fix), `ebe929cb` (clip trim).
 815 tests pass, lint clean. What remains is a live app run and the flow's art.

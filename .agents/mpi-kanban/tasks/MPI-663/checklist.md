@@ -25,7 +25,12 @@
 - [x] Release note + roster line in `docs/releases/UNRELEASED.md`
 - [x] Icons: `stem_bass` / `stem_drums` / `stem_other` drawn and added to `icons.js`; Vocals
       reuses `mic`. Rendered at 48/24/18px and in the real toggle chrome before landing
-- [ ] USER: live run in the app - four cards, then a combine run, and listen to both
+- [x] Live run in the app (agent instance, 2026-08-30): four cards named per stem and
+      playable, a combine run landing ONE `flowStems_001` card, the last stem toggle
+      locking and Combine greyed below two, Flow Library opening with 0 console errors.
+      The engine needed the node pack installed AND a delegated restart - see
+      `validation.md`
+- [ ] USER: listen to the four stems and the combined track in the app
 - [ ] Fixed a RED master of my own making: the FlowDef named preview art that did not exist,
       so the Flow Library 404d (caught by tests/desktop/flows-tab-ring.spec.js). Keys dropped
       until the art lands + a guard added so it fails in `npm test` instead of in CI
