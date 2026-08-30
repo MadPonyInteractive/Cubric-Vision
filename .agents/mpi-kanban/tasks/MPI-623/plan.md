@@ -617,6 +617,57 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     **Limits, stated:** one rail of four, judged on raw Wan frames. The HiRes composite, SfM
     and a Brush eval still have to run before the quality question is closed end to end.
 
+33. **FIXANYTHING IS NOT A REPLACEMENT FOR THE WAN HOLE-FILL - it is the same base model
+    solving a DIFFERENT step, and its real home here is AFTER Brush, not before SfM.**
+    *FixAnything: 3D-Consistent Rendering Refinement via Video Generative Priors* - Vuong,
+    Ramanan, Narasimhan (CMU), ECCV 2026. <https://fix-anything.github.io/>, code
+    <https://github.com/kvuong2711/fix-anything>, weights `kvuong2711/fix-anything`
+    (`fixanything_lora.safetensors`, rank 64), Apache 2.0. Read from the project page, the
+    GitHub README and the HF model card - **not from the PDF**; every disqualifier below is
+    structural (format, pipeline position, base weight, no ComfyUI), so the paper is unlikely
+    to move them, but the arXiv has not been read line by line.
+
+    **What it actually is:** a rank-64 LoRA on **Wan2.1-I2V-14B-480P** - the same family we
+    already run, one tier down. Stage I supervised finetune on ~20 paired videos, Stage II
+    Flow-DPO with **COLMAP pose accuracy as the reward**. Conditioning is video-to-video, not
+    I2V: "the degraded render's VAE latent is channel-concatenated with the noisy latent,
+    together with a per-frame binary mask marking which frames to *trust* and which to *fix*."
+    832x480, 61 frames (internally 65), longer trajectories chunked with a shared clean anchor.
+    Trained on DL3DV-10K rendered through all four reps - 3DGS, NeRF, mesh, **sparse point
+    clouds**.
+
+    **Why not to switch, five structural reasons:**
+    1. **Wrong pipeline position.** It repairs renders OF an existing 3D representation. Our
+       Wan step runs BEFORE any representation exists - it manufactures the views SfM and Brush
+       consume. Steelman for it: our control renders are geometry reprojections with holes,
+       i.e. close to its "sparse point cloud" training case. That is the one honest argument
+       for a swap, and reasons 2-5 kill it anyway.
+    2. **No equirectangular anywhere.** Zero mention of 360 / equirect / panorama on the page,
+       README or model card; training is perspective DL3DV capture. We run 1440x720 equirect
+       and carry `pano_video_gen_720p_comfy` at 0.98 precisely because wrap-around is not
+       native to Wan. FixAnything's LoRA competes for that same slot, and two LoRAs from
+       unrelated training regimes on one DiT is the MPI-282 trap, untested.
+    3. **Resolution regression.** 832x480 against our 1440x720 - roughly half the angular
+       density per degree feeding SfM. Amendment 28 puts the resolution recovery in the HiRes
+       composite, but the composite cannot restore feature density Wan never emitted.
+    4. **Different base weight.** The 480P variant, ~60 GB, i.e. a fresh download and a fresh
+       quantization question one day after the 720P Q4 one was settled (amendment 32).
+    5. **No ComfyUI path.** Channel-concat conditioning plus a per-frame trust mask is not
+       expressible with stock nodes - it is a custom node in `ComfyUi-MpiNodes` or a separate
+       torch-2.6 process with its own 60 GB base.
+
+    Against that we would be discarding a **measured pass**: 0.86-0.93 known-pixel correlation
+    across all 81 frames, 99.91% of holes filled, 29 min per rail (amendment 32).
+
+    **Where it IS worth something - park it, do not discard it.** Its literal stated task is
+    repairing 3DGS renders, and that is exactly Phase 3's problem: the stills a user captures
+    from a Draft-quality splat at a new angle. Revisit **after** a Brush splat exists, on
+    perspective eval renders, where it is in-domain instead of out of it. Its Flow-DPO reward
+    also independently corroborates amendments 26/30 - pose consistency across views is the
+    axis that decides whether the reconstruction merges.
+
+    **Verdict given to Fabio: do not switch. Run the four-rail bake.**
+
 ### Verified NOT drifted from the source workflow (checked 2026-08-29)
 
 **This list is not exhaustive and two things it omitted were wrong - see amendments 29 and
