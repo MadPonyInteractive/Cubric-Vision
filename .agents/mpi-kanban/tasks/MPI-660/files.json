@@ -1,0 +1,9 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    "js/data/commandRegistry.js",
+    "js/services/generationService.js",
+    "js/services/projectService.js",
+    "routes/projects.js"
+  ]
+}

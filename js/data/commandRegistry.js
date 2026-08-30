@@ -85,6 +85,13 @@ const I2V_HELP = {
  *                                              share a verb across models (edit/krea2Edit/qwenEdit) share a
  *                                              `short` and therefore a strip position. Only ops the strip can
  *                                              render carry one — universal/tool ops live on the History rail.
+ * @property {string}          [filePrefix]   - Filename prefix for saved output (`flowTTS_001.wav`). Defaults to the
+ *                                              op KEY, which is right for every op the user can name — but a Flow's
+ *                                              key is an internal id (`flowChatterBox`) while the Library shows its
+ *                                              title ("Text to Speech"), so the card read as a Flow that does not
+ *                                              exist. Set one wherever the key does not read as the Flow's title.
+ *                                              NOT a rename of the key: `operation` is stamped in every sidecar and
+ *                                              versioned in operationRegistry.js, so only the FILENAME moves.
  * @property {string}          [info]         - One-line description shown in the status bar on hover in the op dropdown.
  * @property {OpHelp}          [help]         - Long-form prompting guide shown by the "?" button beside the op
  *                                              strip (MPI-360). The `info` one-liner stays the short form; this is
@@ -1003,6 +1010,7 @@ export const commands = {
     // ModelDef and no dep entry of its own.
     flowLtxExtend: {
         label: 'Flow: Extend Video',
+        filePrefix: 'flowExtendVideo',      // key says LTX; the Library says "Extend Video"
         progressLabel: 'Extending',
         mediaType: MEDIA_TYPE.VIDEO,        // OUTPUT type
         requiresImages: 0,                  // media is never a hard requirement at the op layer
@@ -1027,6 +1035,7 @@ export const commands = {
     // place), so there is no duration control either.
     flowLtxFoley: {
         label: 'Flow: Add Foley',
+        filePrefix: 'flowAddFoley',         // key says LTX; the Library says "Add Foley"
         progressLabel: 'Adding foley',
         mediaType: MEDIA_TYPE.VIDEO,        // OUTPUT type — video + its new audio
         requiresImages: 0,                  // media is never a hard requirement at the op layer
@@ -1088,6 +1097,7 @@ export const commands = {
         // cards already carry the `FLOWSCRIBOBJ_` prefix and their sidecars' `flowId`, so
         // renaming it breaks reuse on every item already generated. See flowsRegistry.js.
         label: 'Flow: Draw It In',
+        filePrefix: 'flowDrawItIn',         // the key is the old name; only NEW files move
         progressLabel: 'Rendering the drawing',
         mediaType: MEDIA_TYPE.IMAGE,        // OUTPUT type
         requiresImages: 0,                  // media is never a hard requirement at the op layer
@@ -1245,6 +1255,7 @@ export const commands = {
     // `audio_prompt` — a garbage reference in place of a clean refusal.
     flowChatterBox: {
         label: 'Flow: Text to Speech',
+        filePrefix: 'flowTTS',              // key names the model; the Library says "Text to Speech"
         progressLabel: 'Speaking the line',
         mediaType: MEDIA_TYPE.AUDIO,        // OUTPUT type
         requiresImages: 0,

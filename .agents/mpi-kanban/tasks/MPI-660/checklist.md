@@ -1,0 +1,4 @@
+- [ ] `filePrefix` on CommandDef + the mismatched Flow ops
+- [ ] threaded through `saveGeneration` → `/project/save-generation`
+- [ ] server uses `filePrefix` when present
+- [ ] verified: a TTS run lands as `flowTTS_001`

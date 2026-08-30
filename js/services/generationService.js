@@ -1120,6 +1120,9 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         audioViewUrl: (i === 0 && model.mediaType === 'video') ? (outputInfo.audioUrl || null) : null,
                         itemId: thisItemId,
                         operation,
+                        // Filename only. The op key is the default prefix; a Flow whose key
+                        // does not read as its Library title overrides it (MPI-660).
+                        filePrefix: getCommand(operation)?.filePrefix ?? null,
                         meta: { prompt: positive, negativePrompt: negative, negativeAudioPrompt: negativeAudio, modelId: model.id, seed: exec.seed ?? -1, generationSettings },
                         generationMs: elapsedMs,
                         pixelDimensions: resolvedDims,
