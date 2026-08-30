@@ -387,6 +387,13 @@
   The small sizes are unchanged, and nothing decodes a big version just because you scrolled
   past it.
 
+- Generated files are named after the button you pressed. An edit is `edit_004` whichever
+  model made it, an upscale is `upscale_002` rather than `pid_002`, and a video is `i2v_007`
+  rather than `i2v_ms_007`. The names came from internal ids, so the same Edit button
+  produced four different ones depending on the model, and some of them named a thing that
+  appears nowhere in the app. Which model made a picture is still one click away on the
+  card's Reuse. Files you already have keep the names they were saved under.
+
 - Hovering a video card costs a fraction of what it did. A clip preview used to play the
   full-resolution master, so a 3000-pixel-wide video decoded every one of those pixels into
   a card a few hundred pixels across. The gallery now keeps a 720p copy for hover playback —

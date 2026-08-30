@@ -39,12 +39,13 @@ No collision risk was found for the renames: `nextSequence` seeds a new prefix's
 from a disk scan for that literal prefix plus `_NNN`, so `video_crop_007.mp4` is invisible
 to `videoCrop` and existing files keep their names.
 
-## Proposed `docs/releases/UNRELEASED.md` entry — NOT written, awaiting approval
+## `docs/releases/UNRELEASED.md` entry — APPROVED and written 2026-08-30
 
 The Flow half owes nothing (Flows debut in this release, so no user met the old names).
 The prompt-box half does: `edit`, `pid` and the `_ms` video ops all shipped in v1.4.2 or
-earlier, so this changes what a released feature names its files. Proposed for
-`## Important changes`:
+earlier, so this changes what a released feature names its files. It went under `## Fixes`,
+not `## Important changes` — Fabio's call, and the right one: nothing breaks, and files
+already on disk keep their names. The text as written:
 
 > - Generated files are named after the button you pressed. An edit is `edit_004` whichever
 >   model made it, an upscale is `upscale_002` rather than `pid_002`, and a video is
