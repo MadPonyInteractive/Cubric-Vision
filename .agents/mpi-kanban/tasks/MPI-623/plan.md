@@ -102,6 +102,29 @@ notes in [research/](research/).
 > list: `unet_gguf` aliases to `diffusion_models` (`nodes.py:32`).** The bench on 8188 is
 > Fabio's own instance (PID 3784) - use it, do not spawn another.
 
+> **Session note 2026-08-29 (eighth). THE Q4 QUESTION IS ANSWERED - YES - AND THE RAILS WERE
+> NEVER MICKMUMPITZ'S.** The GGUF landed (11 341 184 384 bytes, sha256 `ffecd91e…42a4`, both
+> verified) and the amendment-26-piloted bake was queued - then its rail 1 came back **not a
+> panorama**, with known-pixel correlation collapsing from +0.996 at frame 0 to -0.046 at frame
+> 2 (amendment 31). Fabio called it on sight. Diffing `ds.json` against every working file
+> found why: **the shipped rails already converge** (`look_at_target` / `per_point_look`) and
+> our files carry `look_forward` with altered anchor positions - amendment 30, which unseats
+> amendment 15's premise and re-frames 25/26. Restoring rail 27's shipped piloting fixed it
+> completely: correlation 0.86-0.93 across all 81 frames, 99.91% of holes filled, a clean
+> equirect, 29 min on Q4 - **amendment 32. fp8 is NOT needed and batch task 2's tier choice is
+> answered on quality.** The interrupted run cost ~40 min of GPU and nothing else; `POST
+> /interrupt` only, the bench was never killed, and **nothing went to R2 - task 2 stays parked.**
+> Also found and fixed: the positive conditioning was wired to the NEGATIVE encode in every
+> flattened graph, and at `cfg=1` that was the only thing steering the sampler (amendment 29).
+>
+> **Next, and it is a FORK, not a continuation:** Fabio found
+> <https://fix-anything.github.io/> and wants it read BEFORE any more bake work - it may do the
+> hole-filling job better than Wan does. **Read the paper first and give a verdict.** If it is
+> not worth it, the continuation is the full four-rail bake with the shipped piloting restored
+> on ALL four rails (~2.5-3 h) through composite -> SfM -> Brush Draft -> eval renders. If it
+> is, we may implement it INSTEAD of the current Wan approach. Do not start the four-rail bake
+> before that verdict.
+
 **Project mode:** `scalable-foundation`.
 
 A user bakes a Gaussian-splat scene once from a 360 equirect image, then re-enters
@@ -490,7 +513,118 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     regions amendment 27 shows in both render and ground truth - and Q4 is enough to answer
     that. fp8 only gets considered if Q4's fill is wrong, not if it is merely soft.
 
+29. **THE POSITIVE PROMPT WAS NEVER CONNECTED - every flattened API graph fed the NEGATIVE
+    text into the positive slot, and at `cfg=1` that is the only conditioning that steers.**
+    Found while patching the graph for the Q4 run, by tracing the SOURCE workflow's
+    `Bundle`/`UnbundleByName` pair instead of trusting the flattened file. In the shipped
+    `ds.json`, `Bundle` node 102 takes `input_8` <- node 10 (the POSITIVE `CLIPTextEncode`)
+    and `input_10` <- node 11 (the negative); `UnbundleByName` re-emits them as slots 6 and
+    7, and all five `SplatKit_WanI2VMaskedConditioning` nodes take `positive` <- slot 6,
+    `negative` <- slot 7. **The source is correct.** But the flattening this line of work did
+    to obtain an API graph collapsed both to `["11", 0]`: `hires_api.json`,
+    `hires_api_patched.json`, `hires_api_largest.json` and `hires_api_matcher.json` are ALL
+    wired `positive: ["11",0], negative: ["11",0]`, leaving node 10 dead in every one of them.
+    `hires_api_largest.json` is the file that produced Phase 0b's 2h18m bake.
+    **So Phase 0b ran with "The video is not of a high quality, it has a low resolution.
+    Distortion. strange artifacts." as its positive conditioning** - and because the lightx2v
+    distill LoRA runs at `cfg=1`, ComfyUI skips the uncond pass, so the negative slot was
+    inert and that text was the ONLY thing steering the sampler.
+    This is a SECOND independent cause of "the bake looked far worse than the source video",
+    alongside amendment 15/17's mis-piloted rails. It survived because the "Verified NOT
+    drifted" list below checked weights, strengths, resolutions and `base_mode` - never the
+    conditioning wiring. Fixed in the Q4 graph (`hires_api_q4.json`: `positive: ["10",0]` on
+    all four). **Carry-forward: when Phase 2 authors its own graph, positive/negative wiring
+    is a thing to ASSERT, not assume - and a flattened graph is not evidence about the
+    source.**
+
+30. **THE RAILS WE HAVE BEEN MEASURING ARE NOT THE RAILS MICKMUMPITZ SHIPPED, and amendment
+    15's premise does not survive the diff.** `ds.json` is the shipped rail-bearing workflow -
+    confirmed by elimination, since `pano.json` contains NO
+    `SplatKit_CameraPlotRenderControlGeo` at all. Against it, the working files carry
+    different piloting:
+
+    | rail | ds.json (shipped) | `hires_ui_stripped.json` / every `hires_api*.json` |
+    |---|---|---|
+    | 27 | `look_at_target` @ `-0.108, 0.073, 1.953` | `look_forward`, target blank |
+    | 122 | `per_point_look`, 6-float rows | `look_forward`, 3-float rows |
+    | 133 | `per_point_look`, 6-float rows | `look_forward`, 3-float rows |
+    | 144 | `per_point_look` | `per_point_look` (the one that survived) |
+
+    **His rails already converge.** Amendment 15 recorded them as "byte-identical to the
+    shipped workflow defaults ... flown unchanged through an interior"; that is wrong, and the
+    anchor POSITIONS differ too, so it is not a plain truncation - rail 122's shipped row 2
+    position is `0.430, 0.021, 0.843` where the working files carry `0.883, 0.021, -0.444`
+    (only `y` survives). The divergence is already present in `hires_ui_stripped.json`, which
+    still holds its 12 `Bundle` nodes, so it predates the flattening to an API graph and this
+    session could not reconstruct which step introduced it.
+    **What this costs the earlier amendments.** Amendment 25 measured "the shipped rails reach
+    r=2.95 and 2.60, past the room's p90" - it measured the ALTERED rails. Amendment 26's
+    finding that a shared look target merges SfM is still a true measurement, but it is not the
+    discovery it was written as: the shipped workflow already had converging aims, and what
+    amendment 26 really fixed was damage introduced upstream. Its chosen target `0, 0.3, 0`
+    also sits essentially ON the camera start point, so cameras look BACKWARD as they pull
+    away, where the shipped rail 27 aims ~1.95 units FORWARD.
+    **Open, not concluded:** whether that backward aim is what made the Q4 run non-panoramic
+    (amendment 31). A one-rail test with rail 27's shipped piloting restored is what settles
+    it - `hires_api_q4_pilot.json`.
+
+31. **THE Q4 RUN'S WAN OUTPUT IS NOT A PANORAMA, and the failure is structural, not
+    quantization.** Rail 1 of the amendment-26-piloted Q4 bake, correlating Wan's output
+    against the control render over the KNOWN (non-hole) pixels only: frame 0 **+0.996**,
+    frame 2 **-0.046**, frame 20 -0.085, frame 40 -0.043. It collapses at **frame 2, where the
+    hole is 1.1%** - i.e. with 98.9% of the frame carrying known geometry, Wan reproduces none
+    of it. Wan anchors on the I2V reference frame and then discards the control entirely.
+    Hole-filling itself is not the visible failure: zero black pixels remain (fill luminance
+    117 at frame 40). The output simply is not equirect - the ceiling is not smeared along the
+    top edge, rubble sits in the top corners - which Fabio called on sight.
+    **Q4 is not indicted by this** - and amendment 32 went on to exonerate it outright.
+    Quantization damage degrades gradually as the hole grows; this is a switch flipping between
+    frame 0 and frame 2, which is the signature of the control conditioning not being honoured
+    at all. Run interrupted at ~40 min on Fabio's call rather than spend ~2.5 h more on it; the
+    bench was interrupted through `POST /interrupt`, never killed.
+    Measured with `known-pixel corr`: resize the control to Wan's 1440x720, mask to
+    `control.sum(axis=2) >= 12`, `np.corrcoef` over the masked pixels. **That metric is the
+    cheap gate for any future Wan run** - it separates "soft" from "ignoring the control",
+    which eyeballing a still does not.
+
+32. **Q4_K_M FILLS THE HOLES CORRECTLY. The answer to Fabio's question is YES, and fp8 is not
+    needed.** One rail (27), the SHIPPED piloting from `ds.json` restored, positive
+    conditioning fixed, everything else identical - `hires_api_q4_pilot.json`, 21 nodes,
+    `execution_success` in **1743 s (29 min)** for one rail on the Q4 GGUF.
+    Known-pixel correlation vs the control, the amendment 31 metric, same rail and same weight
+    with ONLY the piloting changed:
+
+    | frame | hole | amendment 26 aim | shipped aim |
+    |---|---|---|---|
+    | 0 | 0.0% | +0.996 | +0.996 |
+    | 2 | 1.1% | **-0.046** | **+0.932** |
+    | 20 | 5.4% | -0.085 | +0.929 |
+    | 40 | 4.9% | -0.043 | +0.925 |
+    | 80 | 3.4% | +0.295 | +0.859 |
+
+    It holds 0.86-0.93 across all 81 frames instead of collapsing at frame 2. Fill at frame 40:
+    59 792 hole pixels, **52 still black** (99.91% filled), mean luminance 125, and the frame
+    is unmistakably an equirect of the room - ceiling smeared along the top edge, floor along
+    the bottom, arcade cabinet, counter, boarded windows, debris floor.
+    **The shipped aim also leaves far less to invent:** hole fraction 5.8% / 4.0% at frames
+    40 / 80 against amendment 26's 20.9% / 14.8% - 3.6x less, because aiming ~1.95 units
+    FORWARD keeps the camera pointed where the panorama has data, while aiming at `0, 0.3, 0`
+    points it back at the region it is reversing away from.
+    **Consequence for batch task 2:** the tier question is answered on quality - GGUF Q4_K_M is
+    good enough and no fp8 upload is justified by this evidence. VRAM is not what decides it
+    either: Q4 peaks ~10.2 GB of 16 380 MiB, and fp8 already ran on this same card in Phase 0b
+    via offload, so GGUF's saving is DOWNLOAD SIZE (11.3 GB vs 16.4 GB), not fit.
+    **Limits, stated:** one rail of four, judged on raw Wan frames. The HiRes composite, SfM
+    and a Brush eval still have to run before the quality question is closed end to end.
+
 ### Verified NOT drifted from the source workflow (checked 2026-08-29)
+
+**This list is not exhaustive and two things it omitted were wrong - see amendments 29 and
+30.** It
+checked weights, LoRA strengths, resolutions and `base_mode`; it never checked which
+`CLIPTextEncode` reached which conditioning slot, and that wiring was broken in every
+flattened API graph.
+
 
 Both LoRAs at his strengths (`pano_video_gen_720p_comfy` 0.98, `lightx2v_T2V_14B_cfg_step_distill_v2`
 1.00) on `wan2.1_i2v_720p_14B_fp8_e4m3fn`; `base_mode=geometry` on all four
