@@ -636,12 +636,24 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     Trained on DL3DV-10K rendered through all four reps - 3DGS, NeRF, mesh, **sparse point
     clouds**.
 
-    **Why not to switch, five structural reasons:**
-    1. **Wrong pipeline position.** It repairs renders OF an existing 3D representation. Our
-       Wan step runs BEFORE any representation exists - it manufactures the views SfM and Brush
-       consume. Steelman for it: our control renders are geometry reprojections with holes,
-       i.e. close to its "sparse point cloud" training case. That is the one honest argument
-       for a swap, and reasons 2-5 kill it anyway.
+    **Why not to switch (reason 1 was later withdrawn - see it below):**
+    1. **~~Wrong pipeline position~~ - WITHDRAWN, this reason was overstated.** It was written
+       as "it repairs renders OF an existing 3D representation, our Wan step runs before one
+       exists". Fabio pushed back with the DL3DV-Drone panel: a ~95%-empty sparse-point input
+       comes back a coherent aerial village. A COLMAP sparse cloud is PRE-reconstruction, so
+       our hole-y geometry reprojection is closer to that training case than the reason
+       claimed, and capacity is not the issue either - our holes are 4-6% against their ~95%.
+       **What the demo actually does, though, is anchor interpolation, not invention.** The
+       page's own caption: "Clean training views the trajectory passes through. The model
+       treats these as anchors and propagates appearance, lighting and scene structure into the
+       degraded frames in between", and the mask ablation states it from the other side -
+       "Without the mask, the model cannot tell clean frames from mildly degraded ones and
+       hallucinates over the training views." The README asks that a trajectory "ideally
+       starts/ends at views used to build the 3D representation". **We have exactly ONE real
+       view in the scene - the panorama.** Frame 0 is an anchor and nothing downstream of it
+       is, which is the regime none of the demos show. So the demos are not evidence for our
+       case, but they are not evidence against it either. **The verdict rests on reason 2
+       alone, and 3-5 as cost.**
     2. **No equirectangular anywhere.** Zero mention of 360 / equirect / panorama on the page,
        README or model card; training is perspective DL3DV capture. We run 1440x720 equirect
        and carry `pano_video_gen_720p_comfy` at 0.98 precisely because wrap-around is not
@@ -667,6 +679,36 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     axis that decides whether the reconstruction merges.
 
     **Verdict given to Fabio: do not switch. Run the four-rail bake.**
+
+34. **THE FOUR-RAIL GRAPH IS BUILT AND ASSERTED, WAITING ONLY ON THE GPU.**
+    `G:\MPI-623-spike\hires_api_q4_4rail.json`, 51 nodes, built from `hires_api_q4.json`
+    with all four rails re-piloted from the shipped file. Patch script asserted, not eyeballed:
+    rail 27's inputs come out **identical to `hires_api_q4_pilot.json`**, the graph that
+    passed; all four `SplatKit_WanI2VMaskedConditioning` still take positive from node 10 (the
+    panorama prompt) and negative from node 11 (amendment 29 holds); the unet is still
+    `wan2.1-i2v-14b-720p-Q4_K_M.gguf`; `length=81` and `moge_level=9` were asserted equal to
+    shipped rather than overwritten. **Nothing has been queued** - Fabio is using the GPU for
+    his own tests and the bake waits on his word.
+
+    **`ds.json` now has a durable home.** `G:\MPI-623-spike\ds_shipped.json`, sha256
+    `d40e6807e9f4d5c5968d4b086948bbaddcdaaa3b964b8d974246efaea951034b`, verified equal to the
+    Temp-scratchpad copy it came from. That closes the preservation risk the last handoff
+    flagged - the only clean copy was living in a session Temp directory.
+
+    **Two divergences amendment 30's table did not record:**
+    - **`ds.json` carries a FIFTH rail, node 157** (`per_point_look`, 6-float rows). The
+      working graph has only 27 / 122 / 133 / 144. Not added - that is a scope call for Fabio
+      and costs ~29 min of GPU. Flagged, not acted on.
+    - **Rail 133 lost a waypoint.** The working graph carried 3 anchor rows where the shipped
+      file has 4. Amendment 30 recorded 133 as a `look_forward` / 3-float-row difference and
+      did not note that a whole row was missing.
+
+    **Save-node attribution needs no graph change.** Amendment-era notes called the `SaveVideo`
+    prefixes "collapsed to `control_rgb`"; in this graph all 8 take `filename_prefix` from the
+    LINK `["41", 1]` (`SplatKit_DatasetProject`), not a literal. Rails are still attributable
+    because ComfyUI's `/history` keys `outputs` by node id, so the eight videos map back to
+    their rails without touching the prefixes the passing run used. The composite and SfM nodes
+    consume links in-graph, never the saved files, so the prefixes are inspection-only.
 
 ### Verified NOT drifted from the source workflow (checked 2026-08-29)
 
