@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-660", "at": "2026-08-30T08:58:30+01:00", "actor": "claude", "from": "doing", "to": "done", "reason": "Naming fixed for Flows, prompt-box ops and the two tool routes; 797-test suite green, docs healed."}

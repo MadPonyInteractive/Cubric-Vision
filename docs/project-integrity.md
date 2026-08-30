@@ -263,14 +263,25 @@ id is skipped, so the PREVIOUS gen's sidecar dies — gen `t2i_002` kills `t2i_0
 
 ## Sequenced media filenames — the counter lives in `project.json`
 
-Sequenced names (`<op>_NNN.ext` — `t2i_001`, `combined_001`, `i2v_ms_001`…) are minted by
+Sequenced names (`<prefix>_NNN.ext` — `t2i_001`, `combined_001`, `edit_001`…) are minted by
 `nextSequence(folderPath, mediaDir, prefix, ext)`, which reads and bumps a **per-prefix counter
 in `project.json` under `sequenceCounters`** (e.g. `{ edit: 7, t2i: 2, upscale: 10 }`) atomically
 inside `updateProjectJson` — the same queue as the item write, so there is no lost-update race.
 Prefix present → grab+bump, ignoring disk. Prefix absent → seed from disk-max **once** (legacy
 files), then pure source-of-truth forever. Keys are added lazily, so a new app operation needs no
-pre-seeding. Six call sites: save-generation, upload/imported, crop-in-projects, `videoConcat`
-(`combined_`/`extended_`), `videoCrop`, `videoReverse`.
+pre-seeding. Call sites: save-generation, upload/imported, crop, composite, apply-paint (prefix
+is the route's own `paint`/`composite` field), `videoConcat` (`combined_`/`extended_`),
+`videoCrop`, `videoReverse`.
+
+**The prefix is NOT the op key (MPI-660).** The stem is the gallery card's NAME, so it has to be
+something the user picked the op by — the key is an internal id. `getFilePrefix` (commandRegistry)
+resolves `filePrefix` → `short` → key, and save-generation takes the answer as its own `filePrefix`
+body field, *beside* an untouched `operation`. That is what folds the four edit keys
+(`edit`/`krea2Edit`/`qwenEdit`/`kleinEdit`) onto `edit_NNN`, `pid` onto `upscale`, the `_ms` video
+keys onto `t2v`/`i2v`/`ref2v`, and `flowChatterBox` onto `flowTTS`. Ops now sharing a prefix share
+one counter — still monotonic, just interleaved. **Never rename `operation` to fix a filename:** it
+is stamped in every sidecar, resolved by Reuse, and versioned in `operationRegistry.js`.
+`tests/flow-output-filename.test.cjs` fails any op filed under a name the UI does not show.
 
 **Why it may not be scanned off disk (the bug this replaced, `08d782b3`).** Numbering by
 `max(NNN on disk) + 1` **re-mints deleted numbers**: delete `i2v_ms_001.mp4` and the next i2v gen

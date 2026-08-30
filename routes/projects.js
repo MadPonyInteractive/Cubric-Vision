@@ -230,7 +230,7 @@ function updateItemMeta(metaPath, updater) {
 }
 
 // ── Monotonic sequence allocator ─────────────────────────────────────────────
-// Sequenced media names (i2v_ms_001.mp4, combined_001.mp4, crop_001.mp4…) must
+// Sequenced media names (i2v_001.mp4, combined_001.mp4, crop_001.mp4…) must
 // NEVER reuse a number, even after the file is deleted — a reused name lets a
 // new gen overwrite an existing card's file, or a delete-by-filename strip a
 // still-referenced entry (both → blank card + gallery 404).
@@ -1153,7 +1153,7 @@ router.delete('/project-media/:projectId/:filename', async (req, res) => {
         }
 
         // Guard: only unlink the on-disk file when it still belongs to THIS
-        // item. Sequenced names (i2v_ms_001.mp4, combined_001.mp4…) get re-minted
+        // item. Sequenced names (i2v_001.mp4, combined_001.mp4…) get re-minted
         // after a delete, so a later item can own the same filename while an
         // earlier history entry still references it. Deleting by filename alone
         // then orphans that other entry (missing sidecar → gallery 404). If the

@@ -3,16 +3,17 @@
   "id": "MPI-660",
   "title": "Flow outputs are filed under the op key, not the Flow's name",
   "description": "A Flow's saved media is named from the operation key, so the 'Text to Speech' Flow produces flowChatterBox_001 - a name no Flow in the Library carries. Give a command an optional filePrefix and thread it through save-generation, then set one on every Flow op whose key does not read as its title.",
-  "column": "doing",
-  "maturity": "active",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-08-30T00:00:00+01:00",
-  "updated_at": "2026-08-30T00:00:00+01:00",
+  "updated_at": "2026-08-30T08:58:30+01:00",
   "links": {
     "brief": "brief.md",
     "checklist": "checklist.md",
     "files": "files.json",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "validation": "validation.md"
   },
   "activeSessionTitle": "Flow output filenames"
 }

@@ -57,7 +57,7 @@ NOT mechanically split these):
 | **Harnesses — running app code WITHOUT the app** (bare-Node registry imports + the absolute-path import boundary, `CUBRIC_ENGINE_ROOT` install harness, one router on a spare port, your own `app:isolated` instance, **measuring GPU memory** — which the standard desktop harness can never do) | [testing-harnesses.md](testing-harnesses.md) |
 | Workspaces / routing | [workspaces.md](workspaces.md) |
 | Data layer (registries, projectModel, resolver, persist whitelist, reuse/sidecar) | [data.md](data.md) |
-| Project data model (.meta sidecars, reconciliation) | [project-integrity.md](project-integrity.md) |
+| Project data model (.meta sidecars, reconciliation, output filenames / card names) | [project-integrity.md](project-integrity.md) |
 | Versioning (APP/SCHEMA/COMFY, op registry) | [versioning.md](versioning.md) |
 | Shell services (overlays, hotkeys, statusbar) | [shell.md](shell.md) |
 | Events / EventBus | [events.md](events.md) |

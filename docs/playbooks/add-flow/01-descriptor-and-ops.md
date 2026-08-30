@@ -320,27 +320,25 @@ immediately before pressing Generate."* **That is true only for a frame-native s
 **Until MPI-606 unifies the stores: declare a shared id on ONE surface.** For a gizmo-step flow
 that means the step, and changing the value before `Generate Again` costs one ticker click.
 
-## The op key becomes the OUTPUT FILENAME — keep it short (MPI-567)
+## The OUTPUT FILENAME is `filePrefix`, not the op key (MPI-567, rewired MPI-660)
 
-`routes/projects.js` (~1812) sanitises the op key and uses it as the sequenced filename prefix,
-capped at 24 chars: this flow's op shipped as `flowScribbleObject` → `flowScribbleObject_001.png`,
-badged in the gallery as `FLOWSCRIBBLEOBJECT_001`, and was renamed to `flowScribObj` →
-`FLOWSCRIBOBJ_001` before release for exactly that reason. Long op names produce unusable
-filenames, and the gallery badge is where the user meets them.
+The sequenced stem (`flowTTS_001.wav`) is the gallery card's NAME, so it must read as the Flow's
+title in the Library. It used to be the op key, which is an internal id — the Flow titled "Text to
+Speech" runs on `flowChatterBox`, so its card named a Flow that does not exist.
 
-**Renaming is free before release and expensive after.** Check `appVersionIntroduced` against the
-released `APP_VERSION`: an op introduced in an unreleased version has no files on any user's disk,
-so the rename is a find-and-replace and nothing more. Once shipped, existing filenames and their
-`sequenceCounters` entry are user data — leave it.
+**Set `filePrefix` on the CommandDef whenever the key does not read as the title.** `getFilePrefix`
+resolves `filePrefix` → `short` → key; a Flow op has no `short` (it never reaches the op strip), so
+for Flows it is `filePrefix` or the key. Keep it under 24 chars — the server truncates there — and
+initials are fine when the title is long (`flowTTS` ← "Text to Speech").
+`tests/flow-output-filename.test.cjs` fails a Flow whose prefix does not read as its title, spelled
+out or as initials.
 
-**It is more than the four op files.** The op key is matched BY NAME in the test suite as well, so
-sweep the whole repo rather than the playbook's file list: `flowScribObj`'s rename touched the four
-op files, the FlowDef's `operation`, and two tests — `flow-model-choice.test.cjs` asserts
-`COMMANDS.<op>.injector`, and `inject-params-titles.test.cjs` names it in prose. `npm test` is the
-gate that proves the sweep was complete.
-
-This is why the flow ops do **not** share one naming convention: `flowHeadSwap` (1.1.0) and the
-two LTX flows (1.4.2) shipped with long names and keep them. Do not "tidy" a released op key.
+**This is why you no longer rename an op key to fix a filename.** `operation` is stamped in every
+sidecar, resolved by Reuse, and versioned in `operationRegistry.js` — renaming it after release
+orphans every card already generated. `filePrefix` costs nothing and touches one line. The prior
+advice here (rename before release, sweep the whole repo, `flowScribbleObject` → `flowScribObj`)
+applied when the two were the same string; they are not any more, and the old long keys
+(`flowHeadSwap`, `flowLtxExtend`, `flowLtxFoley`, `flowScribObj`) simply carry a `filePrefix`.
 
 ## The run path — `submitFlowGeneration`
 

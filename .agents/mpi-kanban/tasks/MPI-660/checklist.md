@@ -1,4 +1,8 @@
-- [ ] `filePrefix` on CommandDef + the mismatched Flow ops
-- [ ] threaded through `saveGeneration` → `/project/save-generation`
-- [ ] server uses `filePrefix` when present
-- [ ] verified: a TTS run lands as `flowTTS_001`
+- [x] `filePrefix` on CommandDef + the mismatched Flow ops
+- [x] threaded through `saveGeneration` → `/project/save-generation`
+- [x] server uses `filePrefix` when present
+- [x] `getFilePrefix` folds the op strip's `short` in — edit/upscale/t2v/i2v/ref2v
+- [x] `videoCrop_` / `videoReverse_` replace the two snake_case tool prefixes
+- [x] regression test over every file-producing op + the tool routes (797 suite green)
+- [x] docs healed: project-integrity.md, add-flow/01-descriptor-and-ops.md, docs/README.md row
+- [ ] one live run per family to see the names land (not done — no app run this session)
