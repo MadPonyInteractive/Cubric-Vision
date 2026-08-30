@@ -86,3 +86,47 @@ which is the MPI-370 class).
 
 Not testable from Windows. `ssh macbox` was refused on 2026-08-27 (rented box, connection
 refused at gate1.rentamac.io) and no Mac was rented for this.
+
+### 2026-08-30 — check 2 ANSWERED from Windows, no Mac needed
+
+A resolve is not a run, and a resolve is all check 2 asks for. `uv` resolves against a
+declared target platform without downloading anything, so the wheel question is answerable
+here:
+
+```
+uv pip install --dry-run --no-deps --python-platform aarch64-apple-darwin -r dev_configs/python_deps.txt
+```
+
+**Answer: no, an arm64 Mac below macOS 14 does not resolve — and bitsandbytes is only half
+of it.** Two packages have a macOS floor, and the older one has been there since the curated
+set was created:
+
+| package | only Mac wheel | arrived in |
+|---|---|---|
+| `bitsandbytes==0.50.2` | `macosx_14_0_arm64` | MPI-607 |
+| `embreex==4.4.0` | `macosx_13_0_arm64` | **MPI-413** — the original curated set |
+
+`embreex` comes via `trimesh[easy]` and its marker is `platform_machine != 'aarch64'`, which
+does **not** exclude Apple Silicon: macOS reports `arm64`, and `aarch64` is the Linux spelling.
+So it is selected on every Mac we ship to.
+
+**The set's effective macOS floor is therefore 14 (Sonoma), and nothing declares it.**
+
+**Bounding the bitsandbytes marker does not fix this** — measured, not assumed. Re-running the
+same resolve with `(platform_machine == "arm64" and platform_release >= "23") or sys_platform
+!= "darwin"` moves the failure to `embreex` instead of clearing it. Linux stayed at 149
+packages, so the bound itself is harmless; it just does not buy anything on its own.
+
+**What this changes about check 1.** "Does `pip install -r python_deps.txt` complete?" now has
+a version-dependent answer: **yes on macOS 14+, no below it**, for a reason that predates
+DramaBox. Anyone reporting "pip was fine on Mac" was on 14+.
+
+**Recommendation — declare the floor, do not chase it.** macOS 14+ is one line in the release
+notes and the install docs. The alternative is un-pinning `trimesh[easy]`'s Extra and finding a
+`bitsandbytes` old enough to publish a macOS 13 wheel, which trades a documented floor for two
+downgrades on every other platform.
+
+**Checks 3 and 4 are untouched by this** — whether nf4 actually runs on MPS still needs a Mac,
+and the install-warning + run-toast gate Fabio asked for on 2026-08-27 is still unimplemented.
+The other two platforms are clean: Linux (glibc ≥ 2.28, the Pod) resolves 149 packages and
+Windows resolves clean.
