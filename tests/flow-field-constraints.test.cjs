@@ -90,6 +90,29 @@ test('every icon a flow names actually exists', async () => {
     }
 });
 
+test('every preview asset a flow declares is actually on disk', async () => {
+    // A declared-but-missing preview is a 404 in the Flow Library the moment it opens.
+    // It cost a red CI run on this very card: `preview: 'flow-stems.webp'` was declared
+    // before the art existed, and `tests/desktop/flows-tab-ring.spec.js` (which asserts
+    // zero console errors) is what found it — four minutes into CI, not here.
+    //
+    // Omitting the key is the supported state, not a defect: MpiTileSheet renders a
+    // placeholder gradient for a flow with no art yet. Naming a file that is not there
+    // is the defect, so that is what this asserts.
+    const fs = require('node:fs');
+    const mod = await esm('js/data/flowsRegistry.js');
+    const flows = mod.FLOWS || mod.flows || mod.default;
+    const dir = path.join(__dirname, '..', 'comfy_workflows', 'display');
+
+    for (const flow of flows) {
+        for (const key of ['preview', 'video']) {
+            if (!flow[key]) continue;
+            assert.ok(fs.existsSync(path.join(dir, flow[key])),
+                `flow "${flow.id}" declares ${key} "${flow[key]}", which is not in comfy_workflows/display/`);
+        }
+    }
+});
+
 test('the stems FlowDef declares the constraints the frame paints', async () => {
     const flow = await stemsFlow();
     const byId = new Map(flow.fields.map(f => [f.id, f]));
