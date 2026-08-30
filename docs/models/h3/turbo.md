@@ -1,4 +1,4 @@
-# H3 turbo — the 20→6 step distill LoRA (MPI-505, weight swapped MPI-508)
+# H3 turbo — the 20→6 step distill LoRA (MPI-505, weight swapped MPI-508 and MPI-662)
 
 Split out of `performance.md` on 2026-08-09 when it outgrew that file. Everything here is
 about the shipped turbo toggle: what it costs, what it is worth, and what it changes.
@@ -27,6 +27,32 @@ Settings, all measured on the bench 2026-08-09, not inherited from the model car
 **Strengths are NOT comparable between the two LoRAs.** lightx2v's safetensors metadata
 reads `baked_scale: 0.125` / `peft alpha/r=0.125 baked into lora_B`, so 0.75 here is a
 tuned value on its own curve, not a reduction from larry's 1.0.
+
+## THEN IT CHANGED AGAIN — v0.1 → v1.0 768p (MPI-662, 2026-08-30)
+
+Same publisher, same conversion author, same 416-tensor coverage (`diffusion_model.blocks`
+×400 + `token_refiner` ×16, zero text-encoder keys — checked on both files). What differs:
+
+| | v0.1 | **v1.0 768p (shipped)** |
+|---|---|---|
+| size | 1.82GB | **0.41GB** |
+| rank | flat 128 | **dynamic**, `sv_fro 0.96 from 128`, avg 31 |
+| `baked_scale` | 0.125 | **1.0** |
+| alpha | r=0.125 baked | 128, folded into lora_B |
+
+Adopted on a bench read: less noise, cleaner picture, at a quarter of the download.
+
+**The scale moved and the strength number did not — so 0.75 is now 8x what it was.** The
+graph still applies `0.75 if a else 0.2` (`MpiMath` #343 fl2va, #453 r2va). On the turbo
+branch that is the intended, tested value: 0.75-on-v1.0 is what was judged good. **The
+non-turbo 0.2 was NOT retuned** and is likewise 8x its old effective delta on the 25-step
+path; equal-effect against v0.1 would be 0.025. Untested at the time of the swap.
+
+The 8-step v1.0 sibling (`..._8step_v1.0_resized_avg_rank_24_bf16`, `baked_scale` 0.0625)
+was tested the same day and **rejected: same quality, more time.**
+
+Everything below this section was measured on v0.1 or on larry's, and stands only until
+someone re-measures it on v1.0.
 
 Both weights are pure diffusion-model LoRAs — 416 tensors each, split
 `diffusion_model.blocks` ×400 + `diffusion_model.token_refiner` ×16, **zero text-encoder
@@ -141,8 +167,8 @@ LoRA patch.) A correctness fix that saves 1.6%, not a speed lever.
 Both graphs route the model through an `MpiIfElse` on `Input_is_Turbo` — `[369]` in
 fl2va, `[459]` in r2va:
 
-    UNET ─┬─> MiniMaxH3SigmaShift ──> gate.true    (turbo)
-          └─> EasyCache ───────────> gate.false   (non-turbo)
+    UNET ─┬─> ModelAttentionBackend ─> MiniMaxH3SigmaShift ─> gate.true    (turbo)
+          └─> EasyCache ────────────────────────────────────> gate.false   (non-turbo)
                                      gate ──> turbo LoRA ──> user LoRA slots
 
 `MpiIfElse` is **lazy**, so on a turbo run the EasyCache node does not execute at all.
@@ -156,3 +182,22 @@ occurrences), so a non-turbo run skipping it is exactly the 1.3.1 behaviour.
 Two wiring mistakes were caught at the sync's diff step before either was installed: the
 branches inverted (turbo keeping the cache), and `MiniMaxH3SigmaShift` stranded on one
 branch so the other lost it. Convert-and-diff before installing is what caught both.
+
+## `ModelAttentionBackend` is gated ON turbo — and OFF the quality path (MPI-662)
+
+Core's `ModelAttentionBackend` node (`comfy_extras/nodes_model_advanced.py`, present from
+the pinned `v0.34.0` — it was absent at `v0.31.0`, which is what blocked MPI-605) takes
+`attention: "comfy kitchen attention"`. It sits on the **turbo branch only**, `[393]` in
+fl2va and `[497]` in r2va, between the UNET loader and `MiniMaxH3SigmaShift`.
+
+That split is a measured decision, not symmetry:
+
+- **Turbo path — adopted.** Faster AND visibly cleaner, so it wins on both axes at once.
+- **25-step quality path — rejected.** It gains speed there too (roughly: kitchen-attention
+  cold ≈ stock warm), but it **degrades quality**, and that path exists precisely to be the
+  good one. H3 already has a fast path; buying speed on the slow one with picture quality is
+  the wrong trade.
+
+This is the first place the "approximate attention loses precision" objection was actually
+measured per path rather than argued — see MPI-605, which reached the opposite conclusion
+about the two paths from the same node.

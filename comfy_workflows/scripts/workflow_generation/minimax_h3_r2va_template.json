@@ -185,7 +185,7 @@
   },
   "321": {
     "inputs": {
-      "string": "C:\\Users\\Fabio\\Documents\\Cubric Vision\\Projects\\cowboys\\Media\\t2i_067.png",
+      "string": "",
       "channel": "alpha",
       "block_if_empty": false
     },
@@ -814,24 +814,6 @@
       "title": "Mpi If Else"
     }
   },
-  "429": {
-    "inputs": {
-      "frame_rate": 24,
-      "loop_count": 0,
-      "filename_prefix": "AnimateDiff",
-      "format": "video/h264-mp4",
-      "pingpong": false,
-      "save_output": false,
-      "images": [
-        "430",
-        0
-      ]
-    },
-    "class_type": "VHS_VideoCombine",
-    "_meta": {
-      "title": "Preview"
-    }
-  },
   "430": {
     "inputs": {
       "passthrough": [
@@ -1015,7 +997,7 @@
       "shift_video": 12,
       "shift_audio": 5,
       "model": [
-        "392",
+        "497",
         0
       ]
     },
@@ -1042,7 +1024,7 @@
   },
   "457": {
     "inputs": {
-      "lora_name": "minimax-h3\\minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors",
+      "lora_name": "minimax-h3\\minimax_h3_fl2v_lightx2v_turbo_4step_v1.0_768p_resized_avg_rank_31_bf16.safetensors",
       "model": [
         "459",
         0
@@ -1109,6 +1091,19 @@
     "class_type": "MpiVideoSamplingPreview",
     "_meta": {
       "title": "Mpi Video Sampling Preview"
+    }
+  },
+  "497": {
+    "inputs": {
+      "attention": "comfy kitchen attention",
+      "model": [
+        "392",
+        0
+      ]
+    },
+    "class_type": "ModelAttentionBackend",
+    "_meta": {
+      "title": "ModelAttentionBackend"
     }
   }
 }

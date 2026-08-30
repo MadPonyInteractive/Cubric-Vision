@@ -271,6 +271,13 @@
   box and the startup prompt goes quiet for that version; Settings still has the update
   whenever you want it.
 
+- **MiniMax H3's Turbo mode got faster and cleaner at the same time.** Turbo now runs on a
+  newer speed weight and a faster attention path, and the picture it produces is less noisy
+  than before — so the fast option is no longer only about saving time. The weight behind it
+  is also much smaller: 0.41 GB in place of 1.82 GB, which is 1.4 GB less to download when
+  you install H3 from here on. The full-quality 25-step mode is untouched and still the
+  default.
+
 ## Fixes
 
 > **A fix to a FLOW does not belong in this section for this release.** Flows debut here, so

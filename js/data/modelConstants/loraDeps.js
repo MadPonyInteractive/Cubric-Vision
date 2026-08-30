@@ -32,21 +32,35 @@ export const loraDeps = {
     'minimax-h3-turbo-lora': {
         id: 'minimax-h3-turbo-lora',
         name: 'MiniMax H3 Turbo LoRA (6-step distill)',
-        // SWAPPED 2026-08-09 (MPI-508). The first weight we shipped here — drbaph's
-        // larryvrh v4_step600_ema — was measured at close to NO-LoRA timing: it cut the
-        // step count and gave the wall clock back. lightx2v's is a real speed-up. Its
-        // strengths are not comparable to the old one's: the safetensors metadata says
-        // `peft alpha/r=0.125 baked into lora_B`, so 0.75 here is a tuned value, not a
-        // reduction from 1.0. At 1.0 the AUDIO degrades badly (audio breaks before the
-        // picture does on H3), and at 4 steps — what it was distilled for — audio is
-        // unusable. 6 steps is the floor. Apache-2.0 upstream, so no licences.js record.
+        // SWAPPED TWICE. 2026-08-09 (MPI-508): drbaph's larryvrh v4_step600_ema out,
+        // lightx2v v0.1 in — larry's measured at close to NO-LoRA timing (it cut the step
+        // count and gave the wall clock back per step); lightx2v's is a real speed-up.
+        // 2026-08-30 (MPI-662): lightx2v v0.1 out, lightx2v **v1.0 768p** in — same
+        // publisher, same 416-tensor coverage, but dynamically RESIZED (`sv_fro 0.96 from
+        // 128`, per-layer ranks averaging 31) so it weighs 0.41GB instead of 1.82GB.
+        // Bench-judged better on the turbo path: less noise, cleaner picture.
+        //
+        // **THE STRENGTH SCALE CHANGED AND THE NUMBER DID NOT.** v0.1 baked
+        // `peft alpha/r=0.125` into lora_B; v1.0 bakes a flat `scale 1.0` (alpha 128,
+        // folded into lora_B). The graph still applies `0.75 if a else 0.2`
+        // (`MpiMath` #343 fl2va / #453 r2va), so the same 0.75 now delivers EIGHT TIMES
+        // the delta it did on v0.1. That is deliberate on the turbo path — 0.75 on v1.0
+        // is what was bench-tested and adopted. The non-turbo 0.2 rode along unretuned
+        // and is 8x its old effective value on the 25-step path; equal-effect would be
+        // 0.025. Do not read either number as carried over: they are on a new curve.
+        //
+        // v0.1's other findings stand until re-measured on v1.0: at strength 1.0 the AUDIO
+        // degrades badly (audio breaks before the picture does on H3), and 4 steps — what
+        // it was distilled for — makes audio unusable, so 6 is the step floor.
+        // An 8-step v1.0 sibling exists and was REJECTED 2026-08-30: same quality, more
+        // time. Apache-2.0 upstream, so no licences.js record.
         origin: 'lightx2v/Minimax-h3-Turbo (Apache-2.0), ComfyUI conversion by Kijai/MiniMax-H3_comfy',
-        filename: 'loras/minimax-h3/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors',
-        url: 'https://models.cubric.studio/vision/models/loras/minimax-h3/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors',
-        mirrorUrl: 'https://huggingface.co/Kijai/MiniMax-H3_comfy/resolve/main/loras/minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors',
-        size: '1.82GB',
-        bytes: 1956171984,
-        sha256: 'fc9b6500f0331fe925b004738baaa31bd34104741c8bf9334816f9ac3005c8c1',
+        filename: 'loras/minimax-h3/minimax_h3_fl2v_lightx2v_turbo_4step_v1.0_768p_resized_avg_rank_31_bf16.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/minimax-h3/minimax_h3_fl2v_lightx2v_turbo_4step_v1.0_768p_resized_avg_rank_31_bf16.safetensors',
+        mirrorUrl: 'https://huggingface.co/Kijai/MiniMax-H3_comfy/resolve/main/loras/minimax_h3_fl2v_lightx2v_turbo_4step_v1.0_768p_resized_avg_rank_31_bf16.safetensors',
+        size: '0.41GB',
+        bytes: 440873704,
+        sha256: '9515eee9f642aa0e7fcc401f56d408ef2d6388f81881fe50bddded8220870a4d',
     },
     // Content-filter-bypass LoRA (always-on Input_Bypass_Filter_Lora node). A tiny
     // 12-float projector nudge. Dep of BOTH models (it's negligible); the generator bakes

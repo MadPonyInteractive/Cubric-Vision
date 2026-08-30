@@ -922,7 +922,7 @@
       "shift_video": 12,
       "shift_audio": 5,
       "model": [
-        "129",
+        "393",
         0
       ]
     },
@@ -933,7 +933,7 @@
   },
   "323": {
     "inputs": {
-      "lora_name": "minimax-h3\\minimax_h3_fl2v_lightx2v_turbo_4step_v0.1_comfy.safetensors",
+      "lora_name": "minimax-h3\\minimax_h3_fl2v_lightx2v_turbo_4step_v1.0_768p_resized_avg_rank_31_bf16.safetensors",
       "model": [
         "369",
         0
@@ -1217,6 +1217,19 @@
     "class_type": "VAEDecode",
     "_meta": {
       "title": "VAE Decode"
+    }
+  },
+  "393": {
+    "inputs": {
+      "attention": "comfy kitchen attention",
+      "model": [
+        "129",
+        0
+      ]
+    },
+    "class_type": "ModelAttentionBackend",
+    "_meta": {
+      "title": "ModelAttentionBackend"
     }
   }
 }
