@@ -1,0 +1,568 @@
+{
+  "id": "8ba39c17-6669-43f6-ac02-524c2b322767",
+  "revision": 0,
+  "last_node_id": 32,
+  "last_link_id": 42,
+  "nodes": [
+    {
+      "id": 28,
+      "type": "MpiClearVram",
+      "pos": [
+        465.68804271024214,
+        356.3629331247739
+      ],
+      "size": [
+        186.9140625,
+        26
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "passthrough",
+          "name": "passthrough",
+          "shape": 7,
+          "type": "*",
+          "link": 37
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "passthrough",
+          "name": "passthrough",
+          "type": "*",
+          "links": [
+            38
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "5e070436fc90ab84fdd66c2fe702572d3d04f7e2",
+        "Node name for S&R": "MpiClearVram"
+      }
+    },
+    {
+      "id": 11,
+      "type": "AudioSeparation",
+      "pos": [
+        23.755230125523006,
+        535.0732217573225
+      ],
+      "size": [
+        315,
+        166
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "audio",
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 42
+        },
+        {
+          "localized_name": "chunk_fade_shape",
+          "name": "chunk_fade_shape",
+          "shape": 7,
+          "type": "COMBO",
+          "widget": {
+            "name": "chunk_fade_shape"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "chunk_length",
+          "name": "chunk_length",
+          "shape": 7,
+          "type": "FLOAT",
+          "widget": {
+            "name": "chunk_length"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "chunk_overlap",
+          "name": "chunk_overlap",
+          "shape": 7,
+          "type": "FLOAT",
+          "widget": {
+            "name": "chunk_overlap"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "Bass",
+          "name": "Bass",
+          "type": "AUDIO",
+          "slot_index": 0,
+          "links": [
+            37
+          ]
+        },
+        {
+          "localized_name": "Drums",
+          "name": "Drums",
+          "type": "AUDIO",
+          "slot_index": 1,
+          "links": [
+            39
+          ]
+        },
+        {
+          "localized_name": "Other",
+          "name": "Other",
+          "type": "AUDIO",
+          "slot_index": 2,
+          "links": [
+            40
+          ]
+        },
+        {
+          "localized_name": "Vocals",
+          "name": "Vocals",
+          "type": "AUDIO",
+          "slot_index": 3,
+          "links": [
+            41
+          ]
+        }
+      ],
+      "properties": {
+        "aux_id": "christian-byrne/audio-separation-nodes-comfyui",
+        "ver": "ac339561973f0c1e56db2f9d40f11b0fddda6763",
+        "Node name for S&R": "AudioSeparation"
+      },
+      "widgets_values": [
+        "half_sine",
+        16,
+        0.1
+      ],
+      "widgets_values_named": {
+        "chunk_fade_shape": "half_sine",
+        "chunk_length": 16,
+        "chunk_overlap": 0.1
+      }
+    },
+    {
+      "id": 32,
+      "type": "MpiLoadAudio",
+      "pos": [
+        -295.32450959101334,
+        533.4884561373268
+      ],
+      "size": [
+        270,
+        82
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string",
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "block_if_empty",
+          "name": "block_if_empty",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "block_if_empty"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "audio",
+          "name": "audio",
+          "type": "AUDIO",
+          "links": [
+            42
+          ]
+        }
+      ],
+      "title": "Input_Audio",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "5e070436fc90ab84fdd66c2fe702572d3d04f7e2",
+        "Node name for S&R": "MpiLoadAudio"
+      },
+      "widgets_values": [
+        "",
+        true
+      ],
+      "widgets_values_named": {
+        "string": "",
+        "block_if_empty": true
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 25,
+      "type": "SaveAudioAdvanced",
+      "pos": [
+        733.3318831876046,
+        353.8213594544975
+      ],
+      "size": [
+        687.5570847309136,
+        136
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "audio",
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 38
+        },
+        {
+          "localized_name": "filename_prefix",
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "format",
+          "name": "format",
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "widget": {
+            "name": "format"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "audioUI",
+          "name": "audioUI",
+          "type": "AUDIO_UI",
+          "widget": {
+            "name": "audioUI"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "audio",
+          "name": "audio",
+          "type": "AUDIO",
+          "links": null
+        }
+      ],
+      "title": "Output_Audio_1",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2"
+      },
+      "widgets_values": [
+        "stems/Bass",
+        "flac"
+      ],
+      "widgets_values_named": {
+        "filename_prefix": "stems/Bass",
+        "format": "flac"
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 29,
+      "type": "SaveAudioAdvanced",
+      "pos": [
+        734.0829292127092,
+        548.6079703331584
+      ],
+      "size": [
+        687.5570847309136,
+        136
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "audio",
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 39
+        },
+        {
+          "localized_name": "filename_prefix",
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "format",
+          "name": "format",
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "widget": {
+            "name": "format"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "audioUI",
+          "name": "audioUI",
+          "type": "AUDIO_UI",
+          "widget": {
+            "name": "audioUI"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "audio",
+          "name": "audio",
+          "type": "AUDIO",
+          "links": null
+        }
+      ],
+      "title": "Output_Audio_2",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2"
+      },
+      "widgets_values": [
+        "stems/Drums",
+        "flac"
+      ],
+      "widgets_values_named": {
+        "filename_prefix": "stems/Drums",
+        "format": "flac"
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 30,
+      "type": "SaveAudioAdvanced",
+      "pos": [
+        736.2502932294457,
+        732.0640372787642
+      ],
+      "size": [
+        687.5570847309136,
+        136
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "audio",
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 40
+        },
+        {
+          "localized_name": "filename_prefix",
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "format",
+          "name": "format",
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "widget": {
+            "name": "format"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "audioUI",
+          "name": "audioUI",
+          "type": "AUDIO_UI",
+          "widget": {
+            "name": "audioUI"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "audio",
+          "name": "audio",
+          "type": "AUDIO",
+          "links": null
+        }
+      ],
+      "title": "Output_Audio_3",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2"
+      },
+      "widgets_values": [
+        "stems/Other",
+        "flac"
+      ],
+      "widgets_values_named": {
+        "filename_prefix": "stems/Other",
+        "format": "flac"
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 31,
+      "type": "SaveAudioAdvanced",
+      "pos": [
+        741.2502932294457,
+        915.5201042243701
+      ],
+      "size": [
+        687.5570847309136,
+        136
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "audio",
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 41
+        },
+        {
+          "localized_name": "filename_prefix",
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "format",
+          "name": "format",
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "widget": {
+            "name": "format"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "audioUI",
+          "name": "audioUI",
+          "type": "AUDIO_UI",
+          "widget": {
+            "name": "audioUI"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "audio",
+          "name": "audio",
+          "type": "AUDIO",
+          "links": null
+        }
+      ],
+      "title": "Output_Audio_4",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2"
+      },
+      "widgets_values": [
+        "stems/Vocals",
+        "flac"
+      ],
+      "widgets_values_named": {
+        "filename_prefix": "stems/Vocals",
+        "format": "flac"
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    }
+  ],
+  "links": [
+    [
+      37,
+      11,
+      0,
+      28,
+      0,
+      "AUDIO"
+    ],
+    [
+      38,
+      28,
+      0,
+      25,
+      0,
+      "AUDIO"
+    ],
+    [
+      39,
+      11,
+      1,
+      29,
+      0,
+      "AUDIO"
+    ],
+    [
+      40,
+      11,
+      2,
+      30,
+      0,
+      "AUDIO"
+    ],
+    [
+      41,
+      11,
+      3,
+      31,
+      0,
+      "AUDIO"
+    ],
+    [
+      42,
+      32,
+      0,
+      11,
+      0,
+      "AUDIO"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.7060561299852294,
+      "offset": [
+        701.3579823943605,
+        -16.446615133141854
+      ]
+    }
+  },
+  "version": 0.4
+}
