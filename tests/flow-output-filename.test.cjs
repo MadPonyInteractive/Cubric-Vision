@@ -79,6 +79,20 @@ test('every Flow files its output under its own title', async () => {
     assert.deepEqual(offenders, [], 'set CommandDef.filePrefix so the file reads as the Flow');
 });
 
+// The tool routes (crop, composite, concat, reverse) name their own output with a
+// literal rather than through a command, so the op test above cannot see them. They
+// only have to agree with everything else: one camelCase word, no `video_crop`.
+test('the tool routes name their output in the same convention as the ops', () => {
+    const offenders = [];
+    for (const file of ['projects.js', 'videoCrop.js', 'videoReverse.js', 'videoConcat.js']) {
+        const src = read(`routes/${file}`);
+        for (const [, prefix] of src.matchAll(/[nN]extSequence(?:dName)?\([^)]*?'([^']+)'\s*,\s*(?:'\w+'|\w+)\)/g)) {
+            if (!/^[a-z][a-zA-Z0-9]*$/.test(prefix)) offenders.push(`routes/${file}: ${prefix}_001`);
+        }
+    }
+    assert.deepEqual(offenders, [], 'sequenced output prefixes are camelCase, like every op key');
+});
+
 // The three hops that carry the prefix are wiring, and none of them can run headless
 // (the save needs a live ComfyUI output to download). Dropped anywhere along the way it
 // silently falls back to the op key — the exact bug this fixes, back again.

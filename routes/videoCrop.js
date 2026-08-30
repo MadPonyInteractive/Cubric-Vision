@@ -11,7 +11,7 @@
  *                   by the caller (MPI-261 divisible-by). When present it is used
  *                   directly and the normalized→even-snap path is skipped (the
  *                   caller's multiples of 16 are already even for libx264).
- *   outFileName: string  (optional, default "video_crop_<timestamp>.mp4"),
+ *   outFileName: string  (optional, default "videoCrop_NNN.mp4"),
  *   groupId:     string  (optional — for caller context, echoed back),
  *   itemId:      string  (optional — source item id, echoed back),
  *   trimIn:      number  (optional — slice source starting at this offset, seconds),
@@ -96,7 +96,7 @@ router.post('/api/video/crop', async (req, res) => {
             cropY = Math.max(0, Math.floor(y * srcMeta.height));
         }
 
-        // 3. Prepare output path — sequenced "video_crop_NNN.mp4" like image crop
+        // 3. Prepare output path — sequenced "videoCrop_NNN.mp4" like image crop
         const mediaDir = path.join(folderPath, 'Media');
         await fs.ensureDir(mediaDir);
 
@@ -104,7 +104,7 @@ router.post('/api/video/crop', async (req, res) => {
         if (outFileName && /\.(mp4|mov|webm)$/i.test(outFileName)) {
             finalName = outFileName;
         } else {
-            finalName = await nextSequence(folderPath, mediaDir, 'video_crop', 'mp4');
+            finalName = await nextSequence(folderPath, mediaDir, 'videoCrop', 'mp4');
         }
         outputPath = path.join(mediaDir, finalName);
 

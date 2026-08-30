@@ -6,7 +6,7 @@
  * Body: {
  *   folderPath:  string  (project folder path),
  *   sourcePath:  string  (absolute file path OR /project-file?path=... URL),
- *   outFileName: string  (optional, default "video_reverse_NNN.mp4"),
+ *   outFileName: string  (optional, default "videoReverse_NNN.mp4"),
  *   groupId:     string  (optional — for caller context, echoed back),
  *   itemId:      string  (optional — source item id, echoed back),
  *   trimIn:      number  (optional — slice source starting at this offset, seconds),
@@ -82,7 +82,7 @@ router.post('/api/video/reverse', async (req, res) => {
         if (outFileName && /\.(mp4|mov|webm)$/i.test(outFileName)) {
             finalName = outFileName;
         } else {
-            finalName = await nextSequence(folderPath, mediaDir, 'video_reverse', 'mp4');
+            finalName = await nextSequence(folderPath, mediaDir, 'videoReverse', 'mp4');
         }
         outputPath = path.join(mediaDir, finalName);
 

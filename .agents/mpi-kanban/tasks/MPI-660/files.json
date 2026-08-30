@@ -5,6 +5,8 @@
     "js/services/generationService.js",
     "js/services/projectService.js",
     "routes/projects.js",
-    "tests/flow-output-filename.test.cjs"
+    "tests/flow-output-filename.test.cjs",
+    "routes/videoCrop.js",
+    "routes/videoReverse.js"
   ]
 }
