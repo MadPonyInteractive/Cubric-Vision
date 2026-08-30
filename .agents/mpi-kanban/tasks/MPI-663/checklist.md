@@ -21,7 +21,12 @@
 - [x] Docs: `existing-flows/stems.md`, `02-media-io.md` § multi-audio capture,
       `ui/carousel-frame/fields.md` § fields that constrain each other
 - [x] Proven on REAL stems from the user's own track (run under a GPU lease, 10s)
-- [ ] Preview assets - `flow-stems.webp` + `flow-stems.mp4` (`/mpi-flow-graphics`)
+- [x] Preview assets - `flow-stems.webp` (896x1120, 96 KB) + `flow-stems.mp4` (1280x800,
+      6s, 234 KB), both declared on the FlowDef. Five lanes off the real run: frost SOURCE
+      over four heat stems; the hero draws them in under a heat playhead then lifts them
+      back off, so the loop returns to the source alone. Layout laid out in the browser
+      (the fonts are woff2, unreachable by ffmpeg) and wiped between two opaque plates -
+      recipe added to `06-preview-image.md`
 - [x] Release note + roster line in `docs/releases/UNRELEASED.md`
 - [x] Icons: `stem_bass` / `stem_drums` / `stem_other` drawn and added to `icons.js`; Vocals
       reuses `mic`. Rendered at 48/24/18px and in the real toggle chrome before landing

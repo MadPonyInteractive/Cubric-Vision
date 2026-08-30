@@ -266,6 +266,24 @@ Three things in the Add Foley recipe each cost a rebuild, and none of them error
   `scale=sqrt:filter=peak:draw=full` is the proven recipe. And its background is
   transparent — a white waveform on it reads as a blank image.
 
+**For a layout that needs the APP'S OWN TYPE, lay it out in the browser and screenshot
+it** (Stems, MPI-663). The vendored fonts are **woff2**, which ffmpeg's `drawtext`
+(libfreetype) cannot load at all, and hand-placing labels in `sharp` means guessing metrics.
+Write a throwaway `_art/<name>.html` at the repo root — the running instance serves it, so
+`/assets/fonts/JetBrainsMono-*.woff2` and the real `oklch()` tokens both resolve — then
+`playwright-cli resize` + `screenshot "#el"`, which returns the element at exactly its CSS
+size (896 × 1120 asked, 896 × 1120 back) with no crop and no DPR surprise. Delete `_art/`
+after: it is scaffolding, not art.
+
+That also gives the reveal for free **without any transparency**: render the layout TWICE,
+once full and once with the animated part hidden (a `?stems=0` query flipping
+`visibility`), and wipe between the two plates with the registered-seam recipe
+(`geq` alpha + `alphamerge`). Both plates are opaque and pixel-identical outside the
+animated region, which is exactly the condition that device wants. Fold the loop into the
+same mask — `a = seam(T) * fade(T)` — and the clip returns to the "empty" plate on its own,
+so the loop point needs no crossfade and no black: measured **mean channel diff 0.07/255**
+between first and last frame.
+
 **HyperFrames is for a hero made of TYPE and GRAPHICS**, not plates and data: real
 brand fonts, a GSAP timeline, designed motion. Tool at `C:/AI/Mpi/video-tool`;
 authoring contract in `MadPony-Identity/playbooks/hyperframes-authoring.md` — read

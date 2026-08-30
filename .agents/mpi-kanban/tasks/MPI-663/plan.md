@@ -6,6 +6,9 @@
 named per stem and play; a drums+vocals combine run lands ONE `flowStems_001` card with the
 clip trim firing for real (+0.71 dB measured, `volume=-0.705dB` written); the last stem
 toggle locks and Combine greys below two; the Flow Library opens with zero console errors.
+**ART DONE TOO** — `flow-stems.webp` + `.mp4` built, declared, committed and pushed
+(`a74b5cd6`); tile and hero both verified serving 200 with the right byte counts and the
+hero proven playing at 444 px in a live instance. Only the user's own listen remains.
 Evidence and the two screenshots: `validation.md`. **One thing the handoff did not know:
 the separation node pack was never in the APP engine, only on the bench** — boot's UW deps
 repair installed it, but an attached instance cannot restart an engine it did not spawn, so
