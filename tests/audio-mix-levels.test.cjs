@@ -82,6 +82,56 @@ test('combining stems sums them, it does not average them', async (t) => {
     }
 });
 
+test('a sum that would clip is trimmed to fit, not hard-clipped', async (t) => {
+    // Measured on a real MiniMax track: drums+vocals summed to +0.63 dB over full scale.
+    // The instinct that says this cannot happen — "the stems came out of one file" — holds
+    // only for ALL of them; drop one and you remove whatever was pulling the waveform DOWN
+    // at some peaks. FLAC hard-clips the overshoot, and this flow's entire purpose is to
+    // hand clean material to a DAW.
+    const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'cubric-clip-'));
+    try {
+        // Two loud tones. `+17dB` because lavfi's `sine` does NOT generate at full scale
+        // (it lands near -18 dBFS), so the obvious "volume=-3dB" makes a pair that sums to
+        // -15 and never tests anything — which is exactly how this test first passed
+        // vacuously. The premise is asserted below rather than assumed.
+        const inputs = [];
+        for (const name of ['a', 'b']) {
+            const p = path.join(dir, `${name}.flac`);
+            await execFileP(ffmpegPath, [
+                '-y', '-hide_banner',
+                '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1:sample_rate=44100',
+                '-af', 'volume=17dB', '-c:a', 'flac', p,
+            ]);
+            inputs.push(p);
+        }
+        const inputPeak = await peakDb(inputs[0]);
+        assert.ok(inputPeak + 6.02 > 0.5,
+            `test setup: the pair must actually overshoot, but sums to ${(inputPeak + 6.02).toFixed(2)} dBFS`);
+
+        const out = path.join(dir, 'mixed.flac');
+        await mixAudioFiles(inputs, out);
+
+        // Measured in FLOAT, where an overshoot is still visible. `volumedetect` reads the
+        // clamped integer and would report a tidy 0.0 dB for a file being destroyed, which
+        // is exactly the reading that would let this regress unnoticed.
+        const { stderr } = await execFileP(ffmpegPath,
+            ['-hide_banner', '-i', out, '-af', 'aformat=sample_fmts=fltp,astats=metadata=1:reset=0',
+             '-f', 'null', '-'], { maxBuffer: 4 * 1024 * 1024 })
+            .catch(err => ({ stderr: err.stderr || '' }));
+        const peaks = [...stderr.matchAll(/Peak level dB:\s*(-?[\d.]+)/g)]
+            .map(m => Number(m[1])).filter(Number.isFinite);
+        assert.ok(peaks.length, 'astats reported no peak');
+        const peak = Math.max(...peaks);
+        assert.ok(peak <= 0.01, `the written file must not exceed full scale; got ${peak} dBFS`);
+
+        // Trimmed, not squashed: still within a hair of the ceiling it was pulled down to,
+        // so the fix is a static gain rather than a limiter eating the peaks.
+        assert.ok(peak > -1.0, `the trim must be the overshoot and no more; got ${peak} dBFS`);
+    } finally {
+        await fs.promises.rm(dir, { recursive: true, force: true });
+    }
+});
+
 test('a combine of fewer than two files is refused, not silently passed through', async () => {
     await assert.rejects(() => mixAudioFiles(['only-one.flac'], 'out.flac'), /at least two/);
     await assert.rejects(() => mixAudioFiles([], 'out.flac'), /at least two/);

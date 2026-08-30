@@ -79,26 +79,86 @@ function muxAudioIntoVideo(videoPath, audioPath, outPath) {
  * @param {string} outPath       destination
  * @returns {Promise<void>}      resolves on success; rejects with the ffmpeg stderr tail
  */
-function mixAudioFiles(inputPaths, outPath) {
+async function mixAudioFiles(inputPaths, outPath) {
     if (!Array.isArray(inputPaths) || inputPaths.length < 2) {
-        return Promise.reject(new Error('mixAudioFiles needs at least two inputs'));
+        throw new Error('mixAudioFiles needs at least two inputs');
     }
+    const mix = `amix=inputs=${inputPaths.length}:normalize=0:dropout_transition=0`;
+
+    // PASS 1 — how far past full scale does the sum go? Measured in FLOAT, where the
+    // value can exceed 0; volumedetect reads the clamped integer and would report a
+    // tidy 0.0 dB for a sum that is being destroyed.
+    //
+    // 🔴 A SUBSET SUM REALLY DOES CLIP, and the first instinct — "these stems came out
+    // of one file, so they cannot exceed it" — is wrong. It holds only for ALL of them.
+    // Drop one and you remove whatever was pulling the waveform DOWN at some peaks:
+    // measured on a real MiniMax track (mastered to 0 dBFS, as they all are), drums+vocals
+    // overshot by +0.63 dB. Hard-clipped samples in a file whose entire purpose is to be
+    // opened in a DAW is the one outcome this flow cannot ship.
+    const over = await _peakOverFullScaleDb(inputPaths, mix);
+
+    // PASS 2 — write it, trimmed by exactly the overshoot when there is one. A single
+    // static gain, so the waveform and the balance between stems are untouched; it is
+    // the difference between "quieter by half a dB" and "clipped", and for material on
+    // its way to a mix, headroom is the right side of that trade. No limiter: this flow
+    // hands over material to be processed, and dynamics are the user's to decide.
+    const filter = over > 0 ? `${mix},volume=${(-over).toFixed(3)}dB` : mix;
     const args = ['-y'];
     inputPaths.forEach(p => args.push('-i', p));
+    args.push('-filter_complex', filter, '-c:a', 'flac', outPath);
+
+    if (over > 0) {
+        logger.info('project', `ffmpeg mix: sum peaks +${over.toFixed(2)}dB over full scale, trimming to fit`);
+    }
+    return _spawnFfmpeg(args, 'mix');
+}
+
+/**
+ * Peak of the summed inputs in dB relative to full scale, as a POSITIVE number when the
+ * sum overshoots and 0 when it does not. `astats` after `aformat=fltp` is what makes the
+ * overshoot visible at all.
+ *
+ * Deliberately fails OPEN: if the measurement cannot be parsed, return 0 and write the
+ * mix untrimmed. A missing trim is a file that might clip; a failed measurement treated
+ * as fatal is no file at all.
+ */
+async function _peakOverFullScaleDb(inputPaths, mix) {
+    const args = [];
+    inputPaths.forEach(p => args.push('-i', p));
     args.push(
-        '-filter_complex', `amix=inputs=${inputPaths.length}:normalize=0:dropout_transition=0`,
-        '-c:a', 'flac',
-        outPath,
+        '-filter_complex', `${mix},aformat=sample_fmts=fltp,astats=metadata=1:reset=0`,
+        '-f', 'null', '-',
     );
+    try {
+        const stderr = await _spawnFfmpeg(args, 'mix-measure', { capture: true });
+        // One `Peak level dB` per channel plus an Overall block; the largest is the one
+        // that decides whether anything clips.
+        const peaks = [...stderr.matchAll(/Peak level dB:\s*(-?[\d.]+|inf)/g)]
+            .map(m => Number(m[1]))
+            .filter(Number.isFinite);
+        if (!peaks.length) return 0;
+        return Math.max(0, Math.max(...peaks));
+    } catch (err) {
+        logger.warn('project', `ffmpeg mix: peak measurement failed (${err.message}) — writing untrimmed`);
+        return 0;
+    }
+}
+
+/** Run ffmpeg, rejecting with the stderr tail. Resolves with stderr when `capture`. */
+function _spawnFfmpeg(args, label, { capture = false } = {}) {
     return new Promise((resolve, reject) => {
-        logger.info('project', `ffmpeg mix: ${ffmpegPath} ${args.join(' ')}`);
+        logger.info('project', `ffmpeg ${label}: ${ffmpegPath} ${args.join(' ')}`);
         const proc = spawn(ffmpegPath, args, { windowsHide: true });
         let stderrBuf = '';
-        proc.stderr.on('data', (d) => { stderrBuf += d.toString(); if (stderrBuf.length > 8000) stderrBuf = stderrBuf.slice(-8000); });
+        proc.stderr.on('data', (d) => {
+            stderrBuf += d.toString();
+            // astats prints per-channel blocks; keep enough to hold them all.
+            if (stderrBuf.length > 64000) stderrBuf = stderrBuf.slice(-64000);
+        });
         proc.on('error', (err) => reject(err));
         proc.on('close', (code) => {
-            if (code === 0) return resolve();
-            reject(new Error(`ffmpeg mix exited ${code}: ${stderrBuf.slice(-600)}`));
+            if (code === 0) return resolve(capture ? stderrBuf : undefined);
+            reject(new Error(`ffmpeg ${label} exited ${code}: ${stderrBuf.slice(-600)}`));
         });
     });
 }

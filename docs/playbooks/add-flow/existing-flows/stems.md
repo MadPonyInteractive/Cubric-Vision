@@ -59,9 +59,27 @@ provenance, the project.json write. Only where the file comes from differs.
 
 🔴 **`amix` needs `normalize=0`.** Its default divides every input by N, so drums+vocals would
 come back at half the level they had in the track and all four at a quarter — no error, nothing
-logged, and the file plays. The sum cannot clip beyond the original, because these stems came
-out of one file. Pinned by `tests/audio-mix-levels.test.cjs`, which asserts that mixing a tone
-with a copy of itself is **+6.02 dB** (measured, not assumed).
+logged, and the file plays. Pinned by `tests/audio-mix-levels.test.cjs`, which asserts that
+mixing a tone with a copy of itself is **+6.02 dB** (measured, not assumed).
+
+🔴 **A SUBSET SUM CLIPS, and the obvious reasoning says it cannot.** "These stems came out of
+one file, so they cannot exceed it" holds only for ALL of them. Drop one and you remove whatever
+was pulling the waveform DOWN at some peaks. Measured on a real MiniMax track — they arrive
+mastered to 0 dBFS, and Drums alone is already there:
+
+| combination | true peak before the trim |
+|---|---|
+| all four | +0.01 dB |
+| instrumental (no vocals) | +0.03 dB |
+| **drums + vocals** | **+0.63 dB** |
+
+FLAC hard-clips that, in a file whose entire purpose is to be opened in a DAW. So `mixAudioFiles`
+runs **two passes**: `astats` after `aformat=fltp` to see the overshoot (`volumedetect` reads the
+CLAMPED integer and reports a tidy 0.0 dB for a file being destroyed — the reading that would let
+this regress unseen), then one static `volume=-Xdb` on the write. Waveform and inter-stem balance
+untouched; the file is quieter by under a decibel instead of clipped. **No limiter** — this flow
+hands over material to be processed, and dynamics are the user's to decide. The measurement fails
+OPEN: unparseable means write untrimmed, because a possibly-clipping file beats no file.
 
 A mix failure FAILS THE SAVE. It is not the video mux, where keeping a silent video beats losing
 the generation — here the combined file is the entire product, and quietly landing one stem
