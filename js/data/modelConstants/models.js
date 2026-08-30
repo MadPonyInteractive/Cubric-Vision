@@ -1547,8 +1547,10 @@ export const MODELS = [
             // int8_convrot, NOT the fp16 build — REQUIRES core >= v0.31.0 (MPI-517).
             'vae-minimax-h3-video-int8',
             'vae-minimax-h3-audio',
-            // 1.82GB turbo distill (MPI-505, weight swapped to lightx2v in MPI-508),
-            // SHARED with ref2va — installing both downloads it once. A flat dep like
+            // 0.41GB turbo distill (MPI-505; weight swapped to lightx2v in MPI-508, then
+            // to lightx2v v1.0 in MPI-662). NO LONGER shared with ref2va — that card took
+            // its own ref2v-trained distill in MPI-662, so installing both models now
+            // downloads two turbo LoRAs. A flat dep like
             // krea2's accelerator rather than an opt-in extra: turbo is a per-run toggle,
             // so the weight has to be on disk before the user can flip it. With turbo OFF
             // both strengths gate to 0 and MpiLoraModelClip short-circuits the file load
@@ -1579,9 +1581,10 @@ export const MODELS = [
         sizeTier: 'balanced',
         modelFamily: 'MiniMax-H3',
         name: 'MiniMax H3 Reference',
-        // Same 12GB floor as fl2va, and not by copy-paste: the two dep sets weigh the
-        // SAME 53.15GB (the transformers are 20.97GB each and everything else is shared),
-        // so the computed floor is the identical 16GB overstatement.
+        // Same 12GB floor as fl2va, and not by copy-paste: the two dep sets weigh within
+        // 0.12GB of each other (47.91GB here, 48.03GB there — the transformers are
+        // 19.53GB each, 28.09GB is shared, and only the turbo LoRAs differ since
+        // MPI-662), so the computed floor is the identical 16GB overstatement.
         minVramGb: 12,
         dropdownMeta: 'VIDEO',
         mediaType: 'video',
@@ -1600,8 +1603,10 @@ export const MODELS = [
         // toggle removes both in one move instead of shipping two fields that inject
         // nowhere. NOTE: 'minimax-h3' above has the same missing-Input_Negative shape and
         // does NOT set this — pre-existing, tracked on MPI-475, not fixed here.
-        // h3TurboToggle: same 8-step distill as fl2va — one LoRA, both DiTs (see the
-        // fl2va card for why this is not krea2's `turboToggle`).
+        // h3TurboToggle: same toggle as fl2va, but since MPI-662 it arms a DIFFERENT
+        // weight at a DIFFERENT strength — this card's own ref2v distill at 1.0, against
+        // fl2va's v1.0 at 0.75. (See the fl2va card for why this is not krea2's
+        // `turboToggle`.)
         capabilities: { multiStage: true, singleFileStages: true, audio: true, negativePrompt: false, h3TurboToggle: true },
         // ponytail: the fl2va clip, on loan. A ref2va showcase has to wait for a run judged
         // on the CORRECT transformer — every r2va result before the 2026-08-07 re-export
@@ -1630,10 +1635,14 @@ export const MODELS = [
             // int8_convrot, NOT the fp16 build — REQUIRES core >= v0.31.0 (MPI-517).
             'vae-minimax-h3-video-int8',
             'vae-minimax-h3-audio',
-            // Same turbo distill as fl2va (MPI-505/508) — one weight, both DiTs. The
-            // filename says fl2v; it is applied to ref2va too, which is how the upstream
-            // community graph uses it.
-            'minimax-h3-turbo-lora',
+            // Its OWN turbo distill since MPI-662 — NOT the fl2va weight. Until 2026-08-30
+            // both DiTs shared the fl2v LoRA (upstream's own usage); this card now takes
+            // lightx2v's ref2v-trained one, which bench-tested more cinematic and better at
+            // following the audio description. It also runs at strength 1.0 against fl2va's
+            // 0.75, baked in this graph's own `MpiMath` #453 — see the dep for why the two
+            // numbers must not be harmonised. Installing both models now downloads two turbo
+            // LoRAs (0.41GB + 0.29GB) instead of one.
+            'minimax-h3-ref2va-turbo-lora',
             // Same preview decoder as fl2va (MPI-508) — shared, one download.
             'taeh3-decoder',
             'ComfyUI-MpiNodes',

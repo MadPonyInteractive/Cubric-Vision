@@ -1,7 +1,7 @@
 {
   "167": {
     "inputs": {
-      "int": 1376
+      "int": 864
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -10,7 +10,7 @@
   },
   "168": {
     "inputs": {
-      "int": 768
+      "int": 480
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -972,7 +972,7 @@
   },
   "444": {
     "inputs": {
-      "boolean": true
+      "boolean": false
     },
     "class_type": "MpiSimpleBoolean",
     "_meta": {
@@ -981,7 +981,7 @@
   },
   "453": {
     "inputs": {
-      "math_expression": "0.75 if a else 0.2",
+      "math_expression": "1.0 if a else 0.2",
       "a": [
         "444",
         0
@@ -1024,7 +1024,7 @@
   },
   "457": {
     "inputs": {
-      "lora_name": "minimax-h3\\minimax_h3_fl2v_lightx2v_turbo_4step_v1.0_768p_resized_avg_rank_31_bf16.safetensors",
+      "lora_name": "minimax-h3\\minimax_h3_ref2v_lightx2v_turbo_4step_v0.1_resized_avg_rank_20_bf16.safetensors",
       "model": [
         "459",
         0

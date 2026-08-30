@@ -15,7 +15,7 @@ formality.** Read § Licence before scoping anything.
 | Ops | `t2v_ms`, `i2v_ms` — one graph, `comfy_workflows/minimax_h3_fl2va.json` |
 | Stages | Two, in ONE file. No `_stage2` twin |
 | Audio | Emitted, not accepted. `capabilities.audio` is OFF — see § Audio |
-| Weights | 4 files, 53.15 GB, **publisher-hosted, never R2** |
+| Weights | 6 files, **48.03 GB** (computed from `DEPS`, 2026-08-30). The two DiTs and the audio VAE are publisher-hosted; the encoder (MPI-653), the int8 video VAE (MPI-517), the turbo LoRA and the TAE are R2-primary — so "never R2" no longer holds |
 | Engine floor | ComfyUI **0.30.0** (the H3 nodes do not exist before it) |
 
 There are two H3 transformers. This card is **fl2va** (`MiniMaxH3ImageToVideo`), the

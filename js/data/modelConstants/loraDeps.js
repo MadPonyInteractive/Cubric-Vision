@@ -71,6 +71,43 @@ export const loraDeps = {
         bytes: 440873704,
         sha256: '9515eee9f642aa0e7fcc401f56d408ef2d6388f81881fe50bddded8220870a4d',
     },
+    // The ref2va turbo distill — a SEPARATE weight from the fl2va one above, adopted
+    // 2026-08-30 (MPI-662). Until then both DiTs shared the fl2v LoRA, which is how the
+    // upstream community graph uses it; that is no longer true and any comment claiming
+    // "one weight, both DiTs" is stale.
+    //
+    // Why a second weight: this one is trained for the reference path. `MiniMaxH3Reference-
+    // ToVideo` sets `minimax_refs` and never `minimax_keyframes`, so a distill trained on
+    // it has conditioning the fl2v weight never saw. Bench-judged over a full session on
+    // 2026-08-30: more cinematic, and noticeably better at following the AUDIO description.
+    //
+    // **IT IS A v0.1, DELIBERATELY.** lightx2v shipped v1.0 for fl2v only; there is no
+    // ref2v v1.0 as of 2026-08-30. If one appears, retest — everything v1.0 touched here
+    // came back better, and the fl2v generational jump is the reason the fl2va card runs
+    // v1.0 while this one does not.
+    //
+    // **Its strength is 1.0, not 0.75**, baked in r2va's own `MpiMath` #453
+    // (`1.0 if a else 0.2`) — per-graph, so it does not disturb fl2va's #343. Do not
+    // "harmonise" the two: they are different weights on different curves, each tuned by
+    // eye. Magnitude arithmetic predicts nothing here and was wrong three times running
+    // on 2026-08-30 (measured `||B@A||_F` puts this at ~0.12x the fl2v v1.0 at the same
+    // strength, and it is the one that WON on ref2va).
+    //
+    // **Judge it at a real clip length.** Every short A/B during adoption reversed itself
+    // once the clips ran seconds instead of one: H3's trained window is 124-362 frames
+    // (~5.2-15.1s), and at ~1s neither the audio nor the cinematic read exists to judge.
+    // Apache-2.0 upstream, so no licences.js record.
+    'minimax-h3-ref2va-turbo-lora': {
+        id: 'minimax-h3-ref2va-turbo-lora',
+        name: 'MiniMax H3 Reference Turbo LoRA (6-step distill)',
+        origin: 'lightx2v/Minimax-h3-Turbo (Apache-2.0), ComfyUI conversion by Kijai/MiniMax-H3_comfy',
+        filename: 'loras/minimax-h3/minimax_h3_ref2v_lightx2v_turbo_4step_v0.1_resized_avg_rank_20_bf16.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/minimax-h3/minimax_h3_ref2v_lightx2v_turbo_4step_v0.1_resized_avg_rank_20_bf16.safetensors',
+        mirrorUrl: 'https://huggingface.co/Kijai/MiniMax-H3_comfy/resolve/main/loras/minimax_h3_ref2v_lightx2v_turbo_4step_v0.1_resized_avg_rank_20_bf16.safetensors',
+        size: '0.29GB',
+        bytes: 306731560,
+        sha256: '9ea3bd3a6aac22994153e294cf1ecab0a8766fc0f8d056ace645a01d1a6a4daf',
+    },
     // Content-filter-bypass LoRA (always-on Input_Bypass_Filter_Lora node). A tiny
     // 12-float projector nudge. Dep of BOTH models (it's negligible); the generator bakes
     // strength 1.0 on SFW (the fp8_scaled weight is filtered) and 0.0 on NSFW (self-unfiltered).

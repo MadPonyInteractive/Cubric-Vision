@@ -9,6 +9,8 @@
     "comfy_workflows/scripts/workflow_generation/minimax_h3_r2va_template.json",
     "js/data/modelConstants/loraDeps.js",
     "docs/models/h3/turbo.md",
-    "docs/releases/UNRELEASED.md"
+    "docs/releases/UNRELEASED.md",
+    "js/data/modelConstants/models.js",
+    "docs/models/h3/README.md"
   ]
 }

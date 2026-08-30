@@ -278,6 +278,11 @@
   you install H3 from here on. The full-quality 25-step mode is untouched and still the
   default.
 
+- **Turbo on MiniMax H3 Reference now has its own speed weight, tuned for references.** Both
+  H3 models used to share one, built for the other model. Reference now gets one trained for
+  the job: shots come out more cinematic, and the sound follows what you asked for more
+  closely. It adds a 0.29 GB download to that model, and only to that model.
+
 ## Fixes
 
 > **A fix to a FLOW does not belong in this section for this release.** Flows debut here, so

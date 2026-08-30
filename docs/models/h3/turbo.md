@@ -72,6 +72,35 @@ was tested the same day and **rejected: same quality, more time.**
 Everything below this section was measured on v0.1 or on larry's, and stands only until
 someone re-measures it on v1.0.
 
+## ref2va took its OWN weight, at its OWN strength (MPI-662, 2026-08-30)
+
+The two DiTs shared one turbo LoRA from MPI-505 until this change — upstream's own usage,
+and never actually judged on ref2va. Judged now, it loses. ref2va ships
+`minimax_h3_ref2v_lightx2v_turbo_4step_v0.1_resized_avg_rank_20_bf16` (0.29GB) at
+**strength 1.0**, in r2va's own `MpiMath` #453 (`1.0 if a else 0.2`). fl2va is untouched:
+fl2v v1.0 at 0.75, `MpiMath` #343. The expressions are per-graph — do not harmonise them.
+
+Bench verdict over a full session: more cinematic, and **noticeably better at following the
+audio description** — which is the axis H3 breaks on first, so it is the one worth having.
+
+**It is a v0.1 on purpose.** lightx2v shipped v1.0 for fl2v only; no ref2v v1.0 existed on
+2026-08-30. If one appears, retest — every v1.0 tried that day beat its v0.1.
+
+### Two methodology findings from this adoption, both of which cost runs
+
+**1. Clip length is a confound, and it reversed conclusions.** Every short A/B run at ~1s
+said the ref2v weight was inferior — softer, flatter, worse. Re-run at seconds instead of
+one, the verdict flipped completely. H3's trained window is 124–362 frames (~5.2–15.1s at
+24fps); ~1s is ~22 frames, a fifth of the floor. Audio in particular cannot be judged there
+at all. **Fix the clip length before comparing anything, and keep it inside the window.**
+
+**2. LoRA magnitude does not predict quality — stop computing it.** Measured `||B@A||_F`
+per module across all 208 pairs, this weight applies a median **0.12x** what fl2v v1.0
+applies at the same strength (and ~0.56x what v0.1 did). It was predicted to be starved.
+It won. Three separate magnitude predictions were made on 2026-08-30 and all three were
+wrong. The metadata `baked_scale` is worse than useless for this — it is bookkeeping about
+what was folded into `lora_B`, not a strength ratio. Judge by eye at a real duration.
+
 Both weights are pure diffusion-model LoRAs — 416 tensors each, split
 `diffusion_model.blocks` ×400 + `diffusion_model.token_refiner` ×16, **zero text-encoder
 keys**. So `strength_clip` is a no-op on either, and the graph feeds the gate into both

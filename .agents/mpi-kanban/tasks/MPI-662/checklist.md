@@ -36,3 +36,26 @@ The v0.1 file is stranded on the disk of every existing H3 user. `_orphanedDepId
 therefore swept by nothing. Same shape as MPI-508's swap. 1.82GB per user. Worth its own card;
 deliberately not bolted on here, because a second notion of "orphan" is how MPI-310 destroyed
 5.24GB of user weights.
+
+## Second leg - ref2va takes its own turbo LoRA (2026-08-30, after a full test session)
+
+- [x] Adopt `minimax_h3_ref2v_lightx2v_turbo_4step_v0.1_resized_avg_rank_20_bf16` on ref2va
+      at strength 1.0 (r2va `MpiMath` #453 -> `1.0 if a else 0.2`). fl2va untouched.
+- [x] New dep id `minimax-h3-ref2va-turbo-lora` - the two cards no longer share one LoRA
+- [x] models.js: ref2va dependency swapped, three stale "shared / both DiTs" comments fixed
+- [x] Footprint comment corrected from "SAME 53.15GB" - computed from DEPS, the sets are
+      48.03GB (fl2va) and 47.91GB (ref2va), 28.09GB shared, 67.85GB with both installed
+- [x] R2 upload verified: 306,731,560 bytes, HTTP 200, Content-Length matches
+- [x] Synced; runtime diff is exactly the two intended changes
+- [x] Tests: 14 pass, 0 fail (incl. shared-dep-uninstall-direction, which the un-sharing touches)
+
+### Findings worth keeping
+
+- **Clip length reversed the verdict.** Every ~1s A/B said the ref2v weight was worse. At
+  real duration it won on both cinematic look and audio adherence. H3's trained window is
+  124-362 frames (~5.2-15.1s); ~1s is ~22 frames. Judge nothing on H3 below the window.
+- **Magnitude predicted the opposite of the result, three times.** Measured ||B@A||_F puts
+  this weight at 0.12x the fl2v v1.0 at equal strength; it was called starved, and it won.
+  Do not reason about LoRA strength from `baked_scale` or from norms.
+- The fl2v v1.0 adoption earlier the same day was judged on shorter clips than this one.
+  Not re-judged. If a release is being cut, that is the run to repeat first.
