@@ -749,6 +749,74 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     of Wan **plus** an unmeasured 8192-wide composite, and chunk 1 is what measures it. Any
     "~2 h for four rails" estimate was Wan sampling only.
 
+36. **THE FULL FOUR-RAIL BAKE RAN END TO END, AND THE SHIPPED PILOTING MERGES WHAT
+    AMENDMENT 11 COULD NOT.** Six GPU leases, every one `success`: rails 27 / 122 / 133 / 144
+    at **37.0 / 35.0 / 34.8 / 35.3 min**, SfM at **20.5 min**, Brush Draft ~1 min (inferred
+    from the `.ply` mtime against the lease line - Brush writes nothing to stdout, amendment
+    9). Dataset `mpi623_wanq4`, splat `G:\MPI-623-spike\wanq4_brush_out\
+    mpi623_wanq4_5000.ply`, 53.3 MB at 5 000 steps.
+
+    **Amendment 11 is superseded on its central claim.** It recorded that "four independent
+    rails radiating from the origin split SfM into two reconstructions" and called it
+    geometry, not matcher tuning. With the SHIPPED converging piloting restored (amendments
+    30/32) the same four rails merge into **ONE model**: `num_frames 164`,
+    `trajectory_lengths [41, 41, 41, 41]`, `on_split` still at its strict `stop`. The rails
+    that split were the ALTERED ones. Amendment 11's *rule* survives - canned presets must
+    overlap - but its measurement was of damaged rails, exactly like amendment 25's.
+
+    **Per-rail known-pixel correlation (amendment 31's gate), all four rails:**
+
+    | rail | corr from frame 2 | worst hole |
+    |---|---|---|
+    | 27 | 0.856 - 0.953 | 6.1% |
+    | 122 | 0.853 - 0.950 | 5.6% |
+    | 133 | 0.810 - 0.947 | 37.8% |
+    | 144 | 0.648 - 0.948 | **94.3%** |
+
+    Rail 144 frame 40 is 94.3% hole - only 5.7% of that frame is reprojected panorama. The
+    0.648 is not Wan ignoring the control, it is barely any control left to honour. **This is
+    the shipped piloting's own behaviour**, not our drift.
+
+37. **HELD-OUT EVAL, AND WHERE THE DRAFT SPLAT ACTUALLY FAILS.** Brush's own
+    `--eval-split-every 8` held 123 of 984 cube faces out of training; scored against their
+    ground truth. **Read DOWN a column - never across, per amendment 14's blank-ceiling
+    trap** (face 4 reads high on good and bad frames alike).
+
+    | rail | face 0 | face 2 | face 4 |
+    |---|---|---|---|
+    | 27 | **29.48** | 26.93 | 35.81 |
+    | 122 | 26.07 | **21.13** | 31.46 |
+    | 133 | 28.39 | 25.00 | 31.50 |
+    | 144 | **20.86** | 25.93 | 31.74 |
+
+    **Rail 27's region is excellent** - `frame_00008_perspective_00000000` renders at 29.94 dB
+    and is visually near-identical to ground truth. **Rail 144 is soft** - the room's
+    structure is right, the detail is gone. **Rail 122 carries a real hole**, and it was
+    verified rather than assumed: `frame_00061_perspective_00000002` scores 16.19 dB with
+    *completely different content* from its ground truth. A pairing check over all 984
+    ground-truth images settles which it is - a control render ranks its own namesake **#1 of
+    984** (29.94 dB against 23.80 for the runner-up), so the filename pairing is sound, while
+    the suspect ranks its own ground truth **#87**, and its best match anywhere is 19.89 dB on
+    the OPPOSITE cube face of neighbouring frames. **The reconstruction is missing that wall
+    surface and renders the far side of the room through it.**
+    Lead for Phase 2, not a settled cause: the weak cells track the rails that leaned hardest
+    on invented content, but rail 133 holds up (28.39 / 25.00) despite a 37.8% hole, so hole
+    size alone does not predict splat quality - consistency of the invention across views does.
+
+38. **A SILENT FALLBACK COST ONE WHOLE SfM RUN - `hires_N` IS JSON, NOT A PATH.**
+    The first merge returned `success` and was WRONG: `p2s_dataset.json` read
+    `dualres: False`, `reproject_resolution [2048, 1024]`, i.e. the cube faces came from the
+    2048 proxies and the 8192x4096 composites - the entire point of the HiRes step - went
+    unused. `core/hires_composite.py:465` emits `hires_manifest` as JSON CONTENT
+    (`{"dir", "glob", "count", "paths"}`), and `nodes/upscale.py:_parse_hires_manifest`
+    returns `([], "")` for anything that does not parse, so callers "treat 'nothing wired' and
+    'wired but empty' the same" - **a wrong string falls back to single-res with no error**.
+    Feeding it the manifest FILE PATH looked right and did nothing.
+    Re-run with reconstructed JSON: `dualres=True`, SfM 2048x1024, reprojection **8192x4096**,
+    984 faces at 2048x2048. The cost difference is itself the tell - 7.5 min wrong versus 20.5
+    min right. **Any future graph that wires `hires_N` MUST assert `dualres` afterwards;
+    the exit code cannot see this.**
+
 ### Verified NOT drifted from the source workflow (checked 2026-08-29)
 
 **This list is not exhaustive and two things it omitted were wrong - see amendments 29 and
