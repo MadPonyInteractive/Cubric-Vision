@@ -710,6 +710,45 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     their rails without touching the prefixes the passing run used. The composite and SfM nodes
     consume links in-graph, never the saved files, so the prefixes are inspection-only.
 
+35. **THE BAKE SPLITS INTO SIX GPU LEASES - the SplatKit nodes were built for it.**
+    Fabio asked whether the ~2.5-3 h run can be broken up so he keeps the card between pieces.
+    It can, and not by a trick: `SplatKit_DatasetProject.reset` is documented "Clear the
+    project folder first. **Default off = resumable (the depth cache is reused)**". Set
+    `reset=true` on the first chunk only and every later chunk resumes the same dataset.
+
+    | chunk | graph | contains | GPU |
+    |---|---|---|---|
+    | 1 | `chunk1_rail27.json` | rail 27 -> Wan -> composite, `reset=true` | 29 min + composite |
+    | 2 | `chunk2_rail122.json` | rail 122, `reset=false` | same |
+    | 3 | `chunk3_rail133.json` | rail 133, `reset=false` | same |
+    | 4 | `chunk4_rail144.json` | rail 144, `reset=false` | same |
+    | 5 | not yet built | SfM merge over the four rails | no Wan sampling |
+    | 6 | not yet built | Brush Draft + held-out eval renders | ~30 s train (amendment 27) |
+
+    All four chunk graphs are in `G:\MPI-623-spike\`, 23 nodes each, cut from
+    `hires_api_q4_4rail.json` by backward reachability and asserted: exactly one `KSampler`,
+    one `CameraPlot`, one `HiResComposite` and two `SaveVideo` per chunk, every link resolving
+    inside the subset, no SfM node, and each rail's piloting **unchanged from the four-rail
+    graph** (so rail 27 is still identical to the pilot that passed).
+
+    **Why a chunk can end at the composite:** `SplatKit_HiResComposite` has `output_node=True`,
+    so it executes with nothing downstream of it. Checked in `object_info.json`, not assumed.
+
+    **Why chunk 5 is not built yet, and this is deliberate.** `SphereSfMDatasetDualRes` needs
+    `pano_frames_1..4` as IMAGE links; only `pano_frames_1` is REQUIRED, 2-4 are optional. The
+    composite persists what chunk 5 needs - `save_proxies` defaults true and writes
+    `<set_name>/proxies/` - and `VHS_LoadImagesPath` (directory -> IMAGE) is present on the
+    bench to read them back. The SfM node also takes `hires_dir` + `hires_glob` as an
+    alternative to wiring `hires_1..4` manifests. **But the actual proxy/hi-res folder layout
+    and filenames only exist once a composite has run**, so chunk 5 gets built against the real
+    `proxy_dir` / `hires_dir` / `hires_manifest` strings read out of chunk 1's `/history`,
+    not against a guess.
+
+    **A cost correction.** The 1743 s (29 min) pilot figure did **not** include a composite -
+    `hires_api_q4_pilot.json` has no `SplatKit_HiResComposite` node. So per-rail cost is 29 min
+    of Wan **plus** an unmeasured 8192-wide composite, and chunk 1 is what measures it. Any
+    "~2 h for four rails" estimate was Wan sampling only.
+
 ### Verified NOT drifted from the source workflow (checked 2026-08-29)
 
 **This list is not exhaustive and two things it omitted were wrong - see amendments 29 and
