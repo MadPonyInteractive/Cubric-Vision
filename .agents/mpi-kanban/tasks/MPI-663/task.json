@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-663",
+  "title": "Flow: Stems (audio separation)",
+  "description": "No-model utility Flow: one audio in, four stem cards out (Bass/Drums/Other/Vocals) via Hybrid Demucs. Graph prototyped and accepted on the bench.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-30T17:25:21+01:00",
+  "updated_at": "2026-08-30T16:26:29Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
