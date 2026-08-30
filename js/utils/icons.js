@@ -59,6 +59,14 @@ export const ICONS = {
     'video': '<path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/>',
     'audio': '<path d="M12 3v10.55A4 4 0 1 0 14 17V7h4V3h-6z"/>',
     'mic': '<path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5-3c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>',
+    // ── Stems (MPI-663) ───────────────────────────────────────────────────────
+    // The Stems flow's four toggles. Vocals reuses `mic` above — nothing drawn here
+    // would beat it, and a fourth near-duplicate is worse than the reuse.
+    // `stem_other` is deliberately an equaliser rather than an instrument: "Other" IS
+    // whatever is left in the mix, so a specific instrument would name it wrongly.
+    'stem_bass': '<path d="M20.7 2.3l1 1-2.6 2.6 1.3 1.3-1.4 1.4-1.3-1.3-5.6 5.6a5.5 5.5 0 1 1-1.4-1.4l5.6-5.6-1.3-1.3 1.4-1.4 1.3 1.3 2.6-2.6zM8.5 13a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7zm0 2a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3z"/>',
+    'stem_drums': '<path d="M12 9.5c-4.4 0-8 1.2-8 2.8v4.4c0 1.6 3.6 2.8 8 2.8s8-1.2 8-2.8v-4.4c0-1.6-3.6-2.8-8-2.8zm0 1.8c3.3 0 6 .5 6 1s-2.7 1-6 1-6-.5-6-1 2.7-1 6-1z"/><circle cx="5.9" cy="3.2" r="1.5"/><path d="M5.1 4.6l1.7-1 4 6.8-1.7 1-4-6.8z"/><circle cx="18.1" cy="3.2" r="1.5"/><path d="M18.9 4.6l-1.7-1-4 6.8 1.7 1 4-6.8z"/>',
+    'stem_other': '<path d="M3 10h3.2v10H3V10zm5.9-6h3.2v16H8.9V4zm5.9 3h3.2v13h-3.2V7zm5.9 5H21v8h-1.4v-8z"/>',
     'chat': '<path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>',
     'text': '<path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>',
     'translate': '<path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>',

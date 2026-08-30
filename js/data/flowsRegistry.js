@@ -1774,9 +1774,9 @@ export const FLOWS = [
         // are chunking plumbing, not choices about the result, so they stay baked at the
         // values proven on the bench.
         fields: [
-            { id: 'Input_Get_Bass',   type: 'toggle', label: 'Bass',   icon: 'audio', default: true, group: 'stems', minActive: 1 },
-            { id: 'Input_Get_Drums',  type: 'toggle', label: 'Drums',  icon: 'audio', default: true, group: 'stems', minActive: 1 },
-            { id: 'Input_Get_Other',  type: 'toggle', label: 'Other',  icon: 'audio', default: true, group: 'stems', minActive: 1 },
+            { id: 'Input_Get_Bass',   type: 'toggle', label: 'Bass',   icon: 'stem_bass', default: true, group: 'stems', minActive: 1 },
+            { id: 'Input_Get_Drums',  type: 'toggle', label: 'Drums',  icon: 'stem_drums', default: true, group: 'stems', minActive: 1 },
+            { id: 'Input_Get_Other',  type: 'toggle', label: 'Other',  icon: 'stem_other', default: true, group: 'stems', minActive: 1 },
             { id: 'Input_Get_Vocals', type: 'toggle', label: 'Vocals', icon: 'mic',   default: true, group: 'stems', minActive: 1 },
             {
                 id: 'combine', type: 'toggle', label: 'Combine into one file', icon: 'merge',

@@ -69,6 +69,27 @@ test('combine is dead until there are two stems to combine', async () => {
     assert.equal(disabledFieldIds(flow.fields, allOn()).has('combine'), false);
 });
 
+test('every icon a flow names actually exists', async () => {
+    // `renderIcon` falls back to the `info` glyph for an unknown name and `buildField`
+    // falls back to a tick — no error, no log. So a typo'd icon is a control wearing the
+    // wrong picture forever, which nobody reports because it looks deliberate. This is
+    // the same silent-skip family as an injection title with no node.
+    const { ICONS } = await esm('js/utils/icons.js');
+    const mod = await esm('js/data/flowsRegistry.js');
+    const flows = mod.FLOWS || mod.flows || mod.default;
+
+    const declared = flows.flatMap(f => [
+        ...(f.fields || []),
+        ...(f.steps || []).flatMap(s => s.fields || []),
+    ]).filter(x => x?.icon);
+
+    assert.ok(declared.length, 'no flow declares an icon — the registry has drifted');
+    for (const f of declared) {
+        assert.ok(f.icon in ICONS,
+            `field "${f.id}" names icon "${f.icon}", which is not in icons.js`);
+    }
+});
+
 test('the stems FlowDef declares the constraints the frame paints', async () => {
     const flow = await stemsFlow();
     const byId = new Map(flow.fields.map(f => [f.id, f]));
