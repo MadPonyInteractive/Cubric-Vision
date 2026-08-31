@@ -4,6 +4,16 @@ Written 2026-08-31 after Fabio brought in `kat3ri/ComfyUI-MiniMax-H3-Extend`. Tw
 this plan and neither should be re-searched: `brief.md` (the H3 seam physics — every rule there
 fails SILENTLY) and `research/minimax-h3-extend-nodepack.md` (the pack, and what changed).
 
+## Current State (2026-08-31, handed off)
+
+Planning session only. **Nothing is implemented — no repo code, no graph, no node.** Phase 1 has
+not started. The card sits in `todo` / `planned` on purpose: no file outside
+`tasks/MPI-591/` was touched, so it never needed `doing`. The next session moves it to `doing`
+(and writes `checklist.md` + `files.json`) at the moment it first edits something outside the
+card folder — Phase 1 is bench work and does not qualify; Phase 2 onward does.
+
+Both of Fabio's open questions are answered and folded in (§ Phase 3 for the negative, § Disk).
+
 ## The card is UNBLOCKED — that is the headline
 
 `task.json` still says "cannot start until `/mpi-bump-engine` lands a core that has both".
