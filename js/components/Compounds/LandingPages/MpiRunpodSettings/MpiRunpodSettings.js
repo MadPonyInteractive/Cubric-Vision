@@ -572,8 +572,15 @@ export const MpiRunpodSettings = ComponentFactory.create({
                         _handoffToWait = true;
                         return;
                     }
+                    // MPI-667: download mode has no card to pick, so the GPU copy was a dead
+                    // end — RunPod ran out of CPU capacity in EU-RO-1 on 2026-08-31 and the
+                    // app answered "pick another card" on a Pod that has no GPU at all. Send
+                    // them to a GPU instead: the volume is data-center-locked and mounts the
+                    // same either way, so any card in that DC downloads to the same place.
                     _setEngineHint(root, outOfStock
-                        ? `${msg} — that GPU is out of stock right now. Pick another card and Connect again.`
+                        ? (_runpodCfg().gpuType === '__cpu__'
+                            ? `${msg} — RunPod has no CPU capacity in this data center right now. Pick a GPU and Connect: your models still download to the same volume.`
+                            : `${msg} — that GPU is out of stock right now. Pick another card and Connect again.`)
                         : msg, true);
                     _setEngineStatusText(root, data.podId ? 'creating…' : 'stopped');
                     _engineBtnLabelSet(data.podId ? 'Disconnect' : 'Connect');

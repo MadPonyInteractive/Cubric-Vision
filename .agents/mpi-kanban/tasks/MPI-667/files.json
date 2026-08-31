@@ -3,6 +3,8 @@
   "files": [
     ".agents/mpi-kanban/tasks/MPI-667/**",
     "routes/remotePodLifecycle.js",
-    "tests/pod-cpu-flavors.test.cjs"
+    "tests/pod-cpu-flavors.test.cjs",
+    "js/components/Compounds/LandingPages/MpiRunpodSettings/MpiRunpodSettings.js",
+    "docs/runpod-troubleshooting.md"
   ]
 }

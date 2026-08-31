@@ -133,7 +133,17 @@ end-to-end 2026-06-15 (CPU Pod → download → switch to RTX 2000 Ada, models p
   skipped for CPU: `dataCenters()` reports GPU availability only, so a CPU stock-out is
   knowable only by asking for the Pod. **Workaround while it is out:** connect on any cheap
   GPU card in the same data center — the volume mounts identically and the downloads land
-  the same, at a few cents an hour.
+  the same, at a few cents an hour. Download mode now says exactly that instead of the GPU
+  copy ("pick another card"), which was a dead end on a Pod that has no card to pick.
+
+  **Confirm scarcity in the console, and read it by SELECTABILITY, not by price** — one click
+  from Settings' "Open in RunPod console". Open `Deploy a Pod → CPU`, attach the network
+  volume (that locks the region to the volume's DC), and try to *click* a card. RunPod keeps
+  rendering the CPU grid with live per-hour pricing even when nothing can be deployed, so a
+  priced card is NOT an available one; only the click settles it. That misread cost a wrong
+  fix on 2026-08-31 — sized flavor ids (`cpu3c-2-4`), reasoned from "the console shows them
+  available", committed and reverted in `8ae312c7`. The bare families are what created live
+  on 2026-07-29, so do not "correct" them without evidence stronger than a screenshot.
 - **Slim image** (mpi-ci `cubric-vision-pod/Dockerfile.cpu` + `start-cpu.sh`): wrapper + aria2c
   only, no torch/ComfyUI. `/wrapper/models/install` (aria2c) is pure HTTP+disk. The wrapper's
   `/health` returns `ready:true, comfy_ready:false, download_mode:true` when `CUBRIC_DOWNLOAD_MODE`
