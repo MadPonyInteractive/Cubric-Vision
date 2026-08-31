@@ -26,6 +26,19 @@ Design settled 2026-08-30 (hybrid). See `plan.md` for the full field surface and
 - [ ] `@` picker extracted from `MpiPromptBox` onto `MpiInput` (tier 3, purely additive on tier 2).
       `matchRefTagQuery` is reusable verbatim; only the DOM/keyboard/insert needs extracting
 
+## Deps and licence (GAP — not in the original plan)
+
+- [x] Flow shape settled against the playbook: no-model, media-free, `mediaType: 'audio'`, no
+      uiComponent. Does NOT need `/mpi-add-model` — the Voice Changer "flow with deps" precedent
+- [ ] Three `assetDeps.js` entries — DiT fp16 (4.91GB), text encoder pruned_int8 (9.20GB), VAE
+      (0.22GB), all from `Comfy-Org/MiniMax-Music-3`. ~14.33GB total
+- [ ] `sha256` for each (`/mpic-compute-dep-hashes`)
+- [ ] `requiredDeps` on the FlowDef lists exactly those three
+- [ ] Licence entry in `licences.js` — MiniMax-Music3 Community License. NO territory bar (unlike
+      H3), but attribution IS required: the name must show prominently in a commercial product's UI.
+      Use the existing `attribution` field, FLUX Klein precedent
+- [ ] **Fabio's call: WHERE the attribution shows.** A UI obligation, not a click-through
+
 ## Graph
 
 - [ ] `flow_minimax_music.json` authored from the bench workflow

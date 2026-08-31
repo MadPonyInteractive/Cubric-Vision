@@ -235,6 +235,68 @@ labels in the FlowDef — a raw-graph reader sees what runs.
 skill forbids copying them (see `research/minimax-music-3.md` § LICENCE). We conform to the schema and
 write our own prose for 18 families. That is a one-off authoring job, done once, offline.
 
+## The flow's SHAPE — settled against the playbook (2026-08-31)
+
+Step 0 of `docs/playbooks/add-flow/README.md`, answered. None of this was in the plan.
+
+| Fork | Answer |
+|---|---|
+| Model or no model | **No model.** `requiredModels: []` + `requiredDeps: [...]` — the Voice Changer / head-swap shape |
+| Inputs | **Fields only.** No `inputSchema.media` at all — text in, audio out |
+| Output | `mediaType: 'audio'` |
+| uiComponent | **None.** MPI-572 deleted the per-Flow Organism |
+
+**Why no ModelDef, even though this pulls ~14.3 GB.** Voice Changer settled the precedent for
+exactly this case and its comment is explicit: a flow with weights is *"a FLOW WITH DEPS,
+deliberately not a ModelDef (which would force dead fields and an entry in the model picker) and
+not a Plugin"*. Music 3 is the same animal — nothing about it belongs in the model picker. **So this
+card does NOT need `/mpi-add-model`.**
+
+**Media-free means §02 does not apply.** No media slots ⇒ none of the traps that dominate the
+playbook's trap table are reachable here: no audio-slot `mediaType`, no `filterMediaInputsForModel`,
+no path-reading input nodes. The only §02 rule still live is output capture — `Output_Audio` is the
+same title a video's soundtrack side-channel uses, and **`mediaType: 'audio'` is the only thing that
+tells them apart** (MPI-573 built that; Voice Changer was its first consumer).
+
+**The roster is confirmed as the sanctioned route, independently of our design.** The playbook's own
+rule: *"If a control is not expressible, add a PRIMITIVE plus the FIELD TYPE, never a bare input."*
+That is precisely tiers 2 and 3. No exception is being taken.
+
+### 🔴 GAP 1 — the weights are not in the dependency system
+
+`grep` over `dev_configs/` and `js/data/modelConstants/` finds **only MiniMax H3** (the video model).
+Music 3 has no entry anywhere. The bench runs because Fabio downloaded the weights by hand. Three
+new `assetDeps.js` entries are needed, all from `Comfy-Org/MiniMax-Music-3`:
+
+| Dep | File | Size |
+|---|---|---|
+| DiT | `diffusion_models/minimax_music3_dit_fp16.safetensors` | 4.91 GB |
+| Text encoder | `text_encoders/minimax_music3_text_encoder_pruned_int8_convrot.safetensors` | 9.20 GB |
+| VAE | `vae/minimax_music3_dav.safetensors` | 0.22 GB |
+
+≈ **14.33 GB total.** Use the int8 text encoder — the bf16 alternative is ruled out (§ The voice
+roster). `sha256` for each via `/mpic-compute-dep-hashes`. Sizes above are HF's own figures, taken
+from the API rather than guessed.
+
+### 🔴 GAP 2 — the WEIGHTS licence was never examined, only the caption templates
+
+§ Current State records the licence position as settled, but that covered MiniMax's 1,000 template
+captions. The weights are a separate instrument, and this vendor has form: H3 ships a
+territory-restricted CLA (`minimax-h3-cla-2026-08-02`, excluding the EU, UK, Korea and the USA).
+
+Read from `MiniMaxAI/MiniMax-Music3/LICENSE` on 2026-08-31 — the MiniMax-Music3 Community License:
+
+- ✅ **No territory restriction.** Unlike H3. The Outputs bar that makes H3 painful is absent.
+- ⚠️ **Attribution is REQUIRED, and it is a UI obligation, not a click-through:** the licence
+  requires the name `MiniMax-Music3` to be displayed prominently on the interface of a commercial
+  product using it. `licences.js` already models this — its `attribution` field, with FLUX Klein as
+  the precedent, so no frame work is needed. **Where it shows is Fabio's call.**
+- ⚠️ Clause 4 puts a safeguards obligation on anyone shipping a product that generates outputs.
+- The $20M/yr threshold for separate written authorization is not a near-term concern.
+
+Comfy-Org's repackage is tagged `apache-2.0`, but the upstream Community License governs the
+weights — do not take the repackage's tag as the answer.
+
 ## Frame work this needs (both new, both portable)
 
 ### 1. `hiddenWhen`
