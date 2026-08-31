@@ -4,15 +4,66 @@ Written 2026-08-31 after Fabio brought in `kat3ri/ComfyUI-MiniMax-H3-Extend`. Tw
 this plan and neither should be re-searched: `brief.md` (the H3 seam physics — every rule there
 fails SILENTLY) and `research/minimax-h3-extend-nodepack.md` (the pack, and what changed).
 
-## Current State (2026-08-31, handed off)
+## Current State (2026-08-31, after Phase 1)
 
-Planning session only. **Nothing is implemented — no repo code, no graph, no node.** Phase 1 has
-not started. The card sits in `todo` / `planned` on purpose: no file outside
-`tasks/MPI-591/` was touched, so it never needed `doing`. The next session moves it to `doing`
-(and writes `checklist.md` + `files.json`) at the moment it first edits something outside the
-card folder — Phase 1 is bench work and does not qualify; Phase 2 onward does.
+**Phase 1 is DONE and the route is PROVEN — but not the route this plan described.** The card is
+in `doing` / `in-progress`. `MpiH3MaskedPrefix` exists in `ComfyUi-MpiNodes/h3.py` (uncommitted),
+registered in `__init__.py`, self-check green.
 
-Both of Fabio's open questions are answered and folded in (§ Phase 3 for the negative, § Disk).
+**The winning arm is E: masked prefix + a SINGLE frame-0 guide. Fully stock, no pack, no patch.**
+
+Next action: Fabio judges the E clips (§ Phase 1 results), then Phase 2 = commit/push/pin the node.
+
+Both of Fabio's original open questions were answered on 2026-08-31 (§ Phase 3 for the negative,
+§ Disk). A new one is open: E's tail drifts the camera and shows a light streak — § Phase 1 results.
+
+## Phase 1 results (2026-08-31) — six arms, on the bench
+
+Source: `mpi591_src39.mp4`, 39 frames / 1.625 s / **640x352**, cut down from `MpiVideo_00056`.
+Target 73 frames (39 preserved + 34 new). Seed 591000591 on every arm. Turbo settings lifted from
+the SHIPPED graph, not invented: LoRA `minimax_h3_ref2v_..._4step` at **1.0**, `MiniMaxH3SigmaShift`
+12/5, `BasicScheduler` **beta / 6 steps**, `KSamplerSelect` **euler**. Weights: our
+`ref2va_pruned_int8_convrot` + int8 video VAE, never the author's fp16.
+
+| arm | what | result |
+|---|---|---|
+| A | the pack (`MiniMaxH3VideoExtendPatched`), context as keyframes | **seam invisible** — the oracle |
+| B | masked prefix ALONE | boundary EXACT, but the tail renders **an unrelated scene** |
+| C | masked prefix + a 39-frame `MiniMaxH3AddGuide` | **crash** |
+| D | that guide with NO mask | **same crash** — so it is the guide, not the mask |
+| **E** | **masked prefix + a single frame-0 guide** | **works — continuous, first-party, stock** |
+| F | stock pin-last-frame, no prefix | built, not run (E made it unnecessary) |
+
+**Three findings that outlive the card:**
+
+1. **The masked prefix is mechanically correct on stock core, and that is now measured.** E's and B's
+   first 39 frames come back at **PSNR ~38 dB** against the source — VAE-round-trip level, not a
+   regeneration. The boundary lands exactly where the arithmetic says. The nested AV noise mask
+   reaches the sampler, `scale_latent_inpaint` returns the preserved region unscaled, and
+   `process_timestep` zeroes its timestep. None of that needed a patch.
+2. **A clean prefix is NOT an anchor.** Arm B is the whole lesson: perfectly preserved frames 0-38,
+   and then a completely different street, wardrobe and subject from frame 39. The model will
+   happily leave given tokens alone and ignore them. One single-frame guide at index 0 fixes it.
+3. **`brief.md`'s trap 3 is WRONG for this route and must be corrected.** It says "guides inside the
+   preserved head must be dropped — a stock first-frame guide sitting in the repeated span fights
+   the prefix". It does not fight it: the frame-0 guide *inside* the preserved head is precisely
+   what makes the continuation cohere. Arm B (no guide) is the failure; arm E (guide) is the fix.
+
+**Why C and D crashed, exactly** — `comfy/ldm/minimax/model.py:654`,
+`all_video_rows[~img_update] = cond_video_rows`, `shape mismatch [2640, 96] -> [220, 96]`. 2640 is
+the 39-frame guide's 12 latent steps x 220 rows; 220 is ONE step. Stock reserves a single latent
+step for a keyframe, which is the anchoring limit the pack's `PackedLayout` patch generalises. So
+the research file's read of the patch is confirmed from the failure side — and irrelevant, because
+E never needs a multi-frame guide.
+
+**Open for Fabio:** E's new tail keeps the subject, wardrobe and street, but the camera drifts from
+the source's dolly-in to a pull-back, and a light streak crosses frames 50-72. 6-step turbo at 352p
+is a low bar, so this may be budget rather than mechanism — re-run at 768p / non-turbo before
+reading anything into it.
+
+**Cost note:** the first attempt ran the pack's example defaults (1504x832, 124 frames, 20 steps,
+`res_multistep`) and was still going at 1000 s. Fabio's correction — small source, small canvas,
+single stage, turbo on — took a full arm to **40-80 s**. Do not run this bench work any other way.
 
 ## The card is UNBLOCKED — that is the headline
 
@@ -20,6 +71,31 @@ Both of Fabio's open questions are answered and folded in (§ Phase 3 for the ne
 **It already did.** `node_lock.json` pins core `v0.34.0`, and `MiniMaxH3AddGuide` (PR 15439) and
 the per-stream `audio_denoise_mask` (PR 15375) are both in that tag — read off the tagged files,
 not the changelog. The bench (`G:\ComfyUi`, 0.34.2) has the same. Nothing here waits on anything.
+
+## Plan Drift
+
+- **2026-08-31 — Phase 1 and Phase 2 merged.** Phase 1 said "build the masked-prefix graph by
+  hand". It could not be built: a live `/object_info` probe showed nothing in core or in MpiNodes
+  composes a masked prefix (`MiniMaxH3VideoExtend` / `MiniMaxH3EncodeAV` are fork-only). So the
+  Phase 2 node was written FIRST, in `h3.py`, which the bench sees through its symlink. Phase 2 is
+  now commit → push → pin only. Fabio approved; that is also what moved the card to `doing`.
+- **2026-08-31 — the mechanism changed, the plan's headline claim was wrong.** The plan said the
+  masked prefix "uses no keyframes, so neither core patch applies". Half right: no patch is needed,
+  but the masked prefix ALONE does not continue anything (arm B). The shipping route is masked
+  prefix **plus a single frame-0 guide** (arm E). Still fully first-party and stock — the verdict
+  on the pack does not change, only the graph does.
+- **2026-08-31 — a first-party AV encode is now a Phase 2 item.** Both arms used the pack's
+  `MiniMaxH3EncodeAVPatched` to turn the prior clip into an AV latent, deliberately, to keep the
+  encode out of the comparison. A shipped graph cannot depend on the pack, and core exposes no
+  join for the two halves (`VAEEncode` + `VAEEncodeAudio` give separate latents). Add
+  `MpiH3EncodeAV` to `h3.py` — ~10 lines, mirroring core's own `_encode_ref_audio`.
+- **2026-08-31 — the source clip must be trimmed to 17k+5 frames BEFORE it is encoded.** Found by
+  the node's own self-check, not at run time: an off-grid clip shifts the VAE's packing phase so
+  that NO tail of it lands on a legal context length (a 30-step latent can reach 4, 8, 12, 16, 17,
+  21 ... frames and never 39 or 90). The node raises and says so. The graph needs a trim upstream.
+- **2026-08-31 — every bench graph ends in `MpiClearVram`** (Fabio), wired as a passthrough between
+  the decode chain and `SaveVideo` so it cannot be reordered off the end. Carry this into the
+  Phase 3 shipped graph.
 
 ## The decision: first-party masked prefix. The pack is a bench ORACLE, not a dependency.
 

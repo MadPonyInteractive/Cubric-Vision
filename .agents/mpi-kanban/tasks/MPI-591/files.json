@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "comfy_workflows/raw/flow_h3_extend.json",
+    "comfy_workflows/flow_h3_extend.json",
+    "js/data/modelConstants/universal_workflows.js",
+    "js/data/modelRegistry.js",
+    "js/data/flowsRegistry.js",
+    "js/services/commandExecutor.js",
+    "dev_configs/node_lock.json",
+    "tests/inject-params-titles.test.cjs",
+    "tests/flow-model-choice.test.cjs",
+    "docs/playbooks/add-flow/existing-flows/ltx-extend.md",
+    "docs/playbooks/add-flow/any-of-models.md"
+  ]
+}
