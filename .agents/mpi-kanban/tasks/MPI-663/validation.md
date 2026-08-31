@@ -48,6 +48,22 @@ the tile. Loop seam measured at **0.07/255 mean channel diff** between first and
 `npm test` 815 pass; `tests/desktop/flows-tab-ring.spec.js` 4 pass — the spec that caught
 the early art declaration is green with the art now real.
 
+**Re-run any of these rather than trusting the numbers** (the close-out auditor reads git,
+so a measurement with no command beside it comes back UNPROVEN — it did, for four of these):
+
+```sh
+npm test                                                              # 815 pass / 0 fail
+npx playwright test --config=playwright.desktop.config.js tests/desktop/flows-tab-ring.spec.js
+node_modules/ffmpeg-static/ffmpeg.exe -ss 0     -i comfy_workflows/display/flow-stems.mp4 -frames:v 1 a.png
+node_modules/ffmpeg-static/ffmpeg.exe -sseof -0.06 -i comfy_workflows/display/flow-stems.mp4 -frames:v 1 b.png
+# then the mean |a-b| over sharp().raw() buffers — 0.069/255 on the committed file
+```
+
+The hero's playback readings (`paused:false`, `currentTime` advancing, 444 px wide) are the
+one thing here that cannot be re-derived from the repo: they need a running instance with a
+project open on the Gallery page, and the video selected by `currentSrc` rather than
+`querySelector('video')`.
+
 ## Bench evidence (earlier in the card)
 
 See `plan.md` § Completed and `checklist.md` § Verified — amix `normalize=0` measured at
