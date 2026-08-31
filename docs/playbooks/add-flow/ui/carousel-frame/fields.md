@@ -50,6 +50,12 @@ never reached the payload, defaults were never seeded, and Reuse read only `step
   the value is clamped before it reaches the graph, and a typed number is written back clamped
   so the widget never shows one value while sending another. A slider always renders its live
   numeric readout: a slider without its number is a guess.
+- `slider` also takes `format: 'duration'` (MPI-664), which renders its readout as time —
+  `45` → "45 seconds", `62` → "1 minute 2 seconds", `180` → "3 minutes". A length slider showing
+  a bare `90` tells a user nothing about how long their result is. A formatted slider **opts out
+  of the progress bar's `info` hover**: that bar substitutes `{value}` and cannot format, so it
+  would hover "Length: 90" over a readout saying "1 minute 30 seconds" — one control contradicting
+  itself. Seconds → frames stays the **graph's** job (`MpiMath`), never the app's.
 - `text` takes `placeholder` and `rows`; `rows > 1` renders a `textarea`. That is the prompt case.
 - `radio` takes `options: [{ v, label, info?, note? }]` and an optional `columns`. It is the only
   field type that mounts a Primitive (`MpiRadioGroup`), and it earns that: a tier choice rendered
@@ -64,29 +70,55 @@ never reached the payload, defaults were never seeded, and Reuse read only `step
 - Anything else logs a warning and renders nothing. A silently-missing control is the failure
   mode this whole file exists to avoid.
 
-## Fields that constrain each other (MPI-663)
+## Fields that constrain each other (MPI-663, MPI-664)
 
-Two DECLARATIVE clauses, evaluated by `disabledFieldIds` (`js/utils/declaredFields.js`) and
-painted by the frame through the primitive's own `setDisabled`. Declarative on purpose: a
-predicate in a FlowDef is a thing only a first-party flow can ship.
+Three DECLARATIVE clauses, evaluated in `js/utils/declaredFields.js` and painted by the frame in
+one pass (`_paintFieldConstraints`). Declarative on purpose: a predicate in a FlowDef is a thing
+only a first-party flow can ship.
 
 | clause | on | means |
 |---|---|---|
 | `group: '<name>', minActive: N` | every member | a member that is ON and would take the group below N is **locked**. Members that are OFF stay live — turning one on can never break a floor |
 | `enabledWhen: { group: '<name>', atLeast: N }` | a field OUTSIDE the group | disabled while fewer than N members are on |
+| `hiddenWhen: { field: '<id>', is: <value> }` | any field | **removed from the slide** while that field holds exactly that value |
 
-Stems declares both: its four stem toggles are `{ group: 'stems', minActive: 1 }`, and its
-`combine` toggle is `{ enabledWhen: { group: 'stems', atLeast: 2 } }`.
+The first two are `disabledFieldIds`, the third is `hiddenFieldIds`.
+
+Stems declares both disabling clauses: its four stem toggles are `{ group: 'stems', minActive: 1 }`,
+and its `combine` toggle is `{ enabledWhen: { group: 'stems', atLeast: 2 } }`.
+
+### Hiding vs disabling
+
+**Reach for `hiddenWhen` when the field has nothing to say at all**, and disabling when it has
+something to say that is currently forbidden. MiniMax Music's Instrumental toggle hides the lyrics
+box and both voice controls: with no vocals there is nothing for them to mean, and a greyed lyrics
+box still reads as a box the user failed to fill in.
+
+Hiding is also the **wider reach**. Disabling lands on the primitive's own `setDisabled`, so it
+works for a `toggle` and a `select` and nothing else — a declared `text` box cannot be greyed at
+all today. Hiding is on the field WRAPPER, so it works for every field type.
+
+`hiddenWhen` compares with **exact equality**, not truthiness: an untouched field is `undefined`,
+not `false`, so a rule keyed `is: false` does not fire before the user touches the control.
+
+The painter walks the flow's own fields **and every step's** together, because a rule is declared
+where its control is and the two halves must be evaluated as one set.
+
+⚠️ The frame ships the `[hidden]` CSS override for its own fields. `.mpi-base-flow__field` sets
+`display`, which beats the UA stylesheet's `[hidden]` rule — so the attribute alone hides nothing.
+Any other surface mounting `buildField` under a different BEM block needs its own override.
 
 **The floor is not cosmetic.** A flow whose every branch gates off runs, reports SUCCESS and
 lands no card at all — no error, no toast, nothing logged ([../../02-media-io.md](../../02-media-io.md)
 § Self-gating is not the same as HANDLED). Locking the last toggle is what keeps a user out of
 that state, so any flow whose toggles gate graph branches wants a floor.
 
-🔴 **A disabled field KEEPS ITS VALUE.** Greying a control is not the same as deciding for the
-user, and the value must come back when the constraint clears. So whatever consumes it re-checks
-the real condition instead of trusting the flag — Stems only combines when more than one file
-actually landed, never on the toggle alone.
+🔴 **A disabled OR hidden field KEEPS ITS VALUE.** Greying or hiding a control is not the same as
+deciding for the user, and the value must come back when the constraint clears. So whatever
+consumes it re-checks the real condition instead of trusting the flag — Stems only combines when
+more than one file actually landed, never on the toggle alone. The same law bites harder on
+hiding: an instrumental run whose GRAPH trusted the flag would inject lyrics that are merely
+invisible, so the graph re-checks the condition itself.
 
 ## Where a value lands is decided by its id
 

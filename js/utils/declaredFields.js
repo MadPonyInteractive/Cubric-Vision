@@ -127,6 +127,32 @@ export function mapDeclaredValue(f, v) {
 export const isInjectionParam = (id) => /^input_/i.test(String(id));
 
 /**
+ * Render a declared numeric value the way its `format` asks for (MPI-664).
+ *
+ * A slider that means SECONDS reads as a bare integer today — "90" tells a user
+ * nothing about whether their song is long. `format: 'duration'` spells it, and it
+ * is declared on the field rather than hard-coded per flow so any flow measuring
+ * time gets it by saying so.
+ *
+ * Minutes and seconds only: this renders a media length, and the app caps nothing
+ * near an hour. A longer one would read "125 minutes" rather than lie.
+ *
+ * @param {Object} f  the field declaration
+ * @param {*} v       the current value
+ * @returns {string}  display text
+ */
+export function formatDeclaredValue(f, v) {
+    if (f?.format !== 'duration') return String(v);
+    const total = Math.max(0, Math.round(Number(v) || 0));
+    const mins = Math.floor(total / 60);
+    const secs = total % 60;
+    const part = (n, unit) => `${n} ${unit}${n === 1 ? '' : 's'}`;
+    if (!mins) return part(secs, 'second');
+    if (!secs) return part(mins, 'minute');
+    return `${part(mins, 'minute')} ${part(secs, 'second')}`;
+}
+
+/**
  * Which declared fields must render DISABLED right now, given the current values.
  *
  * MPI-663 — Stems is the first flow whose toggles CONSTRAIN EACH OTHER: at least one
@@ -170,6 +196,45 @@ export function disabledFieldIds(fields = [], values = {}) {
         if (rule?.group && Number.isFinite(rule.atLeast)) {
             if (activeIn(rule.group).length < rule.atLeast) out.add(f.id);
         }
+    });
+    return out;
+}
+
+/**
+ * Which declared fields must render HIDDEN right now, given the current values.
+ *
+ * MPI-664 — MiniMax Music's Instrumental toggle takes the lyrics and both voice
+ * controls off screen entirely rather than greying them: with no vocals there is
+ * nothing for them to say, and a greyed lyrics box still reads as a box the user
+ * failed to fill in.
+ *
+ * Hiding rather than disabling is also the CHEAPER reach. Disabling lands on the
+ * primitive's own `setDisabled`, so it works for a `toggle` and a `select` and for
+ * nothing else — a declared `text` box cannot be greyed at all today. Hiding is on
+ * the wrapper the painter already holds, so it works for every field type.
+ *
+ * One clause, deliberately narrow:
+ *   `{ hiddenWhen: { field: 'Input_Instrumental', is: true } }`
+ *
+ * DECLARATIVE, never a predicate function — the MPI-663 rule. A function in a
+ * FlowDef is something only a first-party flow can ship, and FlowDefs are data so a
+ * third party can express the same constraint.
+ *
+ * A hidden field keeps its VALUE, exactly as a disabled one does: toggle it back and
+ * the lyrics come back as typed. So ANYTHING ACTING ON ONE MUST RE-CHECK THE
+ * CONDITION rather than trust the flag — an instrumental run whose graph trusted the
+ * flag would inject lyrics that are merely invisible.
+ *
+ * @param {Object[]} fields  the declarations
+ * @param {Object} values    current values keyed by field id
+ * @returns {Set<string>}    ids to render hidden
+ */
+export function hiddenFieldIds(fields = [], values = {}) {
+    const out = new Set();
+    (fields || []).forEach((f) => {
+        const rule = f?.hiddenWhen;
+        if (!f?.id || !rule?.field) return;
+        if (values[rule.field] === rule.is) out.add(f.id);
     });
     return out;
 }
@@ -457,14 +522,19 @@ export function buildField(f, cur, onChange, unsubs, opts = {}) {
             interactive: true,
             wheel: true,
             handle: true,
-            info: `${f.label || f.id}: {value}`,
+            // A FORMATTED slider opts out of the info bar (`info: ''`). The bar
+            // substitutes `{value}` and cannot format, so it would hover "Length: 90"
+            // over a readout already saying "1 minute 30 seconds" — one control
+            // contradicting itself. The readout below carries the formatted value and
+            // is always visible, so nothing is lost (MPI-664).
+            info: f.format ? '' : `${f.label || f.id}: {value}`,
         });
         // A slider with no readout is a guess. The number IS the control. It shows
         // the DECLARED value, never the mapped one — `mapTo` is hidden by design.
         const out = ce('span', { className: cls('field-value') });
-        out.textContent = String(value);
+        out.textContent = formatDeclaredValue(f, value);
         inst.on('input', ({ value: v }) => {
-            out.textContent = String(v);
+            out.textContent = formatDeclaredValue(f, v);
             onChange(v);
         });
         unsubs.push(() => inst?.el?.destroy?.());

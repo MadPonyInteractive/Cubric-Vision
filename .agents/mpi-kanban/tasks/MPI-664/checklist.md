@@ -13,9 +13,10 @@ Design settled 2026-08-30 (hybrid). See `plan.md` for the full field surface and
 
 ## Frame work (new, portable)
 
-- [ ] `hiddenWhen` clause in `declaredFields.js` + `_paintFieldConstraints` — extends the MPI-663 constraint path
-- [ ] `format: 'duration'` on `slider` — seconds rendered as "1 minute 2 seconds"
-- [ ] Both promoted into `docs/playbooks/add-flow/ui/`
+- [x] `hiddenWhen` clause in `declaredFields.js` + `_paintFieldConstraints` — extends the MPI-663 constraint path
+- [x] `format: 'duration'` on `slider` — seconds rendered as "1 minute 2 seconds"
+- [x] Both promoted into `docs/playbooks/add-flow/ui/carousel-frame/fields.md`
+- [ ] The painter's DOM half proven in the app — unit-verified only until a FlowDef declares a rule
 
 ## Graph
 

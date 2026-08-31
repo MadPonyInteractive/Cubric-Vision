@@ -540,6 +540,10 @@
     gap: var(--s-2);
     font-size: var(--t-2xs);
 }
+/* A declared `hiddenWhen` field (MPI-664). The class sets `display`, which beats the
+   UA stylesheet's `[hidden]` rule, so the attribute alone hides nothing — same
+   override `__result-empty` and `__pending` already carry. */
+.mpi-base-flow__field[hidden] { display: none; }
 .mpi-base-flow__field-label {
     color: var(--ink-4);
     letter-spacing: 0.14em;

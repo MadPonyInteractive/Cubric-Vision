@@ -5,18 +5,27 @@ read it first, and do not re-search it.
 
 ## Current State
 
-**Design phase COMPLETE. No code written yet.** The whole card so far is design + research.
+**Design COMPLETE. The two frame additions are BUILT and green.** The graph, the FlowDef and the
+enhancer recipe are still to do.
 
 Settled: hybrid caption approach · the LLM question (Vision already ships `promptEnhance`) · the 18
 families as the style dropdown · the caption schema · the licence position · BPM as a 0-means-auto
 box capped at 250 · voice as a config dropdown plus a prose box · lyrics stay the user's job ·
 instrumental hides the lyrics and voice fields.
 
-Next session starts at the graph and the two frame additions (`hiddenWhen`, `format: 'duration'`).
-Nothing is blocked — MPI-663 shipped and released the shared-file claim.
+**Shipped 2026-08-31 — both frame additions, both portable, both documented:**
 
-Still unanswered by Fabio: sign-off on the field surface, and whether the `Input_Voice` list is
-complete.
+- `hiddenFieldIds()` in `declaredFields.js`, painted by `_paintFieldConstraints`.
+- `formatDeclaredValue()` + `format: 'duration'` on the slider branch.
+- `docs/playbooks/add-flow/ui/carousel-frame/fields.md` carries both.
+- Verified: 7/7 in `tests/flow-field-constraints.test.cjs` (2 new), `npm test` 817/817, `npm run lint` clean.
+
+**The field surface CHANGED on 2026-08-31.** Fabio signed off the `Input_Voice` list, then replaced
+the single dropdown with a **voice roster + `@` references in the lyrics**, and split the steps.
+See § The voice roster below — that section supersedes the `Input_Voice` row in § The field surface.
+
+Next action: **run the bench test first** (does MiniMax honour per-section voice stated in the
+caption?). It gates the whole roster. Then the stage restructure, then the graph.
 
 ## The decision
 
@@ -162,6 +171,59 @@ it, and they land on the same template/LLM line everything else does.
 `children-s-music-orchestral-pop`, `a-cappella-choral-pop`, `choral-ambient-new-age` and a dozen more
 choral families.
 
+### The voice roster — supersedes the single `Input_Voice` dropdown (2026-08-31)
+
+Fabio's call, and it is right: a single dropdown cannot say *male verse, female bridge, choir on the
+last chorus*. The replacement is a **cast list plus inline references**, and it lands squarely on the
+TEMPLATE half — the roster is structured data, not prose.
+
+- A **voice roster**: a `+` button adds a row, each row picks a voice type. Any length.
+- In the lyrics box, **`@` opens a picker** of the voices already defined, and inserts `<Name>`.
+
+**`@`, not `^`** — Fabio's correction, and the reason is the one that matters: `@` is already what
+the app teaches for referencing staged references in the video prompting system. Same gesture, learned
+once. A voice in a roster IS a staged reference.
+
+🔴 **The markers are STRIPPED AT DISPATCH.** `<Choir>` is not in MiniMax's official tag set (nine
+structural tags, `[Intro]`…`[Outro]`), and the lyrics field reaches the model verbatim. So the roster
+and its markers build the caption's `Vocal Details`, and the lyrics go to the model CLEAN. Leaving a
+marker in would be building on a tag the model was never told about.
+
+**Prior art, and what is actually reusable** (checked 2026-08-31):
+
+| Piece | Where | Reusable? |
+|---|---|---|
+| `matchRefTagQuery(value, caret, tags)` | `js/data/commandRegistry.js:1687` (MPI-475) | **Verbatim.** Pure, `@` already baked in, and its regex already refuses `foo@bar.com` mid-line — that edge case is its documented reason for existing |
+| The picker DOM / keyboard / insert | `MpiPromptBox.js:~1245-1300` | **No.** ~80 lines welded to `textareaEl`, `promptMode`, `_saveDraft`, `emit`. A Flow's `text` field mounts **MpiInput**, a different Primitive |
+
+So tier 3 costs the DOM extraction out of MpiPromptBox — a shared, high-traffic organism — and
+nothing else. The insert format is already `<tag>`, which reads as a marker rather than as lyrics.
+
+**Fabio chose tier 3** (roster + picker). Tiers 1 (free-text cast list) and 2 (`voices` field type,
+markers typed by hand) remain the fallbacks if the extraction turns out to be a bigger refactor than
+it looks — 3 is purely additive on 2, so 2 can ship first without redesign.
+
+⚠️ **GATED ON A BENCH TEST, and this is not optional.** Nobody has checked whether MiniMax honours
+per-section voice assignment stated in the caption. One caption with `Singer A (Male)` on the verses
+and a choir on the final chorus, then listen. If the model ignores it, the roster collapses back to a
+single dropdown and tiers 2–3 are wasted work. Evidence it is at least plausible: MiniMax's own
+reference captions name singers positionally (`Singer A (Male)`), `Harmony/Backing Vocals` is its own
+sub-label, and section tags are documented as **local** directives. None of that is proof.
+
+### The steps split — options apart from prompt (2026-08-31)
+
+Fabio's second call. Not only tidiness: **the roster must exist before the lyrics box**, or `@` has
+nothing to offer. The dependency forces the order.
+
+1. **Song** — the brief, Instrumental toggle
+2. **Voices** — the roster · *hidden when instrumental*
+3. **Lyrics** — with `@` reaching the roster · *hidden when instrumental*
+4. **Style** — style, own style, BPM, Low VRAM, the caption box
+5. **Run slide** — brief · Enhance · Length · Generate. **Minimal, deliberately.**
+
+`Input_Low_Vram` moves OFF the run slide: it is a set-once machine fact, not a per-run tweak. Length
+stays — it is the one thing that actually changes between runs.
+
 ### BPM is a box, and 0 means auto
 
 MiniMax's Output Contract: *"Use an exact BPM only when explicit or strongly justified; otherwise use
@@ -275,3 +337,31 @@ implementation to read before touching it.
 
 **Settled 2026-08-30:** BPM ceiling is **250**, not 220 — Fabio has mastered tracks at that tempo,
 so a 220 cap would clip real material. Do not "tidy" it down to a textbook range.
+
+## Plan Drift
+
+**2026-08-31 — three things the frame additions needed that the plan did not name.** All three are
+the same shape: the declarative half was easy, the PAINTING half had a hole.
+
+1. **`_paintFieldConstraints` only ever walked `_fields`** — the flow's own fields, never a step's.
+   MPI-663's Stems declares its constraints flow-level, so the gap never showed. This card declares
+   `hiddenWhen` on `fields` STEPS, where the rule would have been evaluated against a value set the
+   Instrumental toggle is not in, and hidden nothing. Fixed with `_allDecls` (flow + every step),
+   used for both the evaluation and the paint. Extends disabling to step fields too — additive, no
+   flow declares one there today.
+   - Value plumbing was already fine and is worth not re-deriving: a `fields`-kind step is a
+     FRAME_KIND, so it seeds into `_fieldValues` (the flow store), and it renders through
+     `_buildFlowFields` — so `_liveFields` registration and the `_onFlowField` repaint were already
+     in place. Only the walk was wrong.
+2. **`wrap.hidden` alone hides nothing.** `.mpi-base-flow__field` sets `display: inline-flex`, which
+   beats the UA stylesheet's `[hidden]` rule. Needed an explicit
+   `.mpi-base-flow__field[hidden] { display: none; }` — the same override `__result-empty` and
+   `__pending` already carry in that file. Classic silent no-op: no error, no log, control still there.
+3. **A formatted slider must opt out of the progress bar's `info`.** `MpiProgressBar` substitutes
+   `{value}` and cannot format, and it rewrites `dataset.info` on every input, so an override from
+   outside is clobbered. Passing `info: ''` when `f.format` is set stops the bar hovering
+   "Length: 90" over a readout saying "1 minute 30 seconds".
+
+**Not proven yet:** the painter's DOM half. Both pure functions are unit-tested, but nothing declares
+`hiddenWhen` or `format: 'duration'` yet, so `wrap.hidden` + the CSS override have not run in the app.
+That closes with the FlowDef, on the checklist's existing "live run verified" item.

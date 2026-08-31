@@ -135,3 +135,49 @@ test('the stems FlowDef declares the constraints the frame paints', async () => 
     assert.deepEqual(combine.enabledWhen, { group: 'stems', atLeast: 2 });
     assert.equal(combine.default, false);
 });
+
+// ── MPI-664 — hiding, and a slider that reads as time ───────────────────────────
+
+test('hiddenWhen takes a field off screen, and only when the rule says so', async () => {
+    // MiniMax Music's Instrumental toggle. Hiding rather than greying, because a greyed
+    // lyrics box still reads as a box the user failed to fill in — and because greying
+    // reaches `setDisabled`, which a declared `text` field does not have.
+    const { hiddenFieldIds } = await esm('js/utils/declaredFields.js');
+    const fields = [
+        { id: 'Input_Instrumental', type: 'toggle' },
+        { id: 'Input_Lyrics', type: 'text', hiddenWhen: { field: 'Input_Instrumental', is: true } },
+        { id: 'Input_Voice', type: 'select', hiddenWhen: { field: 'Input_Instrumental', is: true } },
+        { id: 'positive', type: 'text' },
+    ];
+
+    assert.deepEqual([...hiddenFieldIds(fields, { Input_Instrumental: true })].sort(),
+        ['Input_Lyrics', 'Input_Voice'], 'instrumental hides the lyrics and the voice');
+    assert.deepEqual([...hiddenFieldIds(fields, { Input_Instrumental: false })], [],
+        'vocals back on: everything returns');
+
+    // A field with no rule is never hidden, and the TOGGLE never hides itself.
+    assert.equal(hiddenFieldIds(fields, { Input_Instrumental: true }).has('positive'), false);
+    assert.equal(hiddenFieldIds(fields, { Input_Instrumental: true }).has('Input_Instrumental'), false);
+
+    // Exact equality, not truthiness: an unset value is not `false`, so a rule keyed on
+    // `is: false` must not fire before the user has touched the control.
+    const onFalse = [{ id: 'x', hiddenWhen: { field: 'flag', is: false } }];
+    assert.equal(hiddenFieldIds(onFalse, {}).has('x'), false, 'undefined is not false');
+    assert.equal(hiddenFieldIds(onFalse, { flag: false }).has('x'), true);
+});
+
+test('format: duration spells a slider out instead of showing bare seconds', async () => {
+    const { formatDeclaredValue } = await esm('js/utils/declaredFields.js');
+    const f = { format: 'duration' };
+
+    assert.equal(formatDeclaredValue(f, 45), '45 seconds');
+    assert.equal(formatDeclaredValue(f, 62), '1 minute 2 seconds');
+    assert.equal(formatDeclaredValue(f, 180), '3 minutes');
+    assert.equal(formatDeclaredValue(f, 60), '1 minute');
+    assert.equal(formatDeclaredValue(f, 1), '1 second', 'singular, or it reads as broken');
+    assert.equal(formatDeclaredValue(f, 0), '0 seconds');
+    assert.equal(formatDeclaredValue(f, 300), '5 minutes');
+
+    // No `format` is the untouched path — every existing slider still shows its number.
+    assert.equal(formatDeclaredValue({}, 90), '90');
+});

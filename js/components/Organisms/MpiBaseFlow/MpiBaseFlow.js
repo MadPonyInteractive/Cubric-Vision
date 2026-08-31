@@ -24,7 +24,7 @@ import { getCommand } from '../../../data/commandRegistry.js';
 import { flowModelSlots, flowModelIds, setFlowModel } from '../../../data/flowsRegistry.js';
 import { disambiguatedName } from '../../../data/modelRegistry.js';
 import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
-import { buildField, mapDeclaredValue, isInjectionParam, disabledFieldIds } from '../../../utils/declaredFields.js';
+import { buildField, mapDeclaredValue, isInjectionParam, disabledFieldIds, hiddenFieldIds } from '../../../utils/declaredFields.js';
 
 /**
  * MpiBaseFlow — THE flow frame: a step carousel (MPI-306 Phase 1).
@@ -935,6 +935,21 @@ export const MpiBaseFlow = ComponentFactory.create({
         ].filter(f => f?.action === 'enhance' && f.from && f.to);
 
         /**
+         * Every field this flow declares, flow-level and step-level together.
+         *
+         * The constraint painter walks THIS, not `_fields`. A cross-field rule is
+         * declared where the control is, and MiniMax Music declares its Instrumental
+         * toggle and the three fields it hides on `fields` STEPS — walking only the
+         * flow's own fields would evaluate the rule against a set the toggle is not
+         * in, and hide nothing (MPI-664).
+         * @type {Array<Object>}
+         */
+        const _allDecls = [
+            ...(_fields || []),
+            ...(flow.steps || []).flatMap(st => st?.fields || []),
+        ].filter(f => f?.id);
+
+        /**
          * Field wrappers currently in the DOM, keyed by field id. Cleared on every
          * slide rebuild. A field declared on two surfaces (the prompt step AND the
          * run slide) is one VALUE but two nodes over the flow's life — only the
@@ -1104,13 +1119,21 @@ export const MpiBaseFlow = ComponentFactory.create({
          *
          * Values are never rewritten here. A disabled control keeps what it holds and
          * comes back live the moment the constraint clears.
+         *
+         * MPI-664 adds HIDING on the same pass. Where disabling reaches the primitive's
+         * own `setDisabled` — and so lands on a toggle and nothing else — hiding is on
+         * the wrapper this map already holds, so it works for any field type. Same law
+         * as disabling: the VALUE survives, so the graph re-checks the condition rather
+         * than trusting what is on screen.
          */
         function _paintFieldConstraints() {
-            const ids = disabledFieldIds(_fields, _fieldValues);
-            _fields.forEach((f) => {
+            const disabled = disabledFieldIds(_allDecls, _fieldValues);
+            const hidden = hiddenFieldIds(_allDecls, _fieldValues);
+            _allDecls.forEach((f) => {
                 const wrap = _liveFields.get(f.id);
                 if (!wrap) return;
-                qs('.mpi-base-flow__field-toggle-btn', wrap)?.setDisabled?.(ids.has(f.id));
+                qs('.mpi-base-flow__field-toggle-btn', wrap)?.setDisabled?.(disabled.has(f.id));
+                wrap.hidden = hidden.has(f.id);
             });
         }
 
