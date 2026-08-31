@@ -3,15 +3,21 @@
 Derived from `plan.md` phases 2026-08-31. Each phase has one gate in the plan;
 do not tick an item until its gate is green.
 
-- [x] 1 — Bench: seam proven on `ref2va` against the pack as oracle. Six arms run;
-      **E (masked prefix + a single frame-0 guide) is the route** — fully stock, no
-      pack, no patch. Head preserved at PSNR ~38 dB. **Gate still open: Fabio has
-      not judged the clips, and only a MOVING shot was run — a static one is owed.**
-- [ ] 2 — The masked-prefix node in `ComfyUi-MpiNodes` (`h3.py`, sibling repo at
+- [x] 1 — Bench: seam proven on `ref2va` against the pack as oracle. Nine arms run;
+      **E/G (masked prefix + a single frame-0 guide) is the route** — fully stock, no
+      pack, no patch. Head preserved at PSNR 38 dB. The static shot is now run too (G)
+      and it MATCHES the oracle's seam, 1.40x vs 1.40x. **Gate still open: Fabio has
+      not judged the clips.** Two findings came out of it that he has to weigh:
+      the moving-shot seam misses the oracle (3.85x), and the sparkle in the tail is
+      `MpiH3MaskedPrefix`'s own (arm I proves it) — an undiagnosed defect.
+- [x] 2 — The nodes in `ComfyUi-MpiNodes` (`h3.py`, sibling repo at
       `c:\AI\Mpi\ComfyUi-MpiNodes`, NOT covered by this card's `files.json`).
-      Written + registered, self-check green, UNCOMMITTED. Also needs
-      `MpiH3EncodeAV` (~10 lines) so the shipped graph does not depend on the pack.
-      Gate: committed → pushed → `node_lock.json` commit bumped off `5e07043`.
+      `MpiH3MaskedPrefix` `f6d2484`, `MpiH3EncodeAV` `952919f`, changelog + README
+      `53c0198`. Both verified REGISTERED on a live restarted bench, and the encode
+      proven **bit-identical** to the pack's (`PSNR y:inf`). **Pin bumped off
+      `5e07043` to `53c0198`**, archive URL 200. Gate green.
+      Carried forward: `MpiH3MaskedPrefix` has an OPEN sparkle defect (see plan) —
+      it does not block the pin, because no shipped graph calls it until Phase 3.
 - [ ] 3 — The workflow file `comfy_workflows/raw/flow_h3_extend.json` + API
       export. No `Input_Negative` node. Gate: `tests/inject-params-titles.test.cjs`
       extended and green.

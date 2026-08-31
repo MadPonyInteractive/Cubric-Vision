@@ -4,18 +4,46 @@ Written 2026-08-31 after Fabio brought in `kat3ri/ComfyUI-MiniMax-H3-Extend`. Tw
 this plan and neither should be re-searched: `brief.md` (the H3 seam physics — every rule there
 fails SILENTLY) and `research/minimax-h3-extend-nodepack.md` (the pack, and what changed).
 
-## Current State (2026-08-31, after Phase 1)
+## Current State (2026-08-31, after the static arm and the Phase 2 node)
 
-**Phase 1 is DONE and the route is PROVEN — but not the route this plan described.** The card is
-in `doing` / `in-progress`. `MpiH3MaskedPrefix` exists in `ComfyUi-MpiNodes/h3.py` (uncommitted),
-registered in `__init__.py`, self-check green.
+**Phase 1's static arm is RUN and it is the best result on the card — but it also turned the
+"open for Fabio" question into a measured one.** The card is in `doing` / `in-progress`.
 
-**The winning arm is E: masked prefix + a SINGLE frame-0 guide. Fully stock, no pack, no patch.**
+- **Arm G (static shot) matches the pack oracle exactly on the seam: 1.40x against 1.40x**
+  (§ Phase 1 results, the seam table). Head preserved at PSNR 38.0 dB, scene continuous.
+- **Arm E's moving-shot seam is 3.85x — measurably worse than the oracle.** The camera drift is
+  real and it is a mechanism, not a budget: one frame-0 guide anchors CONTENT, not camera velocity.
+- **The sparkle artifact is NOT camera-related — it reproduces on the locked-off shot.** Fabio,
+  2026-08-31: he has never seen it in turbo, which points at the prefix rather than the sampler.
+  **Arm I is queued to settle it** (frame-0 guide kept, `MpiH3MaskedPrefix` removed, nothing else).
+- **PHASE 2 IS DONE — gate green.** `MpiH3EncodeAV` written, self-check green, both nodes verified
+  REGISTERED on a live restarted bench via `/object_info`, and the pin bumped off `5e07043` to
+  **`53c0198`** (archive URL checked, 200). `MpiH3EncodeAV` is **bit-identical to the pack's
+  `MiniMaxH3EncodeAVPatched`** — arm J against arm G2, `PSNR y:inf`, head at the same 38.035 dB.
+  The fork dependency is gone, proven equivalent rather than merely non-crashing.
+  `changelog.md` + `README.md` rows added for BOTH H3 nodes — `f6d2484` had shipped without them,
+  which would have made them invisible to `/comfy-release`.
 
-Next action: Fabio judges the E clips (§ Phase 1 results), then Phase 2 = commit/push/pin the node.
+**Next action, ordered by Fabio 2026-08-31: (1) DIAGNOSE THE SPARKLE, (2) then Phase 3.**
+Not the other way round — Phase 3 would author a shipped graph around a node whose output is known
+to be wrong. The diagnosis starts as reading, not running: the three places to look are listed at
+the end of § the sparkle is `MpiH3MaskedPrefix`, in order.
 
-Both of Fabio's original open questions were answered on 2026-08-31 (§ Phase 3 for the negative,
-§ Disk). A new one is open: E's tail drifts the camera and shows a light streak — § Phase 1 results.
+Fabio has confirmed the artifact by eye (G has it, I does not) but has NOT yet given the Phase 1
+seam verdict — the static-vs-moving question in § the static arm is still his to answer, and it
+does not block the diagnosis.
+
+**The app engine reinstalls MpiNodes at the new pin on its next boot** — it is a user replica with
+no symlink. Restart the app before generating, or it stays at `5e07043` for that session.
+
+**The bench is shared and it is not free.** GPU 0 was held from 11:49 by another session's MPI-664
+voice bench, on the SAME ComfyUI at `:8188`. `gpu_lease.py run --` queues correctly behind it;
+check `gpu_lease.py status` before assuming a slow run is your own, and check the QUEUE is empty
+before restarting the bench — a restart kills whatever another session has in flight.
+
+**A `RuntimeError: HostBuffer.read_file_slice failed` inside `SamplerCustomAdvanced` is an engine
+hiccup, not a graph bug.** Seen once right after the other session's job released the GPU; the
+identical graph succeeded on retry. Retry before diagnosing.
 
 ## Phase 1 results (2026-08-31) — six arms, on the bench
 
@@ -33,6 +61,113 @@ the SHIPPED graph, not invented: LoRA `minimax_h3_ref2v_..._4step` at **1.0**, `
 | D | that guide with NO mask | **same crash** — so it is the guide, not the mask |
 | **E** | **masked prefix + a single frame-0 guide** | **works — continuous, first-party, stock** |
 | F | stock pin-last-frame, no prefix | built, not run (E made it unnecessary) |
+| **G** | **arm E on a STATIC shot** | **the best result on the card — seam matches the oracle** |
+| H | no prefix, no guide (control) | clean, but a different scene: not a usable control |
+| **I** | **frame-0 guide, prefix REMOVED** | **clean — so the PREFIX causes the sparkle** |
+
+### The sparkle is `MpiH3MaskedPrefix`, and that is a real defect (2026-08-31)
+
+Arm I is arm G with exactly one node removed. Same seed, same frame-0 guide, same source, same
+canvas, same turbo settings. It anchors to the same scene and subject, and its tail is **clean**:
+
+| arm | masked prefix | seam/tail | tail |
+|---|---|---|---|
+| G | **yes** | 1.39x | sparkle/streak particles from ~frame 50 |
+| I | no | 1.17x | **no artifact** |
+
+Fabio, 2026-08-31: he has never seen this artifact in turbo. So it is not the 6-step budget and it
+is not the resolution — the two explanations the earlier "open for Fabio" note offered are both
+dead. **`MpiH3MaskedPrefix` is putting it there.**
+
+Not yet diagnosed, and NOT to be patched at the symptom. What is already known and constrains it:
+
+- The preserved head is clean (PSNR 38.0 dB), so the damage is in the GENERATED region beside the
+  boundary, not in the prefix itself.
+- It grows with distance from the seam rather than sitting on it, which does not fit a simple
+  boundary-blend error.
+**Narrowed, same day, by two more arms:**
+
+- **G2** — arm G re-run on a freshly restarted bench, after Fabio flagged `aimdo` VBAR
+  `pin_count` warnings that never clear. **Bit-identical: `PSNR y:inf` against G.** So the engine
+  state is not a factor, the warnings are noise, and G-vs-I was never confounded by the restart
+  Fabio's MPI-664 job sat in the middle of. Worth keeping as a habit: when two arms straddle
+  another session's job, re-run the earlier one before trusting the pair.
+- **K** — the mask kept exactly as G has it, the context latent zeroed through core's own
+  `LatentMultiply` (so shape, nesting and dtype are the real encode's, not a hand-built tensor).
+  **Tail is clean.**
+
+| arm | prefix content | mask | sparkle |
+|---|---|---|---|
+| G / G2 | real | yes | **yes** |
+| K | zeros | yes | no |
+| I | none | none | no |
+
+**So the noise mask is exonerated and the written CONTENT is the cause.** That also kills the
+first suspect: a noise-scale error would show up in the head, and the head decodes at 38.0 dB.
+
+**Split again by arm L — it is the VIDEO half.** L keeps the video prefix and silences the audio
+one with `AudioAdjustVolume` at -100 dB (silencing beats zeroing: the waveform keeps its exact
+length, so the audio latent keeps its step count and the node's arithmetic is untouched).
+
+| arm | video prefix | audio prefix | mask | sparkle |
+|---|---|---|---|---|
+| G / G2 | real | real | yes | **yes** |
+| **L** | **real** | **silent** | yes | **yes** |
+| K | zeroed | zeroed | yes | no |
+| I | none | none | none | no |
+
+Fabio confirmed the artifact by eye on G and its absence on I, 2026-08-31.
+
+So the cause is **the written video latent**, and the audio half is exonerated. Note the tension
+that makes this interesting: the same written latent decodes the head at 38.0 dB, so it is not
+wrong — it is correct content that nonetheless poisons what is generated after it.
+
+**Where to look next, in order.** All of this is reading, not running:
+
+1. **The encoder's tail pad.** `MpiVideoSamplingPreview`'s changelog records that an H3 encode
+   carries a 3-token pad after the real content, and that H3 packs 17 pixel frames per 5 latent
+   tokens with each chunk's prefix trimmed. `MpiH3MaskedPrefix` takes `ctx_v[:, :, -steps:]` — the
+   TAIL — which is exactly where a pad would sit. The head decoding at 38 dB argues against it, but
+   this is the one place the node knowingly slices near a region the VAE treats specially.
+2. **The packing phase across the boundary.** The context is encoded as a standalone 39-frame clip
+   and then dropped into a 73-frame target's first steps. Both are on the grid, but the target's
+   chunking is computed for 73 frames, not 39 — worth confirming the two agree token-for-token.
+3. **What the model attends to.** The preserved tokens are re-noised at each sigma and never
+   denoised. If the sparkle grows with distance from the seam (it does — it starts around frame 45,
+   not at 39), that is attention drift, not a boundary error.
+
+**Do NOT reach for a fix at the crash site.** There is no crash; there is correct-looking content
+producing wrong output downstream, which is precisely the shape a symptom-patch would hide.
+
+### The static arm (G), 2026-08-31 — the gate's second half
+
+Source `MpiVideo_00001` trimmed to 39 frames at **352x608** (portrait, same pixel budget as E's
+640x352). Picked by measurement, not by eye: edge-region frame-diff, brightness-normalised, isolates
+CAMERA motion from subject motion — `00001` scores **0.075** against **6.2** for the street clips and
+**8.9** for E's own source. It is the only locked-off clip on disk with ≥39 frames.
+
+**The clip must be re-encoded AT the target canvas before it reaches the graph.** `VHS_LoadVideo`
+does not resize, so a 704x1216 source against a 352x608 target is a hard stop — `MpiH3MaskedPrefix`
+raised exactly that, which is the guard working. Phase 1's own source was already downscaled on disk.
+
+**Seam metric** — the seam frame's luma diff over the mean diff of the SYNTHETIC side. Raw frame
+diffs are not comparable across clips (real footage is smooth, a 6-step turbo tail is not), so the
+ratio is the number that carries. The pack's oracle sets the bar at 1.40x:
+
+| clip | head | seam | tail | **seam/tail** |
+|---|---|---|---|---|
+| A oracle (moving) | 3.66 | 11.61 | 8.29 | **1.40x** ← the bar |
+| **G ours (static)** | 2.05 | 5.78 | 4.15 | **1.40x** ← matches it |
+| B mask alone (moving) | 3.68 | 12.72 | 3.97 | 3.20x |
+| E ours (moving) | 3.67 | 23.01 | 5.98 | **3.85x** |
+
+So the route is clean on a locked camera and steps on a dolly-in. That is a real limit to write
+down, not a turbo artefact: a single frame-0 guide gives the model the subject and the set, and
+says nothing about where the camera was going.
+
+**A metric that did NOT work, recorded so it is not tried again:** frame-38-vs-frame-72 scene drift.
+It scores arm B — the known failure that renders an unrelated scene — at 29.5 against G's 25.3. A
+moving subject alone produces that much, so it cannot separate the known-good from the known-bad.
 
 **Three findings that outlive the card:**
 
@@ -96,6 +231,18 @@ not the changelog. The bench (`G:\ComfyUi`, 0.34.2) has the same. Nothing here w
 - **2026-08-31 — every bench graph ends in `MpiClearVram`** (Fabio), wired as a passthrough between
   the decode chain and `SaveVideo` so it cannot be reordered off the end. Carry this into the
   Phase 3 shipped graph.
+- **2026-08-31 — the seam has a NUMBER now, and it says the route has a limit.** "Judged by Fabio"
+  is still the gate, but the seam/tail ratio (§ the static arm) makes the two arms comparable: ours
+  ties the oracle at 1.40x on a locked camera and misses at 3.85x on a dolly-in. Do not read that as
+  a turbo budget — it reproduces the plan's own § Phase 1 "open for Fabio" note as a mechanism. If a
+  moving-camera extend has to be as clean as a static one, the fix is more camera information at the
+  seam (a second guide near the boundary, or the pack's multi-frame anchor), and that is a decision
+  for Fabio, not a silent change to the node.
+- **2026-08-31 — `MpiH3EncodeAV` is written, committed and pushed (`952919f`), and the pin is
+  deliberately still at `5e07043`.** Phase 2's gate reads "committed → pushed → pinned", and the
+  middle step is done. The pin waits because the node has never been loaded by a running ComfyUI:
+  the only bench was held by another session's job all session, and restarting it would have killed
+  that job. Pinning first and verifying later is the false-done this card keeps catching.
 
 ## The decision: first-party masked prefix. The pack is a bench ORACLE, not a dependency.
 
