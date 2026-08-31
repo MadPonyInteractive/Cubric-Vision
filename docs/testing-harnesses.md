@@ -180,6 +180,18 @@ prints `READY <url>`. Drive that URL, never 3000.
   [playbooks/bump-engine/02-local-upgrade.md](playbooks/bump-engine/02-local-upgrade.md)) rather
   than deleting by hand: it stops ComfyUI first and preserves the models root. Measured MPI-525:
   4m04.6s to reinstall, then a 2m47.6s curated pip pass with ~140 packages genuinely downloading.
+- **Your instance can INSTALL a node and still not register it (MPI-663).** Boot's UW deps
+  repair installs a flow's `requiredDeps` into the shared engine on first launch — the zip lands
+  in `custom_nodes/` and `.mpi_node_commit` is stamped — but the running ComfyUI scanned its
+  nodes before that, so the flow still fails as if the pack were missing. And an ATTACHED
+  instance cannot restart it: `stopComfyUI()` only ever kills a handle it spawned itself, so
+  `/comfy/stop` answers `{"success":true}` having done nothing and `/comfy/start` then answers
+  `Already running`. The route that works is `POST /comfy/start {"isUserRestart": true}` — the
+  attach branch in `routes/comfy.js` writes a restart request that the instance OWNING the
+  engine picks up (MPI-484), and the reply says `"delegated": true`. Measured 2026-08-30:
+  `GET 127.0.0.1:48188/object_info/AudioSeparation` was `{}` before, populated ~25s after, with
+  the user's app restarting its own child. Check `/queue` on both 8188 and 48188 first — the
+  restart kills whatever that engine is running.
 - **It copies NOTHING, and that is the safety property** — see
   [runpod-remote-engine.md](runpod-remote-engine.md) § the orphan sweep for what a copied profile
   did to another agent's live Pod.
