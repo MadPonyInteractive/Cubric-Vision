@@ -1035,6 +1035,54 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
       the graph already computes; these five give a sanity range for what a sensible
       normalised reach looks like in a room this size.
 
+44. **THERE IS NO BRUSH TRAINER NODE - PHASE 2's FIRST TASK IS BUILT ON A NODE THAT DOES
+    NOT EXIST, AND THE WHOLE PHASE FORKS ON WHAT REPLACES IT.** Phase 2 opens with "build
+    the runtime workflow: SplatKit dataset creation + the Brush trainer node in ONE graph".
+    Checked against `/object_info` before writing any code: **SplatKit ships 27 nodes and
+    not one of them trains a splat.** They cover the dataset, the rails, the composite and
+    the SfM - `DatasetProject`, `CameraPlotRenderControlGeo`, `HiResComposite`,
+    `SphereSfMDatasetDualRes` - and stop at a COLMAP model. The only nodes in the entire
+    install that *return* a `splat` are `File3DToSplat` (loads one off disk), `MergeSplat`,
+    `GetSplatCount`, `TransformSplat` and `VAEDecodeTripoSplat` (TripoSG - a single-object
+    generative model, not scene-from-dataset). `SaveGaussianSplat` / `PreviewGaussianSplat`
+    are real `output_node`s but both need a splat handed TO them.
+
+    **The spike never used ComfyUI for this step and the plan lost track of that.** Brush is
+    `brush_app.exe`, a **158.8 MB standalone binary** (303 MB extracted) driven by
+    `subprocess` from `brush_swap157.py` - hence amendment 8's clean-root requirement and
+    amendment 9's "writes nothing to stdout, poll `--export-path`". Both amendments are
+    descriptions of an EXTERNAL process, and neither reads that way once you are looking
+    for a node. Licence is **Apache 2.0** (`brush/extracted/LICENSE`), so redistribution is
+    not the blocker.
+
+    **This blocks more than task 1.** Task 2 - "extend the output-capture layer to accept a
+    splat output (`Output_Splat*`, mirroring `Output_Image*`)" - is only coherent if the
+    splat is a ComfyUI output at all. `commandExecutor.js:1681-1692` builds its capture set
+    from `Output_*` node titles and `_collectComfyOutputUrls` reads images/gifs/videos from
+    `/history`; a `.ply` that Brush wrote to a path ComfyUI never heard of cannot be
+    captured by that layer no matter what it is titled. So the fork decides the shape of
+    the capture work too, and neither task should start before it is answered.
+
+    **The three routes, none of them started - Fabio's call:**
+    - **A. Wrap Brush as a first-party node** in `ComfyUi-MpiNodes` (`/mpi-nodes-sync`
+      governs). Restores "one graph, one dispatch" exactly as Phase 2 assumes, and lets
+      `Output_Splat*` be a genuine `output_node` so task 2 mirrors `Output_Image*` honestly.
+      Cost: a new node in the sibling repo, and the 158.8 MB binary becomes a declared
+      dependency on every user's disk.
+    - **B. Two stages, app-orchestrated.** The graph stops at the SfM dataset, the app then
+      runs `brush_app.exe` itself and adopts the `.ply`. Closest to what the spike proved
+      and needs no new node - but it breaks the Flow's "one dispatch" premise, puts a
+      long-running native process under the app's own supervision rather than the queue's,
+      and task 2 becomes "adopt a file from disk", not a capture-layer extension.
+    - **C. Something else trains it.** No candidate found in this install; would need a
+      third-party trainer node that takes a COLMAP dataset. Listed for completeness, not
+      recommended on present evidence.
+
+    **Do not pick one by inference.** A is the only route that leaves Phase 2's existing
+    task list true as written, which is a reason to prefer it and NOT evidence that it is
+    right - it also puts a 158.8 MB binary into the dependency system and a whole trainer
+    into a node pack we maintain.
+
 ### Verified NOT drifted from the source workflow (checked 2026-08-29)
 
 **This list is not exhaustive and two things it omitted were wrong - see amendments 29 and
