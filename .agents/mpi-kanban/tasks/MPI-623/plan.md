@@ -988,6 +988,53 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     intact afterwards. **Any future SfM re-run MUST take a new `output_name` or back
     `sparse/` up first.** Staging for Brush is a real 3.4 GB copy, not hardlinks.
 
+### Amendments from the Phase 2 opening (2026-08-31)
+
+43. **A RAIL'S REACH DOES NOT PREDICT ITS DAMAGE - SO THE PHASE 2 BOUNDS CHECK CANNOT
+    BE A RADIUS CAP.** The five shipped rails are `SplatKit_CameraPlotRenderControlGeo`
+    nodes in `ds_shipped.json`; 27/122/133/144/157 are **node ids**, not an ordering,
+    and a "rail" is just that node's `anchors` text. Measured with `rail_extent.py`
+    (no GPU, pure geometry against the damage already recorded in amendments 37/41/42):
+
+    | rail | mode | maxR | path len | maxY | span XZ | hole | psnr face0 |
+    |---|---|---|---|---|---|---|---|
+    | 27 | look_at_target | 1.406 | 1.743 | 0.219 | 1.455 | 6.1% | 29.27 |
+    | 122 | per_point_look | **1.628** | 3.268 | 0.043 | 2.400 | 5.6% | 25.82 |
+    | 133 | per_point_look | 1.544 | 2.660 | 0.423 | 1.852 | 37.8% | 28.24 |
+    | 144 | per_point_look | 1.044 | 1.954 | 0.387 | 1.307 | **94.3%** | **20.86** |
+    | 157 | per_point_look | **0.859** | 1.870 | **0.811** | 0.911 | 11.8% | 27.39 |
+
+    Spearman rho against reach, n=5 and therefore indicative only: hole% **-0.50**,
+    psnr **+0.10**, corr floor **-0.30**. The sign is **backwards** from the
+    hypothesis - the farthest-reaching rail (122, 1.628) has the *smallest* hole
+    (5.6%), and the worst rail on every splat measure (144) has the second-*smallest*
+    reach (1.044). Rail 157, the best-behaved of the five, reaches least of all.
+
+    **This does not contradict amendment 15, it bounds it.** Amendment 15 measured the
+    ALTERED anchors in `hires_api_largest.json`, which reached 2.44 and -2.27; amendment
+    30 then found those files were never the shipped piloting at all. Every *shipped*
+    rail sits at or under 1.63, i.e. all five are already inside the room, so this table
+    says nothing about what happens beyond the wall - it only says that **within the
+    scene, distance travelled is not the axis that hurts.** Consistent with amendment
+    37, which found hole size does not predict splat quality either.
+
+    **Consequences for Phase 2.**
+    - The "bounds check before the bake" task must stay what it already says - *does
+      every waypoint land inside the MoGe geometry* - and must NOT be cheapened into a
+      scalar `reach > K` reject. That rule is now measured to be wrong on the only five
+      rails we have evidence for.
+    - Passing the bounds check is **necessary, nowhere near sufficient.** Rail 144 is
+      the proof: comfortably inside the scene and still the worst reconstruction in the
+      set. A preset can be legal and still be bad, so preset authoring needs its own
+      held-out evidence, not just a geometry gate.
+    - `maxY` is the one column where 157 is an outlier (0.811 against 0.423 next), and
+      it is the best-behaved rail. **One point is not a finding** - noted as a candidate
+      axis for the `high-then-dive` preset, to be tested, not assumed.
+    - The shipped anchors are in **absolute units** and are the source material for the
+      normalised presets, not the presets themselves. Normalise against the scene extent
+      the graph already computes; these five give a sanity range for what a sensible
+      normalised reach looks like in a room this size.
+
 ### Verified NOT drifted from the source workflow (checked 2026-08-29)
 
 **This list is not exhaustive and two things it omitted were wrong - see amendments 29 and
