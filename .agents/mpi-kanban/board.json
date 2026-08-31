@@ -64,7 +64,6 @@
     "doing": [
       "MPI-591",
       "MPI-605",
-      "MPI-658",
       "MPI-500",
       "MPI-623",
       "MPI-603",
@@ -73,6 +72,7 @@
       "MPI-664"
     ],
     "done": [
+      "MPI-658",
       "MPI-665",
       "MPI-663",
       "MPI-556",
@@ -160,7 +160,7 @@
       "MPI-647"
     ]
   },
-  "updated_at": "2026-08-31T11:35:00+01:00",
+  "updated_at": "2026-08-31T11:45:00+01:00",
   "events": [
     {
       "at": "2026-08-27T15:31:00Z",
@@ -4021,6 +4021,16 @@
       "task": "MPI-645",
       "actor": "implementer:254ff8ae-41ce-42c0-861a-5d99a4ff7f17",
       "note": "Correction to this card's close-out event: trimming the lead-in silence is NOT left open as a card of its own - Fabio decided against it at close-out. The 4s floor IS the fix (his tests come back as a usable 4s of line), so a trim node buys nothing and would cost an MpiNodes node plus a graph re-export. Recorded in drama-box.md, checklist.md and validation.md (commit e4a19f6b). Do not re-open it as 'the other half of MPI-645'."
+    },
+    {
+      "schema": "mpi-kanban/event/v1",
+      "type": "task.moved",
+      "id": "MPI-658",
+      "at": "2026-08-31T11:45:00+01:00",
+      "actor": "claude",
+      "from": "doing",
+      "to": "done",
+      "summary": "Closed by Fabio - the MadPony-Identity narration proved it."
     }
   ]
 }
