@@ -197,6 +197,52 @@ notes in [research/](research/).
 > **Uncommitted:** this plan's amendments 39-42 and this note. Nothing else changed; no
 > product code was touched.
 
+> **Session note 2026-08-31 (eleventh). PHASE 2 OPENED, THE RUNTIME GRAPH EXISTS AND
+> RUNS, AND TWO OF MY OWN CLAIMS HAD TO BE RETRACTED.** The measured work first:
+> **amendment 43** killed the rule Phase 2's bounds check was about to be built on -
+> a rail's REACH does not predict its damage (Spearman -0.50 on hole%, and rail 144,
+> the worst reconstruction in the set, has the second-SMALLEST reach). The bounds
+> check must stay a per-waypoint test against the MoGe extent, and passing it is
+> necessary but nowhere near sufficient.
+>
+> Then Phase 2 task 1. **Amendment 44 claimed no Brush trainer node existed and put a
+> three-route architecture fork to Fabio; amendment 45 retracts it.** `MpiBrushTrain`
+> had existed for two days - `splat.py:201`, registered, committed `5e07043`, an
+> ancestor of the pinned commit. 44 searched the spike's SAVED `object_info.json`,
+> captured six hours BEFORE the node was committed. Route A was never a decision.
+>
+> **Amendment 46: the graph is built and the injection surface works.**
+> `flow_3d_scene.api.json`, 51 -> 61 nodes, copy-and-extended from the proven 4-rail
+> graph under asserts. `Input_Image`, `Input_Name`, `Input_Rail_1..4`, `Input_Steps`;
+> `Output_Image`, `Output_Splat`. The finding worth the session: **`MpiBrushTrain` is
+> not an `output_node`**, so a graph ending at it is refused (`prompt_no_outputs`) and
+> in a graph with other outputs it is silently PRUNED - the first build would have
+> baked three hours, returned `success`, and produced no splat. Feeding its path into
+> a **`PreviewAny` titled `Output_Splat`** fixes both halves with no node-pack change,
+> because the app already reads exactly that shape for `Output_prompt`
+> (`commandExecutor.js:1712-1728`). **Task 2 is therefore much smaller than the plan
+> assumed** - point the existing text capture at a second title, not mirror the image
+> capture path.
+>
+> **The full run: rails GOOD, tail LOST to my own bad call. Amendment 47.** All four
+> rails completed - 164 frames, 164 proxies, 15 GB of composites, **on disk and
+> intact, nothing needs re-baking**. Then the machine hit 74 GB committed against
+> 63.8 physical. Cause verified by diffing the graphs: the merged graph feeds
+> `pano_frames_1..4` from **live IMAGE tensors** where the proven split graph read
+> them **off disk**, and the SfM node needs all four rails at once. **So the Flow does
+> not need two workflows or a purge between stages** - it needs the SfM reading
+> proxies from disk. I then reported the run as hung and got an interrupt approved on
+> that basis; it was not hung, `sphere_cubic_reprojecer` was at frame 73 of 164 at
+> ~5.8 s each, and the log's `exit 4294967295` is my kill. I had sampled CPU on the
+> PARENT process, grepped for child processes with a pattern that could not match the
+> one doing the work, and watched a file that stage does not write.
+>
+> **Nothing is blocked and no decision is pending.** The next job is mechanical:
+> rebuild the SfM + Brush stage reading `_spheresfm_work/proxies/` off disk (split per
+> rail into `by_traj/traj00..03` the way `make_chunk7.py` does it), dispatch it
+> standalone against `mpi623_flowtest`, ~20-30 min, and the splat lands. The bake does
+> NOT need repeating.
+
 **Project mode:** `scalable-foundation`.
 
 A user bakes a Gaussian-splat scene once from a 360 equirect image, then re-enters
@@ -1176,6 +1222,50 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     `DatasetProject` carries `reset=true`). Draft 5000 steps so the splat is comparable to
     amendments 37 and 42 rather than unscoreable. Values set **by title**, not by node id,
     so the run also proves the injection surface is reachable the way the app reaches it.
+
+47. **THE MERGED GRAPH'S 47 GB IS LIVE IMAGE TENSORS, NOT OVERLAPPING STAGES - AND THE
+    RUN THAT EXPOSED IT WAS KILLED BY A MISDIAGNOSIS, NOT BY A HANG.** The full runtime
+    graph ran the four rails correctly (164 frames, 164 proxies, 15 GB of composites, all
+    on disk and INTACT - **nothing needs re-baking**) and then drove the machine to
+    **74 GB committed against 63.8 GB physical, 0 MB available**, with ComfyUI's python
+    holding **47.3 GB private**.
+
+    **The cause, verified by diffing the two graphs rather than reasoned:**
+
+    | | `pano_frames_1..4` fed from |
+    |---|---|
+    | split chunks (`chunk7`, ran twice, succeeded) | `VHS_LoadImagesPath` - read off DISK |
+    | merged runtime graph | `SplatKit_HiResComposite` - live IMAGE tensors |
+
+    `SphereSfMDatasetDualRes` consumes all four rails at once, so ComfyUI must hold four
+    decoded frame batches resident simultaneously. That is the 47 GB. It is **not** WAN's
+    offloaded weights and **not** two stages overlapping - `/system_stats` showed
+    `torch_vram_total` already down to 2.5 GB. `hires_1..4` are unaffected because they
+    are JSON manifests, not pixels (amendment 38).
+    **Consequence: the Flow does NOT need two workflows or an explicit purge between
+    stages.** One graph and one dispatch survive; the SfM's `pano_frames_*` must read the
+    proxies off disk the way the proven split graph did. `MpiClearVram` exists in the pack
+    if an explicit purge is ever wanted, but nothing here calls for one.
+
+    **The misdiagnosis, recorded because the method was wrong, not just the answer.** I
+    reported the run as hung with "nine minutes of zero progress" and Fabio approved an
+    interrupt on that basis. It was not hung. `sphere_cubic_reprojecer` was working
+    through the frames at ~5.8 s each and had reached **frame 73 of 164**; the log's
+    `failed (exit 4294967295) after 425.2s` is exit -1, i.e. MY kill. Three method errors
+    stacked:
+    - CPU was sampled on the ComfyUI **parent** (0.1 s per 20 s wall) while the work ran
+      in a **child** process.
+    - The child-process grep was `colmap|glomap|brush`, which **does not match**
+      `sphere_cubic_reprojecer`. It "found" only a 0.2 GB `colmap_sphere` and that read as
+      "nothing is running".
+    - `database.db`'s mtime was used as the progress signal; the reprojection stage does
+      not write it. The real signal was `_spheresfm_work/equirect_hires/` and the node's
+      own stdout, both available at the time.
+
+    The memory pressure was real and was genuinely degrading the run - available RAM hit
+    0 and `POST /free` returned **200 having released nothing**, exactly the shape
+    `~/.claude/memory/tools/` records. But "stalled" was a stronger claim than the
+    evidence carried, and it is the claim that cost the tail of a 140-minute run.
 
 ### Verified NOT drifted from the source workflow (checked 2026-08-29)
 
