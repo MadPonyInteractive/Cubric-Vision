@@ -92,15 +92,19 @@ that key, and MPI-533 (tombstone ledger) is still a `todo`.
 
 Each phase has one gate. Do not start the next until its gate is green.
 
-### 1 — Bench: prove the seam (no app, no repo edits)
+### 1 — Bench: prove the seam (no app, no repo edits, **NO DOWNLOAD**)
 
-On `G:\ComfyUi` (0.34.2), with **our** weights: `minimax_h3_video_vae_int8_convrot`,
-`minimax_h3_audio_vae_fp32`, the H3 Qwen3-VL encoder. **`minimax_h3_fl2va_*` is NOT on the bench**
-(`G:\CubricModels\diffusion_models` has `ref2va` only) — that download is the first thing this
-phase needs, ~21GB.
+On `G:\ComfyUi` (0.34.2), with **our** weights: `minimax_h3_video_vae_int8_convrot` (2.95GB),
+`minimax_h3_audio_vae_fp32` (0.56GB), the H3 Qwen3-VL encoder (24.55GB) — all already on disk.
 
-1. Install the pack into the bench `custom_nodes/` **only**, run its Text-to-Video-Extend example
-   verbatim on a known clip. That is the oracle take.
+**Run this phase on `ref2va` (19.53GB, already there), NOT `fl2va`.** See § Disk: `fl2va` does not
+fit and buys nothing here. The seam is a **latent-layout** property — the `17k+5` grid, the VAE's
+temporal packing, the nested AV mask — and both DiTs share the VAEs, the encoder and the layout.
+A seam proven on one is proven on the other. The pack's own two examples differ only in the
+`UNETLoader` widget, so the oracle run swaps to `ref2va` the same way.
+
+1. Install the pack into the bench `custom_nodes/` **only**, run its Ref-to-Video-Extend example
+   (it already loads `ref2va`) on a known clip. That is the oracle take.
 2. Build the masked-prefix graph by hand: `MpiH3Length` for the `17k+5` grid, encode the whole
    context run in ONE VAE call, snap the context DOWN onto the grid before slicing the tail
    (trap 1), use a context length divisible by 3 so both clocks line up — **39 / 90 / 141**
@@ -111,9 +115,10 @@ phase needs, ~21GB.
 > **Gate:** a masked-prefix extend whose seam is at least as clean as the pack's, judged by Fabio.
 > A seam that only *looks* fine on one clip is not a pass — run a static shot and a moving one.
 
-Also settle here, cheaply, the thing the ref card will need: does masked prefix + stock
-`MiniMaxH3ReferenceToVideo` work with no patch? The context arrives as latent data rather than as a
-keyframe, so `extra_conds`' overwrite should never fire. Record the answer either way.
+Running on `ref2va` also settles, in the same session and for free, the thing the follow-up ref
+card needs: does masked prefix + stock `MiniMaxH3ReferenceToVideo` work with no patch? The context
+arrives as latent data rather than as a keyframe, so `extra_conds`' overwrite should never fire.
+Record the answer either way.
 
 ### 2 — The node in `ComfyUi-MpiNodes`
 
@@ -137,9 +142,14 @@ this is a bench re-export. Titles must at minimum cover `Input_Video`, `Input_Po
 `Input_Seed`, `Input_Duration`, `Output_Video`, so the existing collected fields land unchanged.
 
 **H3 has no negative input** (`models.js` `minimax-h3`: `negativePrompt: false` — the conditioning
-comes out of a single Qwen3-VL encode). The flow's `negative` field is bench-proven for LTX and
-must not silently vanish on the H3 arm — decide with Fabio whether it hides on that candidate
-(needs `hiddenWhen`, which MPI-664 is adding anyway) or stays and is documented as ignored.
+comes out of a single Qwen3-VL encode). **Fabio, 2026-08-31: the negative box HIDES on the H3
+arm.** So the H3 graph carries no `Input_Negative` node and the field goes behind `hiddenWhen`.
+Keeping it visible would have re-created MPI-475 exactly — a stop the user typed that never
+reached the model, with nothing saying so.
+
+> **DEPENDS ON MPI-664**, which is adding `hiddenWhen` as portable frame work. Do not author a
+> second one here. If Phase 4 lands first, the field stays visible with a one-line comment naming
+> this dependency, and the hide is a one-line follow-up — never a bespoke twin.
 
 > **Gate:** `tests/inject-params-titles.test.cjs` extended to pin the new file's titles, green.
 
@@ -189,10 +199,41 @@ Ask before editing `.claude/rules/`.
   2026-08-11, 19 days behind `main`), and open an issue asking for a `LICENSE` file.
 - **Width/height on the flow** — still MPI-520's open half, still deferred, unchanged by this card.
 
+## Disk — the real constraint, and why Phase 1 costs nothing
+
+Measured 2026-08-31: **`G:` is 98% full, 5.1GB free of 239GB.** `fl2va` is ~19.53GB, so it does
+not fit at all — this is not a preference to weigh, it is arithmetic.
+
+`G:\CubricModels` is **the app's shared model store**, not a bench scratch dir — the bench's
+`extra_model_paths.yaml` says so in its own comment ("same models the app pulls from"). So
+**deleting a weight there uninstalls it from Fabio's app.** Relevant weights:
+
+| weight | size | status |
+|---|---|---|
+| `qwen3vl_32b_h3_*` encoder | 24.55GB | shared by both H3 DiTs — never a candidate |
+| `minimax_h3_ref2va_pruned_int8_convrot` | 19.53GB | **present — Phase 1 runs on this** |
+| `ltx-2.3-22b-distilled-1.1_transformer_only_int8_convrot` | 20.03GB | the flow's shipped path AND its A/B baseline |
+| `minimax_h3_fl2va_pruned_int8_convrot` | ~19.53GB | absent |
+
+**Do not uninstall LTX.** It is `models[0]`, it is what every existing extend ran on, it is the
+control in Phase 1's comparison, and removing it costs a 20GB re-download to get back to today.
+
+Fabio raised uninstalling LTX to make room. It is not needed: **nothing before Phase 3 wants
+`fl2va`.** Prove the seam on `ref2va`, and only then spend space on a route that is known to work
+rather than on spec. When `fl2va` is finally needed, the two surfaces want different things and
+only one of them is tight:
+
+- **Bench (Phase 3, authoring the graph)** — no `G:` space needed at all. The bench's
+  `extra_model_paths.yaml` already maps a SECOND store, `comfyui_external` →
+  `C:/AI/diffusion_models/` (101GB free on `C:`). Drop `fl2va` there; ComfyUI scans both roots and
+  the node dropdown does not care which one served the file.
+- **App (Phase 5, the live run)** — this one is tight. The app has ONE models root
+  (`CUBRIC_MODELS_ROOT`, preserved across engine reinstalls via `getCustomRoot()`,
+  `routes/engine.js:1009`), so the weight has to live under it. Either free ~15GB of unrelated
+  weights on `G:`, or move the whole store — it is one path, not a per-model choice. Decide then,
+  with the route already proven.
+
 ## Open — needs Fabio
 
-1. **The negative box on the H3 arm** (Phase 3): hide it, or keep it and document that H3 ignores
-   it? Hiding is honest but needs `hiddenWhen`; keeping it re-creates exactly the MPI-475 bug
-   ("the user typed a stop that never reached the model, and nothing said so").
-2. **Is a ~21GB fl2va download acceptable to spend on Phase 1**, before anything is proven? The
-   bench has `ref2va` but not `fl2va`, and the prompt-only route needs the latter.
+Nothing. Both questions answered 2026-08-31: the negative hides on the H3 arm (§ Phase 3), and the
+disk question dissolves because Phase 1 needs no download (§ Disk).
