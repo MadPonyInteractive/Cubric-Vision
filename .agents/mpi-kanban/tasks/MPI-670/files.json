@@ -1,0 +1,9 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    ".agents/mpi-kanban/tasks/MPI-670/**",
+    "js/services/mediaUploadService.js",
+    "js/services/clientLogger.js",
+    "routes/projects.js"
+  ]
+}

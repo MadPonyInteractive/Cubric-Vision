@@ -1399,9 +1399,15 @@ router.post('/project-notes/save', async (req, res) => {
 router.post('/project-media/:projectId/upload', async (req, res) => {
     try {
         const { folderPath } = req.query;
-        const { filename, base64Data, promptContext, seed, autoSequence, itemId, mediaType } = req.body;
+        const { filename, base64Data, sourcePath, promptContext, seed, autoSequence, itemId, mediaType } = req.body;
         if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
-        if (!filename || !base64Data) return res.status(400).json({ success: false, error: 'filename and base64Data required' });
+        if (!filename || (!base64Data && !sourcePath)) return res.status(400).json({ success: false, error: 'filename and base64Data or sourcePath required' });
+        // Desktop imports send the file's own disk path instead of a base64 body: a
+        // base64 data URL caps import at ~75mb (the bodyParser limit) and stops being
+        // representable at all past ~384MB (V8 max string length) — MPI-670.
+        if (sourcePath && (!path.isAbsolute(sourcePath) || !(await fs.pathExists(sourcePath)))) {
+            return res.status(400).json({ success: false, error: `sourcePath is not an existing absolute path: ${sourcePath}` });
+        }
 
         const mediaDir = path.join(folderPath, 'Media');
         await fs.ensureDir(mediaDir);
@@ -1415,10 +1421,13 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
             finalFileName = await nextSequence(folderPath, mediaDir, prefix, ext);
         }
 
-        const base64Content = base64Data.replace(/^data:[^;]+;base64,/, '');
-        const buffer = Buffer.from(base64Content, 'base64');
         const filePath = path.join(mediaDir, finalFileName);
-        await fs.writeFile(filePath, buffer);
+        if (sourcePath) {
+            await fs.copy(sourcePath, filePath);
+        } else {
+            const base64Content = base64Data.replace(/^data:[^;]+;base64,/, '');
+            await fs.writeFile(filePath, Buffer.from(base64Content, 'base64'));
+        }
 
         // Write UUID-keyed sidecar to Media/.meta/<uuid>.json (same pattern as save-generation)
         const id = itemId || uuidv4();

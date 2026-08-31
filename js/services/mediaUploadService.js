@@ -7,7 +7,24 @@
  */
 
 import { clientLogger } from './clientLogger.js';
+import { Events } from '../events.js';
 import { measureMediaDimensions } from '../utils/mediaDimensions.js';
+
+/**
+ * Absolute disk path of a File, or null when it has none — a File synthesised from a
+ * Blob (a canvas snapshot, a recorded take) is not backed by disk, and callers pass
+ * plenty of those. Same `webUtils` accessor MpiFolderDrop/MpiProjectDropOverlay use;
+ * null in browser dev mode, which keeps those on the base64 path.
+ */
+function _sourcePathFor(file) {
+    try {
+        if (typeof window.require !== 'function') return null;
+        const webUtils = window.require('electron').webUtils;
+        return webUtils?.getPathForFile(file) || null;
+    } catch (_) {
+        return null;
+    }
+}
 
 /**
  * @param {File} file
@@ -31,7 +48,12 @@ export async function uploadMediaFile(file, mediaType, projectFolderPath, projec
         const filename = `${prefix}_001.${ext}`; // backend overrides sequence via autoSequence
         const itemId = crypto.randomUUID();
 
-        const base64 = await _fileToBase64(file);
+        // The file is already on disk — hand the server its path and let it copy.
+        // Base64 caps import at ~75mb (the bodyParser limit) and past ~384MB
+        // FileReader cannot even build the string (V8 max string length), which is
+        // how a 474 MiB clip imported as nothing at all. MPI-670.
+        const sourcePath = _sourcePathFor(file);
+        const base64 = sourcePath ? null : await _fileToBase64(file);
         const { w: width, h: height } = await measureMediaDimensions(file, mediaType);
 
         const res = await fetch(
@@ -41,7 +63,7 @@ export async function uploadMediaFile(file, mediaType, projectFolderPath, projec
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     filename,
-                    base64Data: base64,
+                    ...(sourcePath ? { sourcePath } : { base64Data: base64 }),
                     autoSequence: true,
                     itemId,
                     mediaType,
@@ -71,6 +93,11 @@ export async function uploadMediaFile(file, mediaType, projectFolderPath, projec
         };
     } catch (e) {
         clientLogger.warn('mediaUploadService', 'Media save failed:', e);
+        // Every caller treats a null return as "skip this file" and says nothing, so
+        // without this the user sees an import silently do nothing at all (MPI-670).
+        // `ui:danger` (toast), not `ui:error` (blocking dialog) — a batch drop of ten
+        // files must not open ten modals.
+        Events.emit('ui:danger', { message: `Could not import ${file?.name || 'media'}: ${e.message || e}` });
         return null;
     }
 }

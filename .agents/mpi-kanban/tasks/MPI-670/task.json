@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-670",
+  "title": "Media import base64-encodes the whole file into a JSON body, so anything over ~75 MiB is refused and over ~384 MiB dies silently",
+  "description": "uploadMediaFile posts the file as a base64 data URL, which caps import at ~75 MiB (bodyParser 100mb) and at ~384 MiB stops producing a string at all (V8 max string length). Send the on-disk path via webUtils.getPathForFile and let the server copy the file instead. Detail: brief.md.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "created_at": "2026-08-31T21:05:00+01:00",
+  "updated_at": "2026-08-31T22:55:00+01:00",
+  "links": {
+    "files": "files.json",
+    "events": "events.jsonl",
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md"
+  }
+}
