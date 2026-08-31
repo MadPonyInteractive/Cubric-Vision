@@ -1,6 +1,6 @@
 import { ComponentFactory } from '../../../factory.js';
 import { MpiOverlay } from '../../../Primitives/MpiOverlay/MpiOverlay.js';
-import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
+import { MpiButton, mountButton } from '../../../Primitives/MpiButton/MpiButton.js';
 import { MpiTileSheet } from '../../../Primitives/MpiTileSheet/MpiTileSheet.js';
 import { Events } from '../../../../events.js';
 import { state } from '../../../../state.js';
@@ -15,6 +15,8 @@ import { sizeToGb } from '../../../../data/modelConstants/footprint.js';
 import { PAGE_GALLERY } from '../../../../router.js';
 import { qs, ce, on } from '../../../../utils/dom.js';
 import { renderIcon } from '../../../../utils/icons.js';
+import { getModelLicence, hasAcceptedLicence } from '../../../../data/modelConstants/licences.js';
+import { openExternal } from '../../../../utils/openExternal.js';
 
 /**
  * Output-type sections, in render order (MPI-634). A flow's tile is the same 4/5
@@ -110,9 +112,18 @@ export const MpiFlowLibrary = ComponentFactory.create({
         // ── Availability badge (chip) for a tile / section sort ──────────────
         function _badgeHtml(flow) {
             const { available } = flowAvailability(flow);
-            return available
-                ? `<span class="mpi-tile__chip mpi-tile__chip--installed">Ready</span>`
-                : `<span class="mpi-tile__chip mpi-tile__chip--available">Get models</span>`;
+            if (available) return `<span class="mpi-tile__chip mpi-tile__chip--installed">Ready</span>`;
+            // MPI-666 — the Model Library's chip, on the surface a beginner actually uses.
+            // "Get models" promises a download and delivers a legal wall plus a trip to
+            // Hugging Face for an access grant; three shipped flows (scribble,
+            // scribble-object, object-stamp) all need `klein-9b`, so this was an ambush on
+            // the Flow grid while the Model Library named it correctly for the same weights.
+            // Naming it before the click is the whole affordance — the gate itself already
+            // fires either way, in `downloadService.start()`.
+            if (_needsLicenceProof(flow)) {
+                return `<span class="mpi-tile__chip mpi-tile__chip--available">Licence required</span>`;
+            }
+            return `<span class="mpi-tile__chip mpi-tile__chip--available">Get models</span>`;
         }
 
         // ── Tile item for the shared sheet: preview thumb + title + availability badge ──
@@ -146,10 +157,48 @@ export const MpiFlowLibrary = ComponentFactory.create({
             return keys;
         }
 
+        // MPI-666 — every licence descriptor gating anything this flow installs, deduped.
+        // Iterates `_installKeys` because the queue key IS the licence key: `getModelLicence`
+        // answers for a model id and for a `flow:<id>` dep key alike (MPI-664 filed
+        // `flow:minimax-music` in MODEL_LICENCES), so a flow's own weights are covered by
+        // the same lookup as its models with no special case.
+        //
+        // Deduped by DESCRIPTOR id, not by key: H3 ships as two ModelDefs under one
+        // agreement, so a flow pulling both must not print the same block twice.
+        function _flowLicences(flow) {
+            const seen = new Set();
+            const out = [];
+            for (const key of _installKeys(flow)) {
+                const licence = getModelLicence(key);
+                if (!licence || seen.has(licence.id)) continue;
+                seen.add(licence.id);
+                out.push({ key, licence });
+            }
+            return out;
+        }
+
+        // Does anything this flow needs still require PROOF the user has not given? Same
+        // test as the Model Library's `_needsLicenceProof`, over a set instead of one id:
+        // a `verify` licence (the licensor grants access on their own site) with no
+        // accepted receipt. A licence without `verify` never matches — its consent step is
+        // one dialog at install, which is not worth pre-announcing on a tile.
+        function _needsLicenceProof(flow) {
+            return _flowLicences(flow).some(({ key, licence }) => licence.verify && !hasAcceptedLicence(key));
+        }
+
         // Install every missing required model (each drives its own dep download —
         // the shared model install flow; exactly the Model Library's _install), plus the
         // flow's own deps as ONE more job. The Flow Library owns no dep resolution of its
         // own: getModelDependencies() / getFlowDependencies() resolve, the service starts.
+        // MPI-666, DELIBERATELY NOT FIXED HERE — a refused gate still has no outcome at this
+        // call site, and it cannot get one honestly from `MpiFlowLibrary`. `start()` resolves
+        // `undefined` on refusal, but on SUCCESS it resolves `this._installChain`, which ends
+        // `.then(settle, settle)` and so resolves `undefined` too. The two are the same value.
+        // Inferring a refusal from "no job appeared" instead would be a symptom patch on a
+        // race, and awaiting the chain would fire the message when the download FINISHED.
+        // The fix is one line in `downloadService.start()` (refuse → a distinguishable value);
+        // that file is MPI-500's, so it is filed as a message, not taken. Every other caller
+        // awaits and discards, so the change is safe whenever 500 lands it.
         function _installMissing(flow, missing) {
             for (const modelId of missing) {
                 const deps = getModelDependencies(modelId);
@@ -305,6 +354,54 @@ export const MpiFlowLibrary = ComponentFactory.create({
             });
         }
 
+        // MPI-666 — the licence block, one per descriptor gating this flow. It is the SAME
+        // markup and the same `mpi-detail__licence*` classes the Model Library drawer uses;
+        // those rules live in MpiModelManager.css, which preloadStyles.js loads app-wide, so
+        // this surface inherits the layout rather than forking it.
+        //
+        // WHY EVERY LICENCE AND NOT A "one or more apply" NOTE: a note that names a licence
+        // without linking it is the same dead end this card closes — "Read the licence" is
+        // the affordance, not the word. N is 1 for every flow shipped today, so the common
+        // case renders exactly like the model drawer; a second descriptor stacks a second
+        // block, which is the only case the model drawer never has to handle.
+        function _licenceFieldHtml(flow) {
+            if (!_flowLicences(flow).length) return '';
+            return `
+                <div class="mpi-detail__field">
+                    <span class="mpi-detail__field-label">Licence</span>
+                    <div id="flow-detail-licences"></div>
+                </div>`;
+        }
+
+        function _mountLicences(flow) {
+            const host = qs('#flow-detail-licences', detailBody);
+            if (!host) return;
+            for (const { licence } of _flowLicences(flow)) {
+                const row = ce('div', { className: 'mpi-detail__licence' });
+                row.append(ce('div', { className: 'mpi-detail__licence-name', textContent: licence.name }));
+                // Required attribution (MPI-452/664) rides with the licence it belongs to,
+                // so a flow pulling two licensed weights attributes each to its own licensor.
+                if (licence.poweredBy) {
+                    row.append(ce('div', { className: 'mpi-detail__licence-powered', textContent: licence.poweredBy }));
+                }
+                const links = ce('div', { className: 'mpi-detail__licence-links' });
+                const linkTo = (text, url) => {
+                    const b = mountButton({ text, variant: 'ghost', size: 'sm', extraClasses: 'mpi-detail__licence-link' });
+                    _unsubs.push(on(b, 'click', () => openExternal(url)));
+                    return b;
+                };
+                links.append(linkTo('Read the licence', licence.licenceUrl));
+                // The link a BARRED user needs. Until now it existed only inside the gate
+                // dialog and in the Model Library drawer, so a Flow-only user who cancelled
+                // the dialog had no standing route to it (MPI-591 puts territory-restricted
+                // MiniMax H3 behind Extend Video, and Fabio's own machine is inside the bar).
+                if (licence.territory) links.append(linkTo('Request authorization', licence.territory.authorizationUrl));
+                if (licence.report) links.append(linkTo(licence.report.label, licence.report.url));
+                row.append(links);
+                host.append(row);
+            }
+        }
+
         function openDetail(flow) {
             _destroyDetailBtns();
             _activeDetail = flow;
@@ -323,9 +420,11 @@ export const MpiFlowLibrary = ComponentFactory.create({
                         ${flowModelIds(flow).map(_modelRowHtml).join('')}
                         ${_flowDepsRowHtml(flow)}
                     </ul>
-                </div>`;
+                </div>
+                ${_licenceFieldHtml(flow)}`;
 
             _mountModelChoice(flow);
+            _mountLicences(flow);
 
             const thumb = qs('#flow-detail-thumb', detailBody);
             if (flow.preview) {
@@ -365,7 +464,13 @@ export const MpiFlowLibrary = ComponentFactory.create({
                 });
                 detailActions.appendChild(open.el); _detailBtns.push(open);
             } else {
-                const install = MpiButton.mount(ce('div'), { text: 'Install models', variant: 'primary', size: 'md' });
+                // Same button, same path — the gate fires inside `downloadService.start()`
+                // either way. Only the promise changes: "Verify licence" opens terms and a
+                // trip to the licensor, not a download (MPI-666, matching the Model Library).
+                const install = MpiButton.mount(ce('div'), {
+                    text: _needsLicenceProof(flow) ? 'Verify licence' : 'Install models',
+                    variant: 'primary', size: 'md',
+                });
                 install.on('click', () => { _installMissing(flow, missing); });
                 detailActions.appendChild(install.el); _detailBtns.push(install);
             }
