@@ -32,6 +32,14 @@ node whose absence rejected `minimax_h3_r2va`, `minimax_h3_fl2va`,
 
 - The bump-engine smoke matrix was deliberately not run; it rents a GPU and
   belongs to MPI-595 Gate B. One op is proven, not the matrix.
-- The STABLE image pins stay at v0.17.0. A `-dev` tag is unreachable to a
-  released user, so a clean release-version image rebuild at ship time is still
+- The STABLE image pins stay where they already were - `POD_IMAGE_VERSION` and
+  `POD_IMAGE_VERSION_CPU`, both `v0.21.0` (`routes/remotePodLifecycle.js:157,191`);
+  `d3a10f15` shows both as untouched context lines. A `-dev` tag is unreachable to
+  a released user, so a clean release-version image rebuild at ship time is still
   MANDATORY and is Gate B's.
+
+  *Corrected 2026-08-31.* This line first read "v0.17.0", carried over from the
+  session handoff and never checked against the file. `v0.17.0` survives only in
+  the historical comments above those two constants, which is exactly what makes
+  the mistake easy: grepping the file for it hits. Caught by the close-out claim
+  auditor. Read the `const`, not the comment.
