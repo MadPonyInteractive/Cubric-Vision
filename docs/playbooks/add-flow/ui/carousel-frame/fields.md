@@ -28,7 +28,8 @@ stacked into the 236px control column; on a step they obey the one-row cap.
 
 **Every type here mounts an app Primitive** (`js/utils/declaredFields.js`, MPI-582) —
 `select`→MpiDropdown, `radio`→MpiRadioGroup, `button`→MpiButton, `toggle`→MpiButton (icon mode,
-`toggleable`, icon optional — MPI-504), `number`/`text`→MpiInput, `slider`→MpiProgressBar.
+`toggleable`, icon optional — MPI-504), `number`/`text`→MpiInput, `slider`→MpiProgressBar,
+`voices`→MpiInput + MpiDropdown + MpiButton (a composite, not a new Primitive — MPI-664).
 `type` NAMES a component; it does not
 replace one. So a consumer block sizes these into its layout and never restates their fill,
 border, hover, focus or disabled treatment — anything chrome-like in a consumer stylesheet is a
@@ -43,8 +44,8 @@ never reached the payload, defaults were never seeded, and Reuse read only `step
 
 ## Field types
 
-`select` · `radio` · `button` · `toggle` · `number` · `slider` · `text` (MPI-531 added
-`number`/`slider`/`text`; MPI-572 added `radio`).
+`select` · `radio` · `button` · `toggle` · `number` · `slider` · `text` · `voices` (MPI-531 added
+`number`/`slider`/`text`; MPI-572 added `radio`; MPI-664 added `voices`).
 
 - `number` / `slider` take `min` / `max` / `step`. **The bounds are ENFORCED**, not decorative —
   the value is clamped before it reaches the graph, and a typed number is written back clamped
@@ -67,6 +68,29 @@ never reached the payload, defaults were never seeded, and Reuse read only `step
   - A seeded value naming an option this build no longer has falls back to `default`, **and writes
     the fallback back** — same law as the clamped number field: a control that shows one value
     while sending another is the worst outcome available.
+- `voices` (MPI-664) is a **roster**: a `+` button adds a row, each row a free-text name and a
+  type picked from `options` (same `{ v, label }` shape as `select`). Any length. It is the answer
+  to a control that must name *several* things of one kind — one dropdown cannot say "male verse,
+  female bridge, choir on the last chorus".
+  - **It is the only type whose UI value is not its graph value.** It holds an ARRAY of
+    `{ name, type }` — that is what Reuse needs to rebuild the control — and `mapDeclaredValue`
+    serialises it to one string, one line per voice, `Name (Type)`. So **the one-field-one-param
+    law is untouched**, and the agent connector (`resolveFlowFieldValues`) serialises through the
+    same call the widget does rather than growing a second dialect.
+  - A row whose type is the catch-all (`Any`) emits the **bare name**: writing "Ana (Any)" into a
+    caption states a vocal quality the user never chose, and a model reads it as one. An unnamed
+    row is dropped rather than emitted blank.
+  - An option's `v` is used **literally**, so declare the caption word (`'Male'`), not an index.
+    A roster feeds PROSE, not an `MpiAnySwitch` bank — there is no int to map to, and a lookup
+    table would only be a second place to drift.
+  - It composes three existing Primitives (`MpiInput` · `MpiDropdown` · `MpiButton`) rather than
+    adding a fourth: it is a new *arrangement*, not a new visual idea.
+  - Rows repaint on **add and remove only**. Wiring a repaint to the name box would rebuild the row
+    under a typing user and drop focus on every keystroke; a name or type edit mutates its row in
+    place and reports.
+  - New rows are auto-named `Singer A`, `Singer B`, … (MiniMax's own caption convention) so a
+    reference to a voice from elsewhere stays unambiguous. Uniqueness is enforced on **add** only —
+    policing a rename would fight the user mid-word.
 - Anything else logs a warning and renders nothing. A silently-missing control is the failure
   mode this whole file exists to avoid.
 

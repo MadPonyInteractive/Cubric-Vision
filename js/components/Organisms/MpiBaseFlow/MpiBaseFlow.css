@@ -693,6 +693,40 @@
     flex: 1;
     min-width: 0;
 }
+/* ── The voice roster (MPI-664) ─────────────────────────────────────────────
+   A roster is a COLUMN of rows, not an inline control, so its wrapper flips axis
+   the same way a `text` field's does — through `:has()`, so the field DECLARATION
+   stays the only place the type is named. Sizing only: the three Primitives inside
+   own their own chrome, per the note above. */
+.mpi-base-flow__field:has(.mpi-base-flow__field-voices) {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+}
+.mpi-base-flow__field-voices {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-2);
+    width: 100%;
+}
+.mpi-base-flow__field-voice-row {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+}
+/* The name takes the slack; the type holds a fixed width so the dropdown does not
+   resize row to row as names grow, and the remove button never stretches. */
+.mpi-base-flow__field-voice-name {
+    flex: 1;
+    min-width: 0;
+}
+.mpi-base-flow__field-voice-type {
+    flex: 0 0 9em;
+}
+.mpi-base-flow__field-voice-add {
+    align-self: flex-start;
+}
 
 /* ── Last step: controls + result ───────────────────────────────────────── */
 .mpi-base-flow__controls {

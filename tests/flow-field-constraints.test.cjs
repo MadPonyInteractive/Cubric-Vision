@@ -181,3 +181,52 @@ test('format: duration spells a slider out instead of showing bare seconds', asy
     // No `format` is the untouched path — every existing slider still shows its number.
     assert.equal(formatDeclaredValue({}, 90), '90');
 });
+
+test('a voice roster serialises to the caption lines the graph reads', async () => {
+    const { serialiseVoices, mapDeclaredValue } = await esm('js/utils/declaredFields.js');
+
+    // MiniMax's own convention in the reference captions: `Singer A (Male)`.
+    assert.equal(
+        serialiseVoices([{ name: 'Singer A', type: 'Male' }, { name: 'The Choir', type: 'Choir' }]),
+        'Singer A (Male)\nThe Choir (Choir)',
+    );
+
+    // The catch-all emits a BARE name. "Ana (Any)" in a caption states a vocal quality
+    // the user never chose, and the model reads it as one.
+    assert.equal(serialiseVoices([{ name: 'Ana', type: 'Any' }]), 'Ana');
+    assert.equal(serialiseVoices([{ name: 'Ana', type: 'any' }]), 'Ana', 'case-insensitive');
+    assert.equal(serialiseVoices([{ name: 'Ana', type: '' }]), 'Ana');
+
+    // A half-added row must not reach the caption as an anonymous voice.
+    assert.equal(
+        serialiseVoices([{ name: '  ', type: 'Male' }, { name: 'Joe', type: 'Male' }]),
+        'Joe (Male)',
+    );
+
+    // Nothing declared, nothing sent — never the string "undefined".
+    assert.equal(serialiseVoices([]), '');
+    assert.equal(serialiseVoices(undefined), '');
+    assert.equal(serialiseVoices(null), '');
+
+    // The serialisation must happen on the SHARED path, so the agent connector and the
+    // widget cannot disagree about what the graph receives.
+    assert.equal(
+        mapDeclaredValue({ type: 'voices' }, [{ name: 'Singer A', type: 'Male' }]),
+        'Singer A (Male)',
+    );
+    // Every other type is untouched by the new branch.
+    assert.equal(mapDeclaredValue({ type: 'text' }, 'hello'), 'hello');
+});
+
+test('a new roster row is named uniquely, so a lyric reference stays unambiguous', async () => {
+    const { nextVoiceName } = await esm('js/utils/declaredFields.js');
+
+    assert.equal(nextVoiceName([]), 'Singer A');
+    assert.equal(nextVoiceName([{ name: 'Singer A' }]), 'Singer B');
+    // A gap is filled rather than skipped past.
+    assert.equal(nextVoiceName([{ name: 'Singer B' }]), 'Singer A');
+    // A user's own name for a voice still blocks the auto one that collides with it.
+    assert.equal(nextVoiceName([{ name: 'singer a' }]), 'Singer B', 'case-insensitive');
+    assert.equal(nextVoiceName([{ name: '  Singer A  ' }]), 'Singer B', 'trimmed');
+    assert.equal(nextVoiceName(undefined), 'Singer A');
+});

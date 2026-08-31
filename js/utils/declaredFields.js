@@ -104,6 +104,12 @@ export function fieldNumber(raw, f) {
  * @returns {*}       the graph value, clamped for a numeric field, or `v` untouched
  */
 export function mapDeclaredValue(f, v) {
+    // A `voices` roster is the ONE field type whose UI value is not its graph value:
+    // it holds rows so Reuse can rebuild the control, while the graph wants a single
+    // string. Serialising HERE rather than inside the widget keeps the one-field-one-
+    // param law intact AND puts the agent connector (`resolveFlowFieldValues`) on the
+    // same path as the widget — the duplication this module exists to prevent.
+    if (f?.type === 'voices') return serialiseVoices(v);
     if (f?.type === 'number' || f?.type === 'slider') v = fieldNumber(v, f);
     if (!Array.isArray(f?.mapTo) || f.mapTo.length !== 2) return v;
     const n = Number(v);
@@ -113,6 +119,59 @@ export function mapDeclaredValue(f, v) {
     const max = Number(f.max ?? 1);
     const t = max === min ? 0 : Math.min(1, Math.max(0, (n - min) / (max - min)));
     return lo + t * (hi - lo);
+}
+
+/**
+ * A voice roster's rows → the one string the graph reads (MPI-664).
+ *
+ * One line per named voice, `Name (Type)`, which is MiniMax's own convention in the
+ * reference captions (`Singer A (Male)`). A row whose type is the catch-all emits the
+ * bare name: writing "Ana (Any)" into a caption states a vocal quality the user did
+ * not choose, and the model reads it as one.
+ *
+ * An option's `v` IS the caption word here, not an index. This roster feeds PROSE —
+ * the caption's `Vocal Details` — not an `MpiAnySwitch` bank, so there is no int to
+ * map to and a lookup table would only be a second place to drift.
+ *
+ * Unnamed rows are dropped rather than emitted blank: a half-added row must not
+ * become an anonymous voice in the caption.
+ *
+ * @param {Array<{name: string, type: string}>} rows
+ * @returns {string}
+ */
+export function serialiseVoices(rows) {
+    if (!Array.isArray(rows)) return '';
+    return rows
+        .map(r => ({
+            name: String(r?.name ?? '').trim(),
+            type: String(r?.type ?? '').trim(),
+        }))
+        .filter(r => r.name)
+        .map(r => (r.type && r.type.toLowerCase() !== 'any' ? `${r.name} (${r.type})` : r.name))
+        .join('\n');
+}
+
+/**
+ * The name a newly added roster row gets: the first unused `Singer A`, `Singer B`, …
+ *
+ * Auto-naming is not cosmetic. The lyrics box references a voice by name, so two rows
+ * sharing one makes the reference ambiguous — and a row added blank would be dropped
+ * by `serialiseVoices` without ever saying why.
+ *
+ * ponytail: uniqueness is enforced on ADD only, never on a rename. Policing every
+ * keystroke would fight the user mid-word; the upgrade path is to validate at the
+ * point the marker is inserted, which is where tier 3's picker lands.
+ *
+ * @param {Array<{name: string}>} rows
+ * @returns {string}
+ */
+export function nextVoiceName(rows = []) {
+    const taken = new Set((rows || []).map(r => String(r?.name ?? '').trim().toLowerCase()));
+    for (let i = 0; i < 26; i += 1) {
+        const name = `Singer ${String.fromCharCode(65 + i)}`;
+        if (!taken.has(name.toLowerCase())) return name;
+    }
+    return `Singer ${(rows || []).length + 1}`;
 }
 
 /**
@@ -568,6 +627,108 @@ export function buildField(f, cur, onChange, unsubs, opts = {}) {
         inst.on('input', ({ value }) => onChange(value));
         unsubs.push(() => inst?.el?.destroy?.());
         wrap.appendChild(host);
+    } else if (f.type === 'voices') {
+        // The voice ROSTER (MPI-664) — a cast list of any length, each row a name and
+        // a voice type. A single dropdown cannot say "male verse, female bridge, choir
+        // on the last chorus", and the bench test proved MiniMax honours exactly that
+        // when the caption states it per section.
+        //
+        // It composes THREE Primitives (MpiInput · MpiDropdown · MpiButton) rather than
+        // introducing a fourth: nothing here is a new visual idea, only a new
+        // arrangement of existing ones, so a new Primitive would be a second drawing of
+        // controls the app already owns.
+        const opts_ = f.options || [];
+        // The rows are COPIED, never aliased: `cur` is the persisted value off a card,
+        // and mutating it in place would edit the payload behind the flow's back.
+        const rows = (Array.isArray(cur) && cur.length ? cur : (f.default || []))
+            .map(r => ({ ...r }));
+        const list = ce('div', { className: cls('field-voices') });
+
+        // Every row mounts Primitives, so a rebuild MUST destroy the previous set or
+        // the instances leak for as long as the flow stays open.
+        let rowUnsubs = [];
+        const dropRows = () => { rowUnsubs.forEach(fn => fn()); rowUnsubs = []; };
+        unsubs.push(dropRows);
+
+        // ponytail: a full re-render per add/remove. A roster is a handful of rows, so
+        // diffing buys nothing — revisit only if a flow ever declares a long one.
+        //
+        // Repainting is deliberately NOT wired to the name box: rebuilding the row
+        // under a typing user would drop focus on every keystroke. A name or type edit
+        // mutates its row in place and reports; only add and remove change the SHAPE.
+        const paint = () => {
+            dropRows();
+            list.textContent = '';
+
+            rows.forEach((row, i) => {
+                const line = ce('div', { className: cls('field-voice-row') });
+
+                const nameHost = ce('div', { className: cls('field-voice-name') });
+                const nameInst = MpiInput.mount(nameHost, {
+                    type: 'text',
+                    size: 'sm',
+                    placeholder: f.namePlaceholder || 'Name',
+                    value: String(row.name ?? ''),
+                });
+                nameInst.on('input', ({ value }) => { row.name = value; onChange(rows); });
+                rowUnsubs.push(() => nameInst?.el?.destroy?.());
+
+                const typeHost = ce('div', { className: cls('field-voice-type') });
+                const typeInst = MpiDropdown.mount(typeHost, {
+                    options: opts_.map(o => ({
+                        label: o.label ?? String(o.v), value: String(o.v), info: o.info,
+                    })),
+                    value: String(row.type ?? opts_[0]?.v ?? ''),
+                });
+                typeInst.on('change', ({ value }) => {
+                    const o = opts_.find(x => String(x.v) === String(value));
+                    if (!o) return;
+                    // The option's ORIGINAL `v`, never the DOM string — the same law the
+                    // select and radio branches follow, and for the same reason.
+                    row.type = o.v;
+                    onChange(rows);
+                });
+                rowUnsubs.push(() => typeInst?.el?.destroy?.());
+
+                const delHost = ce('div');
+                const delInst = MpiButton.mount(delHost, {
+                    icon: 'trash',
+                    variant: 'ghost',
+                    size: 'sm',
+                    info: `Remove ${row.name || 'this voice'}`,
+                    extraClasses: cls('field-voice-remove'),
+                });
+                delInst.on('click', () => { rows.splice(i, 1); onChange(rows); paint(); });
+                rowUnsubs.push(() => delInst?.el?.destroy?.());
+
+                line.appendChild(nameHost);
+                line.appendChild(typeHost);
+                line.appendChild(delHost);
+                list.appendChild(line);
+            });
+
+            const addHost = ce('div', { className: cls('field-voice-add') });
+            const addInst = MpiButton.mount(addHost, {
+                icon: 'plus',
+                label: f.addLabel || 'Add a voice',
+                size: 'sm',
+            });
+            addInst.on('click', () => {
+                rows.push({ name: nextVoiceName(rows), type: opts_[0]?.v ?? '' });
+                onChange(rows);
+                paint();
+            });
+            rowUnsubs.push(() => addInst?.el?.destroy?.());
+            list.appendChild(addHost);
+        };
+        paint();
+
+        // Write the declared default back, the same law the select and radio branches
+        // follow: a roster that shows two voices while sending none is the worst
+        // outcome available, and a run that never touches the control must still carry
+        // what the control displays.
+        if (!Array.isArray(cur) && rows.length) onChange(rows);
+        wrap.appendChild(list);
     } else {
         clientLogger.warn('declaredFields', `unknown field type "${f.type}" — skipping`);
         return null;
