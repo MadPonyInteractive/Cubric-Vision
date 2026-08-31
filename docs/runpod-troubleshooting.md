@@ -121,19 +121,29 @@ end-to-end 2026-06-15 (CPU Pod → download → switch to RTX 2000 Ada, models p
   at 20), env `CUBRIC_DOWNLOAD_MODE=1`, and the **slim `:v<ver>-cpu` image** — NOT a GPU image.
   The full cu124/cu128 image will NOT run on a CPU Pod (its entrypoint inits CUDA → container
   starts with 0 processes → app hangs "connecting"), so the slim image is mandatory.
-- **A CPU flavor CAN be out of stock, and it blocks the whole feature** (MPI-667). The spec
-  named `cpu3c` and nothing else until 2026-08-31, when EU-RO-1 ran out of it and every
-  Connect answered *"There are no longer any instances available with the requested
-  specifications"* — the byte-identical spec had created fine two days earlier, so read this
-  refusal as supply, not drift. `_createPodInternal` now retries down `CPU_FLAVORS`
-  (`cpu3c` → `cpu3g` → `cpu5c` → `cpu5g`), cheapest and enum-proven first; a flavor RunPod
-  does not recognise costs one rejected request. Only `cpu3c` is proven against the REST
-  enum — if a log shows the walk reaching the end with a 400 rather than a 500 on the later
-  ids, the id is wrong, not the stock. The reconnect path's GPU-availability gate is still
-  skipped for CPU: `dataCenters()` reports GPU availability only, so a CPU stock-out is
-  knowable only by asking for the Pod. **Workaround while it is out:** connect on any cheap
-  GPU card in the same data center — the volume mounts identically and the downloads land
-  the same, at a few cents an hour.
+- **A CPU flavor id is `family-vcpu-ram`, and a bare family reads as a stock-out** (MPI-667).
+  The spec named `cpuFlavorIds: ['cpu3c']` — a family, with no vCPU count — which resolves to
+  no concrete instance. RunPod reports an **unsatisfiable** spec in the same words it uses for
+  an **empty** one: *"There are no longer any instances available with the requested
+  specifications"*. So the refusal reads as scarcity and is not. It bit on 2026-08-31 in
+  EU-RO-1, blocking download mode outright; the byte-identical spec had created fine on
+  2026-07-29, which made drift look impossible and sent the first diagnosis at supply.
+  **Two things separate the two causes, and neither is the message:**
+  - The console, region-locked by attaching the same volume, showed every CPU card
+    **available and priced** ($0.06–$0.96/hr) while the app was being refused. RunPod greys
+    out and drops pricing on a real stock-out. Check this FIRST — it is one click from the
+    Settings panel's "Open in RunPod console" link, and it is ground truth.
+  - The console's CPU grid **is** the flavor list: 3 GHz / 5 GHz x Compute-Optimized x
+    {2/4, 4/8, 8/16, 16/32, 32/64} → `cpu3c-2-4`, `cpu5c-4-8`, and so on.
+
+  `_createPodInternal` now walks `CPU_FLAVORS` (`cpu3c-2-4` → `cpu3c-4-8` → `cpu5c-2-4` →
+  `cpu5c-4-8`, then the bare `cpu3c`/`cpu5c` as a backstop, since those are what worked in
+  July). Cheapest first: a model download is network/disk-bound, so 2 vCPU / 4 GB is ample
+  for wrapper + aria2c. A flavor that is genuinely out costs one rejected request and the
+  walk moves on. The reconnect path's GPU-availability gate stays skipped for CPU:
+  `dataCenters()` reports GPU availability only, so a CPU refusal is knowable only by asking
+  for the Pod. **Workaround if CPU really is out:** connect on any cheap GPU card in the same
+  data center — the volume mounts identically and the downloads land the same, at cents an hour.
 - **Slim image** (mpi-ci `cubric-vision-pod/Dockerfile.cpu` + `start-cpu.sh`): wrapper + aria2c
   only, no torch/ComfyUI. `/wrapper/models/install` (aria2c) is pure HTTP+disk. The wrapper's
   `/health` returns `ready:true, comfy_ready:false, download_mode:true` when `CUBRIC_DOWNLOAD_MODE`
