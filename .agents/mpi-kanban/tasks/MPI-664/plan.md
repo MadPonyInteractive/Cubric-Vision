@@ -26,8 +26,23 @@ five. § The field surface has been rewritten to the five-step shape; § The voi
 reasoning and the bench evidence behind it.
 
 **Bench test PASSED 2026-08-31** — MiniMax honours per-section voice stated in the caption, so the
-roster is on. See § The voice roster for the evidence and its one caveat. Next action: the stage
-restructure, then the graph.
+roster is on. See § The voice roster for the evidence and its one caveat.
+
+**Tier 2 SHIPPED 2026-08-31 (`6836d667`) — the `voices` roster field type.** A branch in
+`buildField` composing MpiInput + MpiDropdown + MpiButton; no new Primitive. It is the only field
+type whose UI value is not its graph value — it holds `{ name, type }` rows for Reuse, and
+`serialiseVoices` (via `mapDeclaredValue`) turns them into one string, which keeps the
+one-field-one-param law AND puts the agent connector on the widget's own serialisation call.
+819/819, lint clean, documented in `ui/carousel-frame/fields.md`.
+
+**Next action: the three `assetDeps.js` entries + the licence entry** (§ The flow's SHAPE, GAP 1 and
+GAP 2). The FlowDef cannot land before them — it would point at a workflow and deps that do not
+exist. Then the graph, then the FlowDef, then tier 3's `@` picker.
+
+⚠️ **THREE frame additions are now unproven in the app, not one:** `hiddenWhen`, `format: 'duration'`
+and the `voices` roster. All are unit-tested pure halves; no FlowDef declares any of them yet, so no
+`wrap.hidden`, no formatted readout and no roster row has ever rendered live. They all close on the
+same first live run — do not treat that run as a formality.
 
 🔴 **`Input_Duration` is a CEILING, not a length.** Found on the bench run: `max_duration` was set to
 150 and the model returned 80.76s — `MiniMaxMusic3TextEncode` derives the actual `seconds` from the
