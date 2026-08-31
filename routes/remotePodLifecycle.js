@@ -369,26 +369,17 @@ async function _volumeMatchedDiskGb(key, volumeId) {
 const CPU_SENTINEL = '__cpu__';
 
 // MPI-667: the CPU flavors a download-mode Pod may land on, in preference order.
-//
-// A RunPod CPU flavor id is `family-vcpu-ram`, NOT a bare family: the console's CPU grid
-// is exactly this list (3 GHz / 5 GHz x Compute-Optimized x 2/4, 4/8, 8/16, 16/32, 32/64).
-// The spec sent the bare family `cpu3c` and no vcpu count, which resolves to no concrete
-// instance — and RunPod reports an UNSATISFIABLE spec with the same words it uses for an
-// empty one: "There are no longer any instances available with the requested
-// specifications". So this refusal reads as a stock-out and is not one. Live 2026-08-31,
-// EU-RO-1: all four bare families refused with http 500 (not the 400 a rejected enum
-// gives) while the console, region-locked to that same volume, showed every card
-// available and priced.
-//
-// Ordered cheapest-first. A model download is network/disk-bound, so the CPU class does
-// not matter — only that something is free; 2 vCPU / 4 GB is ample for wrapper + aria2c.
-// The create walks the list, so a flavor that is genuinely out of stock costs one
-// rejected request and moves on. The bare families are kept LAST: they are what worked
-// on 2026-07-29, so if RunPod ever resolves them again they still serve as a backstop.
-const CPU_FLAVORS = [
-  'cpu3c-2-4', 'cpu3c-4-8', 'cpu5c-2-4', 'cpu5c-4-8',
-  'cpu3c', 'cpu5c',
-];
+// This used to be the single hardcoded `cpu3c`, so that ONE flavor going out of stock
+// in the volume's data center refused Connect outright — RunPod answers "There are no
+// longer any instances available with the requested specifications" and download mode
+// is simply unreachable (live 2026-08-31 in EU-RO-1; the byte-identical spec created
+// fine on 2026-07-29, so it was pure supply, not drift). The create retries down this
+// list rather than surfacing the first refusal. `cpu3c` stays first: it is the cheapest
+// and the only one proven against the REST enum. A flavor RunPod does not recognise
+// costs one rejected request and nothing else, which is why the rest can sit here
+// unproven — a model download is network/disk-bound, so the CPU class does not matter,
+// only that SOMETHING is free.
+const CPU_FLAVORS = ['cpu3c', 'cpu3g', 'cpu5c', 'cpu5g'];
 
 // MPI-189: SINGLE cu130 image for ALL GPU cards. The old cu124/cu128 per-arch
 // branching is GONE — torch 2.10+cu130 carries both Ada sm_89 (4090) and Blackwell
