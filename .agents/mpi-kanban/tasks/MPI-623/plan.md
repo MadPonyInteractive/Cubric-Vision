@@ -1035,7 +1035,9 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
       the graph already computes; these five give a sanity range for what a sensible
       normalised reach looks like in a room this size.
 
-44. **THERE IS NO BRUSH TRAINER NODE - PHASE 2's FIRST TASK IS BUILT ON A NODE THAT DOES
+44. **[RETRACTED BY AMENDMENT 45 - the node exists and is pinned. The SplatKit
+    inventory below is still correct; the conclusion drawn from it is not.]**
+    **THERE IS NO BRUSH TRAINER NODE - PHASE 2's FIRST TASK IS BUILT ON A NODE THAT DOES
     NOT EXIST, AND THE WHOLE PHASE FORKS ON WHAT REPLACES IT.** Phase 2 opens with "build
     the runtime workflow: SplatKit dataset creation + the Brush trainer node in ONE graph".
     Checked against `/object_info` before writing any code: **SplatKit ships 27 nodes and
@@ -1082,6 +1084,47 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     task list true as written, which is a reason to prefer it and NOT evidence that it is
     right - it also puts a 158.8 MB binary into the dependency system and a whole trainer
     into a node pack we maintain.
+
+45. **AMENDMENT 44 IS WRONG ON ITS CENTRAL CLAIM AND IS RETRACTED: `MpiBrushTrain`
+    ALREADY EXISTS, IS REGISTERED, AND IS INSIDE THE PINNED COMMIT.** Route A was not a
+    decision to take - it was taken during Phase 0 and then lost. `splat.py:201` in
+    `ComfyUi-MpiNodes` defines `MpiBrushTrain` (`dataset_path` + `total_steps` in,
+    `ply_path` STRING out, `CATEGORY = "MpiNodes/Splat"`), it is imported and registered in
+    `__init__.py:108/226/342`, it landed as **`5e07043` on 2026-08-29 17:40**, and
+    `git merge-base --is-ancestor 5e07043 53c0198` confirms it is an ancestor of the pinned
+    commit - three commits back from HEAD. Node repo tree is clean, HEAD == `origin/main`,
+    and `node_lock.json` == HEAD. **It ships to users today.**
+
+    **How amendment 44 went wrong, because the failure mode is reusable.** It searched
+    `D:\WORK\MPI-623-spike\object_info.json`, a SNAPSHOT captured **2026-08-29 11:16** -
+    six hours and twenty-four minutes BEFORE the node was committed. Every statement it
+    makes about that file is true; the file just predates the answer. The 27-node SplatKit
+    inventory in 44 is still correct and still worth having (SplatKit really does stop at a
+    COLMAP model), but "there is no Brush trainer node" was a claim about the whole install
+    drawn from a stale local artefact. **`/object_info` is a LIVE endpoint - a saved copy of
+    it is evidence about the past, and the node pack's own source is the authority on our
+    own nodes.** The node's docstring even says "Cubric Vision MPI-623, Phase 0"; a grep of
+    `c:\AI\Mpi\ComfyUi-MpiNodes` would have cost one call and settled it.
+
+    **What the node already handles - it is not a stub.** Brush is fetched per platform on
+    first use from the GitHub release and **checksum-verified against pinned sha256s**
+    (`BRUSH_VERSION v0.3.0`, win/macos/linux assets), so amendment 44's "the 158.8 MB
+    binary becomes a declared dependency on every user's disk" is wrong too - it is an
+    on-demand fetch, not a shipped payload. It stages a single-model root (**amendment 8**),
+    polls the export dir for `export_{iter}.ply` because Brush is silent off a TTY
+    (**amendment 9**), drives a real `comfy.utils.ProgressBar` off that step count, and
+    kills the child on `BaseException` so a cancelled prompt cannot leave Brush holding the
+    GPU. `export_every` / `sh_degree` / `max_splats` / `brush_path` are already exposed.
+
+    **What this leaves for Phase 2 task 1** - unchanged in substance, only in premise. The
+    graph is authorable today: SplatKit's dataset + rail + composite + `SphereSfMDatasetDualRes`
+    nodes, then `MpiBrushTrain`, in one graph. Two things still stand from 44 and are NOT
+    retracted: the hard rule that the graph is authored in the LOCAL ComfyUI and never
+    hand-edited (so the spike's script-assembled chunk graphs cannot be shipped as-is, and
+    they are split across seven chunks for GPU leasing besides), and the task-2 question of
+    how a `.ply` reaches the capture layer - `MpiBrushTrain` returns a PATH STRING, not a
+    ComfyUI output, so `Output_Splat*` still needs deciding against
+    `commandExecutor.js:1681-1692`.
 
 ### Verified NOT drifted from the source workflow (checked 2026-08-29)
 
