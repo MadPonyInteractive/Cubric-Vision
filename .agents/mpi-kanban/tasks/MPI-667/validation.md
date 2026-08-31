@@ -56,3 +56,12 @@ selectability, not by price.
 - **Push held.** `.husky/pre-push` refuses master while its last run is red — run
   `33420864054`, MPI-666's `licence-gate.test.cjs`. That test passes in this working tree on a
   peer's uncommitted `licences.js` edits, so it clears on their commit, not on anything here.
+
+## User confirmation, 2026-08-31 (post-close)
+
+The user reports CPU Pods still will not create, **and that they cannot create one from
+RunPod's own console either**. That is the independent check this card could not make for
+itself: the refusal reproduces outside the app, so the cause is RunPod capacity, not
+Cubric Vision. The CPU_FLAVORS walk shipped here removes a real single point of failure
+regardless, but it cannot manufacture capacity and was never expected to.
+
