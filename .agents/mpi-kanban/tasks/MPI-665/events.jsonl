@@ -1,1 +1,2 @@
 {"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-665", "at": "2026-08-31T11:05:00+01:00", "actor": "claude-opus-5", "column": "doing", "title": "shellWindow() hands a spec a window whose shell has not booted"}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-665","at":"2026-08-31T11:35:00+01:00","actor":"claude-opus-5","from":"doing","to":"done","reason":"Boot gate shipped in 41d1c62a; CI run 33379558218 green on master (npm test + test:desktop), which unblocks pre-push."}
