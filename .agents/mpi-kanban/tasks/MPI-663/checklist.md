@@ -35,8 +35,9 @@
       locking and Combine greyed below two, Flow Library opening with 0 console errors.
       The engine needed the node pack installed AND a delegated restart - see
       `validation.md`
-- [ ] USER: listen to the four stems and the combined track in the app
-- [ ] Fixed a RED master of my own making: the FlowDef named preview art that did not exist,
+- [x] USER: listened to the four stems and the combined track in the app, and saw the tile
+      and hero in the Flow Library - approved 2026-08-30 ("1")
+- [x] Fixed a RED master of my own making: the FlowDef named preview art that did not exist,
       so the Flow Library 404d (caught by tests/desktop/flows-tab-ring.spec.js). Keys dropped
       until the art lands + a guard added so it fails in `npm test` instead of in CI
 

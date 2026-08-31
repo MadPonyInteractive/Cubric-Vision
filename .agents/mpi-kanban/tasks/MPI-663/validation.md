@@ -33,9 +33,20 @@ populated.
 Screenshots: `.playwright-cli/page-2026-08-30T20-22-33-713Z.png` (all four on) and
 `…T20-23-04-629Z.png` (one stem left — Vocals locked, Combine greyed).
 
-Not verified by the agent, and left for the user: how the four stems and the combined
-track SOUND in the app, which is the `user-ux` half of this card. (The same audio was
-already listened to and approved off the bench run.)
+**USER SIGN-OFF, 2026-08-30.** Fabio listened to the four stems and the combined track in
+the app and looked at the tile and hero in the Flow Library — approved, no changes. That
+closes the `user-ux` half, and the card with it.
+
+## The art (2026-08-30)
+
+`flow-stems.webp` 896×1120 / 96,562 B and `flow-stems.mp4` 1280×800 / 233,590 B, both
+declared on the FlowDef and both serving 200 at those byte counts. The hero was proven
+PLAYING in a live instance rather than merely present in the DOM: selected by `currentSrc`
+(not `querySelector('video')` — an open project mounts several), `paused:false`, `muted`,
+`loop`, `currentTime` +0.90s over 900ms, `getBoundingClientRect().width` 444px, poster =
+the tile. Loop seam measured at **0.07/255 mean channel diff** between first and last frame.
+`npm test` 815 pass; `tests/desktop/flows-tab-ring.spec.js` 4 pass — the spec that caught
+the early art declaration is green with the art now real.
 
 ## Bench evidence (earlier in the card)
 
