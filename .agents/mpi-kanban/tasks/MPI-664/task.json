@@ -3,11 +3,11 @@
   "id": "MPI-664",
   "title": "Flow: MiniMax Music 3 (text-to-music)",
   "description": "Wire MiniMax Music 3 as a Flow. Model verified working locally; the open call is how the Flow composes the structured caption from user-facing controls (template vs LLM vs hybrid).",
-  "column": "todo",
-  "maturity": "needs-decision",
+  "column": "doing",
+  "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-08-30T17:25:28+01:00",
-  "updated_at": "2026-08-30T16:27:28Z",
+  "updated_at": "2026-08-30T17:28:00Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -19,8 +19,8 @@
     "research": "research/"
   },
   "attention": {
-    "state": "required",
-    "reason": "Caption UI is undecided: template vs LLM vs hybrid, and where an LLM would run in Vision. Blocks planning.",
-    "updated_at": "2026-08-30T16:27:28Z"
+    "state": "cleared",
+    "reason": "Hybrid settled with the user: dropdowns write the deterministic blocks, the LLM writes prose only.",
+    "updated_at": "2026-08-30T17:28:00Z"
   }
 }

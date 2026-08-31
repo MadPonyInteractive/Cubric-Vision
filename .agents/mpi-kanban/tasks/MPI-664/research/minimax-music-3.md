@@ -24,9 +24,13 @@ Two text fields, and the split matters:
 2. **Lyrics** — with section tags. The official set:
    `[Intro] [Verse] [Pre-Chorus] [Chorus] [Post-Chorus] [Bridge] [Instrumental] [Solo] [Outro]`
 
-Prompt-length guidance found in the wild: **80–200 words is the sweet spot**. Below ~80 the model
-fills with defaults; past ~200 it starts weighing conflicting signals and drops details. The stock
-ComfyUI template caption is well past 200 words — worth measuring against, not copying.
+Caption length: **250–450 English words.** This is MiniMax's OWN figure, from the Output Contract
+in their `music-caption-rewriter` skill (verified 2026-08-30 against the source).
+
+> **CORRECTED 2026-08-30.** This section previously said *"80–200 words is the sweet spot"*, sourced
+> from third-hand community guidance. It is wrong and it was load-bearing — a caption written to 200
+> words is roughly half of what MiniMax specify. Their own 1,000 bundled reference captions all sit in
+> the 250–450 band. Do not reinstate the lower figure.
 
 Section tags are described by MiniMax as generative control, **not** a symbolic guarantee. The
 model will not honour them strictly.
@@ -76,6 +80,82 @@ Do **not** confuse these with `MiniMaxAI/MiniMax-H3-Turbo-Lora` — that is the 
 2. **fp32 DiT exists** (9.8 GB, vs the 4.9 GB fp16 in use).
 
 Other file sizes for reference: VAE 217 MB, INT8 DiT 2.5 GB.
+
+## The caption SCHEMA (verified from the skill's own templates, 2026-08-30)
+
+Three top-level headings, this exact order, with the sub-labels the reference captions actually use.
+This is an interface fact — conform to it exactly.
+
+| Heading | Sub-labels |
+|---|---|
+| `Global Metadata` | Basic Attributes · Global Emotional Progression · Application Scenarios & Imagery · Sonics & Production Profile |
+| `Vocal Details` | Vocal Gender & Timbre · Vocal Style · Harmony/Backing Vocals · Vocal FX |
+| `Arrangement` | Instrument Lifecycle Description (Primary/Secondary Layering) · Groove & Foundation Progression · Embellishments, Textures & Spatial FX |
+
+MiniMax's own rules worth copying verbatim into any recipe we write:
+
+- **Instrumental** — state that the piece is instrumental **and name the instrument or texture
+  carrying the lead melodic role**. Naming the lead is what stops the model filling the vocal hole
+  with humming or a vocoder pad. Their validation list carries *"an instrumental request remains
+  instrumental"* and *"never silently reverse ... an instrumental requirement"*, so they hit the same
+  failure.
+- **Do not fabricate** an exact BPM, key, vocal gender or production technique when a broader
+  description will do.
+- Section tags are **local** directives — a tag may change its own section's arrangement without
+  replacing the song's global genre.
+- Prefer concrete musical changes over decorative prose; a readable energy arc, not an equipment list.
+
+## The 18 style families (MiniMax's own taxonomy)
+
+From `references/genre-router.md`. Each carries positive cues and a disambiguation rule against its
+nearest neighbour. **This is the style dropdown.**
+
+`east-asian-modern` · `east-asian-ballad-heritage` · `modern-rnb-neo-soul` · `soul-blues-gospel` ·
+`cinematic-pop-ballad` · `cinematic-orchestral-epic` · `electronic-synth-ambient-pop` ·
+`jazz-swing-big-band` · `traditional-vocal-stage` · `hip-hop-rap` · `metal-heavy-rock` ·
+`pop-alternative-rock` · `contemporary-folk-acoustic` · `roots-traditional-global` ·
+`general-pop-ballad` · `dance-pop-disco-funk` · `club-edm-house-trance` · `country-americana`
+
+Beneath them: **645 distinct sub-styles across 1,000 template files** (`alternative-metal-nu-metal`,
+`acoustic-folk-mandopop-ballad`, `reggae-roots-reggae`). Too many for a picker — use them as
+placeholder examples and let the rewriter route free text.
+
+`general-pop-ballad` is explicitly the **fallback** family, for mood-only briefs.
+
+**Reggae is in-distribution.** `roots-traditional-global` names reggae in its own positive cues and
+there is a `templates/reggae-roots-reggae_0001.txt`. So `bghira/minimax-music-suno-reggae-rank128-v2`
+is chasing a particular reggae *character*, not filling a capability gap — do not read the existence
+of a genre LoRA as evidence the base model lacks that genre.
+
+## LICENCE: take the schema, never the prose
+
+`MiniMax-AI/MiniMax-Music3` has **no `LICENSE` file** and GitHub's licence API returns `None`
+(checked 2026-08-30). Default is all rights reserved. **Do not ship MiniMax's template prose inside
+Cubric Vision.**
+
+Their own skill says the same thing independently: *"Do not copy sentences, distinctive phrases, or a
+template's complete structure. Synthesize a new caption around the user's brief."*
+
+The schema, the 18 family names and the routing rules are interface facts and are fine to conform to.
+The 1,000 caption files are not ours to redistribute.
+
+## `TextGenerate` — what it actually takes (source-verified)
+
+Read from `G:\ComfyUi\ComfyUI\comfy_extras\nodes_textgen.py`, 2026-08-30. Correcting a research
+claim that arrived via web search:
+
+- It takes **`io.Clip.Input("clip")`** — a CLIP object from `CLIPLoader`, reading `text_encoders/`.
+  It does **NOT** take a path under `models/LLM/`; there is no `LLM` entry in `folder_paths.py`. The
+  string `"LLM"` appears only as a **search alias** in the node schema.
+- Consequence: a candidate rewriter model must be loadable by `CLIPLoader` as one of its declared
+  types **and** implement `.generate()`. That is a much narrower door than "any Qwen3", and it rules
+  out GGUF and sharded checkpoints. Swapping in a bigger LLM is not a drop-in.
+- `CLIPLoader`'s type list includes **`minimax`** — MiniMax Music 3's own encoder loads through the
+  same node Vision's rewriter uses (as `krea2`).
+- Optional `image` / `video` / `audio` inputs exist, plus a `thinking` boolean.
+- **`max_length` defaults to 512** (max 32768). A 250–450 word caption does not fit that. Vision's
+  `qwen3vl_4b_prompt_enhancer.json` bakes 512 on its untitled `TextGenerate` node, so raising it for
+  music means titling that node `Input_*` first.
 
 ## Prior art for the caption problem
 

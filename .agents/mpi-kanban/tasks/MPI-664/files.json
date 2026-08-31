@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    ".agents/mpi-kanban/tasks/MPI-664/**",
+    "comfy_workflows/raw/flow_minimax_music_template.json",
+    "comfy_workflows/flow_minimax_music.json",
+    "js/data/flowsRegistry.js",
+    "js/data/commandRegistry.js",
+    "js/data/modelConstants/universal_workflows.js",
+    "js/utils/declaredFields.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "comfy_workflows/qwen3vl_4b_prompt_enhancer.json",
+    "comfy_workflows/raw/qwen3vl_4b_prompt_enhancer.json",
+    "docs/playbooks/add-flow/existing-flows/minimax-music.md",
+    "docs/playbooks/add-flow/ui/README.md",
+    "tests/inject-params-titles.test.cjs"
+  ]
+}
