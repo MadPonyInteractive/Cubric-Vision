@@ -125,6 +125,32 @@ notes in [research/](research/).
 > is, we may implement it INSTEAD of the current Wan approach. Do not start the four-rail bake
 > before that verdict.
 
+> **Session note 2026-08-30 (ninth). THE FOUR-RAIL BAKE IS DONE, AND FIXANYTHING WAS
+> DECLINED.** The fork resolved first: FixAnything (CMU, ECCV 2026) is a rank-64 LoRA on
+> Wan2.1-I2V-14B-**480P** with video-to-video conditioning, 832x480, trained on perspective
+> DL3DV renders. **Verdict: do not switch** - amendment 33, whose first reason Fabio pushed
+> back on and which is withdrawn as overstated. It rests on the total absence of
+> equirectangular support, with resolution / base weight / no-ComfyUI as cost. Parked as a
+> **Phase 3** lever on post-Brush eval renders, where it is in domain.
+>
+> Then the bake, split into **six GPU leases** so Fabio kept the card between pieces
+> (amendment 35) - the SplatKit nodes support it directly, `DatasetProject.reset` being
+> documented resumable and `HiResComposite` being an `output_node`. All six `success`:
+> four rails at 34.8-37.0 min, SfM 20.5 min, Brush Draft ~1 min -> **53.3 MB splat**.
+> **Amendment 11 is superseded on its central claim** - the four rails MERGE into one model
+> with the shipped piloting; the rails that split were the altered ones. Held-out eval
+> (amendment 37): rail 27 excellent, rail 144 soft, **rail 122 carries a real hole** where the
+> splat renders through a missing wall - verified by a pairing check, not assumed.
+> **Amendment 38 is the trap worth carrying forward:** `hires_N` is JSON content, not a path,
+> and a wrong string falls back to single-res SILENTLY - the first merge returned `success`
+> having ignored the 8192 composites entirely.
+>
+> **Fabio's calls this session:** rail 122's hole is **Phase 2 work**, not chased now. Rail
+> 157 (the fifth rail `ds.json` ships and no working file ever had) is **not blocking** and
+> needs no decision - it costs ~1 h to add later (37 min bake + SfM + Brush) and matters as a
+> **Phase 2 coverage input** when the canned presets are authored. Task 2 stays parked and
+> nothing went to R2.
+
 **Project mode:** `scalable-foundation`.
 
 A user bakes a Gaussian-splat scene once from a 360 equirect image, then re-enters
