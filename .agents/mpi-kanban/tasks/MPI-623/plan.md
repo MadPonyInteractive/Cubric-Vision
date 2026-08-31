@@ -1126,6 +1126,57 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     ComfyUI output, so `Output_Splat*` still needs deciding against
     `commandExecutor.js:1681-1692`.
 
+46. **THE PHASE 2 RUNTIME GRAPH EXISTS AND RUNS - AND `PreviewAny` IS THE ANSWER TO
+    TASK 2, WITH A PRECEDENT ALREADY IN THE APP.** Built as
+    `D:\WORK\MPI-623-spike\flow_3d_scene.api.json` by `make_runtime_graph.py`, which
+    copy-and-extends `hires_api_q4_4rail.json` - the graph whose four rails carry the
+    SHIPPED piloting and whose SfM node already merges them - under asserts that fail the
+    build rather than write a wrong graph. 51 -> 61 nodes. Injection surface:
+    **`Input_Image`, `Input_Name`, `Input_Rail_1..4`, `Input_Steps`**; outputs
+    **`Output_Image`** and **`Output_Splat`**.
+
+    **The finding that matters, and it was two minutes of GPU rather than three hours.**
+    `MpiBrushTrain` has `output_node = False`. A graph that merely ENDS at it is rejected
+    outright - ComfyUI returned `{"error": {"type": "prompt_no_outputs"}}` - and, worse,
+    in a graph that has other outputs it is simply **pruned and never executed**, because
+    ComfyUI only runs the subgraph feeding an output node. The first build of the runtime
+    graph had exactly that shape: `Output_Image` came off the composite and the trainer
+    dangled. It would have validated, run for three hours, produced a still, and produced
+    **no splat at all**, with `success` in `/history`.
+    **Fix, no node-pack change:** `MpiBrushTrain.ply_path` -> a **`PreviewAny`** titled
+    `Output_Splat`. That forces execution AND puts the path in `/history` where the app can
+    read it. It is the SAME capture shape the app already implements for `Output_prompt`
+    (`commandExecutor.js:1712-1728` - title-scoped, a PreviewAny used for debugging is
+    ignored). So task 2 does not need `Output_Splat*` to mirror `Output_Image*`'s
+    image-capture path at all; it needs the existing text-capture path pointed at a second
+    title.
+
+    **Proved before the long run, on the real bench** (`test_brush_link.py`, 2-node graph,
+    500 steps): **success in 85 s**, `/history` returning
+    `{"3": {"text": ["D:\\WORK\\Images\\Outputs\\splats\\mpi623_wanq4_swap157_7ar3kamo\\export_500.ply"]}}`
+    with `export_250.ply` and `export_500.ply` on disk. That also exercised
+    `stage_clean_dataset`'s hardlink path against a real `_spheresfm_work` dataset.
+
+    **Other edits, each asserted:** `LoadImage` -> `MpiLoadImageFromPath` (path-reading,
+    `block_if_empty`), verified first that all **nine** consumers read index 0;
+    `DatasetProject.dataset_name` and the four rails' `anchors` converted from widgets to
+    links off titled `PrimitiveString`s; the card's still taken as frame 0 of the
+    `traj_index 0` composite via `MpiGetImageAtIndex` -> `SaveImage` (a real view from
+    inside the baked room, which the source panorama is not).
+
+    **Known gaps, deliberate.** Rail **orientation** stays a widget - rail 27 is
+    `look_at_target` and the other three are `per_point_look`, so a coverage preset that
+    changes orientation needs a second injected field per rail. And this file is
+    **API-format and script-assembled**, which the add-flow playbook forbids shipping: it
+    is a proof and a reference for authoring the graph on the ComfyUI canvas, not the
+    `comfy_workflows/raw/` file. Do not commit it as one.
+
+    **Full run dispatched** 15:30, `prompt_id 836bbbfa`, 61 nodes ACCEPTED with
+    `node_errors: none`, into the fresh dataset name `mpi623_flowtest` (fresh because
+    `DatasetProject` carries `reset=true`). Draft 5000 steps so the splat is comparable to
+    amendments 37 and 42 rather than unscoreable. Values set **by title**, not by node id,
+    so the run also proves the injection surface is reachable the way the app reaches it.
+
 ### Verified NOT drifted from the source workflow (checked 2026-08-29)
 
 **This list is not exhaustive and two things it omitted were wrong - see amendments 29 and
