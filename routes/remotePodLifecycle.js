@@ -251,8 +251,34 @@ const POD_IMAGE_VERSION_CPU = 'v0.21.0';
 // `docker manifest inspect` needs no daemon so it proves nothing about booting. Gates 7-9
 // cover it on a real Pod, where the runner hard-fails unless the Pod reports 0.31.0.
 // The stable pair still stays on v0.17.0 — see the mandatory release-time rebuild above.
-const POD_IMAGE_VERSION_DEV = 'v0.21.0-dev';
-const POD_IMAGE_VERSION_CPU_DEV = 'v0.21.0-dev';
+// v0.22.0-dev (MPI-669): ComfyUI v0.31.0 -> v0.34.0. NOT a scheduled bump — an unblock.
+// MPI-649 moved node_lock to v0.34.0 as the "local half" and pushed the image rebuild onto
+// MPI-595 Gate B, because the executing smoke matrix rents a GPU. MPI-605 then put
+// ModelAttentionBackend into four shipped workflows (minimax_h3_r2va, minimax_h3_fl2va,
+// ltx_i2v_t2v, ltx_i2v_t2v_int8). That node is ComfyUI CORE (comfy_extras/
+// nodes_model_advanced.py), absent from 0.31.0 — exactly as MPI-605's own description
+// predicted — so all four ran locally and rejected on a Pod with "Node
+// 'ModelAttentionBackend' not found. The custom node may not be installed.", which is a lie
+// twice over: it is not a custom node, and no install could ever supply it.
+// Verified present at the PINNED tag, not merely on the bench: the bench is 0.34.2, so
+// v0.34.0's own comfy_extras/nodes_model_advanced.py was read from GitHub before building.
+// Same shape as the v0.21.0-dev entry above — mpi-ci's own node_lock.json + python_deps.txt
+// had to be synced first (63e19c3), together, since the lock and the curated pip set cannot
+// travel apart. Both legs built and pushed in run 33427642508, both pull-verified public.
+// The cu130 leg printed `node-import smoke test OK` — every baked node still imports on
+// 0.34.0, which is the MPI-341 gate and the one that matters for a core bump — plus
+// post-node torch 2.12.0+cu130 / torchvision 0.27.0+cu130 and exactly one opencv
+// (`cv2 5.0.0 ximgproc True`).
+// The cpu boot smoke was NOT run: the Docker daemon was down on the build machine, and
+// `docker manifest inspect` needs no daemon so it proves nothing about booting — the same
+// gap the v0.21.0-dev build carried.
+// NOT SMOKED: the executing op matrix. This image is built, booted and pull-verified, not
+// proven to GENERATE on 0.34.0. `release:check` still refuses the bump without that
+// evidence, which is the gate working. The stable pair stays on v0.17.0 — a clean
+// release-version rebuild at ship time remains MANDATORY, or users get a v0.34.0 local
+// engine against a 0.28.0 remote Pod.
+const POD_IMAGE_VERSION_DEV = 'v0.22.0-dev';
+const POD_IMAGE_VERSION_CPU_DEV = 'v0.22.0-dev';
 // 0.2.23 (MPI-169): add GET /wrapper/disk (du -sb of the mounted volume) so the
 // Settings volume bar can show truthful USED bytes — RunPod's API has no used-bytes.
 // R2-publish-only (publish-runtime.sh, no image rebuild). Degrades gracefully: an
