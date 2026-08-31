@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-665", "at": "2026-08-31T11:05:00+01:00", "actor": "claude-opus-5", "column": "doing", "title": "shellWindow() hands a spec a window whose shell has not booted"}

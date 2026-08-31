@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-665",
+  "title": "shellWindow() hands a spec a window whose shell has not booted",
+  "description": "CI run 33373667728 failed fullscreen-titlebar.spec.js on master and blocked every push. tests/desktop/shellWindow.js resolves the shell window at domcontentloaded, but the renderer boots asynchronously after that: init.js awaits initPaths() and only then initShell(), whose step 0 is Hotkeys.init() — the F11 binding. Every other spec's first action is an auto-waiting locator, so it waits by accident; this one's first action is keyboard.press('F11'), which does not auto-wait, so the key lands in a renderer with no F11 handler, no IPC is ever sent, and the class never arrives. Reproduced locally 1-in-6 launches; the docs-only commit that triggered the red run is unrelated. Fix: shellWindow() waits for the shell to have booted before returning.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "doing",
+  "created_at": "2026-08-31T11:05:00+01:00",
+  "updated_at": "2026-08-31T11:05:00+01:00",
+  "links": {
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl"
+  }
+}
