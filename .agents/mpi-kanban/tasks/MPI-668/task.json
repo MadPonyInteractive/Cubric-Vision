@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-668",
+  "title": "Nothing checks the Pod's ComfyUI core against node_lock, so a stale image surfaces as a rejected prompt mid-generation",
+  "description": "Connect installs the universal custom nodes, reseeds the model cache and reports ready without ever comparing the Pod's ComfyUI core version to dev_configs/node_lock.json. Live 2026-08-31: node_lock has been on v0.34.0 since MPI-649 while the DEV Pod image v0.21.0-dev still carries 0.31.0, and the user only found out when a MiniMax H3 generation came back 'Node ModelAttentionBackend not found. The custom node may not be installed.' - which is doubly misleading, since that node is ComfyUI CORE (comfy_extras/nodes_model_advanced.py), so no custom-node install could ever supply it. Four shipped workflows carry it (minimax_h3_r2va, minimax_h3_fl2va, ltx_i2v_t2v, ltx_i2v_t2v_int8), all fine locally and all dead on that Pod. The Pod already answers its core version - /object_info is polled at connect and the wrapper reports on /health - so the check is a comparison, not new plumbing. MPI-649 lists a 'version assert' as part of MPI-595 Gate B; this card is that assert on the APP side, at connect, where it costs seconds instead of a failed generation. Decide what a mismatch does: a hard block is defensible when the core is BEHIND the lock, but a warning may be the honest answer for ahead-of-lock, and the message must name the real fix (rebuild the Pod image) rather than repeating ComfyUI's custom-node guess.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-08-31T20:29:07+01:00",
+  "updated_at": "2026-08-31T20:29:07+01:00",
+  "links": {
+    "files": "files.json",
+    "events": "events.jsonl"
+  }
+}

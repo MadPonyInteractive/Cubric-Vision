@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-668", "at": "2026-08-31T20:29:07+01:00", "actor": "claude", "column": "todo", "title": "Nothing checks the Pod's ComfyUI core against node_lock, so a stale image surfaces as a rejected prompt mid-generation"}
