@@ -22,7 +22,11 @@ Design settled 2026-08-30 (hybrid). See `plan.md` for the full field surface and
 - [x] `format: 'duration'` on `slider` — seconds rendered as "1 minute 2 seconds"
 - [x] Both promoted into `docs/playbooks/add-flow/ui/carousel-frame/fields.md`
 - [ ] The painter's DOM half proven in the app — unit-verified only until a FlowDef declares a rule
-- [ ] `voices` field type — a new branch in `_buildField`, the roster itself (tier 2)
+- [x] `voices` field type — a new branch in `buildField`, the roster itself (tier 2). Composes
+      MpiInput + MpiDropdown + MpiButton, no new Primitive. Serialises through `mapDeclaredValue`
+      (`serialiseVoices`), so the agent connector shares the widget's path. 819/819, lint clean.
+      **DOM half still unproven in the app** — no FlowDef declares it yet, same caveat as
+      `hiddenWhen` and `format: 'duration'`; all three close together on the live run
 - [ ] `@` picker extracted from `MpiPromptBox` onto `MpiInput` (tier 3, purely additive on tier 2).
       `matchRefTagQuery` is reusable verbatim; only the DOM/keyboard/insert needs extracting
 
