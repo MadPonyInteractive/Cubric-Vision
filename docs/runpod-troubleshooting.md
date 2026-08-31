@@ -117,10 +117,23 @@ end-to-end 2026-06-15 (CPU Pod → download → switch to RTX 2000 Ada, models p
   `runpodConfig.gpuType` to the sentinel `'__cpu__'`. It rides the existing gpuType field,
   Connect guard, persistence, and GPU-switch delete-and-recreate logic untouched.
 - **Create spec** (`_createPodInternal`, `routes/remotePodLifecycle.js`): sentinel → `computeType:'CPU'`
-  + `cpuFlavorIds:['cpu3c']` (no `gpuTypeIds`/`gpuCount`), `containerDiskInGb:20` (CPU Pods cap
+  + one `cpuFlavorIds` entry (no `gpuTypeIds`/`gpuCount`), `containerDiskInGb:20` (CPU Pods cap
   at 20), env `CUBRIC_DOWNLOAD_MODE=1`, and the **slim `:v<ver>-cpu` image** — NOT a GPU image.
   The full cu124/cu128 image will NOT run on a CPU Pod (its entrypoint inits CUDA → container
   starts with 0 processes → app hangs "connecting"), so the slim image is mandatory.
+- **A CPU flavor CAN be out of stock, and it blocks the whole feature** (MPI-667). The spec
+  named `cpu3c` and nothing else until 2026-08-31, when EU-RO-1 ran out of it and every
+  Connect answered *"There are no longer any instances available with the requested
+  specifications"* — the byte-identical spec had created fine two days earlier, so read this
+  refusal as supply, not drift. `_createPodInternal` now retries down `CPU_FLAVORS`
+  (`cpu3c` → `cpu3g` → `cpu5c` → `cpu5g`), cheapest and enum-proven first; a flavor RunPod
+  does not recognise costs one rejected request. Only `cpu3c` is proven against the REST
+  enum — if a log shows the walk reaching the end with a 400 rather than a 500 on the later
+  ids, the id is wrong, not the stock. The reconnect path's GPU-availability gate is still
+  skipped for CPU: `dataCenters()` reports GPU availability only, so a CPU stock-out is
+  knowable only by asking for the Pod. **Workaround while it is out:** connect on any cheap
+  GPU card in the same data center — the volume mounts identically and the downloads land
+  the same, at a few cents an hour.
 - **Slim image** (mpi-ci `cubric-vision-pod/Dockerfile.cpu` + `start-cpu.sh`): wrapper + aria2c
   only, no torch/ComfyUI. `/wrapper/models/install` (aria2c) is pure HTTP+disk. The wrapper's
   `/health` returns `ready:true, comfy_ready:false, download_mode:true` when `CUBRIC_DOWNLOAD_MODE`
