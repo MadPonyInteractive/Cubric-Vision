@@ -151,6 +151,52 @@ notes in [research/](research/).
 > **Phase 2 coverage input** when the canned presets are authored. Task 2 stays parked and
 > nothing went to R2.
 
+> **Session note 2026-08-31 (tenth). THE PUSH BLOCK IS GONE AND RAIL 157 IS BAKED.**
+> The previous handoff's one live item closed itself: another agent fixed master's red
+> (`41d1c62a`, MPI-665) and CI run `33379558218` is **green**, so the five docs commits
+> are on the remote and **no decision was ever needed**. Fabio then freed the GPU for an
+> hour, so rail 157 - the fifth rail `ds.json` ships and no working file ever had - was
+> baked: `chunk6_rail157.json`, **success in 34.3 min**, `traj04` at 41 frames and
+> 8192x4096 composites (amendments 40, 41). It has the **highest correlation floor of the
+> five** (0.903-0.941) with mid-pack holes, though amendment 37 warns that neither
+> predicts splat quality.
+>
+> **The structural finding is amendment 39: SfM takes FOUR rails and no more** -
+> `spheresfm.py:170` is an explicit 4-tuple, verified in source as well as `/object_info`.
+> A five-rail merge is impossible without patching SplatKit (third-party, MIT). So the
+> only coverage experiment available was a **4-of-5 swap**, and **Fabio chose to run it**:
+> 157 in place of 144 (amendment 42). It merges (`trajectory_lengths [41,41,41,41]`,
+> `on_split` still `stop`), the weak slot lifts **+6.5 dB**, and the three untouched rails
+> move by <=0.53 dB. Splat `G:\MPI-623-spike\swap157_brush_out\swap157_5000.ply`, 52.2 MB.
+> **Rail 122's hole is unchanged and still the worst thing in the scene** - it was not
+> what changed.
+>
+> **The live question for Phase 2** is therefore whether the canned presets adopt 157 over
+> 144. The measurement supports it but does not settle it: the two rails fly different
+> paths, so part of the gap is that 157's views are easier (worst hole 11.8% vs 94.3%),
+> and wall COVERAGE is a question PSNR on held-out views cannot answer.
+>
+> **Nothing was overwritten** - the swap wrote to a new dataset name because
+> `spheresfm_colmap.py:818-820` rmtree's `images/` and `sparse/` under `out_dir`; the
+> original was verified intact. **Any future SfM re-run must take a new `output_name`.**
+>
+> **PATH CHANGE - THE SPIKE MOVED OFF G:.** Fabio's rule: **only weights the bench loads
+> belong on `G:` or `C:/AI`** - those are its two load paths. The spike is scratch, not
+> models, so `G:\MPI-623-spike\` is now **`D:\WORK\MPI-623-spike\`**. Every
+> `G:\MPI-623-spike\...` path elsewhere in this plan resolves under that new root -
+> apply the substitution, the filenames are unchanged. Verified: 1812 files /
+> 8,025,205,532 bytes byte-identical before the original was removed, the six `.py`
+> helpers repointed, and `eval_swap157.py` re-run from D: reproducing its table exactly.
+> G: went 4.8 GB -> 13 GB free. The scripts this session wrote (`run_chunk.py`,
+> `make_chunk6/7.py`, `brush_swap157.py`, `eval_swap157.py`) are now in that durable dir
+> too, not only in session Temp.
+>
+> **Still on G: and NOT ours to clear:** `$RECYCLE.BIN` holds ~12 GB. Emptying it is
+> Fabio's to do.
+>
+> **Uncommitted:** this plan's amendments 39-42 and this note. Nothing else changed; no
+> product code was touched.
+
 **Project mode:** `scalable-foundation`.
 
 A user bakes a Gaussian-splat scene once from a 360 equirect image, then re-enters
@@ -842,6 +888,105 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     984 faces at 2048x2048. The cost difference is itself the tell - 7.5 min wrong versus 20.5
     min right. **Any future graph that wires `hires_N` MUST assert `dualres` afterwards;
     the exit code cannot see this.**
+
+### Amendments from the rail-157 session (2026-08-31)
+
+39. **SfM TAKES FOUR RAILS, FULL STOP - A FIVE-RAIL MERGE IS NOT POSSIBLE WITHOUT
+    PATCHING SPLATKIT.** `SplatKit_SphereSfMDatasetDualRes` declares `pano_frames_1`
+    required and `pano_frames_2/3/4` + `hires_1..4` optional - there is no fifth slot.
+    This is not merely a schema limit that a hand-written API graph could slip past:
+    `nodes/spheresfm.py:170` collects the trajectories as
+    `batches = [b for b in (pano_frames_1, pano_frames_2, pano_frames_3, pano_frames_4)
+    if b is not None]`, an explicit 4-tuple with no loop and no `**kwargs`, and line 37
+    documents the ceiling on purpose ("wire extra WAN videos into pano_frames_2/3/4").
+    Checked against `/object_info` AND the source, because the schema alone would not
+    have settled it.
+    **Consequence for Phase 2:** rail 157 can never be a *fifth* rail in one
+    reconstruction. The only coverage experiment available is a **4-of-5 swap** - e.g.
+    157 in place of 144, the soft rail of amendment 37 - which costs SfM 20.5 min +
+    Brush ~1 min on top of the bake. Which four rails the canned presets use is a
+    Phase 2 decision and is Fabio's, not an agent's.
+    **Rail 157's bake is still worth having**: it lands as `traj04` in the same dataset
+    and yields its own known-pixel correlation, the measurement that needs no SfM at all.
+    It cannot disturb the existing four - `chunk5_sfm.json` names `traj00..03` explicitly,
+    and the rail chunks carry `reset: false`.
+
+40. **The rail-157 chunk is `chunk6_rail157.json`, built by copy-and-swap from chunk4.**
+    Exactly three edits, each asserted: the rail node re-keyed `144 -> 157` with rail 157's
+    own `anchors` read out of `ds_shipped.json`, its **four** consumer links repointed
+    (`148.control_video`, `148.control_mask`, `145.images`, `154.rail` - the guess of two
+    was wrong and the assert caught it), and `HiResComposite.traj_index 3 -> 4`.
+    `reset` stays `false`. `debug_save` deliberately left at `all` so the run stays
+    byte-identical to the four it must be compared against; the ~3.7 GB lands on **D:**
+    (220 GB free), not G:.
+    **Two durability notes.** `G:` is at 98% (5.1 GB free) and is where the spike's `.ply`
+    output goes - not a blocker today, worth watching. And `score_rail.py` / `eval_brush.py`
+    only ever existed in a session Temp folder, the same near-loss `ds_shipped.json` had;
+    both are now copied to `G:\MPI-623-spike\`.
+
+41. **RAIL 157 BAKED, AND IT IS THE BEST-BEHAVED RAIL OF THE FIVE - on the control
+    measurement, which is NOT the same as splat quality.** `success` in **34.3 min**,
+    in line with the other four (34.8-37.0). Asserted on the output, not the exit code:
+    `traj04` carries **41** frames like traj00-03, and its composites are
+    **8192x4096**, byte-for-byte the same shape as traj03's - so the HiRes step really
+    ran and this was not amendment 38's single-res fallback a second time.
+    Known-pixel correlation from frame 2 (`score_rail.py`, control `control_rgb_00009_.mp4`
+    vs Wan `control_rgb_00010_.mp4`):
+
+    | rail | corr, frame 2+ | worst hole |
+    |---|---|---|
+    | 27 | 0.856 - 0.953 | 6.1% |
+    | 122 | 0.853 - 0.950 | 5.6% |
+    | 133 | 0.810 - 0.947 | 37.8% (f80) |
+    | 144 | 0.648 - 0.948 | **94.3%** (f40) |
+    | **157** | **0.903 - 0.941** | 11.8% (f20) |
+
+    Rail 157 has the **highest floor of all five**; its ceiling is marginally lower. Its
+    holes are **mid-pack, not the smallest** - 11.8% is larger than 27's 6.1% and 122's
+    5.6%, and far smaller than 133 and 144. **Do not read this as "157 will make a better
+    splat."**
+    Amendment 37 measured the opposite relationship - hole size does NOT predict splat
+    quality (rail 133 held up at 28.39/25.00 through a 37.8% hole while rail 144 was the
+    soft one), and the axis that did matter was consistency of the invention across
+    views. What this table supports is only that 157 is a **sound candidate for the
+    4-of-5 swap**, most obviously against 144. Only running that SfM + Brush would settle
+    it.
+
+42. **THE 4-OF-5 SWAP RAN: 157 REPLACES 144, THE WEAK SLOT LIFTS +6.5 dB, AND THE OTHER
+    THREE RAILS DO NOT MOVE.** Fabio's call, run end to end. `chunk7_sfm_swap157.json`
+    (rails traj00/01/02/**04**), **SfM 11.3 min**, then Brush Draft 5000 at the same flags
+    as amendment 37 so the two are comparable: **6.3 min**, `swap157_5000.ply` **52.2 MB**
+    against the 4-rail run's 53.3 MB, 123 held-out renders in both.
+    Asserted on the output per amendment 38: `dualres=True`, `reproject_resolution
+    [8192, 4096]`, `sfm_resolution [2048, 1024]`, `num_frames 164`,
+    `trajectory_lengths [41, 41, 41, 41]` with `on_split` still at strict `stop` -
+    **so 157 substitutes for 144 without splitting the reconstruction**, which is the
+    amendment 11 overlap rule holding for a rail nothing had ever tested.
+
+    | rail | face 0 | face 2 | face 4 |
+    |---|---|---|---|
+    | 27 | 29.48 -> 29.27 | 26.93 -> 26.62 | 35.81 -> 36.27 |
+    | 122 | 26.07 -> 25.82 | 21.13 -> 21.91 | 31.46 -> 31.54 |
+    | 133 | 28.39 -> 28.24 | 25.00 -> 25.20 | 31.50 -> 30.97 |
+    | **144 -> 157** | **20.86 -> 27.39** | 25.93 -> 26.69 | 31.74 -> 37.08 |
+
+    Rail 144's face 0 was the worst cell in amendment 37's table; 157 puts **+6.5 dB**
+    there, and face 4 gains +5.3. The three untouched rails move by <=0.53 dB - that is
+    the control working, and it is the reason to believe the swap and not the noise.
+
+    **What this does NOT prove.** The two bottom rows are *different camera paths over
+    different geometry*, so part of the gap is simply that 157's views are easier - its
+    worst hole is 11.8% against 144's 94.3%. This says **157 is a better-behaved member
+    of the set**, not that the room is reconstructed better overall; coverage of the walls
+    is a separate question that PSNR on held-out views cannot answer. **Rail 122's hole is
+    untouched and still the worst thing in the scene** - all six worst renders are rail
+    122, exactly as before, because 122 was not what changed.
+
+    **Nothing was overwritten.** `spheresfm_colmap.py:818-820` rmtree's `images/` and
+    `sparse/` under `out_dir`, so the swap was pointed at a NEW dataset name
+    (`mpi623_wanq4_swap157`); `mpi623_wanq4`'s `sparse/0` and 984 images were verified
+    intact afterwards. **Any future SfM re-run MUST take a new `output_name` or back
+    `sparse/` up first.** Staging for Brush is a real 3.4 GB copy, not hardlinks.
 
 ### Verified NOT drifted from the source workflow (checked 2026-08-29)
 
