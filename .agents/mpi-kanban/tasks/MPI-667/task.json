@@ -4,10 +4,10 @@
   "title": "CPU download-mode Pod is pinned to one CPU flavor - a cpu3c stock-out in EU-RO-1 blocks Connect outright",
   "description": "_createPodInternal hardcodes spec.cpuFlavorIds = ['cpu3c'] for the no-GPU download-mode Pod (MPI-88), so a single flavor going out of stock in the volume's data center refuses Connect with RunPod's 'There are no longer any instances available with the requested specifications'. Live 2026-08-31 in EU-RO-1: the identical spec created fine on 2026-07-29/30 (podId 5guftel67o99u4, omi9588i0gymlu) and git diff since that commit touches zero CPU-branch lines, so this is pure supply, not drift. The reconnect path compounds it - _isGpuAvailable is skipped for CPU on the stated assumption that 'CPU capacity is effectively always available', which this refusal disproves. Fix: hand RunPod the whole flavor list and let it place on whatever is free.",
   "column": "doing",
-  "maturity": "in-progress",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-31T19:31:16+01:00",
-  "updated_at": "2026-08-31T19:31:16+01:00",
+  "updated_at": "2026-08-31T19:47:31+01:00",
   "links": {
     "checklist": "checklist.md",
     "files": "files.json",
