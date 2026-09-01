@@ -48,6 +48,38 @@ affordance is already data on the `LicenceDescriptor`.
       component source. Proved it bites: all five anchoring regexes fail against
       `git show HEAD:…/MpiFlowLibrary.js`.
 
+## Phase 2 — the POST-INSTALL route (folded in, Fabio 2026-09-01)
+
+Found by Fabio testing phase 1: "If I open up scribble, it just opens up the flow. It doesn't
+give me the slide over because it's already installed." Filed here rather than as MPI-667 on
+his call — same defect, second half.
+
+**The precise fact** (`_pick`, MPI-638): the drawer is skipped when the flow is available
+**and** `state.currentPage === PAGE_GALLERY`. So inside a project an installed flow goes
+straight to its frame and the licence block never renders. From the **Landing** page it still
+opens (disabled Open + toast), so the route is not gone — it is inconsistent, and it is absent
+from exactly the surface a user lives in.
+
+What is lost inside a project, by descriptor:
+
+| | klein-9b (scribble, scribble-object, object-stamp) | H3 (MPI-591, Extend Video) |
+|---|---|---|
+| Fields | `poweredBy` only — no `territory`, no `report` | `poweredBy` + `territory` + `report` |
+| Lost | licence text, attribution | those **plus** the misuse-report channel and "Request authorization" |
+
+H3 is why this cannot wait for MPI-591 to ship: §V.5 obliges us to keep a reporting mechanism
+*reasonably accessible*, and "go back to Landing" is a weak reading of that. `flow:minimax-music`
+(MPI-664) carries `report` too. Land this BEFORE 591, or H3 ships with its report channel
+reachable from one page only.
+
+- [ ] The same licence block on `MpiBaseFlow`'s step 0, over the same `_flowLicences` set.
+      Step 0 already paints title, hero and description — which is the model drawer's own
+      argument for where a licence belongs: *"where a user already comes to read what a model
+      is."* Extracting `_flowLicences` / the render out of the `MpiFlowLibrary` closure so both
+      surfaces share one implementation is the likely shape; two copies would drift into one
+      surface attributing and the other not.
+- [ ] Check `MpiBaseFlow` ownership before editing — it is on MPI-664's `files.json`.
+
 ## Verified
 
 - `node --test tests/flow-licence-surface.test.cjs` → 4 pass, 0 fail.
@@ -55,12 +87,29 @@ affordance is already data on the `LicenceDescriptor`.
 - No CSS written: `mpi-detail__licence*` is defined in `MpiModelManager.css`, which
   `preloadStyles.js:54` loads app-wide, so the Flow drawer already had the rules.
 
-## NOT yet verified
+## Seen in a running app (2026-08-31, isolated instance :55693)
 
-The rendered surface has not been seen in a running app — the chip text, the drawer block
-and the button wording are asserted in source, not in pixels. Reload the Flow Library and
-look at **Scribble**: the tile should read "Licence required", and its drawer should carry a
-Licence field naming the FLUX Non-Commercial License v2.1 with a "Read the licence" link.
+Own profile + EMPTY models root (`%TEMP%\cubric-666\`), so every flow read as uninstalled.
+Engine stamp seeded AFTER boot (`.mpi_engine_version` = 0.34.0 + a stub `python.exe`) purely to
+clear `engineGate.hasNoEngine`, which blocks `flows:open` outright — seeding post-boot means the
+UW dep repair never armed, so nothing downloaded.
+
+- Grid: `0 ready · 13 need models`. **Draw It In**, **Scribble**, **Object Stamp** →
+  `LICENCE REQUIRED`. Every other flow → `GET MODELS`.
+- Scribble drawer: `LICENCE / FLUX Non-Commercial License v2.1 / Licensed by Black Forest Labs
+  Inc. under the FLUX Non-Commercial License / Read the licence`. Footer: `VERIFY LICENCE`.
+- No Report or Request-authorization link, correctly — `FLUX2_KLEIN_9B` declares neither.
+
+## CI went red on the first push, and it was this card's test
+
+`876b4361` turned master red; its parent `86281686` was green, so it was mine.
+`a flow-only dep key resolves its licence exactly as a model id does` asserted
+`flow:minimax-music`, which exists ONLY in MPI-664's **uncommitted** `licences.js`. Green
+locally against the dirty tree, absent on CI. Rewritten as a sweep over whatever `flow:` keys
+are present (shape + readable licence), asserting no named key and NOT that the flow is
+shipped — `minimax-music`'s FlowDef has not landed either, so a shipped-flow check would fail
+on Fabio's tree. Proved in BOTH states: dirty tree (1 flow key) and a detached worktree at
+HEAD (0 flow keys), 4/4 passing in each.
 
 ## Out of scope
 

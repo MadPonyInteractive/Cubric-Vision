@@ -77,16 +77,32 @@ test('the gated flows resolve a verify licence through their model ids', async (
 
 test('a flow-only dep key resolves its licence exactly as a model id does', async () => {
     const { registry, licences } = await load();
-    // MPI-664 filed `flow:minimax-music` in MODEL_LICENCES: a flow's OWN weights are gated
-    // under its dep-queue key, which no ModelDef covers. `_flowLicences` iterates that key
-    // alongside the model ids and must not special-case it — if `flowDepKey` ever stops
-    // producing the string the descriptor is filed under, 13.3GB of licensed weights install
-    // with nothing shown, and the drawer names no licence at all.
-    const key = registry.flowDepKey('minimax-music');
-    assert.equal(key, 'flow:minimax-music');
-    const licence = licences.getModelLicence(key);
-    assert.ok(licence, 'flow:minimax-music lost its descriptor — the Flow drawer goes blank');
-    assert.ok(licence.licenceUrl, 'a licence the drawer renders must be readable from it');
+    // A flow's OWN weights are gated under its dep-queue key, which no ModelDef covers.
+    // `_flowLicences` iterates that key alongside the model ids and must not special-case
+    // it, so the two halves of that have to hold:
+    //
+    //   1. `flowDepKey` still produces the `flow:<id>` shape MODEL_LICENCES is keyed by.
+    //      This is the committed contract and is asserted unconditionally.
+    assert.equal(registry.flowDepKey('minimax-music'), 'flow:minimax-music');
+    assert.equal(registry.flowDepKey('anything'), 'flow:anything');
+
+    //   2. Every `flow:` entry that EXISTS round-trips through `flowDepKey` and carries a
+    //      readable licence. A key hand-written in a shape `flowDepKey` never produces is
+    //      MPI-664's own warning made real: the lookup misses and 13.3GB of licensed
+    //      weights install with nothing shown.
+    //
+    // A SWEEP OVER WHAT IS THERE, NOT A NAMED KEY — and no assertion that the flow itself
+    // is shipped. `flow:minimax-music` is filed in MPI-664's working tree while its FlowDef
+    // is not, so a shipped-flow check would fail on that tree, and asserting the key
+    // directly fails on CI, which has neither. The first version of this test did exactly
+    // that and turned master red on the first push.
+    const flowKeys = Object.keys(licences.MODEL_LICENCES).filter(k => k.startsWith('flow:'));
+    for (const key of flowKeys) {
+        assert.equal(registry.flowDepKey(key.slice('flow:'.length)), key,
+            `${key} is not a shape flowDepKey produces — the gate can never fire`);
+        assert.ok(licences.getModelLicence(key).licenceUrl,
+            `${key}: a licence the drawer renders must be readable from it`);
+    }
 });
 
 test('every descriptor the flow drawer can render carries its own way out', async () => {
