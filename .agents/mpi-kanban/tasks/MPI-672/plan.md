@@ -196,6 +196,62 @@ Two things the next session inherits and did not cause:
   folders were committed, so origin briefly carried card ids with no cards behind them. Already
   repaired by `819a6f46`; noted because the same race can recur — this tree runs peers.
 
+**2026-09-01, phase 3 in progress — the branch is built and pushed; the release is not cut
+yet.** Work happens in a `git worktree` at `D:\tmp\cv-142-wt` on branch `1.4.2`, NOT in the
+main tree: three peers (MPI-591, MPI-664, MPI-678) hold uncommitted work on master and a
+branch switch there would have taken it. The repo's `post-checkout` hook installed
+`node_modules` and bootstrapped `.engine-config.json` on its own.
+
+`1.4.2` is now on origin at `68a67a0b`, four ports on top of `88fcda76`:
+`659d641a` (e152cc10) · `13faa25a` (fc6f4336) · `94799255` (54f03caf) · `68a67a0b` (a2a14de3).
+Ported as `git diff <sha>^ <sha> -- . ':(exclude).agents'` through `git apply --3way`, one
+commit each — **board state was deliberately excluded**, since `board.json` at 1.4.2 is 640
+commits stale and a plain `cherry-pick` conflicts on it every time.
+
+Three things the next session should know, all recorded in full in `tasks/MPI-672/validation.md`:
+
+- **`MpiSettings.js` was hand-ported** — every anchor in a2a14de3 is the Update section
+  (MPI-629), which is master-only, so on the branch Engine health is the FIRST section and
+  its comment no longer points at an Update section that does not exist. `engine-repair-reachable.spec.js`
+  drives that exact section and is green.
+- **`a2a14de3` carried one line of MPI-591's unshipped work** —
+  `getUniversalWorkflow(payload.operation, payload.flowModelIds)` in `commandExecutor.js`.
+  The two-argument signature exists in no branch, only in MPI-591's `plan.md`, so it was
+  inert on master. Stripped from the port. Worth a look at whether it should also come off
+  master, but that is not this card's call.
+- **The desktop suite's red is the box, not the port.** Every full run fails exactly one
+  spec and a different one each time, each passing alone; the *pristine* base `88fcda76`
+  fails **two** on the same box. `npm test` is a clean 626/626.
+
+**2026-09-01, later — 1.4.3 is STAMPED and pushed; only the tag and the publish remain.**
+`f7939337` on `origin/1.4.2`: `appVersion.js` + `package.json` + `package-lock.json` at
+1.4.3, `RELEASE_NOTES['1.4.3']`, `docs/releases/2026-09-01-v1.4.3.md`,
+`.approved-1.4.3.json`, UNRELEASED cleared. Fabio read the overlay copy at Gate 1 and
+approved it unchanged. Pure-patch path — no ops, no schema, no engine move.
+
+Gates, all in `tasks/MPI-672/validation.md`: `release:check` green **with the Pod
+model-paths leg actually run** (it skips in a worktree — it resolves `mpi-ci` as a sibling
+of the repo root, so the real `start.sh` was staged at `D:\tmp\mpi-ci` for the run and the
+stand-in deleted after); `npm test` 626/626; Pod `dev`/`stable` manifests byte-identical;
+engine pin unmoved so the smoke-evidence gate does not apply.
+
+Two findings that are NOT this release's to fix:
+
+- **`release:deps` exits 1** on `ltx23-lora-foley`'s HuggingFace mirror (404 — the repo
+  answers 200, so the file was never uploaded), while its R2 primary serves 200 at the
+  declared 226,709,270 bytes. A dev-gated Flow weight on one route instead of two. Same on
+  master. Reported to Fabio, spun out as a separate background task, no card.
+- **`toast-serial-countdown` is load-sensitive**, and the box now fails it even on the
+  pristine base `88fcda76` (2/2) having passed it earlier. `APP_VERSION` was reverted to
+  1.4.2 as a probe and it still failed, so the new changelog entry is not the cause. Do not
+  bisect this again — the answer is the load, not the port.
+
+Next: push the `v1.4.3` tag (Fabio authorized it), watch the mpi-ci build, download the 6
+artifacts, then Gate 2 and `gh release create`. **The tag lands on a BRANCH commit** — if
+CI needs a manual dispatch, `ref` must be `1.4.2` or a full 40-char SHA; a short SHA fails
+at checkout in ~40s. Reconcile `git rev-parse 'v1.4.3^{}'` against the SHA CI actually
+built before publishing.
+
 ## Phases
 
 **Phase 1 — make the failure visible and reportable (MPI-675, then MPI-673).**

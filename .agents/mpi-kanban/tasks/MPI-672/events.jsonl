@@ -1,1 +1,4 @@
 {"schema": "mpi-kanban/event/v1", "id": "MPI-672", "type": "task.created", "at": "2026-09-01T08:07:06Z", "actor": "claude", "summary": "Created from GitHub issue #2 root-cause investigation."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-672", "at": "2026-09-01T14:39:17+01:00", "actor": "claude-opus-5", "from": "todo", "to": "doing", "reason": "Phase 3: cut the 1.4.3 release off branch 1.4.2."}
+{"schema": "mpi-kanban/event/v1", "type": "task.updated", "id": "MPI-672", "at": "2026-09-01T14:45:00Z", "actor": "claude-opus-5", "note": "Phase 3 started: links completed, ownership written."}
+{"schema": "mpi-kanban/event/v1", "type": "checklist.updated", "id": "MPI-672", "at": "2026-09-01T14:45:00Z", "actor": "claude-opus-5", "note": "Checklist derived from plan.md phases; 1 and 2 checked, 3 open."}

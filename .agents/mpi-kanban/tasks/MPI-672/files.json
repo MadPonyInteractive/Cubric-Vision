@@ -1,0 +1,12 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/core/appVersion.js",
+    "js/data/releaseNotes.js",
+    "package.json",
+    "package-lock.json",
+    "docs/releases/**",
+    "release-baselines/*.json",
+    ".agents/mpi-kanban/tasks/MPI-672/**"
+  ]
+}
