@@ -41,6 +41,16 @@ needs no xvfb on Windows.
   symlink and exits 0. All three consumers dynamic-import it inside `try/catch`. No PAT,
   no registry, no vendored copy. (The dangling symlink in a shipped artifact is a
   separate problem: MPI-416.)
+- **A push is its own concurrency group — do not "tidy" that back to the ref.**
+  `group:` resolves to `github.run_id` for a push and to `github.ref` only for a PR.
+  Sessions push straight to master minutes apart; with a shared ref group and
+  `cancel-in-progress: true`, each push killed its predecessor (17 of 60 runs
+  cancelled over two days) and the commit that broke the suite was rarely the one
+  that went red — a `chore:` or `docs:` commit landing after it wore the failure, and
+  `.husky/pre-push` saw `cancelled` instead of `failure` and let the pile-up through.
+  Setting `cancel-in-progress: false` on the ref group does NOT fix it: the run waits
+  as `pending` and the next push cancels it there, because GitHub keeps one pending
+  run per group. A group of ONE is what gives every commit a verdict. (MPI-676)
 - **`build-portable.yml` is deliberately NOT gated on this.** A `v*` tag is cut from a
   commit this workflow already ran, and `mpi-version-bump` keeps its human gate.
 - **Artifacts on failure only**, minus `test-results/**/user-data/**` — that is each
