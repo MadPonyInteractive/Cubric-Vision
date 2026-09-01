@@ -197,6 +197,29 @@ test('the LTX extend Flow carries its I/O titles AND its declared control node (
     assert.ok(have.has('output_video'), `${file} must carry a capture node titled "output_video"`);
 });
 
+test('the H3 arm of the extend Flow carries its titles, and NO negative (MPI-591)', () => {
+    // Extend Video is the first Flow whose picked model selects a different GRAPH, so
+    // this file has to answer the same titles `flow_ltx_extend.json` does — the run is
+    // the same op with the same collected fields, only the workflow swaps.
+    //
+    // `input_negative` is deliberately ABSENT and that absence is the assertion. H3
+    // takes no negative conditioning (`models.js` minimax-h3: `negativePrompt: false`
+    // — one Qwen3-VL encode, no second pass), so a node carrying that title would be a
+    // node nothing reads. The field hides on the H3 arm rather than feeding a dead
+    // node; leaving it visible AND unwired is MPI-475 exactly — a stop the user typed
+    // that never reached the model, with nothing saying so.
+    const file = 'flow_h3_extend.json';
+    const have = titlesOf(file);
+    for (const title of [
+        'input_positive', 'input_seed', 'input_video', 'input_duration',
+    ]) {
+        assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
+    }
+    assert.ok(have.has('output_video'), `${file} must carry a capture node titled "output_video"`);
+    assert.ok(!have.has('input_negative'),
+        `${file} must NOT carry "input_negative" — H3 has no negative conditioning`);
+});
+
 test('the LTX foley Flow carries its I/O titles (MPI-536)', () => {
     // flowLtxFoley declares NO injection-param field — its two prompt fields are the
     // top-level positive/negative that submitFlowGeneration writes — so the pinned set
