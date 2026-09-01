@@ -2163,7 +2163,7 @@ export function runCommand(payload) {
             if (err?.code === 'python_deps_broken') {
                 clientLogger.error('comfy', `Generation blocked — engine packages missing: ${state.comfyDepsWarning}`);
                 Events.emit('ui:error', {
-                    title: 'Engine packages failed to install',
+                    title: 'Part of the engine did not install',
                     message: err.message,
                 });
                 exec.onError?.(err);

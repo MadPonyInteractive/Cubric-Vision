@@ -82,8 +82,88 @@ const TQDM_RE = /(\d+)\/(\d+)\s*\[/g;
 const COMFY_TAIL_MAX = 15;
 const _comfyOutputTail = [];
 
+// MPI-674: the engine announces its OWN import failures, twice per pack — a
+// `Cannot import <path> module for custom nodes: <reason>` warning where it happens,
+// and an `(IMPORT FAILED): <path>` row in the import-times summary that closes node
+// loading. That is the ground truth `checkUniversalWorkflowDepsStatus` cannot reach:
+// it answers from the folder and its commit marker, both of which are correct for a
+// pack that is on disk at the right commit and fails to import. So the disk check
+// calls the engine healthy for ever while every graph touching those packs is
+// rejected with a raw missing-class name — the whole of issue #2.
+//
+// Read from stdout rather than diffing /object_info against the shipped graphs'
+// `class_type`s: a workflow for a model the user has never installed legitimately
+// names classes from a pack that is not on disk, so that diff false-positives on a
+// perfectly healthy engine. A pack that was never installed is never imported and
+// never prints either line — the signal is exactly the packs that SHOULD have loaded.
+//
+// Both patterns are matched because they are printed at different points by different
+// code paths; either alone is enough to know, and needing both to survive a chunk
+// boundary is what `_importScanCarry` removes.
+const CANNOT_IMPORT_RE = /Cannot import\s+(\S+)\s+module for custom nodes:/g;
+const IMPORT_FAILED_RE = /\(IMPORT FAILED\):\s*(\S+)/g;
+let _importScanCarry = '';
+
+/**
+ * Scans raw engine output for node packs that failed to import, recording their names
+ * on `processState.comfyImportFailures`.
+ *
+ * Runs on the RAW chunk, before `_handleComfyOutput` trims it: the trim would eat the
+ * trailing newline this scanner uses to tell a complete line from a split one. Only
+ * whole lines are matched, and the trailing partial is carried into the next chunk —
+ * ComfyUI prints this block in large bursts, but "large" is not "atomic", and a pack
+ * silently dropped at a chunk boundary is the same invisible failure this card exists
+ * to remove. The carry is bounded so a stream with no newline cannot grow it forever.
+ * @param {string} raw
+ * @private
+ */
+function _scanForImportFailures(raw) {
+    const buf = _importScanCarry + raw;
+    const cut = buf.lastIndexOf('\n');
+    if (cut === -1) {
+        _importScanCarry = buf.slice(-4096);
+        return;
+    }
+    const complete = buf.slice(0, cut);
+    _importScanCarry = buf.slice(cut + 1).slice(-4096);
+
+    const seen = processState.comfyImportFailures;
+    for (const re of [CANNOT_IMPORT_RE, IMPORT_FAILED_RE]) {
+        re.lastIndex = 0;
+        let m;
+        while ((m = re.exec(complete)) !== null) {
+            // The captured token is an absolute path to the pack folder; the folder
+            // name is what a user (and a log reader) recognises.
+            const name = m[1].replace(/[\\/]+$/, '').split(/[\\/]/).pop();
+            if (name && !seen.includes(name)) {
+                seen.push(name);
+                logger.error('comfy', `custom node pack failed to import: ${name}`);
+            }
+        }
+    }
+}
+
+/**
+ * The degraded-engine reason drawn from import failures, or null when the engine we
+ * own imported everything.
+ *
+ * ponytail: only an engine THIS process spawned has been scanned. An attached
+ * instance (MPI-484 — another app instance owns the engine on the shared port) was
+ * never our child, so we saw none of its stdout and answer "unknown", not "healthy".
+ * The instance that spawned it did the scan and shows the dialog.
+ * @private
+ */
+function _importFailureWarning() {
+    if (!processState.activeComfyProcess) return null;
+    const failed = processState.comfyImportFailures;
+    if (!failed?.length) return null;
+    return `custom node packs failed to import: ${failed.join(', ')}`;
+}
+
 function _handleComfyOutput(level, chunk) {
-    const text = chunk.toString().trim();
+    const raw = chunk.toString();
+    _scanForImportFailures(raw);
+    const text = raw.trim();
     if (!text) return;
 
     _comfyOutputTail.push(text);
@@ -170,7 +250,17 @@ router.get('/comfy/status', async (req, res) => {
     // engine on the other end came up degraded, and the frontend reads it from status
     // rather than from the /comfy/start response — which the reader may never have
     // made (attached instance) or may have made in a previous page life (reload).
-    const flags = { needsRestart, depsWarning: processState.lastDepsWarning || null };
+    //
+    // MPI-674: two reasons feed it now, and the pip one is checked first because it is
+    // the CAUSE — "the install failed" is a better thing to be told than the packs that
+    // fell over downstream of it. The import scan is what catches the case with no
+    // failed install to report at all: a marker stamped by an earlier successful pass
+    // makes `ensureCuratedPythonDeps` skip, so the packages can go missing afterwards
+    // and every start reports a clean install over an engine that imports nothing.
+    const flags = {
+        needsRestart,
+        depsWarning: processState.lastDepsWarning || _importFailureWarning(),
+    };
     try {
         const ax = getAxios();
         // Same ownership-is-not-availability split as /comfy/start (MPI-484): with no
@@ -491,6 +581,11 @@ router.post('/comfy/start', async (req, res) => {
         _comfyOutputTail.length = 0;
         processState.lastComfyExit = null;
         processState.comfyStopRequested = false;
+        // MPI-674: and forget the previous engine's import failures, so a repaired
+        // engine is not still reported broken by the one it replaced. The carry goes
+        // with them — a partial line from a dead process can only mis-match here.
+        processState.comfyImportFailures = [];
+        _importScanCarry = '';
 
         processState.activeComfyProcess = spawn(pythonPath, args, { cwd: path.dirname(mainPath), env: spawnEnv });
         // We own the engine now, so we are the one that can honour another
@@ -1037,3 +1132,4 @@ module.exports.removeComfyEventClient = removeComfyEventClient;
 // way the remote path checks the Pod volume. Reuses the exact custom-root +
 // default-root + recursive-search + completeness logic used by /comfy/models/check.
 module.exports.localModelsCheck = _localModelsCheck;
+module.exports.scanForImportFailures = _scanForImportFailures;   // MPI-674 — exported for unit test
