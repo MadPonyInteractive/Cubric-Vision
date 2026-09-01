@@ -1,0 +1,12 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "routes/shared.js",
+    "routes/comfy.js",
+    "js/state.js",
+    "js/services/comfyController.js",
+    "js/services/commandExecutor.js",
+    "tests/curated-deps-warning.test.cjs",
+    "tests/desktop/deps-warning-blocks-generation.spec.js"
+  ]
+}

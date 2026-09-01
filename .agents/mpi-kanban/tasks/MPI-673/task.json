@@ -3,13 +3,16 @@
   "id": "MPI-673",
   "title": "A failed curated-deps pass is silent: wire depsWarning to the UI and gate the generation",
   "description": "UMBRELLA: MPI-672 - Issue #2: a silent curated-deps failure ships a broken engine and the log can never reach us (2026-09-01). Members and phase order: tasks/MPI-672/plan.md. /comfy/start already RETURNS depsWarning and no frontend reads it, so a broken engine looks healthy. Surface it and stop the gen instead of failing later with a raw ComfyUI class error.",
-  "column": "todo",
-  "maturity": "planned",
+  "column": "doing",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-09-01T08:07:06Z",
-  "updated_at": "2026-09-01T08:07:06Z",
+  "updated_at": "2026-09-01T10:26:41+01:00",
   "links": {
     "brief": "brief.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
     "events": "events.jsonl"
   }
 }

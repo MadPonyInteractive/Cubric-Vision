@@ -148,6 +148,14 @@ const processState = {
     lastComfyExit: null,
     // Set while WE are killing it, so a user-initiated Stop is not reported as a crash.
     comfyStopRequested: false,
+    // MPI-673: why the curated pip pass failed on the start that spawned the engine
+    // we are serving, or null when it succeeded. The engine comes up DEGRADED after a
+    // failure (custom nodes fail to import) but reports `success: true`, so the reason
+    // has to outlive the /comfy/start response — a UI that reloaded, or one that never
+    // made that request, still has to learn the engine cannot run a graph. Echoed on
+    // /comfy/status. A failed pass stamps no marker, so the next spawn retries and
+    // clears this by writing null.
+    lastDepsWarning: null,
 };
 
 function stopComfyUI() {

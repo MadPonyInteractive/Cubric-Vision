@@ -1,1 +1,5 @@
 {"schema": "mpi-kanban/event/v1", "id": "MPI-673", "type": "task.created", "at": "2026-09-01T08:07:06Z", "actor": "claude", "summary": "Created from GitHub issue #2 root-cause investigation."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-673", "at": "2026-09-01T10:09:20+01:00", "actor": "claude", "from": "todo", "to": "doing", "reason": "Phase 1b of MPI-672: surface depsWarning and gate the generation."}
+{"schema": "mpi-kanban/event/v1", "type": "checklist.updated", "id": "MPI-673", "at": "2026-09-01T10:26:41+01:00", "actor": "claude", "note": "All 8 items ticked; two folded-in findings and one deliberate omission recorded."}
+{"schema": "mpi-kanban/event/v1", "type": "validation.updated", "id": "MPI-673", "at": "2026-09-01T10:26:41+01:00", "actor": "claude", "note": "npm test 840/840, lint clean, and a new desktop spec proves the dialog and the pre-dispatch block on a real shell."}
+{"schema": "mpi-kanban/event/v1", "type": "task.updated", "id": "MPI-673", "at": "2026-09-01T10:26:41+01:00", "actor": "claude", "note": "maturity -> validating; the new dialog copy is the one thing wanting the user's eyes."}

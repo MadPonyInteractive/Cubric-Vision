@@ -29,6 +29,20 @@ import { findRejectedFile, rejectedBasename, MODEL_FILE_INPUTS } from '../utils/
 // the server was still coming up. Polling is 1s/iteration, so this is seconds.
 const COMFY_READY_TIMEOUT_S = 240;
 
+// MPI-673: what a user is told when the local engine's curated pip pass failed. The
+// engine still STARTS on that failure (deliberate — refusing to boot over an offline
+// pip is the worse regression, see routes/comfy.js) but comes up with several custom
+// node packs unimported, so a graph using them is rejected with a raw missing-class
+// name. That reads as a broken app; this says what actually broke.
+//
+// It names no repair button: the failed pass stamps no marker, so the retry is simply
+// the next fresh engine start, and an in-app control to force one is MPI-674's scope.
+export const DEPS_BROKEN_MESSAGE =
+    'Some of the Python packages the local engine needs could not be installed, so several '
+    + 'of its custom nodes did not load. Generations that use them will fail.\n\n'
+    + 'The install is retried every time the engine starts fresh. If it keeps failing, check '
+    + 'your internet connection or proxy — then use "Show log file" below and send us the log.';
+
 // Binary WS frames carry a 4-byte big-endian event-type header. Only event type 1
 // (PREVIEW_IMAGE) is an image; ComfyUI also sends OTHER binary event types on the
 // same socket — e.g. type 3, a ~93-byte stage/progress marker emitted when a second
@@ -372,6 +386,7 @@ function createEngine({ engine, alwaysLocal }) {
         try {
             const statusRes = await fetch('/comfy/status');
             const status = await statusRes.json();
+            this._noteDepsWarning(status);
 
             // The restart-needed signal can live in EITHER place: the frontend
             // `state` flag (set live via the `comfy:needs-restart` SSE) OR the
@@ -469,6 +484,11 @@ function createEngine({ engine, alwaysLocal }) {
             for (let i = 0; i < COMFY_READY_TIMEOUT_S; i++) {
                 const checkRes = await fetch('/comfy/status');
                 const check = await checkRes.json();
+                // MPI-673: the start we just made is what RAN the pip pass, so its
+                // outcome is only knowable from here on. Reading it inside the poll
+                // (not once after it) means the dialog opens as soon as the engine is
+                // up, not at the user's first generation attempt.
+                this._noteDepsWarning(check);
                 if (check.ready) {
                     this._emitLifecycle('comfy:ready');
                     return { ready: true, remoteComfyRestarted: false };
@@ -490,6 +510,35 @@ function createEngine({ engine, alwaysLocal }) {
             Events.emit('ui:error', { title: 'ComfyUI failed to start', message: e.message });
             throw e;
         }
+    },
+
+    /**
+     * Mirrors `/comfy/status`'s `depsWarning` into `state.comfyDepsWarning`, and opens
+     * the blocking error dialog the first time a given warning is seen (MPI-673).
+     *
+     * A toast is the wrong surface here: this is not one failed action, it is an engine
+     * that will fail every generation until its packages install. Announcing on CHANGE
+     * (not on presence) is what keeps the 1s readiness poll from reopening it forever —
+     * and `state` is a Proxy that emits `state:changed` on every assignment, so the
+     * write is guarded too, not just the dialog.
+     *
+     * Only the LOCAL path reaches here: `ensureServerRunning` hands a remote-connected
+     * engine to `_ensureRemoteReady` before the status fetch, and the Pod never runs the
+     * curated pass. A stale local warning therefore survives a remote session untouched,
+     * which is correct — the local engine is still degraded when you come back to it.
+     * @param {{ depsWarning?: string|null }} status
+     * @private
+     */
+    _noteDepsWarning(status) {
+        const warning = status?.depsWarning || null;
+        if (warning === state.comfyDepsWarning) return;
+        state.comfyDepsWarning = warning;
+        if (!warning) return;
+        clientLogger.error('comfy', `Local engine is degraded — ${warning}`);
+        Events.emit('ui:error', {
+            title: 'Engine packages failed to install',
+            message: DEPS_BROKEN_MESSAGE,
+        });
     },
 
     /**
@@ -1231,6 +1280,20 @@ function createEngine({ engine, alwaysLocal }) {
         // path picks getEngine(forceLocal) and calls .runWorkflow on it. So `this`
         // is already the correct engine; `this._alwaysLocal` drives all routing.
         const serverReady = await this.ensureServerRunning(opts);
+
+        // MPI-673 / issue #2: the engine is UP but its curated Python packages never
+        // installed, so five node packs failed to import. Dispatching anyway is what
+        // produced the reported dialog — ComfyUI rejects the graph on whichever missing
+        // class it reaches first ("Node 'ClownsharKSampler' not found"), which names a
+        // node the user never chose and reads as a broken app. Refuse here instead, with
+        // the real reason. Local engines only; the Pod runs no curated pass, and the
+        // remote path never populates this flag.
+        const isLocalRun = this._alwaysLocal || !remoteEngineClient.isRemote();
+        if (isLocalRun && state.comfyDepsWarning) {
+            const err = new Error(DEPS_BROKEN_MESSAGE);
+            err.code = 'python_deps_broken';
+            throw err;
+        }
 
         let workflow = workflowOrId;
 

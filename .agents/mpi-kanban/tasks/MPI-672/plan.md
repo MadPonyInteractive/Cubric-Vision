@@ -96,7 +96,35 @@ Three things the next session should know:
   better desktop affordance and covers the brief, so it did not get a second worse button.
   Delete or wire it if a browser-only surface ever needs it.
 
-Next: **MPI-673** (surface `depsWarning` and gate the generation), the second half of phase 1.
+**2026-09-01, later still — MPI-673 is BUILT and sits in `doing` / `validating`.** Evidence
+in `tasks/MPI-673/validation.md`: `npm test` 840/840 (incl. the new
+`tests/curated-deps-warning.test.cjs`), lint clean, and a new desktop spec
+(`tests/desktop/deps-warning-blocks-generation.spec.js`, 2.3s) that stubs a degraded
+`/comfy/status` on a real Electron shell and proves the dialog opens, does not reopen,
+and `runWorkflow` rejects with `python_deps_broken` before the graph is loaded.
+
+What landed: `processState.lastDepsWarning` makes the reason outlive the `/comfy/start`
+response; `/comfy/status` spreads `...flags` so **all four** branches carry `depsWarning`;
+`state.comfyDepsWarning` mirrors it; `comfyController._noteDepsWarning()` announces it once
+per NEW value through the blocking dialog; `runWorkflow` refuses a local dispatch on it and
+`commandExecutor` translates the code. MPI-459 intact — a failed pass still starts the engine.
+
+Three things the next session should know:
+
+- **Announce on CHANGE, never on presence.** The readiness poll reads `/comfy/status` every
+  second and `state` is a Proxy emitting on every assignment, so presence would reopen the
+  dialog forever. The desktop spec pins the no-reopen half.
+- **A release build has NO engine-restart control** — `js/shell/navigation.js`'s "Restart
+  Engine" is on the dev-only Ctrl+Tab radial. So the copy names no button; it says the
+  install retries on the next fresh start (true by construction — a failed pass stamps no
+  marker). **A reachable in-app repair is MPI-674's, and it is now load-bearing for MPI-673's
+  message.**
+- **The full desktop suite flakes under load on this box.** A whole-suite run took 8.3m
+  against a ~1.2m budget with three agent sessions live, and 4 specs timed out at 30s
+  (`audio-permission`, both `flow-clear-slot-advances`, `flow-reuse-opens-without-model`) —
+  all 4 pass in 14.4s re-run alone. Re-run before believing a desktop red.
+
+Next: **MPI-674** (phase 2) — import-aware health check plus the repair.
 
 Two things the next session inherits and did not cause:
 

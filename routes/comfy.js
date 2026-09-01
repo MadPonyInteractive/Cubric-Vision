@@ -167,6 +167,11 @@ router.get('/comfy/status', async (req, res) => {
     // at `ready` are unaffected; the readiness poll uses this to stop waiting on a
     // process that has already died.
     const lastExit = processState.lastComfyExit || null;
+    // MPI-673: `depsWarning` rides EVERY branch below. It is the only signal that the
+    // engine on the other end came up degraded, and the frontend reads it from status
+    // rather than from the /comfy/start response — which the reader may never have
+    // made (attached instance) or may have made in a previous page life (reload).
+    const flags = { needsRestart, depsWarning: processState.lastDepsWarning || null };
     try {
         const ax = getAxios();
         // Same ownership-is-not-availability split as /comfy/start (MPI-484): with no
@@ -176,15 +181,15 @@ router.get('/comfy/status', async (req, res) => {
         if (!processState.activeComfyProcess) {
             const alive = ax && await ax.get(`http://127.0.0.1:${COMFYUI_PORT}/history`, { timeout: 1000 })
                 .then(() => true).catch(() => false);
-            if (!alive) return res.json({ running: false, needsRestart, lastExit });
-            return res.json({ running: true, ready: true, needsRestart });
+            if (!alive) return res.json({ running: false, ...flags, lastExit });
+            return res.json({ running: true, ready: true, ...flags });
         }
-        if (!ax) return res.json({ running: true, ready: false, needsRestart });
+        if (!ax) return res.json({ running: true, ready: false, ...flags });
         const ready = await ax.get(`http://127.0.0.1:${COMFYUI_PORT}/history`, { timeout: 1000 })
             .then(() => true).catch(() => false);
-        res.json({ running: true, ready, needsRestart });
+        res.json({ running: true, ready, ...flags });
     } catch (e) {
-        res.json({ running: false, needsRestart, lastExit });
+        res.json({ running: false, ...flags, lastExit });
     }
 });
 
@@ -487,6 +492,12 @@ router.post('/comfy/start', async (req, res) => {
             depsWarning = `curated python deps FAILED: ${err.message}`;
             logger.error('comfy', `${depsWarning} — starting anyway, custom nodes may fail to import`);
         }
+        // MPI-673: outlive the response. Returning the reason to this one caller was
+        // not enough — nothing read it, and the engine this start is about to spawn
+        // stays degraded for its whole life, across every app/browser reload. Written
+        // on BOTH outcomes: a success writes null, which is exactly what a retry of a
+        // previously failed pass is (no marker was stamped, so it ran again here).
+        processState.lastDepsWarning = depsWarning;
 
         // Fresh start → forget the previous life's output and exit record, so a stale
         // crash can never be reported against this run (MPI-415).
