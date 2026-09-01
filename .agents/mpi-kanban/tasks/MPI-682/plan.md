@@ -7,9 +7,9 @@ them**, every claim below was read from the code on 2026-09-01.
 
 Facts established at planning time:
 
-- **Footer states live in one place.** `openDetail()`,
-  `MpiFlowLibrary.js:406-455` — installing → `Cancel`, available → `Open`, else → `Install`.
-  The `available` branch mounts `Open` and nothing else.
+- **Footer states live in one place.** The footer block at the end of `openDetail()`
+  (`MpiFlowLibrary.js:371`, footer at `:406-455`) — installing → `Cancel`, available →
+  `Open`, else → `Install`. The `available` branch mounts `Open` and nothing else.
 - **The server would refuse a flow uninstall today.** `_flowRequiredDepIds()`
   (`routes/downloadManager.js:407`) takes no exclude arg and protects unconditionally; it is
   read at **two** call sites, one per engine guard — `:268` (`_localSharedDepsMap`) and

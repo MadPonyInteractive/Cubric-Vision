@@ -24,9 +24,9 @@ hand-deleting files the app then has no idea are gone.
 
 ## Two blockers, one is server-side
 
-**1. No UI.** `openDetail()` in
-`js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js:406-455` has three
-footer states — installing → `Cancel`, available → `Open`, otherwise → `Install`. The
+**1. No UI.** `openDetail()`
+(`js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js:371`) ends in a
+footer block (`:406-455`) with three states — installing → `Cancel`, available → `Open`, otherwise → `Install`. The
 `available` branch mounts `Open` and nothing else.
 
 **2. The backend would refuse anyway.** `_flowRequiredDepIds()`
