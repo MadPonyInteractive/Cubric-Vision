@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-683",
+  "title": "MpiOkCancel collapses newlines - every bullet-list confirm body renders as one run-on line",
+  "description": "The shared confirm dialog sets its body with textContent and declares no white-space, so a newline vanishes. Set white-space: pre-line on .mpi-ok-cancel__text.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "completed",
+  "created_at": "2026-09-01T21:22:32+01:00",
+  "updated_at": "2026-09-01T21:25:51+01:00",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl",
+    "checklist": "checklist.md",
+    "files": "files.json",
+    "validation": "validation.md"
+  }
+}

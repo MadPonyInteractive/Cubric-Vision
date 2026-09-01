@@ -1486,10 +1486,6 @@ export const MpiRunpodSettings = ComponentFactory.create({
                 await _createRunpodVolume(root, size, cfg.datacenter, dcName);
             });
             dialog.el.show();
-            // Honour the \n\n split between the base copy and the live cost line
-            // (scoped to this dialog so the shared MpiOkCancel style is untouched).
-            const textSlot = qs('#text-slot', dialog.el);
-            if (textSlot) textSlot.style.whiteSpace = 'pre-line';
         }
 
         async function _createRunpodVolume(root, size, dataCenterId, dcName) {

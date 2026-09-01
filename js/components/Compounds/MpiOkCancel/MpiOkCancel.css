@@ -45,6 +45,9 @@
     color: var(--ink-3);
     line-height: 1.5;
     word-wrap: break-word;
+    /* The body is set with textContent, so a bullet list arrives as newlines and
+       nothing else. pre-line honours them and still collapses source indentation. */
+    white-space: pre-line;
 }
 
 /* Optional Input Field Container */

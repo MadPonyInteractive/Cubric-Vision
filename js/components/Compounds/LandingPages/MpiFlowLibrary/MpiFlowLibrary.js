@@ -202,10 +202,8 @@ export const MpiFlowLibrary = ComponentFactory.create({
             await pending?.run();
         });
         _confirmDialog.on('cancel', () => { _pendingConfirm = null; });
-        // The body is set with textContent and MpiOkCancel.css declares no `white-space`,
-        // so a `\n` collapses. Keep the message prose — the Model Library's `\n• ` bullets
-        // render as one run-on line today, and fixing that is a change to the shared
-        // Compound, not to this card.
+        // The body is set with textContent, and MpiOkCancel.css carries `white-space:
+        // pre-line` (MPI-683), so a `\n` in the message renders as a real line break.
         const _confirmText = qs('#text-slot', _confirmDialog.el);
         function _showConfirm(text, run) {
             if (_confirmText) _confirmText.textContent = text;
