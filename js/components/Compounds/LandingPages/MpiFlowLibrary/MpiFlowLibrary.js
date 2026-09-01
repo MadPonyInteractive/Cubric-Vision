@@ -10,7 +10,7 @@ import {
 } from '../../../../data/flowsRegistry.js';
 import { MpiDropdown } from '../../../Primitives/MpiDropdown/MpiDropdown.js';
 import { MpiOkCancel } from '../../MpiOkCancel/MpiOkCancel.js';
-import { getModelById, getModelDependencies, disambiguatedName } from '../../../../data/modelRegistry.js';
+import { getModelById, getModelDependencies, disambiguatedName, reSyncInstalledModels } from '../../../../data/modelRegistry.js';
 import { downloadService } from '../../../../services/downloadService.js';
 import { sizeToGb } from '../../../../data/modelConstants/footprint.js';
 import { DEPS } from '../../../../data/modelConstants/dependencies.js';
@@ -229,7 +229,21 @@ export const MpiFlowLibrary = ComponentFactory.create({
             _showConfirm(
                 `Uninstall ${flow.title}? ${gb ? `${gb.toFixed(1)}GB` : 'Its files'} will be freed. `
                 + 'Files shared with another installed flow will be kept.',
-                () => downloadService.uninstall(flowDepKey(flow.id), deps, true),
+                async () => {
+                    await downloadService.uninstall(flowDepKey(flow.id), deps, true);
+                    // NOT redundant with the SSE — this IS the repaint. `downloadService`
+                    // re-syncs only inside its `download:uninstalled` SSE listener, and
+                    // `_eventSource` is created lazily by the first download: a session
+                    // that has installed nothing has `_eventSource === null`, so that
+                    // listener cannot fire and the dep-status cache stays pre-uninstall
+                    // forever. Measured 2026-09-01 against a live app — the weights were
+                    // gone from disk while the drawer still read Ready / Installed and the
+                    // header still counted the flow. The Model Library's `await
+                    // reSyncInstalledModels()` after every uninstall is load-bearing for
+                    // the same reason. The re-sync ends in `models:checked`, which the
+                    // listener below turns into `_patchAllAffected()`.
+                    await reSyncInstalledModels();
+                },
             );
         }
 
@@ -700,9 +714,10 @@ export const MpiFlowLibrary = ComponentFactory.create({
         // removed/kept toast for models and plugins, and it only exists while the Model
         // Library is mounted; its lookup resolves a `flow:` key to neither, so the two
         // never both speak. No repaint here on purpose: at this instant the dep-status
-        // cache is still pre-uninstall, so painting now would redraw the flow as Ready and
-        // flash. The SSE twin of this event re-syncs, and MPI-681 made that sync fan out
-        // `models:checked` — the listener above — which is the actual repaint.
+        // cache is still pre-uninstall, so painting now would redraw the flow as Ready.
+        // The repaint is the `await reSyncInstalledModels()` in `_uninstallFlow` — it
+        // re-reads disk and ends in `models:checked`, which MPI-681 made fire for a
+        // deps-only change and which `_patchAllAffected` is bound to above.
         _unsubs.push(Events.on('download:uninstalled', ({ modelId, removed = [], keptShared = [], keptModelFiles = [] }) => {
             const flow = listFlows().find(f => flowDepKey(f.id) === modelId);
             if (!flow) return;

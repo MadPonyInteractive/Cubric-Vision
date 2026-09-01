@@ -57,8 +57,10 @@ test('a deps-only flow offers Uninstall, and sends its OWN deps under the flow k
       // Capture the uninstall POST instead of performing it. Everything else falls
       // through, or the app under test loses its own plumbing mid-spec.
       const sent = [];
+      const urls = [];
       const realFetch = window.fetch.bind(window);
       window.fetch = (url, opts) => {
+        urls.push(String(url));
         if (String(url).includes('/comfy/models/uninstall')) {
           sent.push(JSON.parse(opts.body));
           return Promise.resolve({
@@ -119,7 +121,7 @@ test('a deps-only flow offers Uninstall, and sends its OWN deps under the flow k
       offToast.forEach(off => off?.());
 
       return {
-        readyButtons, modelsOnlyButtons, notReadyButtons, dialogText, sent, toasts,
+        readyButtons, modelsOnlyButtons, notReadyButtons, dialogText, sent, toasts, urls,
         expectedDeps: ownDeps(DEPS_FLOW),
         title: getFlowById(DEPS_FLOW).title,
       };
@@ -143,6 +145,16 @@ test('a deps-only flow offers Uninstall, and sends its OWN deps under the flow k
       .toBe('flow:minimax-music');
     expect(result.sent[0].dependencies.map(d => d.id), 'its OWN deps, not the install-payload union')
       .toEqual(result.expectedDeps);
+
+    // The re-sync is the REPAINT, and it is not optional. `downloadService` re-syncs only
+    // inside its `download:uninstalled` SSE listener, and `_eventSource` is created lazily
+    // by the first download — so in a session that installed nothing there is no SSE and
+    // that listener can never fire. Caught live 2026-09-01 against a real app: the weights
+    // were gone from disk while the drawer still read Ready / Installed, the Extra
+    // dependencies row still said Installed and the header still counted the flow.
+    const after = result.urls.slice(result.urls.findIndex(u => u.includes('/comfy/models/uninstall')) + 1);
+    expect(after.some(u => u.includes('/comfy/models/check')),
+      'the uninstall must re-read disk itself — the SSE re-sync cannot be relied on').toBe(true);
 
     const said = result.toasts.map(t => t.message).join(' | ');
     expect(said, 'the Flow Library must report the result itself — nothing else does')

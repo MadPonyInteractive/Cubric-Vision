@@ -127,8 +127,27 @@ before MPI-682. Deps shared with another flow are still kept (last owner standin
 the removed/kept toast for models and plugins, and only exists while the Model Library is
 mounted; it resolves a `flow:` key to neither, so MpiFlowLibrary carries its own. That
 handler deliberately does **not** repaint: the dep-status cache is still pre-uninstall at
-that instant. The repaint is `models:checked`, fanned out by the re-sync the SSE twin
-triggers (MPI-681).
+that instant, so painting there redraws the flow as Ready.
+
+**`await reSyncInstalledModels()` after the uninstall IS the repaint — it is not
+belt-and-braces.** `downloadService` re-syncs only inside its `download:uninstalled` **SSE**
+listener, and `_eventSource` is created lazily by the first download: in a session that has
+installed nothing, `_eventSource === null`, that listener can never fire, and the dep-status
+cache stays pre-uninstall forever. Measured 2026-09-01 against a live app driving the real
+button — the weights were gone from disk while the drawer still read Ready / Installed, the
+`Extra dependencies` row still said Installed and the header still counted the flow among
+the ready. The re-sync re-reads disk and ends in `models:checked` (MPI-681 made that fire
+for a deps-only change), which `_patchAllAffected` is bound to. The Model Library's
+`await reSyncInstalledModels()` after every uninstall is load-bearing for the same reason —
+do not read it as redundant and drop it. Pinned by `tests/desktop/flow-uninstall-button.spec.js`.
+
+**The dialog quotes the flow's FULL size, not what will actually be freed.** Every one of
+Voice Changer's deps is Chatter Box's too, so its dialog says "1.0GB will be freed" and the
+uninstall frees nothing — the second sentence ("Files shared with another installed flow
+will be kept") is what carries that, and the toast then says it plainly. Computing the real
+figure would mean a second implementation of the shared-dep rule in the renderer, which is
+the mistake `docs/download-manager.md` catalogues; the Model Library's plugin dialog is
+worded the same way for the same reason.
 
 Reachability: an installed flow clicked from the **Gallery** skips the drawer and opens the
 frame (MPI-638), so Uninstall is reached from the Landing page — the same surface as the
