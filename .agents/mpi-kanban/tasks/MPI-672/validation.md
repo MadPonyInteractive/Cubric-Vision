@@ -106,5 +106,40 @@ engine, so nothing was set up by hand.
       probe and it still failed, ruling out the new changelog entry; the **pristine
       base `88fcda76` then failed it 2/2 under the same load**, having passed earlier.
       Load-sensitive spec, rising load on the box, not a 1.4.3 regression.
-- [ ] `git rev-parse 'v1.4.3^{}'` == the SHA CI built
-- [ ] `releases/latest` reports `v1.4.3`, `prerelease: false`, `draft: false`
+- [x] **mpi-ci build 33519891797 — success on all three OS legs.** Dispatched by the
+      `v1.4.3` tag push via the `build-portable.yml` dispatcher (run 33519877008).
+- [x] **Six artifacts downloaded and verified** into
+      `D:\CubricStudio\Vision\Builds\v1.4.3\`. CI publishes 3 artifacts (one per OS),
+      each holding the full build plus its delta bundle; downloading them by name with
+      `gh run download -n <name>` lands the 6 files flat, matching the v1.4.2 folder.
+      Every one passed `unzip -t` / `tar -tzf`, and `APP_VERSION` inside the Windows
+      full build reads `1.4.3`. CI artifacts deleted afterwards (3 ids, `total_count`
+      back to 0), per the storage-hygiene rule.
+- [x] **Gate 2 passed** — the release body was drafted from
+      `docs/releases/2026-09-01-v1.4.3.md` (maintainer-notes section stripped, the
+      checklist's platform-disclosure block appended) and approved by Fabio unchanged.
+      He also confirmed the handoff's two calls: title `v1.4.3` (which matches v1.4.2's
+      own release title) and `--latest`.
+- [x] **Published draft-first.** All 6 assets were uploaded to a draft
+      (`untagged-d81483e4976e1b40de32`) and their byte-sizes compared against disk
+      before anything went public; `gh release edit --draft=false --latest` published it.
+- [x] **`git rev-parse 'v1.4.3^{}'` == the SHA CI built.** Local, `origin`
+      (`git ls-remote origin 'refs/tags/v1.4.3^{}'`) and the GitHub API all peel the
+      annotated tag `cdce113b` to `f79393373fe15a260ed13d0ef0e2df25bdb2ce3a` — the SHA
+      the artifacts were built from. No `workflow_dispatch` rebuild happened, so the
+      tag never went stale.
+- [x] **`releases/latest` reports `v1.4.3`, `prerelease: false`, `draft: false`**, with
+      all 6 assets in state `uploaded`. The API's `target_commitish: master` is
+      cosmetic — GitHub fills in the default branch when the tag already existed; the
+      tag object itself points at `f7939337`, proven above.
+- [x] **Delta baselines restamped AFTER publish**, per the timing rule in
+      `release-baselines/README.md`. Extracted from the published FULL portable-stage
+      manifests (the shallowest `resources/cubric/update-manifest.json`, never the
+      nested `resources/app/...` copy and never a `-update-` bundle) and asserted
+      before they touched the repo: `fromVersion: null`, `toVersion: 1.4.3`,
+      `kind: portable-stage`, darwin 6652 / linux 6472 / win32 6510 — each exactly +2
+      on v1.4.2, which is the shape a 3-file patch should have. Authored on master as
+      `12bb7c0a` (committed by explicit pathspec, so the three peers' uncommitted work
+      in the main tree was untouched) and cherry-picked onto `1.4.2` as `d6793b48`;
+      both branches pushed. `origin/1.4.2` is now ahead of the `v1.4.3` tag by that one
+      commit, which is correct — the tag stays on what shipped.
