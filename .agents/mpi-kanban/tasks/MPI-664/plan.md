@@ -40,9 +40,10 @@ one-field-one-param law AND puts the agent connector on the widget's own seriali
 `MINIMAX_MUSIC3` descriptor keyed `flow:minimax-music` and the licence bundled at
 `licences/minimax-music3/`. 819/819, lint clean. See § GAP 1 and § GAP 2 for what the work changed.
 
-**THE GRAPH IS BUILT AND GREEN (2026-09-01).** `comfy_workflows/raw/flow_minimax_music.json`
-(46 nodes) → `comfy_workflows/flow_minimax_music.json`, converted against the engine, both gates
-clean, titles pinned. § The graph carries the shape and the three plan corrections it forced.
+**THE GRAPH IS BUILT, GREEN AND PUSHED (2026-09-01, `be6f9f27`).**
+`comfy_workflows/raw/flow_minimax_music.json` (46 nodes) → `comfy_workflows/flow_minimax_music.json`,
+converted against the engine, both gates clean, titles pinned, 836/836. § The graph carries the
+shape and the three plan corrections it forced.
 
 **Next action: the FlowDef's five steps**, then tier 3's `@` picker. **The FlowDef's `id` MUST be
 `minimax-music`** or the licence gate never fires: the descriptor is keyed on `flow:minimax-music`
