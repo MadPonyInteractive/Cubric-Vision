@@ -731,7 +731,10 @@ test('the Extend Video pick selects the GRAPH, not just params (MPI-591)', async
     // whitelist, which is exactly where MPI-504's loraModelId was lost.
     assert.match(
         read('js/services/generationService.js'),
-        /flowModelIds: Array\.isArray\(config\.flowModelIds\) \? \[\.\.\.config\.flowModelIds\] : null,\n\s*previewOnly/,
+        /flowModelIds: Array\.isArray\(config\.flowModelIds\) \? \[\.\.\.config\.flowModelIds\] : null,\s*previewOnly/,
+        // `\s*` not `\n\s*`: the runner checks this file out with CRLF, and a bare \n
+        // anchor demands the newline before the \r. The previewOnly neighbour stays - it is
+        // what tells the runCommand payload apart from the identical generationSettings line.
         'flowModelIds must be named in the runCommand payload, not only in generationSettings',
     );
     assert.match(
