@@ -15,7 +15,6 @@ const os   = require('os');
 const fs   = require('fs-extra');
 const path = require('path');
 const { execFile } = require('child_process');
-const axios = require('axios');
 const logger = require('./logger');
 const { redactSecrets } = require('./secretRedaction');
 const { COMFY_DIR, getComfyRepoRel, resolveDownloadConfig } = require('./platformEngine');
@@ -292,110 +291,99 @@ router.get('/logs/read', async (req, res) => {
     }
 });
 
-// ── GitHub Issue Creation ─────────────────────────────────────────────────────
-
 /**
- * Derive the release stage from a semantic version string.
- * Mirrors js/core/appStage.js deriveStage() (frontend ESM cannot be required here).
- * Falls back to 'alpha' for unparseable input — never claims 'release'.
- * @param {string} version
- * @returns {'alpha'|'beta'|'release'}
+ * POST /logs/reveal
+ * Opens the app log in the OS file manager with the file selected, so a
+ * reporter can attach it to an issue. The path is resolved server-side —
+ * the client never needs to know where the log lives.
+ * Returns `logPath` on BOTH outcomes: when revealing fails, the dialog still
+ * has something to show the user.
  */
-function deriveStage(version) {
-    const m = /^(\d+)\.(\d+)\.(\d+)/.exec(String(version || '').trim());
-    if (!m) return 'alpha';
-    const major = Number(m[1]);
-    const minor = Number(m[2]);
-    const patch = Number(m[3]);
-    if (major < 1) return 'alpha';
-    if (minor === 0 && patch === 0) return 'release';
-    if (patch === 0) return 'beta';
-    return 'alpha';
+router.post('/logs/reveal', async (req, res) => {
+    const logPath = logger.getLogPath();
+    try {
+        const exists = await fs.pathExists(logPath);
+        if (!exists) {
+            return res.status(404).json({ success: false, error: 'No log file found yet.', logPath });
+        }
+        if (process.send) {
+            await revealItemViaMainProcess(logPath);
+        } else {
+            await revealItemViaPlatform(logPath);
+        }
+        res.json({ success: true, logPath });
+    } catch (err) {
+        logger.error('system', 'Log reveal failed', err);
+        res.status(500).json({ success: false, error: err.message, logPath });
+    }
+});
+
+// ── Bug Report ────────────────────────────────────────────────────────────────
+
+const ISSUE_REPO = 'MadPonyInteractive/Cubric-Vision';
+const ISSUE_TEMPLATE = 'bug-report.yml';
+
+/** Label matching the `platform` dropdown options in bug-report.yml. */
+function platformLabel() {
+    if (process.platform === 'win32') return 'Windows';
+    if (process.platform === 'darwin') return 'macOS';
+    return 'Linux';
 }
 
 /**
- * POST /github/create-issue
- * Creates a GitHub issue with error report.
- * Body: { title, message, summary, log, build?: { appVersion, stage, hash } }
- * Stage label is re-derived server-side from build.appVersion; client stage is ignored.
+ * POST /github/issue-url
+ * Builds a PREFILLED GitHub issue-form URL for the error the user is looking at.
+ * Body: { title, message, summary, build?: { appVersion, stage, hash } }
+ * Returns: { success, url }
+ *
+ * Deliberately credential-free. This replaces POST /github/create-issue, which
+ * filed the issue through the GitHub API using a GITHUB_TOKEN read from `.env` —
+ * a file scripts/build-portable.mjs strips from every portable build. The route
+ * therefore 500'd for every shipped user and the Report button silently did
+ * nothing (MPI-675). A URL the browser opens needs no secret and cannot leak one.
+ *
+ * The log is NOT in the URL: GitHub caps issue-form query length, and handing
+ * the file over instead is the honest privacy story — the reporter sees exactly
+ * what they attach. POST /logs/reveal is what puts the file in front of them.
  */
-router.post('/github/create-issue', async (req, res) => {
-    const token = process.env.GITHUB_TOKEN;
-    const repo = process.env.GITHUB_REPO;
+router.post('/github/issue-url', async (req, res) => {
+    const { title, message, summary, build } = req.body || {};
 
-    if (!token || !repo) {
-        return res.status(500).json({ success: false, error: 'GitHub credentials not configured' });
-    }
-
-    const { title, message, summary, log, build } = req.body;
-
-    if (!title || !message) {
-        return res.status(400).json({ success: false, error: 'title and message required' });
+    if (!title && !message) {
+        return res.status(400).json({ success: false, error: 'title or message required' });
     }
 
     try {
-        // Build metadata. Stage is ALWAYS re-derived server-side from the
-        // reported app version — the client-sent stage is advisory only and
-        // never trusted. Mirrors js/core/appStage.js deriveStage().
         const appVersion = (build && typeof build.appVersion === 'string') ? build.appVersion : 'unknown';
-        const stage = deriveStage(appVersion);
+        const stage = (build && typeof build.stage === 'string') ? build.stage : '';
         const buildHash = normalizeBuildHash(build?.hash);
 
-        // Trim log to last 2000 chars to stay within GitHub's 65k limit
-        const safeTitle = redactSecrets(title);
-        const safeMessage = redactSecrets(message);
-        const safeSummary = redactSecrets(summary || '');
-        let trimmedLog = redactSecrets(log || '(no log available)');
-        if (trimmedLog.length > 2000) {
-            trimmedLog = '...' + trimmedLog.slice(-2000);
-        }
-
-        let body = `**Error:** ${safeMessage}`;
-        if (safeSummary) {
-            body += `\n\n**What I was doing:**\n${safeSummary}`;
-        }
-        body += `\n\n**App version:** ${appVersion}\n**Stage:** ${stage}\n**Build:** ${buildHash || 'dev'}`;
-        body += `\n\n<details>\n<summary>App Log</summary>\n\n\`\`\`\n${trimmedLog}\n\`\`\`\n\n</details>`;
-
-        const labels = ['bug', 'auto-report', `stage:${stage}`];
-        if (buildHash) {
-            labels.push(`build:${buildHash}`);
-        }
-
-        const ghHeaders = {
-            'Authorization': `token ${token}`,
-            'Accept': 'application/vnd.github.v3+json'
-        };
-        const issueUrl = `https://api.github.com/repos/${repo}/issues`;
-
-        let response;
+        // GPU is the field that decides most engine bugs, and detection is
+        // best-effort: an unknown GPU must never cost the user their report.
+        let gpu = '';
         try {
-            response = await axios.post(issueUrl, { title: safeTitle, body, labels }, { headers: ghHeaders });
-        } catch (labelErr) {
-            // A 422 here is usually a label problem (malformed/invalid label).
-            // Degrade gracefully: report the bug anyway with only the base
-            // 'bug' label rather than dropping the whole report. Log the cause.
-            if (labelErr.response?.status === 422) {
-                logger.warn('system', `GitHub issue label apply failed; retrying with base label only. labels=${JSON.stringify(labels)} detail=${JSON.stringify(labelErr.response?.data)}`);
-                response = await axios.post(issueUrl, { title: safeTitle, body, labels: ['bug'] }, { headers: ghHeaders });
-            } else {
-                throw labelErr;
-            }
+            const downloadConfig = await resolveDownloadConfig();
+            gpu = [downloadConfig.gpu?.name, downloadConfig.gpu?.vendor].filter(Boolean).join(' / ');
+        } catch (gpuErr) {
+            logger.warn('system', `GPU detection unavailable for the bug report: ${gpuErr.message}`);
         }
 
-        res.json({
-            success: true,
-            issueUrl: response.data.html_url,
-            issueNumber: response.data.number
+        const params = new URLSearchParams({
+            template: ISSUE_TEMPLATE,
+            title: `[bug]: ${redactSecrets(title || message)}`.slice(0, 200),
+            summary: redactSecrets(summary || message || ''),
+            actual: redactSecrets(message || ''),
+            platform: platformLabel(),
+            os_version: `${os.type()} ${os.release()}`,
+            app_version: [appVersion, buildHash ? `build ${buildHash}` : null, stage || null].filter(Boolean).join(' — '),
+            logs: `Attach the app log file. It is at:\n${logger.getLogPath()}`,
         });
+        if (gpu) params.set('gpu', redactSecrets(gpu));
+
+        res.json({ success: true, url: `https://github.com/${ISSUE_REPO}/issues/new?${params.toString()}` });
     } catch (err) {
-        console.error('GitHub API error:', err.response?.data || err.message);
-        logger.error('system', 'GitHub issue creation failed', err);
-        res.status(500).json({
-            success: false,
-            error: err.response?.data?.message || err.message,
-            details: err.response?.data
-        });
+        logger.error('system', 'Issue URL build failed', err);
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 

@@ -13,17 +13,18 @@ import { BUILD_HASH } from '../../../core/buildInfo.js';
  * MpiErrorDialog — Global Error Notification Dialog (Compound)
  *
  * A self-contained blocking modal that surfaces actionable error messages to
- * the user. Integrates with OverlayManager and the global Events bus.
+ * the user, and lets them turn one into a bug report we can actually act on:
+ * a prefilled GitHub issue form plus the log file itself, revealed in the OS
+ * file manager so they can attach it. Both paths are credential-free — the
+ * predecessor auto-filed through the GitHub API with a token the portable
+ * build strips, so the button was dead in every release (MPI-675).
  *
  * Designed to be used as a singleton via `showError()` in shell.js.
  * Callers never mount this directly — they call:
  *   import { showError } from '../../shell.js';
- *   showError('Title', 'What went wrong', { downloadLog: true });
+ *   showError('Title', 'What went wrong');
  *
- * Props:
- * @param {string}  [title='An error occurred']  - Dialog title
- * @param {string}  [message='']                 - Error details shown to user
- * @param {boolean} [downloadLog=true]           - Whether to show the Download Log button
+ * Props: none.
  *
  * Instance methods (on instance.el):
  *   show()  — portals backdrop + dialog to document.body
@@ -31,8 +32,9 @@ import { BUILD_HASH } from '../../../core/buildInfo.js';
  *   setError(title, message) — update content before or after show()
  *
  * Emits:
- * 'dismiss'     {} — Dismiss button clicked
- * 'downloadLog' {} — Download Log button clicked
+ * 'dismiss'   {} — Dismiss button clicked
+ * 'report'    {} — Report on GitHub button clicked
+ * 'showLog'   {} — Show log file button clicked
  */
 export const MpiErrorDialog = ComponentFactory.create({
     name: 'MpiErrorDialog',
@@ -46,6 +48,7 @@ export const MpiErrorDialog = ComponentFactory.create({
             </div>
             <div class="mpi-error-dialog__message" id="message-slot"></div>
             <div class="mpi-error-dialog__summary" id="summary-slot" autoHeight: true></div>
+            <div class="mpi-error-dialog__status" id="status-slot" hidden></div>
             <div class="mpi-error-dialog__actions" id="actions-slot"></div>
         </div>
     `,
@@ -53,7 +56,9 @@ export const MpiErrorDialog = ComponentFactory.create({
     setup: (el, props, emit) => {
         // ── Modal primitive — owns backdrop, portal, Overlays, Events ────────
         const modal = MpiModal.mount(document.createElement('div'), {
-            width: 'min(480px, 90vw)',
+            // 560, not 480: the row now carries two report affordances beside
+            // Dismiss, and at 480 it wrapped Dismiss onto its own line.
+            width: 'min(560px, 90vw)',
             backdropClose: false,
         });
         modal.el.appendChild(el);
@@ -88,68 +93,97 @@ export const MpiErrorDialog = ComponentFactory.create({
         summarySlot.appendChild(summaryInput.el);
         const summaryField = qs('.mpi-input__field', summaryInput.el);
 
+        // ── Status line ──────────────────────────────────────────────────────
+        // Every failure below lands here. A report path that fails silently is
+        // the defect this dialog was rebuilt to remove, so no branch may end in
+        // a log line the user cannot see.
+        const statusSlot = qs('#status-slot', el);
+        const setStatus = (text) => {
+            statusSlot.textContent = text || '';
+            statusSlot.hidden = !text;
+        };
+
+        /** Open a URL in the system browser. Returns false if nothing opened. */
+        async function openExternal(url) {
+            try {
+                const { ipcRenderer } = require('electron');
+                if (ipcRenderer) {
+                    await ipcRenderer.invoke('open-external', url);
+                    return true;
+                }
+            } catch (ipcErr) {
+                clientLogger.warn('error-dialog', 'Electron IPC unavailable, falling back to window.open', ipcErr);
+            }
+            try {
+                return Boolean(window.open(url, '_blank'));
+            } catch (openErr) {
+                clientLogger.error('error-dialog', 'window.open failed', openErr);
+                return false;
+            }
+        }
+
         // ── Actions ──────────────────────────────────────────────────────────
         const actionsSlot = qs('#actions-slot', el);
 
-        const reportBtn = MpiButton.mount(document.createElement('div'), {
-            text: 'Report on GitHub',
+        // With `icon` set MpiButton renders `label`, not `text` — `info` is the tooltip.
+        const logBtn = MpiButton.mount(document.createElement('div'), {
             variant: 'outline',
             size: 'md',
-            icon: 'external-link',
+            icon: 'folder',
+            label: 'Show log file',
+            info: 'Open the app log in your file manager so you can attach it',
+        });
+        logBtn.on('click', async () => {
+            emit('showLog', {});
+            setStatus('');
+            try {
+                const res = await fetch('/logs/reveal', { method: 'POST' });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || `HTTP ${res.status}`);
+                setStatus(`Log file: ${data.logPath}`);
+            } catch (err) {
+                clientLogger.error('error-dialog', 'Could not reveal the log file', err);
+                setStatus(`Could not open the log folder (${err.message}). Look for app.log under the Cubric Vision logs folder in your user data directory.`);
+            }
+        });
+        actionsSlot.appendChild(logBtn.el);
+
+        const reportBtn = MpiButton.mount(document.createElement('div'), {
+            variant: 'outline',
+            size: 'md',
+            icon: 'chat',
             label: 'Report on GitHub',
+            info: 'Open a prefilled bug report in your browser',
         });
         reportBtn.on('click', async () => {
             emit('report', {});
+            setStatus('');
+
+            let url;
             try {
-                const logRes = await fetch('/logs/read');
-                if (!logRes.ok) {
-                    clientLogger.warn('error-dialog', 'Log fetch failed', logRes.status);
-                }
-                const logData = await logRes.json();
-                const log = logData.log || '';
-
-                const title = titleSlot.textContent;
-                const message = messageSlot.textContent;
-                const summary = summaryField.value.trim();
-
-                // Send to backend to create GitHub issue. Build metadata is
-                // advisory — the backend re-derives stage from appVersion and
-                // never trusts the client-sent stage.
-                const createRes = await fetch('/github/create-issue', {
+                // The server builds the URL: it owns the log path, the OS
+                // details and secret redaction. Build metadata is advisory.
+                const res = await fetch('/github/issue-url', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        title,
-                        message,
-                        summary,
-                        log,
-                        build: { appVersion: APP_VERSION, stage: APP_STAGE, hash: BUILD_HASH }
-                    })
+                        title: titleSlot.textContent,
+                        message: messageSlot.textContent,
+                        summary: summaryField.value.trim(),
+                        build: { appVersion: APP_VERSION, stage: APP_STAGE, hash: BUILD_HASH },
+                    }),
                 });
-
-                const createData = await createRes.json();
-
-                if (!createData.success) {
-                    clientLogger.error('error-dialog', 'Failed to create GitHub issue', createData.error);
-                    return;
-                }
-
-                clientLogger.info('error-dialog', `GitHub issue created: ${createData.issueUrl}`);
-
-                // Open issue in system browser via Electron IPC
-                try {
-                    const { ipcRenderer } = require('electron');
-                    if (ipcRenderer) {
-                        await ipcRenderer.invoke('open-external', createData.issueUrl);
-                    } else {
-                        window.open(createData.issueUrl);
-                    }
-                } catch (ipcErr) {
-                    clientLogger.warn('error-dialog', 'Electron IPC unavailable, falling back to window.open', ipcErr);
-                    window.open(createData.issueUrl);
-                }
+                const data = await res.json();
+                if (!data.success || !data.url) throw new Error(data.error || `HTTP ${res.status}`);
+                url = data.url;
             } catch (err) {
-                clientLogger.error('error-dialog', 'Failed to create GitHub issue', err);
+                clientLogger.error('error-dialog', 'Could not build the report URL', err);
+                setStatus(`Could not prepare the report (${err.message}). File it by hand at https://github.com/MadPonyInteractive/Cubric-Vision/issues and attach the log with the button above.`);
+                return;
+            }
+
+            if (!await openExternal(url)) {
+                setStatus(`Could not open your browser. Copy this address into it:\n${url}`);
             }
         });
         actionsSlot.appendChild(reportBtn.el);
@@ -170,6 +204,7 @@ export const MpiErrorDialog = ComponentFactory.create({
             titleSlot.textContent = title || 'An error occurred';
             messageSlot.textContent = message || '';
             summaryField.value = '';
+            setStatus('');
         };
     }
 });

@@ -9,9 +9,12 @@
  *   - 0.x.x            → 'alpha'   (internal pre-1.0 builds, never shipped)
  *   - X.Y.Z (X >= 1)   → 'release' (every public build; alpha/beta staging retired)
  *
- * Used by the About panel label and the in-app error reporter. The error
- * reporter's BACKEND re-derives stage from the version it receives — the client
- * value is advisory only and never trusted.
+ * Used by the About panel label and the in-app error reporter. THIS IS THE ONLY
+ * IMPLEMENTATION. routes/system.js used to carry a mirrored copy for labelling
+ * auto-filed issues, and the two had already drifted — the mirror still answered
+ * 'alpha' for 1.4.2 — when MPI-675 deleted that route (it needed a GITHUB_TOKEN
+ * the portable build strips). Do not reintroduce a second copy: the stage now
+ * travels as text in a prefilled issue form the reporter can see and correct.
  */
 
 import { APP_VERSION } from './appVersion.js';

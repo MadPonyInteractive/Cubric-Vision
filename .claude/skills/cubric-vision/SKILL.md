@@ -407,10 +407,12 @@ answer and this file is a snapshot.
 | GET | `/system/platform-config` | Platform config |
 | POST | `/open-folder`, `/reveal-item`, `/choose-folder` | Shell integration |
 | GET | `/logs/read`, `/logs/download` | Logs |
-| POST | `/github/create-issue` | File an issue |
+| POST | `/logs/reveal` | Open the app log in the file manager |
+| POST | `/github/issue-url` | Build a prefilled bug-report URL (no credentials; does NOT file anything) |
 
 `/choose-folder` opens a **blocking OS dialog** on the user's desktop. Never call
-it in an unattended run.
+it in an unattended run. `/logs/reveal`, `/open-folder` and `/reveal-item` pop a
+file-manager window there too — same rule.
 
 ## Dispatching a generation
 

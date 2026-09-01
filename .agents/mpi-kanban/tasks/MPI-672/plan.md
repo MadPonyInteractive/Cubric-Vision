@@ -73,11 +73,30 @@ None of the three fixes depend on that answer.
 
 ## Current State
 
-**2026-09-01 — investigation session, no code written.** The four cards exist, are committed
-and pushed (`819a6f46`), and all sit in `todo`/`planned`. The root cause is reproduced and the
-release path is checked; nothing in the app has been changed yet.
+**2026-09-01, later — MPI-675 is SHIPPED and closed (`done`).** Evidence in
+`tasks/MPI-675/validation.md`: `npm test` 835/835, lint clean, a live `app:isolated` run
+where both buttons and both failure paths were exercised, and Fabio's own screenshot of
+Explorer landing on `app.log` selected.
 
-Next: **phase 1, MPI-675 first**, then MPI-673.
+What landed: `/github/create-issue` is **deleted** (with its mirrored `deriveStage()` and the
+`axios` import). `POST /github/issue-url` builds a prefilled issue-form URL with no
+credentials; `POST /logs/reveal` opens the log in the file manager and returns `logPath` on
+both outcomes; `MpiErrorDialog` gained a **Show log file** button plus a status line that no
+failure branch can skip; `bug-report.yml` names the per-OS log path.
+
+Three things the next session should know:
+
+- **The `deriveStage()` mirror had ALREADY drifted** — `routes/system.js` answered `alpha`
+  for 1.4.2 where `js/core/appStage.js` answers `release`. Deleting it removed a wrong copy,
+  and `docs/versioning.md`'s stated rule was stale too and was corrected. Do not reintroduce
+  a second implementation.
+- **`MpiButton` ignores `text` once `icon` is set** — it renders `label`, with `info` as the
+  tooltip. The old Report button hid this by passing the same string to both.
+- **`/logs/download` was left alone.** It still has no UI caller. Reveal-the-file is the
+  better desktop affordance and covers the brief, so it did not get a second worse button.
+  Delete or wire it if a browser-only surface ever needs it.
+
+Next: **MPI-673** (surface `depsWarning` and gate the generation), the second half of phase 1.
 
 Two things the next session inherits and did not cause:
 

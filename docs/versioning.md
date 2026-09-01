@@ -74,10 +74,10 @@ Engine versions are stored in `dev_configs/system_dependencies.json` and accesse
 
 ### APP_STAGE (derived)
 
-- **Purpose:** Identifies the release channel (`alpha` | `beta` | `release`) shown on the About panel and attached to in-app bug reports as a `stage:<x>` GitHub label.
-- **Not a separate source of truth.** Derived purely from `APP_VERSION` so it can never drift. Rule: `0.x.x` → alpha; `X.0.0` → release; `X.Y.0` (Y>0) → beta; `X.Y.Z` (Z>0) → alpha.
-- **Where:** `js/core/appStage.js` exports `deriveStage()`, `APP_STAGE`, `APP_STAGE_LABEL`. The error-reporter backend (`routes/system.js` `/github/create-issue`) re-derives stage server-side from the reported version (client stage is advisory only, never trusted) via a **mirrored** `deriveStage()` — keep both in sync if the rule changes.
-- **Build hash** (`build:<hash>` issue label) is deferred to MPI-8 portable-build injection; not part of the derived stage.
+- **Purpose:** Identifies the release channel (`alpha` | `beta` | `release`) shown on the About panel and carried into the prefilled "App version" field of an in-app bug report.
+- **Not a separate source of truth.** Derived purely from `APP_VERSION` so it can never drift. Rule: `0.x.x` → alpha; `X.Y.Z` (X≥1) → release. (`beta` is still in the type union but unreachable — alpha/beta staging was retired.)
+- **Where:** `js/core/appStage.js` exports `deriveStage()`, `APP_STAGE`, `APP_STAGE_LABEL`. **One implementation, no mirror.** `routes/system.js` used to carry a duplicate `deriveStage()` for the `stage:<x>` label on auto-filed issues; MPI-675 removed that route (it needed a `GITHUB_TOKEN` the portable build strips), so the stage now travels as advisory text the reporter can see and correct.
+- **Build hash** travels the same way, as text in the prefilled version field — not a `build:<hash>` label.
 
 ---
 

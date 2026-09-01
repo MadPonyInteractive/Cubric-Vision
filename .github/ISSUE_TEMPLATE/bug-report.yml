@@ -72,7 +72,12 @@ body:
     id: logs
     attributes:
       label: Relevant app log tail
-      description: Paste only the relevant ending lines from the app log.
+      description: |
+        Attach `app.log`, or paste its ending lines. In the app, the error dialog's
+        **Show log file** button opens the folder for you. Otherwise it lives at:
+        Windows `%APPDATA%\Cubric Vision\logs\app.log` ·
+        macOS `~/Library/Application Support/Cubric Vision/logs/app.log` ·
+        Linux `~/.config/Cubric Vision/logs/app.log`
       render: text
     validations:
       required: false

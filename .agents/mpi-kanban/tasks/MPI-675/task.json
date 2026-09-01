@@ -3,13 +3,18 @@
   "id": "MPI-675",
   "title": "A reporter can never send us a log: the Report on GitHub button is dead in every release",
   "description": "UMBRELLA: MPI-672 - Issue #2: a silent curated-deps failure ships a broken engine and the log can never reach us (2026-09-01). Members and phase order: tasks/MPI-672/plan.md. /github/create-issue needs GITHUB_TOKEN from .env, which the portable build excludes, so the route 500s and the client swallows it. /logs/download has no UI caller and the issue template names no log path. This is why issue #2 arrived with an empty log tail.",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-09-01T08:07:06Z",
-  "updated_at": "2026-09-01T08:07:06Z",
+  "updated_at": "2026-09-01T09:49:23+01:00",
   "links": {
     "brief": "brief.md",
-    "events": "events.jsonl"
-  }
+    "events": "events.jsonl",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "handoffs": "handoffs/"
+  },
+  "activeSessionTitle": "MPI-672 phase 1: make the log reachable without credentials"
 }

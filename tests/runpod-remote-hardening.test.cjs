@@ -186,50 +186,6 @@ test('logger ring buffer stores redacted secrets instead of raw values', { concu
     assert.match(recent, /Bearer \[REDACTED\]/);
 });
 
-test('system github issue route redacts secrets before building the payload', { concurrency: false }, async () => {
-    const axios = fresh('axios');
-    const originalPost = axios.post;
-    const originalToken = process.env.GITHUB_TOKEN;
-    const originalRepo = process.env.GITHUB_REPO;
-    const captured = [];
-    process.env.GITHUB_TOKEN = 'ghs_test';
-    process.env.GITHUB_REPO = 'owner/repo';
-    axios.post = async (_url, payload) => {
-        captured.push(payload);
-        return { data: { html_url: 'https://github.test/issues/1', number: 1 } };
-    };
-    const systemRouter = fresh('../routes/system');
-    try {
-        await withServer(systemRouter, async (baseUrl) => {
-            const res = await fetch(`${baseUrl}/github/create-issue`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    title: 'RunPod failed rpa_1234567890',
-                    message: 'proxy token=0123456789abcdef exploded',
-                    summary: 'Clicked connect with Bearer abcdefghijklmnop',
-                    log: 'api_key=rpa_1234567890\nwss://x.test/ws?token=0123456789abcdef',
-                    build: { appVersion: '0.1.0', stage: 'alpha', hash: 'abcdef1' },
-                }),
-            });
-            assert.equal(res.status, 200);
-            const data = await res.json();
-            assert.equal(data.success, true);
-        });
-        assert.equal(captured.length >= 1, true);
-        const payload = captured[0];
-        const text = JSON.stringify(payload);
-        assert.equal(text.includes('rpa_1234567890'), false);
-        assert.equal(text.includes('0123456789abcdef'), false);
-        assert.equal(text.includes('abcdefghijklmnop'), false);
-        assert.match(text, /REDACTED/);
-    } finally {
-        axios.post = originalPost;
-        process.env.GITHUB_TOKEN = originalToken;
-        process.env.GITHUB_REPO = originalRepo;
-    }
-});
-
 test('remoteProxy reconnect returns unavailable when the saved GPU is no longer available', { concurrency: false }, async () => {
     const deleted = [];
     const harness = loadRemoteProxyHarness({

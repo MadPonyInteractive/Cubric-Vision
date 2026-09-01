@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "routes/system.js",
+    "js/components/Compounds/MpiErrorDialog/MpiErrorDialog.js",
+    "js/components/Compounds/MpiErrorDialog/MpiErrorDialog.css",
+    "js/core/appStage.js",
+    ".github/ISSUE_TEMPLATE/bug-report.yml",
+    "tests/issue-report-url.test.cjs",
+    "tests/runpod-remote-hardening.test.cjs",
+    "docs/versioning.md",
+    ".claude/skills/cubric-vision/SKILL.md"
+  ]
+}
