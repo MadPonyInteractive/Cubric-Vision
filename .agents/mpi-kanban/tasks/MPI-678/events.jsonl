@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-678", "at": "2026-09-01T14:03:10+01:00", "actor": "claude", "column": "todo", "title": "Gallery archive scope"}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-678", "type": "task.updated", "at": "2026-09-01T13:09:25Z", "actor": "claude", "summary": "Compact plan attached; maturity idea -> planned."}

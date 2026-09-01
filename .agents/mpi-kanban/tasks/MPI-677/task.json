@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-677",
+  "title": "UMBRELLA: consolidate the Cubric family into Cubric Vision",
+  "description": "Fabio, 2026-09-01: drop Cubric Prompt / Studio / Audio / @cubric/ui as separate apps; Vision becomes the all-in-one. Four phases - A recipes into Vision (gated on Cubric-Prompt MPI-35), B split the cubric-vision skill, C agent workspace, D skill build+heal loop. Plus Studio-retirement cleanup inside Vision.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-09-01T11:46:11+01:00",
+  "updated_at": "2026-09-01T11:46:11+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
