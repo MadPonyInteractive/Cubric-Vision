@@ -447,3 +447,6 @@
   about six times less graphics memory per card on a large clip — while the viewer, drag-out
   and everything you export still use the original untouched. Existing projects build their
   copies the first time you open them after updating.
+
+- Download-only Pods no longer fail when one CPU size sells out — the app tries
+  the others, and points you at a cheap GPU card if the whole region is full.
