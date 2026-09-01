@@ -24,10 +24,23 @@ and was still `in_progress` two hours later. Not a failure; re-check before clos
 | `node --check` on all three JS files | clean |
 | `npx eslint` on all three JS files | no output, exit 0 |
 
-**The new anchors were proved to bite**, the same way phase 1's were: every regex run against
-`git show HEAD:<path>` fails — three because `js/utils/flowLicences.js` does not exist at
-HEAD, and the rest because neither consumer imports it there. A green anchoring test that
-also passes against the unfixed tree proves nothing, which is why this is run every time.
+**Ten anchors were proved to bite**, the same way phase 1's were: each regex run against
+`git show HEAD:<path>` fails — five because `js/utils/flowLicences.js` does not exist there,
+five because neither consumer imports it. A green anchoring test that also passes against the
+unfixed tree proves nothing, which is why this is run every time.
+
+**Corrected after the claim auditor, 2026-09-01.** The commit message for `2b0249e6` and the
+first draft of this file both said *every* anchor was proved. Two were not: `/Licence required/`
+and `/Verify licence/` came across from phase 1's test when the assertions were regrouped, and
+both already match at the parent commit `03363cb7` (`MpiFlowLibrary.js:124` and `:471`). They
+prove nothing on their own. The test still fails against the parent — an earlier assertion in
+the same function goes first — so the suite is honest even though those two lines are not, and
+the ten anchors that carry the weight were all checked. Recorded rather than quietly fixed
+because "proved to bite" is exactly the claim a later reader would trust without re-running.
+
+The same audit caught a second overstatement, corrected in `checklist.md`: `MpiFlowLibrary`
+lost **21 lines net** (-84/+63), not the ~45 or 91 claimed. Those figures came from reading a
+`git diff --stat` churn count, taken mid-session before the fold-in, as if it were a net delta.
 
 Nothing asserted here depends on a peer card's working tree: the data half sweeps whatever
 `flow:` keys exist rather than naming one, and every anchor is on a file this card owns.

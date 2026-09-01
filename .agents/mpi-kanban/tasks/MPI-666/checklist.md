@@ -75,7 +75,7 @@ reachable from one page only.
 - [x] The same licence block on `MpiBaseFlow`'s step 0, over the same licence set. Landed as
       the extraction, not a copy: `flowInstallKeys` / `flowLicences` / `buildLicenceRows` now
       live in **`js/utils/flowLicences.js`**, which both surfaces import. `MpiFlowLibrary`
-      lost ~45 lines and renders byte-identically; `MpiBaseFlow` gained an import and a block
+      lost 21 lines NET (-84/+63) and renders byte-identically; `MpiBaseFlow` gained an import and a block
       under the explainer. Precedent for a util that mounts Primitives:
       `js/utils/declaredFields.js`, extracted from this same component by MPI-580.
       - `flowInstallKeys` moved WITH the licence helpers on purpose — the queue key IS the
