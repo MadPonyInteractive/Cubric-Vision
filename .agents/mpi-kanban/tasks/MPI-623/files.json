@@ -16,6 +16,9 @@
     "c:/AI/Mpi/ComfyUi-MpiNodes/README.md",
     "c:/AI/Mpi/ComfyUi-MpiNodes/changelog.md",
     "js/services/flowService.js",
-    "tests/flow-chain.test.cjs"
+    "tests/flow-chain.test.cjs",
+    "js/utils/comfyOutputUrls.js",
+    "js/services/commandExecutor.js",
+    "tests/flow-splat-capture.test.cjs"
   ]
 }

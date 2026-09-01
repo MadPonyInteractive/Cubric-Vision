@@ -165,16 +165,26 @@ Delivered per plan.md amendments 18-20. `'splat'` is NOT a media type.
       860/860 on `npm test`, lint clean. **Q1 answered: a second OP, not a second
       `workflow` field on `FlowDef`. Q2 answered: job 1 owns the card, job 2 attaches
       `splatPath`.** plan.md amendment 52.
-- [ ] **BLOCKED ON A LIVE PEER, not a decision:** the descriptor + the two universal ops
-      need the five registry files MPI-664's session `d6f5361e` holds a fresh write claim
-      on, and the `Output_Splat` capture + the `splatPath` write need
-      `generationService.js` / `commandExecutor.js`, held by MPI-591's live session.
-      Re-check both claims before the next pass. plan.md amendment 52.
+- [x] **THE PEER CLAIMS CLEARED (2026-09-01).** MPI-664's `db2037f3` is now
+      `needs_verification` and MPI-591's `da9845c4` is `complete`; per
+      `coordination-ops/statuses.md` only `claimed` means an active writer, so all seven
+      files are free. The only live `claimed` record in the tree is MPI-591's
+      `ComfyUi-MpiNodes/h3.py`. plan.md amendment 53.
+- [x] **OUTPUT-CAPTURE LAYER DONE (2026-09-01).** `splatViewFileInfo` in
+      `js/utils/comfyOutputUrls.js` + the `outputSplatNodeIds` title set, the `executed`
+      branch and the `splatUrl` side-output in `commandExecutor.js`.
+      `tests/flow-splat-capture.test.cjs`, 4 tests; all five mutations watched go red.
+      864/864 on `npm test`, lint clean. Amendment 46's "small" held. plan.md amendment 53.
+- [ ] **THE INGEST HALF - unblocked, NOT started, and bigger than amendment 46 implied.**
+      `Output_Splat` reports an ABSOLUTE engine path, so the `.ply` must be FETCHED into
+      `.meta/<id>.splat.ply`, and nothing ingests one today. Needs `splatViewUrl` threaded
+      through `generationService.onComplete` -> `projectService.saveGeneration` ->
+      `routes/projects.js` `/project/save-generation` (a `streamDownload` beside the
+      `audioViewUrl` mux). Both server-side files carry MPI-678 `needs_verification`
+      provenance. plan.md amendment 53.
 - [ ] **`ComfyUI-SplatKit` is NOT in `dev_configs/node_lock.json`** - the pack every node
       in this card comes from is undeclared and exists only on the bench. Belongs with
       task 2 below.
-- [ ] Output-capture layer: point the existing title-scoped text capture at
-      `Output_Splat`. Small, per amendment 46 - do NOT mirror the image-capture path.
 - [ ] Wire the Flow across the five registry files; coverage presets as scene-relative
       waypoints; per-waypoint bounds check (NOT a radius cap - amendment 43); dev-gate
       and tile still. See plan.md Phase 2.

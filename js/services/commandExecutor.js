@@ -35,7 +35,7 @@ import { buildWeightMap, create as createAggregator } from './progressAggregator
 import { createStageProgress } from './phaseProgress.js';
 import { stagesFor, postTileBarsFor } from '../data/progressStages.js';
 import { INJECTORS } from './workflowInjectors/index.js';
-import { buildComfyViewUrl, collectComfyOutputUrls, readComfyOutputText } from '../utils/comfyOutputUrls.js';
+import { buildComfyViewUrl, collectComfyOutputUrls, readComfyOutputText, splatViewFileInfo } from '../utils/comfyOutputUrls.js';
 import { generationStore, PHASES } from './generationStore.js';
 
 // Adapters over the shared js/utils/comfyOutputUrls.js (MPI-176). MPI-74: a
@@ -242,7 +242,7 @@ async function _cleanupTrimmedVideoInputs(paths = []) {
  * @typedef {Object} Execution
  * @property {function(string):void}   onPreview  - Called with each latent preview URL
  * @property {function(number):void}   onProgress - Called with 0–1 progress value from ComfyUI
- * @property {function(string[], {latents?: object[], audioUrl?: string|null, promptText?: string|null}):void} onComplete - Called with final output URLs and side outputs on success. `promptText` is the string an `Output_prompt` node encoded (null when the workflow has none).
+ * @property {function(string[], {latents?: object[], audioUrl?: string|null, promptText?: string|null, splatUrl?: string|null}):void} onComplete - Called with final output URLs and side outputs on success. `promptText` is the string an `Output_prompt` node encoded (null when the workflow has none). `splatUrl` is the `/view` URL of the `.ply` an `Output_Splat` node reported (MPI-623; null when the workflow has none, and null when its path had no `splats/` segment to build a URL from).
  * @property {function(Error):void}    onError    - Called on failure
  * @property {function():void}         cancel     - Interrupt the running generation
  */
@@ -1731,6 +1731,26 @@ export function runCommand(payload) {
             )
         );
 
+        // `Output_Splat` capture (MPI-623) — the SAME `PreviewAny` text contract as
+        // `Output_prompt` above, deliberately, rather than a second copy of the image
+        // path. A splat has no save node to collect from: `MpiBrushTrain` shells out to
+        // the Brush binary, which writes the `.ply` itself and hands back a path string.
+        //
+        // The title tap is doing double duty here. `MpiBrushTrain` is not an
+        // `output_node`, so a graph ending at it is refused outright
+        // (`prompt_no_outputs`) and a graph with other outputs silently PRUNES it — the
+        // bake would run for three hours, report success, and produce nothing. Feeding
+        // its path into a titled `PreviewAny` is what makes the trainer reachable at all.
+        //
+        // Exact match, like `output_prompt` and unlike the numbered image/video sets: a
+        // run produces one scene, and a numbered sibling would be a second bake nothing
+        // is built to receive.
+        const outputSplatNodeIds = new Set(
+            Object.keys(workflow).filter(id =>
+                workflow[id]._meta?.title?.toLowerCase() === 'output_splat'
+            )
+        );
+
         // Cache-hit dedupe only fires for workflows that do NOT inject a fresh
         // seed. Convention: a seeded workflow has an MpiInt titled `Input_Seed`
         // (the MPI-116 naming law — `_buildParams` injects a random seed into it
@@ -1809,6 +1829,10 @@ export function runCommand(payload) {
         // workflow has one. null for every workflow that doesn't — which is the
         // signal generationService uses to fall back to the prompt-box text.
         let promptTextOutput = null;
+        // The `/view` URL of the `.ply` an `Output_Splat` node reported, when the
+        // workflow has one. null everywhere else, which is what keeps a 3D Scene card
+        // distinguishable from the ordinary image card it otherwise is (MPI-623).
+        let splatOutputUrl = null;
         let _samplingStartFired = false;
         // MPI-208 Phase 2: model-load state is now the store job's phase, not a
         // private closure. `_modelInitializing` is DERIVED — the job sits in
@@ -2007,7 +2031,7 @@ export function runCommand(payload) {
             // is belt-and-suspenders for the fill. Only when stdout drove (local).
             if (_stdoutDriving) { stageProgress.finish(); emitProgress(stageProgress.percent()); }
             closeComfyEventSource();
-            exec.onComplete?.(outputUrls, { latents: latentOutputs, audioUrl: audioOutputUrl, promptText: promptTextOutput });
+            exec.onComplete?.(outputUrls, { latents: latentOutputs, audioUrl: audioOutputUrl, promptText: promptTextOutput, splatUrl: splatOutputUrl });
         };
 
         const onMessage = (msg) => {
@@ -2171,6 +2195,15 @@ export function runCommand(payload) {
                 }
                 if (outputPromptNodeIds.has(nodeId)) {
                     promptTextOutput = readComfyOutputText(nodeOutput) || promptTextOutput;
+                }
+                if (outputSplatNodeIds.has(nodeId)) {
+                    // A path in an unrecognised shape yields null and is DROPPED rather
+                    // than forwarded — a half-built /view URL would 404 at save time and
+                    // turn a three-hour bake into a card with a dead `splatPath`.
+                    const _info = splatViewFileInfo(readComfyOutputText(nodeOutput));
+                    if (_info) {
+                        splatOutputUrl = _buildComfyViewUrl(_info, workingPayload.forceLocal === true);
+                    }
                 }
             }
         };

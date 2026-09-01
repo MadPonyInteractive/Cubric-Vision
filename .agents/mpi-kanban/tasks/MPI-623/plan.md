@@ -307,6 +307,39 @@ notes in [research/](research/).
 > verifiable yet. **Next:** re-check those claims, then descriptor + two ops + capture +
 > attach in one pass. Phase 2's `user-ux` gate is untouched and still owed.
 
+> **Session note 2026-09-01 (fourteenth). THE CAPTURE IS BUILT, AND AMENDMENT 52's
+> BLOCKER WAS NEVER ONE.** Re-reading `state/index.json` against
+> `coordination-ops/statuses.md` settled it in one line: **only `claimed` means an active
+> writer.** MPI-664's claim is `needs_verification` and MPI-591's is `complete`, so all
+> seven files 52 listed were free — the previous session read "a record exists" as "a peer
+> holds it". The sole live `claimed` record in the tree is MPI-591's
+> `ComfyUi-MpiNodes/h3.py`, which this card does not want.
+>
+> **What landed: the `Output_Splat` capture.** `splatViewFileInfo` in
+> `js/utils/comfyOutputUrls.js`, plus the title set, the `executed` branch and the
+> `splatUrl` side-output in `commandExecutor.js`. `tests/flow-splat-capture.test.cjs`,
+> 4 tests, all five mutations watched go red first. **864/864 on `npm test`, lint clean.**
+> Amendment 53.
+>
+> **The finding: `Output_Splat` reports a PATH, not a file dict** — `MpiBrushTrain` shells
+> out to Brush, which writes the `.ply` itself, so there is no save node. Amendment 46 read
+> this as a string read; it is a string read **plus a fetch**. No decision needed: the node
+> writes under `<comfy_output>/splats/…`, so `/view` serves it over the same authed proxy
+> on the bench AND on a Pod, and the derivation splits at the `splats/` segment the node
+> owns rather than at an output dir the app never learns.
+>
+> **NEXT, and it is the ingest, unblocked and un-started.** Phase 1 wants
+> `.meta/<id>.splat.ply` and **nothing ingests one** — `routes/projects.js:2299-2308` is
+> only the add-from-cards copy. Thread `splatViewUrl` through
+> `generationService.onComplete` -> `projectService.saveGeneration` ->
+> `/project/save-generation`, where a `streamDownload` beside the `audioViewUrl` mux
+> (`routes/projects.js:1956`) writes the file and sets `meta.splatPath`. Both server files
+> carry MPI-678 `needs_verification` provenance — free to edit, provenance to respect. That
+> widened past what this session had told Fabio it would touch, so it was stopped and
+> handed back rather than taken quietly. **Fabio's half is unchanged and still gates the
+> descriptor:** `flow_3d_scene_a.json` / `_b.json` do not exist, and
+> `tests/inject-params-titles.test.cjs:918` reds on a FlowDef naming an absent file.
+
 **Project mode:** `scalable-foundation`.
 
 A user bakes a Gaussian-splat scene once from a 360 equirect image, then re-enters
@@ -1575,6 +1608,59 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     naming files that are not there reds `tests/inject-params-titles.test.cjs`. Nothing
     end-to-end is verifiable until those land - the `chain` field has no consumer yet, by
     design rather than by omission.
+
+### Amendments from the capture session (2026-09-01)
+
+53. **THE `Output_Splat` CAPTURE IS BUILT. Both blocking claims had cleared, and the
+    ATTACH half turned out bigger than amendment 46 read it.**
+
+    **The claims, first, because amendment 52 called this the blocker.** MPI-664's
+    `db2037f3` is now `needs_verification`; MPI-591's `da9845c4` is `complete`.
+    `coordination-ops/statuses.md` is explicit: *only* `claimed` means an active writer,
+    and `complete` / `needs_review` / `needs_verification` / `needs_integration` are all
+    available to a new writer who carries the existing provenance. So the seven files
+    52 listed were never going to need a handoff — they needed a re-read. The one live
+    `claimed` record in the tree is MPI-591's `ComfyUi-MpiNodes/h3.py`, which this card
+    does not want.
+
+    **What landed** (`js/utils/comfyOutputUrls.js`, `js/services/commandExecutor.js`,
+    `tests/flow-splat-capture.test.cjs`, 4 tests): a `PreviewAny` titled `Output_Splat`
+    is read by the SAME text path as `Output_prompt` — exact title match, lowercased, no
+    numbered siblings — and its string is turned into a `/view` URL that rides out on
+    `onComplete` as `splatUrl`. 864/864, lint clean. All five mutations (`lastIndexOf`
+    -> `indexOf`, the directory guard, `type=output` -> `input`, dropping the forward,
+    a title typo) were watched go red before the tests were believed.
+
+    **The finding that matters: `Output_Splat` reports a PATH, not a file dict.**
+    `MpiBrushTrain` shells out to the Brush binary, which writes the `.ply` itself
+    (`splat.py:295`, `return (ply_path,)`), so there is no save node and nothing emits
+    `{filename, subfolder, type}`. Amendment 46 read the capture as a string read; it is
+    a string read **plus a fetch**. Resolvable without a decision, and this is why:
+    the node writes under `folder_paths.get_output_directory()/splats/…`
+    (`splat.py:242`), so the file is reachable over the same authed `/view` proxy as
+    every other output — including on a Pod, whose disk is not ours and whose absolute
+    path the app could never open. The app never learns the engine's output dir, so
+    `splatViewFileInfo` splits at the `splats/` segment the NODE owns instead, taking
+    the LAST one (a user folder called `splats` further up would otherwise capture the
+    split) and returning null for any other shape, because a half-built URL 404s at save
+    time and turns a three-hour bake into a card with a dead `splatPath`.
+
+    **WHAT IS NOT DONE, and it is scope rather than a blocker: the ingest.** Phase 1's
+    contract wants `.meta/<id>.splat.ply` inside the project, and **nothing ingests one**
+    — `routes/projects.js:2299-2308` is only the add-from-cards COPY. The remaining
+    thread is `generationService.onComplete` -> `projectService.saveGeneration` ->
+    `/project/save-generation`, where a `streamDownload` beside the existing
+    `audioViewUrl` mux (`routes/projects.js:1956`) writes the file and sets
+    `meta.splatPath`. That reaches two files this session had said it would not widen
+    into (`routes/projects.js`, `js/services/projectService.js`, both carrying MPI-678
+    `needs_verification` provenance), so it was stopped and handed back rather than
+    taken quietly.
+
+    **Still Fabio's half, unchanged:** `comfy_workflows/flow_3d_scene_a.json` / `_b.json`
+    do not exist, so the descriptor still cannot land —
+    `tests/inject-params-titles.test.cjs:918` reads `graphOf(flow.workflow)` and records a
+    problem when the file is missing. The capture, like the chain before it, is landed
+    ahead of its consumer by design.
 
 ### Verified NOT drifted from the source workflow (checked 2026-08-29)
 

@@ -76,3 +76,39 @@ export function readComfyOutputText(nodeOutput) {
     const value = typeof t[0] === 'string' ? t[0].trim() : '';
     return value === '' ? null : value;
 }
+
+/**
+ * A `/view` file dict for the `.ply` an `Output_Splat` node reported (MPI-623).
+ *
+ * `MpiBrushTrain` returns an ABSOLUTE path on the ENGINE's disk, not a file dict —
+ * it shells out to the Brush binary, which writes the `.ply` itself, so there is no
+ * save node to produce one (ComfyUi-MpiNodes splat.py, `return (ply_path,)`). The
+ * path reaches us as text through a `PreviewAny` titled `Output_Splat`, which is
+ * also what stops the trainer being pruned: it is not an `output_node`, so a graph
+ * that does not consume its output silently drops the whole three-hour bake.
+ *
+ * That path is unreadable as a path — in remote mode the engine is a Pod and its
+ * disk is not ours. But the node writes under `<comfy_output>/splats/…`
+ * (`folder_paths.get_output_directory()`), so the file is reachable over the same
+ * authed `/view` proxy as every other output. We cannot relativise against the
+ * engine's output dir because the app never learns it; we split at the `splats/`
+ * segment the NODE owns instead, which is stable across both machines.
+ *
+ * Separator-agnostic on purpose: the authoring bench is Windows and the Pod is
+ * Linux, and the same graph runs on both.
+ *
+ * @param {string} plyPath  absolute path as `Output_Splat` reported it
+ * @returns {{filename: string, subfolder: string, type: string}|null}
+ *          null when the path is empty or carries no `splats/` segment — an
+ *          unrecognised shape must not become a half-built URL that 404s.
+ */
+export function splatViewFileInfo(plyPath) {
+    const parts = String(plyPath || '').split(/[\\/]+/).filter(Boolean);
+    const at = parts.lastIndexOf('splats');
+    if (at === -1 || at === parts.length - 1) return null;
+    return {
+        filename: parts[parts.length - 1],
+        subfolder: parts.slice(at, -1).join('/'),
+        type: 'output',
+    };
+}
