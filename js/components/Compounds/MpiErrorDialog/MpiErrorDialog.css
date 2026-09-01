@@ -48,11 +48,36 @@
     flex-direction: column;
 }
 
+/* Status — where a failed report path says so, and hands over the raw
+   URL / log path as selectable text. Never hidden behind a log line. */
+.mpi-error-dialog__status {
+    font-size: var(--t-sm);
+    color: var(--ink-2);
+    line-height: 1.5;
+    word-break: break-word;
+    white-space: pre-wrap;
+    user-select: text;
+    padding: 0.625rem 0.75rem;
+    background: var(--surface-bar);
+    border-radius: var(--r-2);
+    border: 1px solid var(--line);
+}
+
+.mpi-error-dialog__status[hidden] {
+    display: none;
+}
+
 /* Actions */
 .mpi-error-dialog__actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.75rem;
-    justify-content: flex-end;
+    justify-content: flex-start;
     padding-top: 0.5rem;
     border-top: 1px solid var(--line);
+}
+
+/* Dismiss sits apart from the two report affordances. */
+.mpi-error-dialog__actions > *:last-child {
+    margin-left: auto;
 }
