@@ -667,6 +667,75 @@ test('the Stems Flow carries its audio input and all FOUR numbered captures (MPI
     }
 });
 
+test('the MiniMax Music Flow carries the whole caption-assembly surface (MPI-664)', () => {
+    // flowMinimaxMusic runs flow_minimax_music.json with no model — three flow deps and
+    // a text-only input surface. Under GAP 4 option B the GRAPH assembles the caption:
+    // the LLM writes only the three marked prose blocks into `Input_Caption`, and the
+    // graph writes the headings, Basic Attributes, the instrumental clause and the
+    // serialised voice roster around them. Every one of the titles below is therefore a
+    // caption fragment, and injection skips a missing title in SILENCE — the run
+    // succeeds and the fragment is simply absent from what the model was told.
+    const file = 'flow_minimax_music.json';
+    const have = titlesOf(file);
+    for (const title of [
+        'input_seed', 'input_caption', 'input_lyrics', 'input_low_vram',
+        'input_instrumental', 'input_style', 'input_style_custom', 'input_bpm',
+        'input_voices', 'input_voice_notes', 'input_duration',
+    ]) {
+        assert.ok(have.has(title), `${file} must carry a node titled "${title}"`);
+    }
+    assert.ok(have.has('output_audio'), `${file} must carry a capture node titled "output_audio"`);
+
+    // The brief never reaches this graph — it is the enhancer's input, and the caption
+    // box holds what comes back. `_buildParams` emits `Input_Positive`/`Input_Negative`
+    // on every run whatever the flow declares, so a node carrying either title would be
+    // overwritten with the raw brief (or with '') and spliced into the caption.
+    for (const title of ['input_positive', 'input_negative', 'input_negative_audio']) {
+        assert.ok(!have.has(title),
+            `${file}: a node titled "${title}" would be written on every run — the brief `
+            + 'reaches this flow through the enhancer, not through the graph');
+    }
+
+    const graph = JSON.parse(fs.readFileSync(path.join(WORKFLOWS, file), 'utf8'));
+    const idOf = (t) => Object.keys(graph)
+        .find(k => (graph[k]._meta?.title || '').toLowerCase() === t);
+    const feeds = (srcId, cls, input) => Object.values(graph).filter(
+        n => n.class_type === cls && Array.isArray(n.inputs?.[input])
+            && n.inputs[input][0] === srcId);
+
+    // The encoder must read the ASSEMBLED strings. If either input ever went back to a
+    // direct feed from the box, the whole chain would still be in the file, still convert,
+    // still run — and every caption would be the raw prose with no headings at all.
+    const enc = Object.values(graph).find(n => n.class_type === 'MiniMaxMusic3TextEncode');
+    for (const input of ['caption', 'lyrics']) {
+        assert.ok(Array.isArray(enc.inputs[input]),
+            `${file}: MiniMaxMusic3TextEncode.${input} must come from the assembly chain`);
+    }
+
+    // A hidden field KEEPS ITS VALUE, so the graph re-checks Instrumental itself rather
+    // than trusting the Voices and Lyrics steps to have been hidden. BOTH gates: losing
+    // the lyrics one ships sung lyrics on an instrumental run, losing the vocal one
+    // describes a roster that never sings.
+    const instrumental = idOf('input_instrumental');
+    assert.equal(feeds(instrumental, 'MpiIfElse', 'boolean').length, 2,
+        `${file}: Input_Instrumental must gate BOTH the lyrics and the Vocal Details block`);
+
+    // Three prose blocks, three extractors. One lost extractor drops its whole block.
+    assert.equal(feeds(idOf('input_caption'), 'RegexExtract', 'string').length, 3,
+        `${file}: Input_Caption must feed all three [MOOD]/[VOCAL]/[ARRANGEMENT] extracts`);
+
+    // `<Choir>` is not in MiniMax's tag set, so the roster markers are stripped before the
+    // lyrics reach the model. Assert the pattern still does that rather than merely that a
+    // RegexReplace exists — a pattern edit is exactly how this goes quiet.
+    const strip = Object.values(graph)
+        .find(n => (n._meta?.title || '') === 'Strip_Voice_Markers');
+    assert.ok(strip, `${file} must carry the Strip_Voice_Markers node`);
+    assert.equal(
+        '[Chorus]\n<The Choir> carry it together'.replace(new RegExp(strip.inputs.regex_pattern, 'g'), ''),
+        '[Chorus]\ncarry it together',
+        `${file}: Strip_Voice_Markers must remove <Name> markers and leave the [Section] tags`);
+});
+
 test('the prompt enhancer graph carries the seed node its caller drives (MPI-504)', () => {
     // MpiBaseFlow._runEnhance sends `injectionParams: { Input_Seed: <random> }` on every
     // press, because step 3's loop is Enhance -> Generate -> Enhance and a fixed seed

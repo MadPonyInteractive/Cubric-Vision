@@ -1,0 +1,663 @@
+{
+  "45": {
+    "inputs": {
+      "string": "[MOOD] Laid-back and dreamy throughout, a gentle warm drift with a subtle late-night glow that deepens in the middle and dissolves softly at the end. Studying, raining-outside, headphones-on late-night listening. Bedroom production: muddy warm texture, heavy vinyl crackle, tape hiss and wow-flutter pitch wobble, low-passed dusty mix, soft-clipped drums, everything slightly detuned and cozy.\n\n[VOCAL] Soft androgynous vocal, hushed half-sung half-spoken delivery, sitting low in the mix like another instrument, lazy behind-the-beat phrasing, gentle breathy timbre. Sparse murmured double-tracked harmonies, occasional wordless \"mmm\" and \"ooh\" hums drenched in tape delay and warm spring reverb. Long stretches with no vocals at all.\n\n[ARRANGEMENT] Dusty boom-bap drums with a soft thumping kick, cracked snare with lazy swing, brushed hi-hats, low round sub bass. Warm Rhodes piano chords with slow chorus wobble as the harmonic bed, mellow jazzy guitar licks answering the vocal lines, constant vinyl crackle as texture. Intro: rain and vinyl noise, solo Rhodes chords fading in, drums slipping in halfway. Verses: minimal — drums, bass, Rhodes, soft guitar fills between lines. Instrumental sections: guitar and Rhodes trade relaxed jazzy phrases over the beat, occasional muted trumpet ghost notes far in the background. Bridge: drums drop away to rain, crackle, and floating detuned Rhodes, then the beat eases back in. Outro: elements fade one by one until only vinyl crackle and a last unresolved Rhodes chord remain."
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Caption"
+    }
+  },
+  "46": {
+    "inputs": {
+      "string": "[Intro]\nMmm...\n(rain on the window)\nOoh...\n\n[Verse]\nMidnight and the canvas glows\nDragging little wires where the current flows\nType a quiet dream, let the sampler drift\nNoise into a picture, like the fog just lifts\nTwenty slow steps, I'm in no hurry now\nLatents turning colors and I don't know how\nEvery render's like a polaroid I found\nSoft focus memories, no sound\n\n[Instrumental]\n\n[Verse]\nQueue another frame, let the motion breathe\nPictures start to move like the falling leaves\nVideo drifting by at twenty-four\nLittle animations on my bedroom floor\nSeed after seed like the rain outside\nSome of them are keepers, some I let slide\nSave the ones that feel like a Sunday slow\nNode to node to node... and off we go\n\n[Chorus]\nMmm... let it render on\n(take your time, take your time)\nOoh... by the morning it'll all be done\n(one more queue, one more try)\n\n[Instrumental]\n\n[Bridge]\nRain keeps drawing pictures on the glass...\nMy machine keeps dreaming...\nNeither of us fast...\n\n[Chorus]\nMmm... let it render on\n(take your time, take your time)\nOoh... by the morning it'll all be done\n(one more queue, one more try)\n\n[Instrumental]\n\n[Outro]\nMmm...\n(node to node)\nOoh... goodnight"
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Lyrics"
+    }
+  },
+  "47": {
+    "inputs": {
+      "clip_name": "minimax_music3_text_encoder_pruned_int8_convrot.safetensors",
+      "type": "minimax",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "48": {
+    "inputs": {
+      "vae_name": "minimax_music3_dav.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "49": {
+    "inputs": {
+      "steps": 30,
+      "cfg": 1.7,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "53",
+        0
+      ],
+      "positive": [
+        "54",
+        0
+      ],
+      "negative": [
+        "55",
+        0
+      ],
+      "latent_image": [
+        "56",
+        0
+      ],
+      "seed": [
+        "65",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "50": {
+    "inputs": {
+      "samples": [
+        "49",
+        0
+      ],
+      "vae": [
+        "48",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeAudio",
+    "_meta": {
+      "title": "VAE Decode Audio"
+    }
+  },
+  "51": {
+    "inputs": {
+      "tile_size": 1536,
+      "overlap": 64,
+      "samples": [
+        "49",
+        0
+      ],
+      "vae": [
+        "48",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeAudioTiled",
+    "_meta": {
+      "title": "VAE Decode Audio (Tiled)"
+    }
+  },
+  "53": {
+    "inputs": {
+      "unet_name": "minimax_music3_dit_fp16.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "54": {
+    "inputs": {
+      "cfg_scale": 1.7,
+      "top_k": 50,
+      "clip": [
+        "47",
+        0
+      ],
+      "caption": [
+        "97",
+        0
+      ],
+      "lyrics": [
+        "78",
+        0
+      ],
+      "seed": [
+        "65",
+        0
+      ],
+      "max_duration": [
+        "74",
+        0
+      ]
+    },
+    "class_type": "MiniMaxMusic3TextEncode",
+    "_meta": {
+      "title": "MiniMax Music3 Text Encode"
+    }
+  },
+  "55": {
+    "inputs": {
+      "conditioning": [
+        "54",
+        0
+      ]
+    },
+    "class_type": "ConditioningZeroOut",
+    "_meta": {
+      "title": "Conditioning Zero Out"
+    }
+  },
+  "56": {
+    "inputs": {
+      "batch_size": 1,
+      "seconds": [
+        "54",
+        1
+      ]
+    },
+    "class_type": "EmptyMiniMaxMusic3LatentAudio",
+    "_meta": {
+      "title": "Empty MiniMax Music3 Latent Audio"
+    }
+  },
+  "60": {
+    "inputs": {
+      "passthrough": [
+        "66",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "62": {
+    "inputs": {
+      "filename_prefix": "audio/ComfyUI",
+      "format": "flac",
+      "audio": [
+        "60",
+        0
+      ]
+    },
+    "class_type": "SaveAudioAdvanced",
+    "_meta": {
+      "title": "Output_Audio"
+    }
+  },
+  "65": {
+    "inputs": {
+      "int": 976866873952
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    }
+  },
+  "66": {
+    "inputs": {
+      "boolean": true,
+      "true": [
+        "51",
+        0
+      ],
+      "false": [
+        "50",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Input_Low_Vram"
+    }
+  },
+  "68": {
+    "inputs": {
+      "string": "Lo-fi hip-hop, chillhop."
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Style"
+    }
+  },
+  "69": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Style_Custom"
+    }
+  },
+  "70": {
+    "inputs": {
+      "int": 78
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Bpm"
+    }
+  },
+  "71": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Voices"
+    }
+  },
+  "72": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Voice_Notes"
+    }
+  },
+  "73": {
+    "inputs": {
+      "boolean": false
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Input_Instrumental"
+    }
+  },
+  "74": {
+    "inputs": {
+      "float": 150
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_Duration"
+    }
+  },
+  "75": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Empty_String"
+    }
+  },
+  "76": {
+    "inputs": {
+      "string": "Instrumental. No vocals of any kind: no singing, no humming, no wordless vocal textures, no vocoder or choir pads. An instrument carries the lead melodic role throughout."
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Instrumental_Clause"
+    }
+  },
+  "77": {
+    "inputs": {
+      "regex_pattern": "<[^<>\\n]*>[ \\t]*",
+      "replace": "",
+      "string": [
+        "46",
+        0
+      ]
+    },
+    "class_type": "RegexReplace",
+    "_meta": {
+      "title": "Strip_Voice_Markers"
+    }
+  },
+  "78": {
+    "inputs": {
+      "true": [
+        "75",
+        0
+      ],
+      "false": [
+        "77",
+        0
+      ],
+      "boolean": [
+        "73",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Lyrics_Gate"
+    }
+  },
+  "79": {
+    "inputs": {
+      "regex_pattern": "^\\s*(?:\\[MOOD\\])?\\s*([\\s\\S]*?)\\s*(?=\\[VOCAL\\]|\\[ARRANGEMENT\\]|$)",
+      "mode": "First Group",
+      "case_insensitive": true,
+      "multiline": false,
+      "dotall": false,
+      "group_index": 1,
+      "string": [
+        "45",
+        0
+      ]
+    },
+    "class_type": "RegexExtract",
+    "_meta": {
+      "title": "Prose_Mood"
+    }
+  },
+  "80": {
+    "inputs": {
+      "regex_pattern": "\\[VOCAL\\]\\s*([\\s\\S]*?)\\s*(?=\\[ARRANGEMENT\\]|$)",
+      "mode": "First Group",
+      "case_insensitive": true,
+      "multiline": false,
+      "dotall": false,
+      "group_index": 1,
+      "string": [
+        "45",
+        0
+      ]
+    },
+    "class_type": "RegexExtract",
+    "_meta": {
+      "title": "Prose_Vocal"
+    }
+  },
+  "81": {
+    "inputs": {
+      "regex_pattern": "\\[ARRANGEMENT\\]\\s*([\\s\\S]*?)\\s*$",
+      "mode": "First Group",
+      "case_insensitive": true,
+      "multiline": false,
+      "dotall": false,
+      "group_index": 1,
+      "string": [
+        "45",
+        0
+      ]
+    },
+    "class_type": "RegexExtract",
+    "_meta": {
+      "title": "Prose_Arrangement"
+    }
+  },
+  "82": {
+    "inputs": {
+      "operator": "==",
+      "b_value": 0,
+      "a": [
+        "70",
+        0
+      ]
+    },
+    "class_type": "MpiCompare",
+    "_meta": {
+      "title": "Bpm_Is_Auto"
+    }
+  },
+  "83": {
+    "inputs": {
+      "round": true,
+      "input": [
+        "70",
+        0
+      ]
+    },
+    "class_type": "MpiConvert",
+    "_meta": {
+      "title": "Bpm_String"
+    }
+  },
+  "84": {
+    "inputs": {
+      "string_b": " BPM.",
+      "delimiter": "",
+      "string_a": [
+        "83",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Bpm_Clause"
+    }
+  },
+  "85": {
+    "inputs": {
+      "true": [
+        "75",
+        0
+      ],
+      "false": [
+        "84",
+        0
+      ],
+      "boolean": [
+        "82",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Bpm_Gate"
+    }
+  },
+  "86": {
+    "inputs": {
+      "delimiter": " ",
+      "string_a": [
+        "71",
+        0
+      ],
+      "string_b": [
+        "72",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Cat_Roster"
+    }
+  },
+  "87": {
+    "inputs": {
+      "delimiter": " ",
+      "string_a": [
+        "86",
+        0
+      ],
+      "string_b": [
+        "80",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Cat_Vocal_Body"
+    }
+  },
+  "88": {
+    "inputs": {
+      "true": [
+        "76",
+        0
+      ],
+      "false": [
+        "87",
+        0
+      ],
+      "boolean": [
+        "73",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Vocal_Gate"
+    }
+  },
+  "89": {
+    "inputs": {
+      "delimiter": " ",
+      "string_a": [
+        "68",
+        0
+      ],
+      "string_b": [
+        "69",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Cat_Style"
+    }
+  },
+  "90": {
+    "inputs": {
+      "delimiter": " ",
+      "string_a": [
+        "89",
+        0
+      ],
+      "string_b": [
+        "85",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Cat_Attrs"
+    }
+  },
+  "91": {
+    "inputs": {
+      "string_a": "Global Metadata: ",
+      "delimiter": "",
+      "string_b": [
+        "90",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Cat_Global_Metadata"
+    }
+  },
+  "92": {
+    "inputs": {
+      "delimiter": " ",
+      "string_a": [
+        "91",
+        0
+      ],
+      "string_b": [
+        "79",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Cat_Global_Metadata_Prose"
+    }
+  },
+  "93": {
+    "inputs": {
+      "string_a": "\n\nVocal Details: ",
+      "delimiter": "",
+      "string_b": [
+        "88",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Cat_Vocal_Details"
+    }
+  },
+  "94": {
+    "inputs": {
+      "string_a": "\n\nArrangement: ",
+      "delimiter": "",
+      "string_b": [
+        "81",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Cat_Arrangement"
+    }
+  },
+  "95": {
+    "inputs": {
+      "delimiter": "",
+      "string_a": [
+        "92",
+        0
+      ],
+      "string_b": [
+        "93",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Cat_Caption_Head"
+    }
+  },
+  "96": {
+    "inputs": {
+      "delimiter": "",
+      "string_a": [
+        "95",
+        0
+      ],
+      "string_b": [
+        "94",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Caption_Final"
+    }
+  },
+  "97": {
+    "inputs": {
+      "regex_pattern": "[ \\t]{2,}",
+      "replace": " ",
+      "string": [
+        "98",
+        0
+      ]
+    },
+    "class_type": "RegexReplace",
+    "_meta": {
+      "title": "Tidy_Caption"
+    }
+  },
+  "98": {
+    "inputs": {
+      "regex_pattern": "\\n\\n(?:Vocal Details|Arrangement):[ \\t]*(?=\\n\\n|$)",
+      "replace": "",
+      "string": [
+        "96",
+        0
+      ]
+    },
+    "class_type": "RegexReplace",
+    "_meta": {
+      "title": "Drop_Empty_Headings"
+    }
+  }
+}

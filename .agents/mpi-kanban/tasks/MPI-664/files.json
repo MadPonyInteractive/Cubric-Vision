@@ -2,7 +2,7 @@
   "schema": "mpi-kanban/files/v1",
   "files": [
     ".agents/mpi-kanban/tasks/MPI-664/**",
-    "comfy_workflows/raw/flow_minimax_music_template.json",
+    "comfy_workflows/raw/flow_minimax_music.json",
     "comfy_workflows/flow_minimax_music.json",
     "js/data/flowsRegistry.js",
     "js/data/commandRegistry.js",

@@ -1,0 +1,3321 @@
+{
+  "id": "flow-minimax-music",
+  "revision": 0,
+  "last_node_id": 98,
+  "last_link_id": 135,
+  "nodes": [
+    {
+      "id": 48,
+      "type": "VAELoader",
+      "pos": [
+        1638.2730822873068,
+        942.7924686192466
+      ],
+      "size": [
+        480,
+        70
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "vae_name",
+          "name": "vae_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "vae_name"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "VAE",
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            75,
+            79
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.31.0",
+        "Node name for S&R": "VAELoader",
+        "models": [
+          {
+            "name": "minimax_music3_dav.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/MiniMax-Music-3/resolve/main/vae/minimax_music3_dav.safetensors",
+            "directory": "vae"
+          }
+        ]
+      },
+      "widgets_values": [
+        "minimax_music3_dav.safetensors"
+      ],
+      "widgets_values_named": {
+        "vae_name": "minimax_music3_dav.safetensors"
+      }
+    },
+    {
+      "id": 49,
+      "type": "KSampler",
+      "pos": [
+        3108.273082287307,
+        572.7924686192466
+      ],
+      "size": [
+        370,
+        270
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "model",
+          "name": "model",
+          "type": "MODEL",
+          "link": 70
+        },
+        {
+          "localized_name": "positive",
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 71
+        },
+        {
+          "localized_name": "negative",
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 72
+        },
+        {
+          "localized_name": "latent_image",
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 73
+        },
+        {
+          "localized_name": "seed",
+          "name": "seed",
+          "type": "INT",
+          "widget": {
+            "name": "seed"
+          },
+          "link": 94
+        },
+        {
+          "localized_name": "steps",
+          "name": "steps",
+          "type": "INT",
+          "widget": {
+            "name": "steps"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "cfg",
+          "name": "cfg",
+          "type": "FLOAT",
+          "widget": {
+            "name": "cfg"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "sampler_name",
+          "name": "sampler_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "sampler_name"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "scheduler",
+          "name": "scheduler",
+          "type": "COMBO",
+          "widget": {
+            "name": "scheduler"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "denoise",
+          "name": "denoise",
+          "type": "FLOAT",
+          "widget": {
+            "name": "denoise"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "LATENT",
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            74,
+            78
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.31.0",
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [
+        1111111112,
+        "fixed",
+        30,
+        1.7,
+        "euler",
+        "simple",
+        1
+      ],
+      "widgets_values_named": {
+        "seed": 1111111112,
+        "control_after_generate": "fixed",
+        "steps": 30,
+        "cfg": 1.7,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "denoise": 1
+      }
+    },
+    {
+      "id": 55,
+      "type": "ConditioningZeroOut",
+      "pos": [
+        2758.273082287307,
+        732.7924686192466
+      ],
+      "size": [
+        230,
+        40
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "conditioning",
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 68
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "CONDITIONING",
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            72
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.31.0",
+        "Node name for S&R": "ConditioningZeroOut"
+      }
+    },
+    {
+      "id": 56,
+      "type": "EmptyMiniMaxMusic3LatentAudio",
+      "pos": [
+        2718.273082287307,
+        572.7924686192466
+      ],
+      "size": [
+        350,
+        90
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "seconds",
+          "name": "seconds",
+          "type": "FLOAT",
+          "widget": {
+            "name": "seconds"
+          },
+          "link": 69
+        },
+        {
+          "localized_name": "batch_size",
+          "name": "batch_size",
+          "type": "INT",
+          "widget": {
+            "name": "batch_size"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "LATENT",
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            73
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.31.0",
+        "Node name for S&R": "EmptyMiniMaxMusic3LatentAudio"
+      },
+      "widgets_values": [
+        120,
+        1
+      ],
+      "widgets_values_named": {
+        "seconds": 120,
+        "batch_size": 1
+      }
+    },
+    {
+      "id": 54,
+      "type": "MiniMaxMusic3TextEncode",
+      "pos": [
+        2168.273082287307,
+        572.7924686192466
+      ],
+      "size": [
+        500,
+        750
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "showAdvanced": true,
+      "inputs": [
+        {
+          "localized_name": "clip",
+          "name": "clip",
+          "type": "CLIP",
+          "link": 67
+        },
+        {
+          "localized_name": "caption",
+          "name": "caption",
+          "type": "STRING",
+          "widget": {
+            "name": "caption"
+          },
+          "link": 129
+        },
+        {
+          "localized_name": "lyrics",
+          "name": "lyrics",
+          "type": "STRING",
+          "widget": {
+            "name": "lyrics"
+          },
+          "link": 134
+        },
+        {
+          "localized_name": "seed",
+          "name": "seed",
+          "type": "INT",
+          "widget": {
+            "name": "seed"
+          },
+          "link": 93
+        },
+        {
+          "localized_name": "max_duration",
+          "name": "max_duration",
+          "type": "FLOAT",
+          "widget": {
+            "name": "max_duration"
+          },
+          "link": 135
+        },
+        {
+          "localized_name": "cfg_scale",
+          "name": "cfg_scale",
+          "type": "FLOAT",
+          "widget": {
+            "name": "cfg_scale"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "top_k",
+          "name": "top_k",
+          "type": "INT",
+          "widget": {
+            "name": "top_k"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "CONDITIONING",
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            68,
+            71
+          ]
+        },
+        {
+          "localized_name": "seconds",
+          "name": "seconds",
+          "type": "FLOAT",
+          "links": [
+            69
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.31.0",
+        "Node name for S&R": "MiniMaxMusic3TextEncode"
+      },
+      "widgets_values": [
+        "",
+        "",
+        222,
+        "fixed",
+        40,
+        1.7,
+        50
+      ],
+      "widgets_values_named": {
+        "caption": "",
+        "lyrics": "",
+        "seed": 222,
+        "control_after_generate": "fixed",
+        "max_duration": 40,
+        "cfg_scale": 1.7,
+        "top_k": 50
+      }
+    },
+    {
+      "id": 53,
+      "type": "UNETLoader",
+      "pos": [
+        1638.2730822873068,
+        572.7924686192466
+      ],
+      "size": [
+        480,
+        90
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "showAdvanced": false,
+      "inputs": [
+        {
+          "localized_name": "unet_name",
+          "name": "unet_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "unet_name"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "weight_dtype",
+          "name": "weight_dtype",
+          "type": "COMBO",
+          "widget": {
+            "name": "weight_dtype"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "MODEL",
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            70
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.31.0",
+        "Node name for S&R": "UNETLoader",
+        "models": [
+          {
+            "name": "minimax_music3_dit_fp16.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/MiniMax-Music-3/resolve/main/diffusion_models/minimax_music3_dit_fp16.safetensors",
+            "directory": "diffusion_models"
+          }
+        ]
+      },
+      "widgets_values": [
+        "minimax_music3_dit_fp16.safetensors",
+        "default"
+      ],
+      "widgets_values_named": {
+        "unet_name": "minimax_music3_dit_fp16.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    {
+      "id": 60,
+      "type": "MpiClearVram",
+      "pos": [
+        3860.486218826735,
+        889.1764759703907
+      ],
+      "size": [
+        186.9140625,
+        26
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "passthrough",
+          "name": "passthrough",
+          "shape": 7,
+          "type": "*",
+          "link": 97
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "passthrough",
+          "name": "passthrough",
+          "type": "*",
+          "links": [
+            92
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "5e070436fc90ab84fdd66c2fe702572d3d04f7e2",
+        "Node name for S&R": "MpiClearVram"
+      }
+    },
+    {
+      "id": 62,
+      "type": "SaveAudioAdvanced",
+      "pos": [
+        4089.6072887133864,
+        893.2568383618966
+      ],
+      "size": [
+        687.5570847309136,
+        136
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "audio",
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 92
+        },
+        {
+          "localized_name": "filename_prefix",
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "format",
+          "name": "format",
+          "type": "COMFY_DYNAMICCOMBO_V3",
+          "widget": {
+            "name": "format"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "audioUI",
+          "name": "audioUI",
+          "type": "AUDIO_UI",
+          "widget": {
+            "name": "audioUI"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "audio",
+          "name": "audio",
+          "type": "AUDIO",
+          "links": null
+        }
+      ],
+      "title": "Output_Audio",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2"
+      },
+      "widgets_values": [
+        "audio/ComfyUI",
+        "flac"
+      ],
+      "widgets_values_named": {
+        "filename_prefix": "audio/ComfyUI",
+        "format": "flac"
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 65,
+      "type": "MpiInt",
+      "pos": [
+        1847.467239927614,
+        1097.7730512616633
+      ],
+      "size": [
+        253.5164346041356,
+        58.91996868586102
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "int",
+          "name": "int",
+          "type": "INT",
+          "widget": {
+            "name": "int"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "int",
+          "name": "int",
+          "type": "INT",
+          "slot_index": 0,
+          "links": [
+            93,
+            94
+          ]
+        }
+      ],
+      "title": "Input_Seed",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "aaa1d2d9fa713decae6843e64f5a81b84f9f443d",
+        "Node name for S&R": "MpiInt"
+      },
+      "widgets_values": [
+        976866873952
+      ],
+      "widgets_values_named": {
+        "int": 976866873952
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 46,
+      "type": "MpiText",
+      "pos": [
+        1685.7763247017142,
+        -213.70242384398455
+      ],
+      "size": [
+        434.8460700101173,
+        685.5968465926047
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string",
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "Text",
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            130
+          ]
+        }
+      ],
+      "title": "Input_Lyrics",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "5e070436fc90ab84fdd66c2fe702572d3d04f7e2",
+        "Node name for S&R": "MpiText"
+      },
+      "widgets_values": [
+        "[Intro]\nMmm...\n(rain on the window)\nOoh...\n\n[Verse]\nMidnight and the canvas glows\nDragging little wires where the current flows\nType a quiet dream, let the sampler drift\nNoise into a picture, like the fog just lifts\nTwenty slow steps, I'm in no hurry now\nLatents turning colors and I don't know how\nEvery render's like a polaroid I found\nSoft focus memories, no sound\n\n[Instrumental]\n\n[Verse]\nQueue another frame, let the motion breathe\nPictures start to move like the falling leaves\nVideo drifting by at twenty-four\nLittle animations on my bedroom floor\nSeed after seed like the rain outside\nSome of them are keepers, some I let slide\nSave the ones that feel like a Sunday slow\nNode to node to node... and off we go\n\n[Chorus]\nMmm... let it render on\n(take your time, take your time)\nOoh... by the morning it'll all be done\n(one more queue, one more try)\n\n[Instrumental]\n\n[Bridge]\nRain keeps drawing pictures on the glass...\nMy machine keeps dreaming...\nNeither of us fast...\n\n[Chorus]\nMmm... let it render on\n(take your time, take your time)\nOoh... by the morning it'll all be done\n(one more queue, one more try)\n\n[Instrumental]\n\n[Outro]\nMmm...\n(node to node)\nOoh... goodnight"
+      ],
+      "widgets_values_named": {
+        "string": "[Intro]\nMmm...\n(rain on the window)\nOoh...\n\n[Verse]\nMidnight and the canvas glows\nDragging little wires where the current flows\nType a quiet dream, let the sampler drift\nNoise into a picture, like the fog just lifts\nTwenty slow steps, I'm in no hurry now\nLatents turning colors and I don't know how\nEvery render's like a polaroid I found\nSoft focus memories, no sound\n\n[Instrumental]\n\n[Verse]\nQueue another frame, let the motion breathe\nPictures start to move like the falling leaves\nVideo drifting by at twenty-four\nLittle animations on my bedroom floor\nSeed after seed like the rain outside\nSome of them are keepers, some I let slide\nSave the ones that feel like a Sunday slow\nNode to node to node... and off we go\n\n[Chorus]\nMmm... let it render on\n(take your time, take your time)\nOoh... by the morning it'll all be done\n(one more queue, one more try)\n\n[Instrumental]\n\n[Bridge]\nRain keeps drawing pictures on the glass...\nMy machine keeps dreaming...\nNeither of us fast...\n\n[Chorus]\nMmm... let it render on\n(take your time, take your time)\nOoh... by the morning it'll all be done\n(one more queue, one more try)\n\n[Instrumental]\n\n[Outro]\nMmm...\n(node to node)\nOoh... goodnight"
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 45,
+      "type": "MpiText",
+      "pos": [
+        1083.0236254745728,
+        -209.70988964782586
+      ],
+      "size": [
+        591.0913516683861,
+        349.50088101114903
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string",
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "Text",
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            109,
+            114,
+            121
+          ]
+        }
+      ],
+      "title": "Input_Caption",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "5e070436fc90ab84fdd66c2fe702572d3d04f7e2",
+        "Node name for S&R": "MpiText"
+      },
+      "widgets_values": [
+        "[MOOD] Laid-back and dreamy throughout, a gentle warm drift with a subtle late-night glow that deepens in the middle and dissolves softly at the end. Studying, raining-outside, headphones-on late-night listening. Bedroom production: muddy warm texture, heavy vinyl crackle, tape hiss and wow-flutter pitch wobble, low-passed dusty mix, soft-clipped drums, everything slightly detuned and cozy.\n\n[VOCAL] Soft androgynous vocal, hushed half-sung half-spoken delivery, sitting low in the mix like another instrument, lazy behind-the-beat phrasing, gentle breathy timbre. Sparse murmured double-tracked harmonies, occasional wordless \"mmm\" and \"ooh\" hums drenched in tape delay and warm spring reverb. Long stretches with no vocals at all.\n\n[ARRANGEMENT] Dusty boom-bap drums with a soft thumping kick, cracked snare with lazy swing, brushed hi-hats, low round sub bass. Warm Rhodes piano chords with slow chorus wobble as the harmonic bed, mellow jazzy guitar licks answering the vocal lines, constant vinyl crackle as texture. Intro: rain and vinyl noise, solo Rhodes chords fading in, drums slipping in halfway. Verses: minimal — drums, bass, Rhodes, soft guitar fills between lines. Instrumental sections: guitar and Rhodes trade relaxed jazzy phrases over the beat, occasional muted trumpet ghost notes far in the background. Bridge: drums drop away to rain, crackle, and floating detuned Rhodes, then the beat eases back in. Outro: elements fade one by one until only vinyl crackle and a last unresolved Rhodes chord remain."
+      ],
+      "widgets_values_named": {
+        "string": "[MOOD] Laid-back and dreamy throughout, a gentle warm drift with a subtle late-night glow that deepens in the middle and dissolves softly at the end. Studying, raining-outside, headphones-on late-night listening. Bedroom production: muddy warm texture, heavy vinyl crackle, tape hiss and wow-flutter pitch wobble, low-passed dusty mix, soft-clipped drums, everything slightly detuned and cozy.\n\n[VOCAL] Soft androgynous vocal, hushed half-sung half-spoken delivery, sitting low in the mix like another instrument, lazy behind-the-beat phrasing, gentle breathy timbre. Sparse murmured double-tracked harmonies, occasional wordless \"mmm\" and \"ooh\" hums drenched in tape delay and warm spring reverb. Long stretches with no vocals at all.\n\n[ARRANGEMENT] Dusty boom-bap drums with a soft thumping kick, cracked snare with lazy swing, brushed hi-hats, low round sub bass. Warm Rhodes piano chords with slow chorus wobble as the harmonic bed, mellow jazzy guitar licks answering the vocal lines, constant vinyl crackle as texture. Intro: rain and vinyl noise, solo Rhodes chords fading in, drums slipping in halfway. Verses: minimal — drums, bass, Rhodes, soft guitar fills between lines. Instrumental sections: guitar and Rhodes trade relaxed jazzy phrases over the beat, occasional muted trumpet ghost notes far in the background. Bridge: drums drop away to rain, crackle, and floating detuned Rhodes, then the beat eases back in. Outro: elements fade one by one until only vinyl crackle and a last unresolved Rhodes chord remain."
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 51,
+      "type": "VAEDecodeAudioTiled",
+      "pos": [
+        3518.273082287307,
+        692.7924686192466
+      ],
+      "size": [
+        280,
+        110
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "samples",
+          "name": "samples",
+          "type": "LATENT",
+          "link": 78
+        },
+        {
+          "localized_name": "vae",
+          "name": "vae",
+          "type": "VAE",
+          "link": 79
+        },
+        {
+          "localized_name": "tile_size",
+          "name": "tile_size",
+          "type": "INT",
+          "widget": {
+            "name": "tile_size"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "overlap",
+          "name": "overlap",
+          "type": "INT",
+          "widget": {
+            "name": "overlap"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "AUDIO",
+          "name": "AUDIO",
+          "type": "AUDIO",
+          "links": [
+            95
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.31.0",
+        "Node name for S&R": "VAEDecodeAudioTiled"
+      },
+      "widgets_values": [
+        1536,
+        64
+      ],
+      "widgets_values_named": {
+        "tile_size": 1536,
+        "overlap": 64
+      }
+    },
+    {
+      "id": 50,
+      "type": "VAEDecodeAudio",
+      "pos": [
+        3528.273082287307,
+        572.7924686192466
+      ],
+      "size": [
+        230,
+        60
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "samples",
+          "name": "samples",
+          "type": "LATENT",
+          "link": 74
+        },
+        {
+          "localized_name": "vae",
+          "name": "vae",
+          "type": "VAE",
+          "link": 75
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "AUDIO",
+          "name": "AUDIO",
+          "type": "AUDIO",
+          "links": [
+            96
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.31.0",
+        "Node name for S&R": "VAEDecodeAudio"
+      }
+    },
+    {
+      "id": 66,
+      "type": "MpiIfElse",
+      "pos": [
+        3528.2290838870745,
+        888.9280707770204
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 12,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "true",
+          "name": "true",
+          "type": "*",
+          "link": 95
+        },
+        {
+          "localized_name": "false",
+          "name": "false",
+          "type": "*",
+          "link": 96
+        },
+        {
+          "localized_name": "boolean",
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "boolean"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "output",
+          "name": "output",
+          "type": "*",
+          "links": [
+            97
+          ]
+        }
+      ],
+      "title": "Input_Low_Vram",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "5e070436fc90ab84fdd66c2fe702572d3d04f7e2",
+        "Node name for S&R": "MpiIfElse"
+      },
+      "widgets_values": [
+        true
+      ],
+      "widgets_values_named": {
+        "boolean": true
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 47,
+      "type": "CLIPLoader",
+      "pos": [
+        1638.2730822873068,
+        742.7924686192466
+      ],
+      "size": [
+        480,
+        120
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "clip_name",
+          "name": "clip_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "clip_name"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "type",
+          "name": "type",
+          "type": "COMBO",
+          "widget": {
+            "name": "type"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "device",
+          "name": "device",
+          "shape": 7,
+          "type": "COMBO",
+          "widget": {
+            "name": "device"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "CLIP",
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            67
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.31.0",
+        "Node name for S&R": "CLIPLoader",
+        "models": [
+          {
+            "name": "minimax_music3_text_encoder_pruned_int8_convrot.safetensors",
+            "url": "https://huggingface.co/Comfy-Org/MiniMax-Music-3/resolve/main/text_encoders/minimax_music3_text_encoder_pruned_int8_convrot.safetensors",
+            "directory": "text_encoders"
+          }
+        ]
+      },
+      "widgets_values": [
+        "minimax_music3_text_encoder_pruned_int8_convrot.safetensors",
+        "minimax",
+        "default"
+      ],
+      "widgets_values_named": {
+        "clip_name": "minimax_music3_text_encoder_pruned_int8_convrot.safetensors",
+        "type": "minimax",
+        "device": "default"
+      }
+    },
+    {
+      "id": 68,
+      "type": "MpiText",
+      "pos": [
+        -2200.0,
+        -200.0
+      ],
+      "size": [
+        320,
+        130
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string",
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "Text",
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            98
+          ]
+        }
+      ],
+      "title": "Input_Style",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "53c019851506df0a99895ca9db4fd09e8d2f3fc3",
+        "Node name for S&R": "MpiText"
+      },
+      "widgets_values": [
+        "Lo-fi hip-hop, chillhop."
+      ],
+      "widgets_values_named": {
+        "string": "Lo-fi hip-hop, chillhop."
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 69,
+      "type": "MpiText",
+      "pos": [
+        -2200.0,
+        10.0
+      ],
+      "size": [
+        320,
+        130
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string",
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "Text",
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            99
+          ]
+        }
+      ],
+      "title": "Input_Style_Custom",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "53c019851506df0a99895ca9db4fd09e8d2f3fc3",
+        "Node name for S&R": "MpiText"
+      },
+      "widgets_values": [
+        ""
+      ],
+      "widgets_values_named": {
+        "string": ""
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 70,
+      "type": "MpiInt",
+      "pos": [
+        -2200.0,
+        220.0
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "int",
+          "name": "int",
+          "type": "INT",
+          "widget": {
+            "name": "int"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "int",
+          "name": "int",
+          "type": "INT",
+          "slot_index": 0,
+          "links": [
+            100,
+            101
+          ]
+        }
+      ],
+      "title": "Input_Bpm",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "53c019851506df0a99895ca9db4fd09e8d2f3fc3",
+        "Node name for S&R": "MpiInt"
+      },
+      "widgets_values": [
+        78
+      ],
+      "widgets_values_named": {
+        "int": 78
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 71,
+      "type": "MpiText",
+      "pos": [
+        -2200.0,
+        430.0
+      ],
+      "size": [
+        320,
+        130
+      ],
+      "flags": {},
+      "order": 18,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string",
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "Text",
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            112
+          ]
+        }
+      ],
+      "title": "Input_Voices",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "53c019851506df0a99895ca9db4fd09e8d2f3fc3",
+        "Node name for S&R": "MpiText"
+      },
+      "widgets_values": [
+        ""
+      ],
+      "widgets_values_named": {
+        "string": ""
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 72,
+      "type": "MpiText",
+      "pos": [
+        -2200.0,
+        640.0
+      ],
+      "size": [
+        320,
+        130
+      ],
+      "flags": {},
+      "order": 19,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string",
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "Text",
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            113
+          ]
+        }
+      ],
+      "title": "Input_Voice_Notes",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "53c019851506df0a99895ca9db4fd09e8d2f3fc3",
+        "Node name for S&R": "MpiText"
+      },
+      "widgets_values": [
+        ""
+      ],
+      "widgets_values_named": {
+        "string": ""
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 73,
+      "type": "MpiSimpleBoolean",
+      "pos": [
+        -2200.0,
+        850.0
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 20,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "boolean",
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "boolean"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "boolean",
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "links": [
+            117,
+            131
+          ]
+        }
+      ],
+      "title": "Input_Instrumental",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "53c019851506df0a99895ca9db4fd09e8d2f3fc3",
+        "Node name for S&R": "MpiSimpleBoolean"
+      },
+      "widgets_values": [
+        false
+      ],
+      "color": "#432",
+      "bgcolor": "#653",
+      "widgets_values_named": {
+        "boolean": false
+      }
+    },
+    {
+      "id": 74,
+      "type": "MpiFloat",
+      "pos": [
+        -2200.0,
+        1060.0
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 21,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "float",
+          "name": "float",
+          "type": "FLOAT",
+          "widget": {
+            "name": "float"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "float",
+          "name": "float",
+          "type": "FLOAT",
+          "links": [
+            135
+          ]
+        }
+      ],
+      "title": "Input_Duration",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "53c019851506df0a99895ca9db4fd09e8d2f3fc3",
+        "Node name for S&R": "MpiFloat"
+      },
+      "widgets_values": [
+        150.0
+      ],
+      "color": "#432",
+      "bgcolor": "#653",
+      "widgets_values_named": {
+        "float": 150.0
+      }
+    },
+    {
+      "id": 75,
+      "type": "MpiText",
+      "pos": [
+        -2200.0,
+        1270.0
+      ],
+      "size": [
+        320,
+        130
+      ],
+      "flags": {},
+      "order": 22,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string",
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "Text",
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            104,
+            132
+          ]
+        }
+      ],
+      "title": "Empty_String",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "53c019851506df0a99895ca9db4fd09e8d2f3fc3",
+        "Node name for S&R": "MpiText"
+      },
+      "widgets_values": [
+        ""
+      ],
+      "widgets_values_named": {
+        "string": ""
+      }
+    },
+    {
+      "id": 76,
+      "type": "MpiText",
+      "pos": [
+        -2200.0,
+        1480.0
+      ],
+      "size": [
+        320,
+        130
+      ],
+      "flags": {},
+      "order": 23,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string",
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "Text",
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            118
+          ]
+        }
+      ],
+      "title": "Instrumental_Clause",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "53c019851506df0a99895ca9db4fd09e8d2f3fc3",
+        "Node name for S&R": "MpiText"
+      },
+      "widgets_values": [
+        "Instrumental. No vocals of any kind: no singing, no humming, no wordless vocal textures, no vocoder or choir pads. An instrument carries the lead melodic role throughout."
+      ],
+      "widgets_values_named": {
+        "string": "Instrumental. No vocals of any kind: no singing, no humming, no wordless vocal textures, no vocoder or choir pads. An instrument carries the lead melodic role throughout."
+      }
+    },
+    {
+      "id": 79,
+      "type": "RegexExtract",
+      "pos": [
+        -1780.0,
+        -200.0
+      ],
+      "size": [
+        360,
+        250
+      ],
+      "flags": {},
+      "order": 24,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string",
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": 109
+        },
+        {
+          "localized_name": "regex_pattern",
+          "name": "regex_pattern",
+          "type": "STRING",
+          "widget": {
+            "name": "regex_pattern"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "mode",
+          "name": "mode",
+          "type": "COMBO",
+          "widget": {
+            "name": "mode"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "case_insensitive",
+          "name": "case_insensitive",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "case_insensitive"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "multiline",
+          "name": "multiline",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "multiline"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "dotall",
+          "name": "dotall",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "dotall"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "group_index",
+          "name": "group_index",
+          "type": "INT",
+          "widget": {
+            "name": "group_index"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "STRING",
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            111
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2",
+        "Node name for S&R": "RegexExtract"
+      },
+      "widgets_values": [
+        "",
+        "^\\s*(?:\\[MOOD\\])?\\s*([\\s\\S]*?)\\s*(?=\\[VOCAL\\]|\\[ARRANGEMENT\\]|$)",
+        "First Group",
+        true,
+        false,
+        false,
+        1
+      ],
+      "title": "Prose_Mood",
+      "widgets_values_named": {
+        "string": "",
+        "regex_pattern": "^\\s*(?:\\[MOOD\\])?\\s*([\\s\\S]*?)\\s*(?=\\[VOCAL\\]|\\[ARRANGEMENT\\]|$)",
+        "mode": "First Group",
+        "case_insensitive": true,
+        "multiline": false,
+        "dotall": false,
+        "group_index": 1
+      }
+    },
+    {
+      "id": 80,
+      "type": "RegexExtract",
+      "pos": [
+        -1780.0,
+        10.0
+      ],
+      "size": [
+        360,
+        250
+      ],
+      "flags": {},
+      "order": 25,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string",
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": 114
+        },
+        {
+          "localized_name": "regex_pattern",
+          "name": "regex_pattern",
+          "type": "STRING",
+          "widget": {
+            "name": "regex_pattern"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "mode",
+          "name": "mode",
+          "type": "COMBO",
+          "widget": {
+            "name": "mode"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "case_insensitive",
+          "name": "case_insensitive",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "case_insensitive"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "multiline",
+          "name": "multiline",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "multiline"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "dotall",
+          "name": "dotall",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "dotall"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "group_index",
+          "name": "group_index",
+          "type": "INT",
+          "widget": {
+            "name": "group_index"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "STRING",
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            116
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2",
+        "Node name for S&R": "RegexExtract"
+      },
+      "widgets_values": [
+        "",
+        "\\[VOCAL\\]\\s*([\\s\\S]*?)\\s*(?=\\[ARRANGEMENT\\]|$)",
+        "First Group",
+        true,
+        false,
+        false,
+        1
+      ],
+      "title": "Prose_Vocal",
+      "widgets_values_named": {
+        "string": "",
+        "regex_pattern": "\\[VOCAL\\]\\s*([\\s\\S]*?)\\s*(?=\\[ARRANGEMENT\\]|$)",
+        "mode": "First Group",
+        "case_insensitive": true,
+        "multiline": false,
+        "dotall": false,
+        "group_index": 1
+      }
+    },
+    {
+      "id": 81,
+      "type": "RegexExtract",
+      "pos": [
+        -1780.0,
+        220.0
+      ],
+      "size": [
+        360,
+        250
+      ],
+      "flags": {},
+      "order": 26,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string",
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": 121
+        },
+        {
+          "localized_name": "regex_pattern",
+          "name": "regex_pattern",
+          "type": "STRING",
+          "widget": {
+            "name": "regex_pattern"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "mode",
+          "name": "mode",
+          "type": "COMBO",
+          "widget": {
+            "name": "mode"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "case_insensitive",
+          "name": "case_insensitive",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "case_insensitive"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "multiline",
+          "name": "multiline",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "multiline"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "dotall",
+          "name": "dotall",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "dotall"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "group_index",
+          "name": "group_index",
+          "type": "INT",
+          "widget": {
+            "name": "group_index"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "STRING",
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            122
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2",
+        "Node name for S&R": "RegexExtract"
+      },
+      "widgets_values": [
+        "",
+        "\\[ARRANGEMENT\\]\\s*([\\s\\S]*?)\\s*$",
+        "First Group",
+        true,
+        false,
+        false,
+        1
+      ],
+      "title": "Prose_Arrangement",
+      "widgets_values_named": {
+        "string": "",
+        "regex_pattern": "\\[ARRANGEMENT\\]\\s*([\\s\\S]*?)\\s*$",
+        "mode": "First Group",
+        "case_insensitive": true,
+        "multiline": false,
+        "dotall": false,
+        "group_index": 1
+      }
+    },
+    {
+      "id": 82,
+      "type": "MpiCompare",
+      "pos": [
+        -1780.0,
+        430.0
+      ],
+      "size": [
+        270,
+        102
+      ],
+      "flags": {},
+      "order": 27,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "a",
+          "type": "*",
+          "link": 100
+        },
+        {
+          "name": "b",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "result",
+          "type": "BOOLEAN",
+          "links": [
+            103
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "53c019851506df0a99895ca9db4fd09e8d2f3fc3",
+        "Node name for S&R": "MpiCompare"
+      },
+      "widgets_values": [
+        "==",
+        0
+      ],
+      "title": "Bpm_Is_Auto",
+      "widgets_values_named": {
+        "operator": "==",
+        "b_value": 0
+      }
+    },
+    {
+      "id": 83,
+      "type": "MpiConvert",
+      "pos": [
+        -1780.0,
+        640.0
+      ],
+      "size": [
+        270,
+        118
+      ],
+      "flags": {},
+      "order": 28,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "input",
+          "type": "*",
+          "link": 101
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            102
+          ]
+        },
+        {
+          "name": "INT",
+          "type": "INT",
+          "links": []
+        },
+        {
+          "name": "FLOAT",
+          "type": "FLOAT",
+          "links": []
+        },
+        {
+          "name": "BOOLEAN",
+          "type": "BOOLEAN",
+          "links": []
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "53c019851506df0a99895ca9db4fd09e8d2f3fc3",
+        "Node name for S&R": "MpiConvert"
+      },
+      "widgets_values": [
+        true
+      ],
+      "widgets_values_named": {
+        "round": true
+      },
+      "title": "Bpm_String"
+    },
+    {
+      "id": 77,
+      "type": "RegexReplace",
+      "pos": [
+        -1780.0,
+        850.0
+      ],
+      "size": [
+        360,
+        200
+      ],
+      "flags": {},
+      "order": 29,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": 130
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            133
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "RegexReplace",
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2"
+      },
+      "widgets_values": [
+        "",
+        "<[^<>\\n]*>[ \\t]*",
+        ""
+      ],
+      "title": "Strip_Voice_Markers",
+      "widgets_values_named": {
+        "string": "",
+        "regex_pattern": "<[^<>\\n]*>[ \\t]*",
+        "replace": ""
+      }
+    },
+    {
+      "id": 84,
+      "type": "StringConcatenate",
+      "pos": [
+        -1360.0,
+        -200.0
+      ],
+      "size": [
+        330,
+        170
+      ],
+      "flags": {},
+      "order": 30,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string_a",
+          "type": "STRING",
+          "widget": {
+            "name": "string_a"
+          },
+          "link": 102
+        },
+        {
+          "name": "string_b",
+          "type": "STRING",
+          "widget": {
+            "name": "string_b"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            105
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "StringConcatenate",
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2"
+      },
+      "widgets_values": [
+        "",
+        " BPM.",
+        ""
+      ],
+      "title": "Bpm_Clause",
+      "widgets_values_named": {
+        "string_a": "",
+        "string_b": " BPM.",
+        "delimiter": ""
+      }
+    },
+    {
+      "id": 86,
+      "type": "StringConcatenate",
+      "pos": [
+        -1360.0,
+        10.0
+      ],
+      "size": [
+        330,
+        170
+      ],
+      "flags": {},
+      "order": 31,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string_a",
+          "type": "STRING",
+          "widget": {
+            "name": "string_a"
+          },
+          "link": 112
+        },
+        {
+          "name": "string_b",
+          "type": "STRING",
+          "widget": {
+            "name": "string_b"
+          },
+          "link": 113
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            115
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "StringConcatenate",
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2"
+      },
+      "widgets_values": [
+        "",
+        "",
+        " "
+      ],
+      "title": "Cat_Roster",
+      "widgets_values_named": {
+        "string_a": "",
+        "string_b": "",
+        "delimiter": " "
+      }
+    },
+    {
+      "id": 78,
+      "type": "MpiIfElse",
+      "pos": [
+        -1360.0,
+        220.0
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 32,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "true",
+          "name": "true",
+          "type": "*",
+          "link": 132
+        },
+        {
+          "localized_name": "false",
+          "name": "false",
+          "type": "*",
+          "link": 133
+        },
+        {
+          "localized_name": "boolean",
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "boolean"
+          },
+          "link": 131
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "output",
+          "name": "output",
+          "type": "*",
+          "links": [
+            134
+          ]
+        }
+      ],
+      "title": "Lyrics_Gate",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "53c019851506df0a99895ca9db4fd09e8d2f3fc3",
+        "Node name for S&R": "MpiIfElse"
+      },
+      "widgets_values": [
+        false
+      ],
+      "widgets_values_named": {
+        "boolean": false
+      }
+    },
+    {
+      "id": 85,
+      "type": "MpiIfElse",
+      "pos": [
+        -940.0,
+        -200.0
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 33,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "true",
+          "name": "true",
+          "type": "*",
+          "link": 104
+        },
+        {
+          "localized_name": "false",
+          "name": "false",
+          "type": "*",
+          "link": 105
+        },
+        {
+          "localized_name": "boolean",
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "boolean"
+          },
+          "link": 103
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "output",
+          "name": "output",
+          "type": "*",
+          "links": [
+            107
+          ]
+        }
+      ],
+      "title": "Bpm_Gate",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "53c019851506df0a99895ca9db4fd09e8d2f3fc3",
+        "Node name for S&R": "MpiIfElse"
+      },
+      "widgets_values": [
+        false
+      ],
+      "widgets_values_named": {
+        "boolean": false
+      }
+    },
+    {
+      "id": 87,
+      "type": "StringConcatenate",
+      "pos": [
+        -940.0,
+        10.0
+      ],
+      "size": [
+        330,
+        170
+      ],
+      "flags": {},
+      "order": 34,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string_a",
+          "type": "STRING",
+          "widget": {
+            "name": "string_a"
+          },
+          "link": 115
+        },
+        {
+          "name": "string_b",
+          "type": "STRING",
+          "widget": {
+            "name": "string_b"
+          },
+          "link": 116
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            119
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "StringConcatenate",
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2"
+      },
+      "widgets_values": [
+        "",
+        "",
+        " "
+      ],
+      "title": "Cat_Vocal_Body",
+      "widgets_values_named": {
+        "string_a": "",
+        "string_b": "",
+        "delimiter": " "
+      }
+    },
+    {
+      "id": 89,
+      "type": "StringConcatenate",
+      "pos": [
+        -940.0,
+        220.0
+      ],
+      "size": [
+        330,
+        170
+      ],
+      "flags": {},
+      "order": 35,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string_a",
+          "type": "STRING",
+          "widget": {
+            "name": "string_a"
+          },
+          "link": 98
+        },
+        {
+          "name": "string_b",
+          "type": "STRING",
+          "widget": {
+            "name": "string_b"
+          },
+          "link": 99
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            106
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "StringConcatenate",
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2"
+      },
+      "widgets_values": [
+        "",
+        "",
+        " "
+      ],
+      "title": "Cat_Style",
+      "widgets_values_named": {
+        "string_a": "",
+        "string_b": "",
+        "delimiter": " "
+      }
+    },
+    {
+      "id": 88,
+      "type": "MpiIfElse",
+      "pos": [
+        -520.0,
+        -200.0
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 36,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "true",
+          "name": "true",
+          "type": "*",
+          "link": 118
+        },
+        {
+          "localized_name": "false",
+          "name": "false",
+          "type": "*",
+          "link": 119
+        },
+        {
+          "localized_name": "boolean",
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "boolean"
+          },
+          "link": 117
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "output",
+          "name": "output",
+          "type": "*",
+          "links": [
+            120
+          ]
+        }
+      ],
+      "title": "Vocal_Gate",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "53c019851506df0a99895ca9db4fd09e8d2f3fc3",
+        "Node name for S&R": "MpiIfElse"
+      },
+      "widgets_values": [
+        false
+      ],
+      "widgets_values_named": {
+        "boolean": false
+      }
+    },
+    {
+      "id": 90,
+      "type": "StringConcatenate",
+      "pos": [
+        -520.0,
+        10.0
+      ],
+      "size": [
+        330,
+        170
+      ],
+      "flags": {},
+      "order": 37,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string_a",
+          "type": "STRING",
+          "widget": {
+            "name": "string_a"
+          },
+          "link": 106
+        },
+        {
+          "name": "string_b",
+          "type": "STRING",
+          "widget": {
+            "name": "string_b"
+          },
+          "link": 107
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            108
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "StringConcatenate",
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2"
+      },
+      "widgets_values": [
+        "",
+        "",
+        " "
+      ],
+      "title": "Cat_Attrs",
+      "widgets_values_named": {
+        "string_a": "",
+        "string_b": "",
+        "delimiter": " "
+      }
+    },
+    {
+      "id": 91,
+      "type": "StringConcatenate",
+      "pos": [
+        -100.0,
+        -200.0
+      ],
+      "size": [
+        330,
+        170
+      ],
+      "flags": {},
+      "order": 38,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string_a",
+          "type": "STRING",
+          "widget": {
+            "name": "string_a"
+          },
+          "link": null
+        },
+        {
+          "name": "string_b",
+          "type": "STRING",
+          "widget": {
+            "name": "string_b"
+          },
+          "link": 108
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            110
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "StringConcatenate",
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2"
+      },
+      "widgets_values": [
+        "Global Metadata: ",
+        "",
+        ""
+      ],
+      "title": "Cat_Global_Metadata",
+      "widgets_values_named": {
+        "string_a": "Global Metadata: ",
+        "string_b": "",
+        "delimiter": ""
+      }
+    },
+    {
+      "id": 93,
+      "type": "StringConcatenate",
+      "pos": [
+        -100.0,
+        10.0
+      ],
+      "size": [
+        330,
+        170
+      ],
+      "flags": {},
+      "order": 39,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string_a",
+          "type": "STRING",
+          "widget": {
+            "name": "string_a"
+          },
+          "link": null
+        },
+        {
+          "name": "string_b",
+          "type": "STRING",
+          "widget": {
+            "name": "string_b"
+          },
+          "link": 120
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            124
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "StringConcatenate",
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2"
+      },
+      "widgets_values": [
+        "\n\nVocal Details: ",
+        "",
+        ""
+      ],
+      "title": "Cat_Vocal_Details",
+      "widgets_values_named": {
+        "string_a": "\n\nVocal Details: ",
+        "string_b": "",
+        "delimiter": ""
+      }
+    },
+    {
+      "id": 94,
+      "type": "StringConcatenate",
+      "pos": [
+        -100.0,
+        220.0
+      ],
+      "size": [
+        330,
+        170
+      ],
+      "flags": {},
+      "order": 40,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string_a",
+          "type": "STRING",
+          "widget": {
+            "name": "string_a"
+          },
+          "link": null
+        },
+        {
+          "name": "string_b",
+          "type": "STRING",
+          "widget": {
+            "name": "string_b"
+          },
+          "link": 122
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            126
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "StringConcatenate",
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2"
+      },
+      "widgets_values": [
+        "\n\nArrangement: ",
+        "",
+        ""
+      ],
+      "title": "Cat_Arrangement",
+      "widgets_values_named": {
+        "string_a": "\n\nArrangement: ",
+        "string_b": "",
+        "delimiter": ""
+      }
+    },
+    {
+      "id": 92,
+      "type": "StringConcatenate",
+      "pos": [
+        320.0,
+        -200.0
+      ],
+      "size": [
+        330,
+        170
+      ],
+      "flags": {},
+      "order": 41,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string_a",
+          "type": "STRING",
+          "widget": {
+            "name": "string_a"
+          },
+          "link": 110
+        },
+        {
+          "name": "string_b",
+          "type": "STRING",
+          "widget": {
+            "name": "string_b"
+          },
+          "link": 111
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            123
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "StringConcatenate",
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2"
+      },
+      "widgets_values": [
+        "",
+        "",
+        " "
+      ],
+      "title": "Cat_Global_Metadata_Prose",
+      "widgets_values_named": {
+        "string_a": "",
+        "string_b": "",
+        "delimiter": " "
+      }
+    },
+    {
+      "id": 95,
+      "type": "StringConcatenate",
+      "pos": [
+        740.0,
+        -200.0
+      ],
+      "size": [
+        330,
+        170
+      ],
+      "flags": {},
+      "order": 42,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string_a",
+          "type": "STRING",
+          "widget": {
+            "name": "string_a"
+          },
+          "link": 123
+        },
+        {
+          "name": "string_b",
+          "type": "STRING",
+          "widget": {
+            "name": "string_b"
+          },
+          "link": 124
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            125
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "StringConcatenate",
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2"
+      },
+      "widgets_values": [
+        "",
+        "",
+        ""
+      ],
+      "title": "Cat_Caption_Head",
+      "widgets_values_named": {
+        "string_a": "",
+        "string_b": "",
+        "delimiter": ""
+      }
+    },
+    {
+      "id": 96,
+      "type": "StringConcatenate",
+      "pos": [
+        740.0,
+        10.0
+      ],
+      "size": [
+        330,
+        170
+      ],
+      "flags": {},
+      "order": 43,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string_a",
+          "type": "STRING",
+          "widget": {
+            "name": "string_a"
+          },
+          "link": 125
+        },
+        {
+          "name": "string_b",
+          "type": "STRING",
+          "widget": {
+            "name": "string_b"
+          },
+          "link": 126
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            127
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "StringConcatenate",
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2"
+      },
+      "widgets_values": [
+        "",
+        "",
+        ""
+      ],
+      "title": "Caption_Final",
+      "widgets_values_named": {
+        "string_a": "",
+        "string_b": "",
+        "delimiter": ""
+      }
+    },
+    {
+      "id": 98,
+      "type": "RegexReplace",
+      "pos": [
+        740.0,
+        220.0
+      ],
+      "size": [
+        360,
+        200
+      ],
+      "flags": {},
+      "order": 44,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": 127
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            128
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "RegexReplace",
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2"
+      },
+      "widgets_values": [
+        "",
+        "\\n\\n(?:Vocal Details|Arrangement):[ \\t]*(?=\\n\\n|$)",
+        ""
+      ],
+      "title": "Drop_Empty_Headings",
+      "widgets_values_named": {
+        "string": "",
+        "regex_pattern": "\\n\\n(?:Vocal Details|Arrangement):[ \\t]*(?=\\n\\n|$)",
+        "replace": ""
+      }
+    },
+    {
+      "id": 97,
+      "type": "RegexReplace",
+      "pos": [
+        740.0,
+        430.0
+      ],
+      "size": [
+        360,
+        200
+      ],
+      "flags": {},
+      "order": 45,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": 128
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            129
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "RegexReplace",
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2"
+      },
+      "widgets_values": [
+        "",
+        "[ \\t]{2,}",
+        " "
+      ],
+      "title": "Tidy_Caption",
+      "widgets_values_named": {
+        "string": "",
+        "regex_pattern": "[ \\t]{2,}",
+        "replace": " "
+      }
+    }
+  ],
+  "links": [
+    [
+      67,
+      47,
+      0,
+      54,
+      0,
+      "CLIP"
+    ],
+    [
+      68,
+      54,
+      0,
+      55,
+      0,
+      "CONDITIONING"
+    ],
+    [
+      69,
+      54,
+      1,
+      56,
+      0,
+      "FLOAT"
+    ],
+    [
+      70,
+      53,
+      0,
+      49,
+      0,
+      "MODEL"
+    ],
+    [
+      71,
+      54,
+      0,
+      49,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      72,
+      55,
+      0,
+      49,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      73,
+      56,
+      0,
+      49,
+      3,
+      "LATENT"
+    ],
+    [
+      74,
+      49,
+      0,
+      50,
+      0,
+      "LATENT"
+    ],
+    [
+      75,
+      48,
+      0,
+      50,
+      1,
+      "VAE"
+    ],
+    [
+      78,
+      49,
+      0,
+      51,
+      0,
+      "LATENT"
+    ],
+    [
+      79,
+      48,
+      0,
+      51,
+      1,
+      "VAE"
+    ],
+    [
+      92,
+      60,
+      0,
+      62,
+      0,
+      "AUDIO"
+    ],
+    [
+      93,
+      65,
+      0,
+      54,
+      3,
+      "INT"
+    ],
+    [
+      94,
+      65,
+      0,
+      49,
+      4,
+      "INT"
+    ],
+    [
+      95,
+      51,
+      0,
+      66,
+      0,
+      "AUDIO"
+    ],
+    [
+      96,
+      50,
+      0,
+      66,
+      1,
+      "AUDIO"
+    ],
+    [
+      97,
+      66,
+      0,
+      60,
+      0,
+      "*"
+    ],
+    [
+      98,
+      68,
+      0,
+      89,
+      0,
+      "STRING"
+    ],
+    [
+      99,
+      69,
+      0,
+      89,
+      1,
+      "STRING"
+    ],
+    [
+      100,
+      70,
+      0,
+      82,
+      0,
+      "INT"
+    ],
+    [
+      101,
+      70,
+      0,
+      83,
+      0,
+      "INT"
+    ],
+    [
+      102,
+      83,
+      0,
+      84,
+      0,
+      "STRING"
+    ],
+    [
+      103,
+      82,
+      0,
+      85,
+      2,
+      "BOOLEAN"
+    ],
+    [
+      104,
+      75,
+      0,
+      85,
+      0,
+      "STRING"
+    ],
+    [
+      105,
+      84,
+      0,
+      85,
+      1,
+      "STRING"
+    ],
+    [
+      106,
+      89,
+      0,
+      90,
+      0,
+      "STRING"
+    ],
+    [
+      107,
+      85,
+      0,
+      90,
+      1,
+      "*"
+    ],
+    [
+      108,
+      90,
+      0,
+      91,
+      1,
+      "STRING"
+    ],
+    [
+      109,
+      45,
+      0,
+      79,
+      0,
+      "STRING"
+    ],
+    [
+      110,
+      91,
+      0,
+      92,
+      0,
+      "STRING"
+    ],
+    [
+      111,
+      79,
+      0,
+      92,
+      1,
+      "STRING"
+    ],
+    [
+      112,
+      71,
+      0,
+      86,
+      0,
+      "STRING"
+    ],
+    [
+      113,
+      72,
+      0,
+      86,
+      1,
+      "STRING"
+    ],
+    [
+      114,
+      45,
+      0,
+      80,
+      0,
+      "STRING"
+    ],
+    [
+      115,
+      86,
+      0,
+      87,
+      0,
+      "STRING"
+    ],
+    [
+      116,
+      80,
+      0,
+      87,
+      1,
+      "STRING"
+    ],
+    [
+      117,
+      73,
+      0,
+      88,
+      2,
+      "BOOLEAN"
+    ],
+    [
+      118,
+      76,
+      0,
+      88,
+      0,
+      "STRING"
+    ],
+    [
+      119,
+      87,
+      0,
+      88,
+      1,
+      "STRING"
+    ],
+    [
+      120,
+      88,
+      0,
+      93,
+      1,
+      "*"
+    ],
+    [
+      121,
+      45,
+      0,
+      81,
+      0,
+      "STRING"
+    ],
+    [
+      122,
+      81,
+      0,
+      94,
+      1,
+      "STRING"
+    ],
+    [
+      123,
+      92,
+      0,
+      95,
+      0,
+      "STRING"
+    ],
+    [
+      124,
+      93,
+      0,
+      95,
+      1,
+      "STRING"
+    ],
+    [
+      125,
+      95,
+      0,
+      96,
+      0,
+      "STRING"
+    ],
+    [
+      126,
+      94,
+      0,
+      96,
+      1,
+      "STRING"
+    ],
+    [
+      127,
+      96,
+      0,
+      98,
+      0,
+      "STRING"
+    ],
+    [
+      128,
+      98,
+      0,
+      97,
+      0,
+      "STRING"
+    ],
+    [
+      129,
+      97,
+      0,
+      54,
+      1,
+      "STRING"
+    ],
+    [
+      130,
+      46,
+      0,
+      77,
+      0,
+      "STRING"
+    ],
+    [
+      131,
+      73,
+      0,
+      78,
+      2,
+      "BOOLEAN"
+    ],
+    [
+      132,
+      75,
+      0,
+      78,
+      0,
+      "STRING"
+    ],
+    [
+      133,
+      77,
+      0,
+      78,
+      1,
+      "STRING"
+    ],
+    [
+      134,
+      78,
+      0,
+      54,
+      2,
+      "*"
+    ],
+    [
+      135,
+      74,
+      0,
+      54,
+      4,
+      "FLOAT"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.35,
+      "offset": [
+        2400.0,
+        400.0
+      ]
+    },
+    "frontendVersion": "1.48.7",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}

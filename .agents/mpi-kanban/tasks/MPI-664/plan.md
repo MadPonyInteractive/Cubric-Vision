@@ -40,10 +40,13 @@ one-field-one-param law AND puts the agent connector on the widget's own seriali
 `MINIMAX_MUSIC3` descriptor keyed `flow:minimax-music` and the licence bundled at
 `licences/minimax-music3/`. 819/819, lint clean. See § GAP 1 and § GAP 2 for what the work changed.
 
-**Next action: author `flow_minimax_music.json`** from the bench graph — the roster means
-variable-length STRING ASSEMBLY, not a fixed switch bank. Then the FlowDef's five steps, then
-tier 3's `@` picker. **The FlowDef's `id` MUST be `minimax-music`** or the licence gate never fires:
-the descriptor is keyed on `flow:minimax-music` and a lookup miss is silent.
+**THE GRAPH IS BUILT AND GREEN (2026-09-01).** `comfy_workflows/raw/flow_minimax_music.json`
+(46 nodes) → `comfy_workflows/flow_minimax_music.json`, converted against the engine, both gates
+clean, titles pinned. § The graph carries the shape and the three plan corrections it forced.
+
+**Next action: the FlowDef's five steps**, then tier 3's `@` picker. **The FlowDef's `id` MUST be
+`minimax-music`** or the licence gate never fires: the descriptor is keyed on `flow:minimax-music`
+and a lookup miss is silent.
 
 ⚠️ **THREE frame additions are now unproven in the app, not one:** `hiddenWhen`, `format: 'duration'`
 and the `voices` roster. All are unit-tested pure halves; no FlowDef declares any of them yet, so no
@@ -468,6 +471,52 @@ What B fixes in the plan, so the next session does not re-derive it:
 Still blocked on GAP 3 for the recipe itself: B needs `injectionParams` on the `enhance` action to
 deliver the music recipe and the raised `max_length`. B does NOT need anything beyond that — which
 is the whole reason it was chosen over A.
+
+## The graph — BUILT 2026-09-01
+
+`raw/flow_minimax_music.json` is the bench graph's 15 nodes plus 31 that assemble the caption.
+Converted against **48188**, `verify-workflow.mjs` + `validate-injection-rules.mjs` both green
+(the three "weight not installed" notes are the new deps, which the engine has never seen).
+
+**The chain, in one line each:**
+
+| Piece | Nodes |
+|---|---|
+| Basic Attributes | `Input_Style` + `Input_Style_Custom` → `Cat_Style`; `Input_Bpm` → `Bpm_Is_Auto`/`Bpm_String`/`Bpm_Clause`/`Bpm_Gate` → `Cat_Attrs` |
+| The 3 prose blocks | `Input_Caption` → `Prose_Mood` / `Prose_Vocal` / `Prose_Arrangement` (`RegexExtract`, First Group) |
+| Vocal Details | `Input_Voices` + `Input_Voice_Notes` → `Cat_Roster` → `Cat_Vocal_Body`; `Vocal_Gate` swaps in `Instrumental_Clause` |
+| Lyrics | `Strip_Voice_Markers` → `Lyrics_Gate` (empties them when instrumental) |
+| Assembly | `Cat_Global_Metadata*` / `Cat_Vocal_Details` / `Cat_Arrangement` → `Cat_Caption_Head` → `Caption_Final` → `Drop_Empty_Headings` → `Tidy_Caption` → the encoder |
+
+**The marker contract.** The LLM emits `[MOOD]` / `[VOCAL]` / `[ARRANGEMENT]` and nothing else;
+the recipe owns that (GAP 3). An **unmarked** caption is not an error — `Prose_Mood`'s pattern
+falls through to the whole string, and `Drop_Empty_Headings` removes the two headings left with
+nothing under them, so a hand-typed brief still produces a well-formed one-block caption.
+
+**Three things the build corrected in this plan:**
+
+1. **No switch bank for style.** `MpiAnySwitch` holds **5** arms and `MpiAnySwitch10` holds **10**;
+   18 families fit neither, and chaining two banks would cost ~21 nodes for one string.
+   `Input_Style` is an `MpiText` and the option's `v` IS the genre phrase — the shape
+   `serialiseVoices` already established on this card ("an option's `v` IS the caption word, not an
+   index … not an `MpiAnySwitch` bank"). § Why the style dropdown does not carry its own caption
+   text is therefore wrong about the mechanism; its *reason* survives, and the same guard applies:
+   the title is pinned, and a title-miss now shows up as a caption with no genre phrase.
+2. **`Input_Duration` needs no seconds→frames conversion.** It is an `MpiFloat` into
+   `MiniMaxMusic3TextEncode.max_duration`; the latent's `seconds` comes from the encoder's own
+   output. The LTX Extend `MpiMath` pattern does not apply here.
+3. **`style_custom` and `voice_notes` had to become `Input_*`.** Both were written as lowercase
+   LLM-bound fields under option A. Under B a lowercase field reaches nothing at all, so the graph
+   carries `Input_Style_Custom` and `Input_Voice_Notes` and the FlowDef must rename them or ship two
+   inert controls. **Worth Fabio's eye** — it is the one place B silently changed what a control
+   does, from "context for the model" to "text spliced verbatim into the caption".
+
+**Proven, and not.** `bench/sim_caption.py` walks the REAL converted API graph and executes its
+string half with the node semantics copied from the engine sources — four cases: vocal, instrumental
+(roster and lyrics still holding their values, which is the `hiddenWhen` trap), BPM-auto with an
+unmarked caption, and the baked defaults. The baked defaults reproduce the caption that passed the
+voice bench, minus the key clause MiniMax tell us not to fabricate. **ComfyUI has not executed the
+chain** — the bench was held by MPI-623's job. That closes on the first real generation.
 
 ## The enhancer recipe
 

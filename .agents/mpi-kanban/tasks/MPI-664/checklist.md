@@ -53,16 +53,36 @@ Design settled 2026-08-30 (hybrid). See `plan.md` for the full field surface and
       a record. MpiAbout's intro copy corrected: it said "Style and control models" over a list that
       already held Chroma, Juggernaut, MiniMax-H3 and other base checkpoints
 
-## Graph
+## Graph — DONE 2026-09-01
 
-- [ ] `flow_minimax_music.json` authored from the bench workflow
-- [ ] Style/tempo/vocal switch banks + `StringConcatenate` assembly of the 3 blocks
-- [ ] Instrumental arm writes the instrumental clause AND names the lead melodic instrument
-- [ ] `Input_Duration` seconds → frames (`MpiMath`, LTX Extend pattern)
-- [ ] `Input_Low_Vram` wired to the tiled/plain VAE decode switch already on the bench
-- [ ] ~~LoRA nodes present~~ but NO rack declared — the bench graph has NO LoRA nodes at all
+- [x] `comfy_workflows/raw/flow_minimax_music.json` authored from the bench workflow (15 → 46 nodes),
+      converted against the **engine** (48188) to `comfy_workflows/flow_minimax_music.json`.
+      `verify-workflow.mjs` and `validate-injection-rules.mjs` both green; the only notes are the
+      three MiniMax weights not installed on the engine yet, which is expected
+- [x] `StringConcatenate` chain assembles the 3 blocks around the LLM's prose (GAP 4 option B)
+- [x] ~~Style/tempo/vocal switch banks~~ — **`MpiAnySwitch` holds 5 arms and `MpiAnySwitch10` holds
+      10; 18 style families do not fit either.** `Input_Style` is an `MpiText` whose injected value
+      IS the genre phrase — the same shape `serialiseVoices` already established on this card for
+      the roster ("an option's `v` IS the caption word, not an index"). Plan correction, see
+      `plan.md` § The graph
+- [x] Instrumental arm writes the instrumental clause, and the graph RE-CHECKS `Input_Instrumental`
+      itself on both the lyrics and the Vocal Details block. It cannot name the lead instrument —
+      the graph does not know it; the clause states that an instrument carries the lead and the
+      recipe must make the LLM name it (GAP 3)
+- [x] ~~`Input_Duration` seconds → frames (`MpiMath`, LTX Extend pattern)~~ — **wrong for this
+      model.** `Input_Duration` is an `MpiFloat` into `MiniMaxMusic3TextEncode.max_duration`;
+      `EmptyMiniMaxMusic3LatentAudio.seconds` is driven from the encoder's own `seconds` output, so
+      there is no conversion to do. It is a CAP, exactly as `plan.md` § Current State records
+- [x] `Input_Low_Vram` wired to the tiled/plain VAE decode switch — already on the bench, untouched
+- [x] ~~LoRA nodes present~~ but NO rack declared — the bench graph has NO LoRA nodes at all
       (verified 2026-08-31, 15 nodes). Nothing to carry over; see `plan.md` § LoRA
-- [ ] Selector titles pinned in `tests/inject-params-titles.test.cjs`
+- [x] Titles pinned in `tests/inject-params-titles.test.cjs` — all eleven `Input_*`, `Output_Audio`,
+      the three always-emitted titles pinned ABSENT, plus the four structural gates that a title
+      check alone cannot catch. 836/836, lint clean
+- [ ] Live run on the bench — `bench/sim_caption.py` walks the real API graph and executes its
+      string half over four cases (vocal / instrumental / BPM-auto+unmarked / baked defaults), but
+      ComfyUI itself has not executed the chain: the bench was held by MPI-623's job. Closes on the
+      first real generation
 
 ## Enhancer recipe
 
@@ -76,7 +96,11 @@ Design settled 2026-08-30 (hybrid). See `plan.md` for the full field surface and
       Attributes, the instrumental clause and the roster string around them. So the scrubs assert the
       prose blocks are present, NOT that "the three headings survived" — that wording in `plan.md`
       § The enhancer recipe predates the decision
-- [ ] Music caption recipe written for `Input_System_Prompt`
+- [ ] Music caption recipe written for `Input_System_Prompt`. **It must emit the three blocks
+      prefixed `[MOOD]`, `[VOCAL]` and `[ARRANGEMENT]`** — that is the contract the graph's three
+      `RegexExtract` nodes parse. An unmarked caption is not an error: the whole text falls through
+      into Global Metadata and the two empty headings are dropped, so a hand-typed brief still runs.
+      It must also NAME the lead melodic instrument when instrumental — the graph cannot
 - [ ] `Input_Scrub_Negation` / `Input_Tidy` patterns assert the 3 PROSE BLOCKS survived (not the
       headings — the graph writes those now, GAP 4 option B)
 - [ ] `max_length` raised past 512 — 250–450 words does not fit the baked default
@@ -86,8 +110,13 @@ Design settled 2026-08-30 (hybrid). See `plan.md` for the full field surface and
 
 - [ ] `FlowDef` restructured into the five steps (Song / Voices / Lyrics / Style / Run)
 - [ ] `FlowDef` + op registered in the 4 files
-- [ ] Roster markers STRIPPED at dispatch — they build the caption's Vocal Details, the lyrics reach
-      the model clean (`<Choir>` is not in MiniMax's tag set)
+- [ ] 🔴 **`style_custom` and `voice_notes` must be renamed `Input_Style_Custom` / `Input_Voice_Notes`.**
+      Both were written as lowercase LLM-bound fields under option A. Under B a lowercase field
+      reaches NOTHING — `_runEnhance` sends only `from`, and a non-`Input_*` id is not injected — so
+      the graph now carries a node for each and both are inert until the FlowDef renames them
+- [x] Roster markers STRIPPED at dispatch — done IN THE GRAPH (`Strip_Voice_Markers`, a
+      `RegexReplace` on `<[^<>\n]*>[ \t]*` before the encoder), so nothing app-side has to know. The
+      `[Section]` tags survive; a marker alone on a line leaves a blank line, which MiniMax ignore
 - [ ] `Input_Duration` labelled as a CAP, not a length — the model derives actual seconds from lyrics
 - [ ] Preview graphics (`/mpi-flow-graphics`)
 - [ ] `docs/playbooks/add-flow/existing-flows/minimax-music.md`
