@@ -145,3 +145,49 @@ plus `A_seam.png` / `B_seam.png` / `E_seam.png` / `E_tail.png` / `G_seam.png` / 
 Static source: `G:\ComfyUi\ComfyUI\input\mpi591_static39.mp4`, cut from `MpiVideo_00001`.
 Graphs and scripts: session scratchpad `h3/` — `build_static.py`, `build_control.py`,
 `build_isolate.py`, `seam_metric.py`, plus `submit.py` carried over.
+
+## Phase 1 — GATE PASSED 2026-09-01 (arm F2)
+
+**Fabio's verdict on `F2_joined.mp4`:** *"the soundtrack carried on. That was a bit of a jump, but
+I think that's just because the model didn't have enough reference to go about, as it's a short
+video... these would work really well in longer references."* Phase 1's gate is "judged by Fabio";
+this is the pass, with the residual attributed to a 1.625 s reference rather than the mechanism.
+
+**The route that passed is ARM F2, and it uses none of the masked-prefix machinery.** Stock
+`MiniMaxH3ReferenceToVideo` generating the NEW frames only, `MiniMaxH3AddGuide` pinning the
+source's last frame at generated frame 0, the source's audio wired to `ref_audio`, and the two
+clips joined in PIXEL space — which is what the shipped `flow_ltx_extend.json` already does at its
+nodes 43/44/45 (`ImageBatchExtendWithOverlap` / `TrimAudioDuration` / `AudioConcat`).
+
+Measured on the FLASH metric (regional luma — the instrument that matches Fabio's eye; the speck
+metric above is discarded) and the seam metric, against the pack oracle on the SAME canvas:
+
+| arm | flash mean | flash worst | seam/tail | audio band cos |
+|---|---|---|---|---|
+| **F2** | **1.05** | **2.03** | **0.94x** | **0.973** |
+| F (no ref_audio) | 1.05 | 1.82 | 0.95x | 0.801 |
+| A pack oracle | 1.71 | 6.42 | 1.40x | 0.981 |
+| E masked prefix | 5.37 | 18.51 | 3.85x | — |
+| G masked prefix (static) | 4.21 | 15.61 | 1.39x | 0.427 |
+
+`seam/tail 0.94x` means the cut frame moves LESS than the tail's own frame-to-frame noise.
+
+**The audio metric is new and it caught what the video metrics could not.** `audio_match.py`: RMS
+dBFS from raw PCM plus a 16-band log-spaced spectral profile, cosine against the source. Arm F
+scored 1.05/1.82 on video and was still wrong, because nothing measured sound. Per
+`~/.claude/memory` `tool_measure_generated_audio`, level comes from raw PCM or `volumedetect` —
+`ebur128` reads the silence floor on clips this short.
+
+**API note that cost a lookup:** stock ref2v's `ref_audios` / `ref_videos` / `ref_video_audios` are
+`COMFY_AUTOGROW_V3`, and in an API prompt their keys are the **dotted flat path**
+(`"ref_audios.ref_audio_0"`), not a nested dict — `_expand_schema_for_dynamic` builds
+`expected_id = finalize_prefix(curr_prefix, name)` and looks that up in live inputs
+(`comfy_api/latest/_io.py:1195`). The shipped graph does not need this: our own `MpiH3References`
+already exposes `ref_image_1..9` / `ref_video_1..3` + `ref_video_audio_1..3` / `ref_audio_1..3` as
+flat named slots and drops the empty ones.
+
+Artifacts: `F_stock_pin_last_00001_` / `F_joined` / `F_seam.png` / `F_tail.png`,
+`F2_ref_audio_00001_` / `F2_joined` / `F2_seam.png` / `F2_tail.png`. Scripts in this session's
+scratchpad: `flash_F.py`, `audio_match.py`, `join_F.py`, `build_F2.py`, `h3/F2_ref_audio.json`,
+and `h3/F3_ref_audio.json` — built, UNRUN, the stronger arm (source frames + soundtrack as a
+reference video pair) held in reserve if a longer real source still steps at the join.

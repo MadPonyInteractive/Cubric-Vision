@@ -41,15 +41,42 @@ Arm M (the confirm run) is DONE: chunk alignment cut the artifact but did not cl
 confirmed by eye that G and M both still flash. The flash metric — not the discarded speck metric —
 is the instrument that matches his eye.
 
-**Next action: RUN ARM F.** It is already built and was skipped on a bad assumption. It is the
-pack author's own mechanism at stock's one-keyframe limit: no written prefix, so no encoder/sampler
-mixing, no patch and no fork. Every other variation of E/G writes a prefix and will keep flashing.
+**ARM F IS RUN (2026-09-01) AND IT WINS — read § ARM F.** Stock `MiniMaxH3ReferenceToVideo` +
+`MiniMaxH3AddGuide` pinning the source's last frame, new frames only, joined to the source in pixel
+space. Flash 1.05 mean / **1.82 worst** where the pack oracle peaks at 6.42 and every prefix arm at
+11-21; seam **0.95x**, i.e. the cut is quieter than the tail's own noise, against the oracle's
+1.40x. **No custom node, no fork, no monkey-patch, no masked prefix.** Fabio's read on 2026-09-01
+— "we were overcomplicating it" — is correct and now measured.
 
-**Three questions are open for Fabio and he has deferred them to the next session:** (1) scope —
-keep diagnosing, or unblock Phases 3-6 in parallel, since they do not depend on the flash; (2) is
-the 39 -> 51 minimum-context change still on the table now that alignment alone did not clear it;
-(3) Phase 1's seam verdict, open since 2026-08-31 — static ties the bar at 1.40x, moving misses at
-3.85x, and § THE AUTHOR'S OWN WORKFLOW now shows that bar was a pixel cut, not a continuous extend.
+**Fabio judged F on 2026-09-01: video good, AUDIO wrong** — it changed to a different soundtrack.
+Arm F2 fixes it with ONE stock link (`ref_audios.ref_audio_0` = the source's audio): band cosine
+0.973 against the source where F was 0.801 and the pack oracle is 0.981, level within 0.4 dB, and
+the video metrics unchanged. See § the audio metric.
+
+**PHASE 1'S GATE IS PASSED.** Fabio on F2, 2026-09-01: *"the soundtrack carried on. That was a bit
+of a jump, but I think that's just because the model didn't have enough reference to go about, as
+it's a short video... these would work really well in longer references."* So the residual jump is
+attributed to a 1.625 s reference, not to the mechanism, and **arm F2's graph is the v1 route**.
+The masked-prefix route is DEAD for v1: `MpiH3MaskedPrefix` is not in the shipped graph. (The node
+and `MpiH3EncodeAV` stay in MpiNodes — shipped, documented and proven equivalent to the pack's
+encode; nothing to revert. They are simply unused by this Flow.)
+
+**PHASE 3 IS DONE — gate green.** `comfy_workflows/flow_h3_extend.json` (33 nodes) and its
+`raw/` LiteGraph twin both exist, and the raw round-trips to the API file with **0 differences**.
+The graph RAN end to end on the bench (70 s): 94 frames, canvas 640x352 derived from the source,
+seam **0.65x**, generated audio alone **0.989** band cosine against the source — above the pack
+oracle's 0.981, and above F2's 0.973 because 56 generated frames give the model more room than 38.
+That is Fabio's "longer references will work better" reading, measured. See § PHASE 3.
+
+**Next: Phase 4** — `byModel` + `getUniversalWorkflow(key, modelIds)` + the `flowsRegistry` slot.
+F3 (`ref_video_1` + its soundtrack) is built and unrun — hold it as the answer if a longer real
+source still steps at the join.
+
+**Three questions are open for Fabio** (all three were asked 2026-09-01; two are now answered by
+arm F and only need his ratification): (1) scope — Phases 3-6 were held for F and F landed, so they
+are unblocked; (2) the 39 -> 51 minimum-context change is MOOT on arm F's route — there is no
+prefix to align; (3) Phase 1's seam verdict — F clears the bar outright, and the bar itself was a
+pixel cut, so like is now being compared with like.
 
 Fabio has confirmed the artifact by eye (G has it, I does not) but has NOT yet given the Phase 1
 seam verdict — the static-vs-moving question in § the static arm is still his to answer, and it
@@ -82,7 +109,7 @@ the SHIPPED graph, not invented: LoRA `minimax_h3_ref2v_..._4step` at **1.0**, `
 | C | masked prefix + a 39-frame `MiniMaxH3AddGuide` | **crash** |
 | D | that guide with NO mask | **same crash** — so it is the guide, not the mask |
 | **E** | **masked prefix + a single frame-0 guide** | **works — continuous, first-party, stock** |
-| F | stock pin-last-frame, no prefix | built, not run (E made it unnecessary) |
+| **F** | **stock pin-last-frame, no prefix** | **RUN 2026-09-01 — clean, and it beats the pack oracle** |
 | **G** | **arm E on a STATIC shot** | **the best result on the card — seam matches the oracle** |
 | H | no prefix, no guide (control) | clean, but a different scene: not a usable control |
 | **I** | **frame-0 guide, prefix REMOVED** | **clean — so the PREFIX causes the sparkle** |
@@ -350,6 +377,179 @@ and the pack's output, so frame 39 is a literal splice and that spike is the edi
 can say whether the pack's route flashes.** Answering that needs a fresh oracle run that emits ONE
 continuous clip — and it is the question that decides whether this route is viable, because if the
 oracle flashes too, the artifact is H3 turbo and not our node.
+
+### ARM F — RUN 2026-09-01. Clean, and it beats the oracle on both metrics.
+
+80 s, `execution_cached: []`, so it really ran. The graph is 20 nodes and **every one of them is
+stock core plus VHS plus our `MpiClearVram`** — no pack node, no `MpiH3MaskedPrefix`, no fork, no
+monkey-patch. The dangling `MiniMaxH3EncodeAVPatched` the built graph still carried was stripped
+first so the arm is provably pack-free:
+
+```
+VHS_LoadVideo → ImageFromBatch(38) ─┐
+MiniMaxH3ReferenceToVideo(len 39) ──┴→ MiniMaxH3AddGuide(frame_idx 0) → SamplerCustomAdvanced
+```
+
+The source's LAST frame is pinned as the guide at the FIRST generated frame. Nothing is written
+into the denoised latent, so there is no encoder/sampler mixing to have. Output is the new frames
+only; `join_F.py` then joins it to the source in pixel space (dropping F's frame 0, which the pin
+makes a duplicate of source frame 38) exactly the way the pack author does — 39 + 38 = 77 frames.
+
+**FLASH metric, over each arm's generated frames only** (F has no preserved head, so the c1/c2/c3
+windows do not apply; the fair controls are the arms on F's OWN canvas and scene, 640x352):
+
+| arm | canvas | prefix | mean | max |
+|---|---|---|---|---|
+| **F stock pin-last** | 640x352 | **no** | **1.05** | **1.82** |
+| A pack oracle, new frames only | 640x352 | n/a | 1.71 | 6.42 |
+| E prefix + frame-0 guide | 640x352 | yes | 5.37 | 18.51 |
+| B prefix, no guide | 640x352 | yes | 2.42 | 21.23 |
+| G straddling prefix | 352x608 | yes | 4.21 | 15.61 |
+| M chunk-aligned prefix | 352x608 | yes | 2.04 | 11.47 |
+| I / H no prefix | 352x608 | no | 0.46 / 0.47 | 0.91 / 0.97 |
+
+**F's worst single frame is 1.82.** Not one spike in 37 generated frames — the per-frame row runs
+0.6 to 1.8 flat. The pack oracle on the same canvas peaks at 6.42. Every prefix arm peaks 11-21.
+
+**SEAM metric on the joined clip** (`seam_metric.py`, seam frame diff / synthetic-tail mean diff):
+
+| clip | head | SEAM | tail | seam/tail |
+|---|---|---|---|---|
+| **F_joined** | 3.66 | 3.56 | 3.75 | **0.95x** |
+| A_oracle_joined | 3.66 | 11.61 | 8.29 | 1.40x |
+| G static | 2.05 | 5.78 | 4.15 | 1.39x |
+| E moving | 3.67 | 23.01 | 5.98 | 3.85x |
+
+**0.95x means the cut frame is quieter than the tail's own frame-to-frame noise** — the seam is
+inside the noise floor, which is the definition the metric was built for. F's tail is also calmer
+than the oracle's (3.75 vs 8.29). Confirmed by eye on `F_seam.png` (frames 36-43: one continuous
+walk, no cut) and `F_tail.png` (frames 39-74: coherent, no sparkle).
+
+**So the entire masked-prefix route is unnecessary.** It was built to avoid a pixel join; the pixel
+join measures better than it does, and better than the pack's. Everything the last two sessions
+diagnosed — `token_drop=3`, the straddled decode chunk, `plan_context`'s packing-phase bug — is
+real and is now moot for v1, because arm F never creates the condition.
+
+Artifacts: `D:\WORK\Images\Outputs\mpi591\F_stock_pin_last_00001_.mp4` (new frames),
+`F_joined.mp4` (77 frames, the deliverable shape), `F_seam.png`, `F_tail.png`.
+
+**But F's AUDIO is a different soundtrack — Fabio heard it, 2026-09-01, and it is a real gap.**
+Arm F left every audio reference on `MiniMaxH3ReferenceToVideo` empty, so the sampler invented a
+soundtrack with nothing to match against. The video metrics could not see it; a metric was needed.
+
+### The audio metric, and arm F2 — the fix is ONE stock link
+
+`audio_match.py`: RMS dBFS from raw PCM (per memory, `ebur128` reads the silence floor on clips
+this short — `volumedetect` or raw PCM, never a loudness filter) plus a 16-band log-spaced spectral
+profile, cosine similarity against the source. It separates "same ambience, new moment" from "a
+different soundtrack", and it agrees with Fabio's ear on the arms he has already judged.
+
+**Arm F2 = arm F + `ref_audios.ref_audio_0` wired to the source clip's audio.** Nothing else
+changed. The stock ref2v node carries `ref_audios` / `ref_videos` / `ref_video_audios` autogrow
+inputs (`/object_info`); the API prompt key is the **dotted flat path**, `"ref_audios.ref_audio_0":
+["5", 2]`, because `_expand_schema_for_dynamic` builds `expected_id = finalize_prefix(curr_prefix,
+name)` and looks that key up in the prompt's live inputs (`comfy_api/latest/_io.py:1195`). Not a
+nested dict. 60 s, sampler and decode ran fresh.
+
+| clip | RMS dBFS | Δ dB | **band cos vs source** |
+|---|---|---|---|
+| source | -11.5 | 0.0 | 1.000 |
+| **F2 (+ ref_audio)** | -11.9 | **-0.4** | **0.973** |
+| A pack oracle | -11.0 | +0.5 | 0.981 |
+| F (no ref_audio) | -13.2 | -1.6 | **0.801** |
+| G masked prefix | -39.9 | **-28.4** | **0.427** |
+
+**F2 sits level with the pack oracle on audio and loses nothing on video** — flash 1.05 mean /
+2.03 max (F: 1.05 / 1.82), seam **0.94x** (F: 0.95x). One stock link bought the audio.
+
+Note where the oracle's audio continuity actually comes from: `oracle_run.json` wires **no**
+`ref_audio` — A's 0.981 comes from `context_latent`, which is AV-nested, so the pack's
+`kind:'context_audio'` keyframes carry the source's audio. Ours is a different mechanism reaching
+a comparable place: `ref_audio` matches CHARACTER (voice, ambience, level), it does not continue
+the waveform. Whether that difference is audible at the join is Fabio's ear, not the metric's.
+
+Artifacts: `F2_ref_audio_00001_.mp4`, `F2_joined.mp4`, `F2_seam.png`, `F2_tail.png`.
+`F3_ref_audio.json` is built and unrun — it adds `ref_videos.ref_video_0` +
+`ref_video_audios.ref_video_audio_0` (the source's frames paired with its soundtrack), a stronger
+continuity signal whose `ref_video` tooltip asks for 2-15s against our 1.625s source, and whose ref
+tokens ride every sampling step. Run it only if F2's audio join is not good enough by ear.
+
+### PHASE 3 — the workflow file, DONE 2026-09-01
+
+`comfy_workflows/flow_h3_extend.json`, 33 nodes, plus `comfy_workflows/raw/flow_h3_extend.json`.
+
+**Every node is a clone of a real node from another `raw/*.json`** — the sampling stack off
+`minimax_h3_r2va.json`, the join off `flow_ltx_extend.json`. Only `MiniMaxH3AddGuide` had no raw
+donor anywhere and was synthesised from `/object_info`, which is the one case bench-editing.md
+allows. Nothing was hand-written as LiteGraph.
+
+```
+MpiLoadVideo(Input_Video) ─┬→ MpiMath x2 (snap W/H down to 32) ─┐
+                           ├→ GetImageRangeFromBatch(-1, 1) ────┼→ MpiH3References(Input_Refs)
+                           └→ audio → ref_audio_1 ──────────────┘         ↓
+MpiInt(Input_Duration) → MpiConvert → MpiH3Length → length     MiniMaxH3AddGuide(frame_idx 0)
+                                                                          ↓
+                              SamplerCustomAdvanced (turbo LoRA 1.0, SigmaShift 12/5, beta/6, euler)
+                                                                          ↓
+       ImageBatchExtendWithOverlap(overlap 1, linear_blend) ← VAEDecode / VAEDecodeAudio → AudioConcat
+                                                                          ↓ MpiSaveVideo(Output_Video)
+```
+
+**Turbo single-stage, deliberately.** That is the configuration arm F2 ran and Fabio passed. The
+r2va two-stage / non-turbo branch is NOT carried over — a Flow bakes one proven path, and these
+sampler settings are the ones that were judged rather than a re-tune.
+
+**No `Input_Negative` node**, and the titles test asserts its ABSENCE. H3 takes no negative
+conditioning, so a node with that title would be one nothing reads; the field hides on the H3 arm
+(the MPI-664 `hiddenWhen` dependency Phase 3 already recorded).
+
+**Verification, in the order bench-editing.md sets out:**
+
+| check | result |
+|---|---|
+| `verify-workflow.mjs` against **48188** (the SHIPPED engine, not the bench) | ✓ 33 nodes |
+| `validate-injection-rules.mjs` | ✓ |
+| raw → `workflow-to-api.mjs` → diff against the API file, input by input | **0 differences** |
+| real bench run of the flow graph, `execution_cached` all loaders only | ✓ 70 s, success |
+| `tests/inject-params-titles.test.cjs` (new H3 case) | ✓ 22/22 |
+| `workflow-input-staging-gate` + `flow-model-choice` + `flow-required-media` + `flow-output-filename` | ✓ 29/29 |
+
+**The bench run's own numbers** (`P3_flow_h3_extend_00001.mp4`, 94 frames = 39 source + 56 new − 1
+crossfade, 640x352 derived from the clip, `Input_Duration` 2 s snapped to 56 frames by
+`MpiH3Length`):
+
+| | value | for comparison |
+|---|---|---|
+| seam / tail | **0.65x** | F2 0.94x, pack oracle 1.40x |
+| flash, generated region | 1.23 mean / 5.05 worst | F2 1.05 / 2.03 over 38 frames, oracle 1.71 / 6.42 |
+| generated audio alone, band cos vs source | **0.989** | F2 0.973, oracle 0.981 |
+
+The worst flash sits at frame 90 — the far END of a 56-frame generation, not the seam — so it is
+drift with distance from the pinned frame, and it is still below the oracle's worst. **The audio
+got BETTER with a longer generation**, which is Fabio's own prediction measured.
+
+> **fps — DECIDED by Fabio 2026-09-01, and it is the one thing Phase 3 still owes.**
+> His rule: *"I honestly don't mind if the input video becomes 24 FPS. The only thing that I mind
+> is if one video has a different speed than the other once they're combined. And also, mind the
+> speed of execution."* So the source is CONVERTED to 24 fps and both halves are true 24 —
+> relabelling is not enough, because a relabelled 30 fps source plays its motion 20% slow beside a
+> generated half that does not, which is exactly the mismatch he rules out.
+>
+> **How, and why this way.** No node on the shipped engine resamples an image batch by frame rate:
+> `VHS_SelectEveryNthImage` only decimates by an integer, and `FrameInterpolate` needs a RIFE model
+> — a weight to download and a pass to run, which fails his speed rule. `MpiLoadVideo` already
+> decodes through ffmpeg in one pass (`_decode_frames`, `video.py:243`), so a `force_rate` widget
+> there (default 0 = source rate, the way VHS_LoadVideo spells it) makes the resample **free** —
+> ffmpeg drops/duplicates during the decode that already happens, no second pass and no model.
+> `frame_count`, `fps` and `duration` are then reported at the new rate, so everything downstream
+> that derives off them stays correct.
+>
+> **The work, in order:** add `force_rate` to `MpiLoadVideo` in the SIBLING repo via
+> `/mpi-nodes-sync` (commit → push → pin `dev_configs/node_lock.json`); it goes in `required` AFTER
+> `block_if_empty`, so every existing `widgets_values` stays valid and every other graph keeps its
+> behaviour at the default. Then in `flow_h3_extend`: `Input_Video.force_rate = 24` and
+> `MpiSaveVideo.fps` becomes a constant **24** instead of `["331", 2]`. Re-run the raw round trip
+> and the bench run afterwards — the graph changes, so both proofs have to be re-earned.
 
 ### A separate latent bug this surfaced — `plan_context` can break the packing phase
 
