@@ -6,6 +6,11 @@
 > archival `docs/releases/YYYY-MM-DD-v<newVersion>.md`, then clear this file
 > back to the header.
 >
+> **Cleared 2026-09-01 after 1.4.3 shipped.** All three fixes were folded into
+> `RELEASE_NOTES['1.4.3']` and `docs/releases/2026-09-01-v1.4.3.md`. Note this file is
+> the *branch's* scratchpad — 1.4.3 was cut from the `1.4.2` maintenance branch, so it
+> held only the three issue-#2 fixes, never master's accumulated backlog.
+>
 > **Cleared 2026-08-15 after 1.4.2 shipped.** All nine items (4 new + 5 fixes) were
 > folded into `RELEASE_NOTES['1.4.2']` and `docs/releases/2026-08-15-v1.4.2.md`.
 >

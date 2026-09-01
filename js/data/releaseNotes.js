@@ -38,6 +38,19 @@
  * @type {Record<string, ReleaseNotes>}
  */
 export const RELEASE_NOTES = {
+  '1.4.3': {
+    version: '1.4.3',
+    whatIsNew: [],
+    fixes: [
+      'A half-installed engine now says so, instead of letting a generation fail on a technical error. Part of the engine is downloaded separately after install, and if that step failed the app started anyway and looked perfectly healthy — until you picked one of the affected models and the generation died with a message naming an internal component. It now tells you plainly that part of the engine did not install, and stops those generations up front rather than halfway through.',
+      'You can repair the engine yourself, from Settings. A new Engine health section appears in Settings only while something is actually wrong, with a Repair engine button that reinstalls the missing part and restarts the engine. It takes a few minutes and your models are left alone. There was previously no way to trigger the reinstall at all — reopening the app did not do it.',
+      'Sending us the log actually works now. The Report on GitHub button quietly did nothing in a released build: it needed a credential no release ships with, so the click just failed in the background with nothing shown. The error window now has a Show log file button that opens the log in your file manager, and Report on GitHub opens a pre-filled report form in your browser for you to attach it to.',
+    ],
+    breakingChanges: [],
+    importantChanges: [],
+    engineNotes: [],
+  },
+
   '1.4.2': {
     version: '1.4.2',
     whatIsNew: [
