@@ -1174,6 +1174,12 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         // (video is master). Only on the first/primary video item;
                         // null when the source had no audio. Ignored for images.
                         audioViewUrl: (i === 0 && model.mediaType === 'video') ? (outputInfo.audioUrl || null) : null,
+                        // MPI-623: the `.ply` an `Output_Splat` node reported, as a /view URL
+                        // the server fetches into `.meta/<id>.splat.ply`. A bake produces ONE
+                        // scene, so it belongs to the first item — the still rendered from the
+                        // bake pose. Null for every workflow without the node, which is all of
+                        // them but the 3D Scene Flow.
+                        splatViewUrl: (i === 0) ? (outputInfo.splatUrl || null) : null,
                         // MPI-663: the stems to sum into THIS file, when the run is a
                         // combine. Null on every other run, and there is only ever one
                         // item in the loop when it is set.
@@ -1257,6 +1263,11 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 if (savedData?.previewAssets) baseProps.previewAssets = savedData.previewAssets;
             }
             if (isAudio) baseProps.duration = savedData?.duration ?? 0;
+            // MPI-623 — on the LIVE item too, not just the sidecar: a just-baked Scene
+            // card must open its own scene without a reload (the miss `flowId` had
+            // above). Set only when the `.ply` landed, and only on an image — a video
+            // or audio item carrying the key would contradict `createVideoItem`.
+            if (!isVideo && !isAudio && savedData?.splatPath) baseProps.splatPath = savedData.splatPath;
             const item = isVideo
                 ? createVideoItem(baseProps)
                 : isAudio ? createAudioItem(baseProps) : createImageItem(baseProps);

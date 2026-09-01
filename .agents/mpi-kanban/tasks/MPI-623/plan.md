@@ -340,6 +340,34 @@ notes in [research/](research/).
 > descriptor:** `flow_3d_scene_a.json` / `_b.json` do not exist, and
 > `tests/inject-params-titles.test.cjs:918` reds on a FlowDef naming an absent file.
 
+> **Session note 2026-09-01 (fifteenth). THE INGEST IS DONE, AND THE `.ply` NOW LANDS
+> INSIDE THE PROJECT.** `splatViewUrl` runs `generationService.onComplete` ->
+> `projectService.saveGeneration` -> `/project/save-generation`, where a `streamDownload`
+> beside the `audioViewUrl` mux writes `.meta/<id>.splat.ply` and stamps `meta.splatPath`.
+> Phase 1's contract is finally satisfied end to end on the app's side: a Scene card is an
+> image card whose companion `.ply` is in the project, owned by `DERIVATIVE_RE`, copied by
+> `add-from-cards` and swept on delete. **869/869 on `npm test`, lint clean.** Amendment 54.
+>
+> **The two things the shape had to get right.** A bake produces ONE scene, so the URL is
+> handed to the FIRST item only — threaded to every item, N cards would each re-fetch
+> hundreds of MB of the same file. And the route RETURNS `splatPath`, which the live image
+> item picks up: the reconciler only hydrates a sidecar on RELOAD, so without that a
+> freshly-baked Scene card would not open its own scene until a restart. That is the exact
+> miss `flowId` had in MPI-256, found by reading its comment rather than by hitting it.
+>
+> **Failure is absence, never a half-set path.** A failed fetch removes the stub, logs, and
+> leaves `splatPath` OFF the sidecar — the still is still worth keeping, and a card
+> pointing at a `.ply` that is not there looks right until it is opened, three hours after
+> the bake that produced it.
+>
+> **NEXT: the descriptor, and it is still Fabio's gate.** `comfy_workflows/flow_3d_scene_a.json`
+> / `_b.json` do not exist; `tests/inject-params-titles.test.cjs:918` reds on a FlowDef
+> naming an absent graph, and the two `UNIVERSAL_WORKFLOWS` entries are covered by NO
+> existence assertion, so landing them ahead of the graphs would pass CI and sit there as a
+> landmine. Everything the app needs to receive a bake is now built and unconsumed:
+> the chain, the capture, the ingest. Phase 2's `user-ux` gate is still owed and CANNOT be
+> exercised until the graphs exist — there is no Flow to run.
+
 **Project mode:** `scalable-foundation`.
 
 A user bakes a Gaussian-splat scene once from a 360 equirect image, then re-enters
@@ -1661,6 +1689,48 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     `tests/inject-params-titles.test.cjs:918` reads `graphOf(flow.workflow)` and records a
     problem when the file is missing. The capture, like the chain before it, is landed
     ahead of its consumer by design.
+
+### Amendments from the ingest session (2026-09-01)
+
+54. **THE INGEST IS BUILT — the `.ply` is fetched into the project, and the failure mode
+    is absence rather than a dead path.**
+
+    **What landed** (`js/services/generationService.js`, `js/services/projectService.js`,
+    `routes/projects.js`, `tests/splat-companion.test.cjs` +5 tests): `splatViewUrl` is
+    threaded through the same three hops `audioViewUrl` already uses, and a
+    `streamDownload` beside the audio mux writes `.meta/<id>.splat.ply` and stamps
+    `metaContent.splatPath` in the `/project-file?path=` shape the `add-from-cards` copy
+    re-points. 869/869 on `npm test`, lint clean.
+
+    **Two decisions inside the wiring, both of which fail silently the other way.**
+    The URL goes to the FIRST item only (`i === 0`): a bake produces one scene, and handed
+    to every item N cards would each re-fetch the same hundreds of MB. And the route
+    RETURNS `splatPath` so the LIVE item carries it — `projectReconciler.js` pushes the
+    whole sidecar as the item, but only on RELOAD, so without the response field a
+    just-baked Scene card would not open until a restart. That is `flowId`'s MPI-256 miss,
+    avoided by reading the comment it left rather than by repeating it.
+
+    **`splatPath` is set only when the bytes landed.** On a failed fetch the partial file
+    is removed, a warning is logged, and the key is left OFF the sidecar. The still is
+    kept — the bake ran and the card is its evidence — but a `splatPath` written
+    optimistically is a card that reads as fine until someone opens it three hours later.
+    The same reasoning as `splatViewFileInfo` returning null (amendment 53), one hop down.
+
+    **It is image-only, deliberately.** `baseProps.splatPath` is set under
+    `!isVideo && !isAudio`, because `createVideoItem`/`createAudioItem` do not declare the
+    key and `tests/splat-companion.test.cjs` asserts they never carry it. A spread would
+    have added it to every video item in silence.
+
+    **Seven mutations watched go red** before the tests were believed: dropping the fetch;
+    setting `splatPath` in the catch; renaming the companion `<id>.ply` (which takes it
+    out of `DERIVATIVE_RE` and leaks 387 MB per delete); dropping the sidecar stamp;
+    dropping `splatViewUrl` from the client's POST body; threading it to every item; and
+    dropping it from the live item. The last three are the silent ones — the file still
+    lands and every other assertion still passes.
+
+    **The descriptor is STILL gated on Fabio.** `flow_3d_scene_a.json` / `_b.json` do not
+    exist. Every app-side piece a bake needs — chain, capture, ingest — is now built and
+    waiting for its consumer.
 
 ### Verified NOT drifted from the source workflow (checked 2026-08-29)
 

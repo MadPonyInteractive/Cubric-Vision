@@ -175,13 +175,15 @@ Delivered per plan.md amendments 18-20. `'splat'` is NOT a media type.
       branch and the `splatUrl` side-output in `commandExecutor.js`.
       `tests/flow-splat-capture.test.cjs`, 4 tests; all five mutations watched go red.
       864/864 on `npm test`, lint clean. Amendment 46's "small" held. plan.md amendment 53.
-- [ ] **THE INGEST HALF - unblocked, NOT started, and bigger than amendment 46 implied.**
-      `Output_Splat` reports an ABSOLUTE engine path, so the `.ply` must be FETCHED into
-      `.meta/<id>.splat.ply`, and nothing ingests one today. Needs `splatViewUrl` threaded
-      through `generationService.onComplete` -> `projectService.saveGeneration` ->
-      `routes/projects.js` `/project/save-generation` (a `streamDownload` beside the
-      `audioViewUrl` mux). Both server-side files carry MPI-678 `needs_verification`
-      provenance. plan.md amendment 53.
+- [x] **THE INGEST HALF DONE (2026-09-01).** `splatViewUrl` threaded
+      `generationService.onComplete` -> `projectService.saveGeneration` ->
+      `/project/save-generation`, where a `streamDownload` beside the `audioViewUrl` mux
+      writes `.meta/<id>.splat.ply` and stamps `meta.splatPath`. The route RETURNS
+      `splatPath` and the live image item carries it, so a fresh Scene card opens without
+      a reload. A failed fetch removes the stub and leaves `splatPath` ABSENT - never
+      half-set. `tests/splat-companion.test.cjs` +5 tests (3 executing the real route
+      against a stand-in `/view` server); **seven mutations watched go red**; 869/869 on
+      `npm test`, lint clean. plan.md amendment 54.
 - [ ] **`ComfyUI-SplatKit` is NOT in `dev_configs/node_lock.json`** - the pack every node
       in this card comes from is undeclared and exists only on the bench. Belongs with
       task 2 below.

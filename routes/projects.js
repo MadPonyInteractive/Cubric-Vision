@@ -1845,7 +1845,7 @@ router.post('/project-media/:projectId/extract', async (req, res) => {
  */
 router.post('/project/save-generation', async (req, res) => {
     try {
-        const { folderPath, comfyViewUrl, audioViewUrl, mixViewUrls = null, itemId, operation = 'generated', filePrefix = null, meta = {}, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId, flowId = null, flowInputs = null } = req.body;
+        const { folderPath, comfyViewUrl, audioViewUrl, splatViewUrl = null, mixViewUrls = null, itemId, operation = 'generated', filePrefix = null, meta = {}, generationMs, pixelDimensions, mediaType, stage, frozenParams, loraSnapshot, previewAssets, replaceItemId, flowId = null, flowInputs = null } = req.body;
         if (!folderPath) return res.status(400).json({ success: false, error: 'folderPath required' });
         if (!comfyViewUrl) return res.status(400).json({ success: false, error: 'comfyViewUrl required' });
         const isVideo = mediaType === 'video';
@@ -1968,6 +1968,29 @@ router.post('/project/save-generation', async (req, res) => {
             }
         }
 
+        // MPI-623: a 3D Scene card is an image card carrying a `.ply`. `Output_Splat`
+        // reports the trainer's own path rather than a save node's file dict, so the
+        // client turned it into a /view URL and the bytes are fetched HERE â€” the same
+        // authed proxy as the audio above, which is what makes this work on a Pod whose
+        // disk the app can never open. `.ply` is the trainer's output format
+        // (MpiBrushTrain returns a ply path); the add-from-cards copy derives the
+        // extension instead because it may be copying a card this build did not write.
+        //
+        // On failure `splatPath` is left UNSET rather than half-set: a card pointing at
+        // a `.ply` that is not there looks fine until it is opened, and turns a
+        // three-hour bake into a silent dead end. The still is still worth keeping.
+        let splatCompanionPath = null;
+        if (splatViewUrl) {
+            const dest = path.join(metaDir, `${id}.splat.ply`);
+            try {
+                await streamDownload(splatViewUrl, dest);
+                splatCompanionPath = dest;
+            } catch (splatErr) {
+                await fs.remove(dest).catch(() => {});
+                logger.warn('project', `splat download failed for ${id} â€” card keeps its still, no splatPath: ${splatErr.message}`);
+            }
+        }
+
         let materializedFrozenParams = frozenParams;
         let materializedPreviewAssets = null;
         let materializedGenerationSettings = (meta.generationSettings && typeof meta.generationSettings === 'object')
@@ -2066,6 +2089,11 @@ router.post('/project/save-generation', async (req, res) => {
                 ? _replacePrevGenerationMs + generationMs
                 : (generationMs ?? null),
         };
+        // MPI-623 â€” set only when the `.ply` actually landed above. Same
+        // `/project-file?path=` shape the add-from-cards copy re-points.
+        if (splatCompanionPath) {
+            metaContent.splatPath = `/project-file?path=${encodeURIComponent(splatCompanionPath)}`;
+        }
         if (isVideo) {
             if (videoInfo) {
                 metaContent.fps        = videoInfo.fps;
@@ -2192,6 +2220,7 @@ router.post('/project/save-generation', async (req, res) => {
             thumbPath: metaContent.thumbPath || null,
             thumbPathLg: metaContent.thumbPathLg || null,
             proxyPath: metaContent.proxyPath || null,
+            splatPath: metaContent.splatPath || null,
             fps: metaContent.fps || 0,
             duration: metaContent.duration || 0,
             frameCount: metaContent.frameCount || 0,

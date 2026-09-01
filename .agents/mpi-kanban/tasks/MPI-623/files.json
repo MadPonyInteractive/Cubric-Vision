@@ -19,6 +19,8 @@
     "tests/flow-chain.test.cjs",
     "js/utils/comfyOutputUrls.js",
     "js/services/commandExecutor.js",
-    "tests/flow-splat-capture.test.cjs"
+    "tests/flow-splat-capture.test.cjs",
+    "js/services/generationService.js",
+    "js/services/projectService.js"
   ]
 }
