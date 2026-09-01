@@ -22,6 +22,9 @@
     "js/data/modelConstants/loraDeps.js",
     "licences/minimax-music3/**",
     "tests/licence-gate.test.cjs",
-    "js/components/Compounds/LandingPages/MpiAbout/MpiAbout.js"
+    "js/components/Compounds/LandingPages/MpiAbout/MpiAbout.js",
+    "js/core/operationRegistry.js",
+    "operation_registry.json",
+    "tests/flow-output-filename.test.cjs"
   ]
 }

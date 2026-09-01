@@ -117,3 +117,46 @@ gone red first.
 
 - The refused-gate outcome — **filed, not taken**. One line at `downloadService.js:105`, a
   file on MPI-500's `files.json`. Message `b7e04c19-3f52-4a86-9d13-2c8f610b4e37`.
+
+## 2026-09-01 — the CI gate is CLEARED, and the report link has now rendered live
+
+Recorded from the MPI-664 session, which had the first non-klein-9b gated flow to look at.
+**No card state changed here** — this is evidence for whoever closes the card.
+
+### The `98afaeed` CI re-check — RESOLVED
+
+The note above said *"CI on `98afaeed` has not concluded ... re-check before close-out"*. It is
+resolved, though not by that run: `98afaeed`'s own run has aged out of the last 40, and the later
+`11f63db3` shows **cancelled** — the concurrency-group behaviour, not a failure.
+
+What settles it is that master HEAD **`ba88c4f0` is green**, and all four of this card's commits
+(`876b4361`, `98afaeed`, `2b0249e6`, `11f63db3`) are ancestors of it. A green run on a descendant
+covers the tree state those commits produced, `tests/flow-licence-surface.test.cjs` included.
+
+### NEW, and it had never been seen: the REPORT link renders
+
+MPI-664's `Text to Music` flow reached the Flow Library for the first time, and it is the first
+gated flow whose licence declares `report`. Phase 1 and phase 2 were both verified on **klein-9b**,
+which declares neither Report nor Request-authorization — so that half of `_licenceErrands` was
+asserted as data and never rendered.
+
+Fabio's screenshot, 2026-09-01, the drawer for `Text to Music`:
+
+- `LICENCE` heading, `MiniMax-Music3 Community License`, `Powered by MiniMax-Music3`
+- **two** links — `Read the licence` and `Report misuse on our Discord`
+- no `Request authorization`, correctly: `MINIMAX_MUSIC3` declares no `territory`
+- `MpiLicenceGate` fires on Install, keyed `flow:minimax-music`, before the 13.4GB moves —
+  which is this card's "consent is NOT bypassed" premise, now seen rather than reasoned
+
+### STILL UNSEEN — and it is exactly what this card is held open for
+
+The screenshot does **not** touch the H3 half. MiniMax Music 3 carries no `territory` and no
+`verify`, so none of these rendered:
+
+1. the widened `LICENCE REQUIRED` chip for a TERRITORY licence,
+2. the `REVIEW LICENCE` footer (this drawer's footer reads `INSTALL MODELS`),
+3. the `Request authorization` link.
+
+§ *Why this card stays in `doing` and not `done`* names precisely those, on Fabio's own call, and
+MPI-591 is still `in-progress`. So this evidence **narrows** the card without closing it: the
+report link is no longer unproven, the territory chip and footer still are.

@@ -5,8 +5,18 @@ read it first, and do not re-search it.
 
 ## Current State
 
-**Design COMPLETE. The two frame additions are BUILT and green.** The graph, the FlowDef and the
-enhancer recipe are still to do.
+**THE FLOW IS WIRED. 2026-09-01.** Design, both original frame additions, the deps + licence, the
+graph, GAP 3, the FlowDef and the enhancer recipe are all DONE and green — 852/852, lint clean on
+every file this card owns, both workflow gates green. What is left is the LIVE RUN, the preview
+graphics and the flow's own doc page.
+
+**Next action: the live run in Fabio's own app.** It is the only remaining proof, and it closes
+FOUR things at once — `hiddenWhen`, `format: 'duration'` and the `voices` roster have still never
+rendered, and nothing has measured whether Qwen3-VL-4B holds the three-marker format.
+
+🔴 **Two things need Fabio before or at that run — see § Open, needs Fabio:** the flow is titled
+**"Text to Music"**, not "MiniMax Music 3"; and a step whose only field is hidden leaves a GHOST
+STEP in the carousel.
 
 Settled: hybrid caption approach · the LLM question (Vision already ships `promptEnhance`) · the 18
 families as the style dropdown · the caption schema · the licence position · BPM as a 0-means-auto
@@ -575,8 +585,58 @@ Worth knowing rather than rediscovering: 663 is what BUILT the `disabledFieldIds
 `_paintFieldConstraints` path that `hiddenWhen` extends, so its stems work is the reference
 implementation to read before touching it.
 
+## ✅ GAP 3 — CLOSED 2026-09-01. The enhance action carries its own recipe
+
+Fabio chose **A: build it** (2026-09-01), over deferring the Enhance button entirely.
+
+`FlowStepField.injectionParams` — one object on the `enhance` declaration, spread in
+`_runEnhance`. Two lines of behaviour change in `MpiBaseFlow`, and it is the plumbing
+`commandRegistry.js`' own comment has promised since MPI-504.
+
+**One deliberate deviation from the plan's wording.** The plan said the declaration is *"merged
+over the driven `Input_Seed`"*. It is spread **before** it instead, so a declaration cannot reach
+the seed. The same file's existing comment is the reason: the seed is driven precisely because a
+fixed one returns the same phrase on every press, and the Enhance → Generate → Enhance loop is the
+whole point. Letting a FlowDef freeze it would be a footgun with no use case.
+
+**What rides on it, all in `MINIMAX_MUSIC_ENHANCE_PARAMS`** (hoisted above `FLOWS`, because the
+`enhance` pair is declared on both the Style step and the run slide and two copies of a recipe is
+two recipes that drift):
+
+- The music recipe. Emits `[MOOD]` / `[VOCAL]` / `[ARRANGEMENT]` and nothing else; never names the
+  genre, BPM or key, because the graph writes those and a 4B rounds "78 BPM" to "around 80".
+- `Input_Scrub_Negation` DISABLED with `(?!)` — a pattern that can never match. The baked one
+  strips negation clauses and would eat *"no drums until the second verse"*.
+- `Input_Tidy` narrowed to `\s+$`. The baked `[\s,.]+$` also eats a closing full stop.
+- `Input_Text_Gen.max_length: 1400`. The shared enhancer graph's `TextGenerate` was UNTITLED —
+  titling it was purely additive, and Character Sheet keeps 512 by not injecting.
+
+**Not a concern, though it reads like one:** the enhancer's `StringReplace` flattens its output to
+one line. The blocks are delimited by their MARKERS, not by newlines, so the parse is unaffected —
+and one line per block is the shape a caption paragraph wants anyway.
+
+## 🔴 A step whose only field is hidden leaves a GHOST STEP — found 2026-09-01, needs Fabio
+
+`hiddenWhen` sets `wrap.hidden` on a FIELD wrapper (`_paintFieldConstraints`). There is no
+step-level equivalent, and **Voices and Lyrics each declare exactly one field**. So an instrumental
+run still shows both steps in the carousel and in the ticker, each with its title and hint above an
+empty body.
+
+Shipped as declared rather than fixed, because a fix is a FIFTH frame addition on this card and the
+fourth to touch `MpiBaseFlow` — the same reason GAP 3 was raised rather than folded in.
+
+The fix, if Fabio wants it, is DERIVED rather than declared — no new vocabulary, and it cannot be
+declared wrong: hide a `fields` step whose every declared field is currently hidden. `_allDecls` and
+`hiddenFieldIds` already hold everything it needs.
+
 ## Open — needs Fabio
 
+0. **The title is "Text to Music", not "MiniMax Music 3".** Every other flow is named for its
+   OUTCOME — Head Swap, Voice Changer, Text to Speech, Stems — and naming this one for its model
+   would be the only exception, sitting directly beside "Text to Speech" in the same audio section.
+   The `id` stays `minimax-music` regardless (the licence gate keys on it), and §3.1 attribution is
+   already discharged on the About page, so nothing legal rides on the title. Say the word and it
+   changes — it costs a `filePrefix` line, because the op is `flowTextToMusic`.
 1. Sign-off on the five-step field surface above.
 2. ~~Anything missing from the `Input_Voice` list?~~ **Closed** — the list was signed off, then the
    single dropdown was replaced by the roster outright, so the question no longer applies. The voice
@@ -624,3 +684,32 @@ the same shape: the declarative half was easy, the PAINTING half had a hole.
 **Not proven yet:** the painter's DOM half. Both pure functions are unit-tested, but nothing declares
 `hiddenWhen` or `format: 'duration'` yet, so `wrap.hidden` + the CSS override have not run in the app.
 That closes with the FlowDef, on the checklist's existing "live run verified" item.
+
+**2026-09-01 — the FlowDef pass, and the one real bug it turned up.**
+
+1. 🔴 **A declared field with NO `default` is never seeded, so the GRAPH'S BAKED VALUE RUNS.**
+   `_seedField` returns `undefined` and both seeding loops skip an undefined, so the id never
+   reaches `injectionParams` at all. `Input_Lyrics` and `Input_Caption` are baked with the BENCH'S
+   OWN DEMO SONG — a full lo-fi track and its caption — so a user who left the lyrics box empty
+   would have heard the bench's words, and one who skipped Enhance would have had their brief
+   silently replaced by the bench's caption. Fixed by declaring `default: ''` on all four
+   empty-able text fields. The class is general and the fix is one word; the guard below is what
+   stops it coming back.
+2. **A new generic guard** in `inject-params-titles.test.cjs` — *"every FlowDef field and enhance
+   recipe addresses a real node"*. It was the THIRD injection source and nothing checked it: the
+   existing dotted-key test reads `PromptBoxControls.js` only. It covers all three failure modes at
+   once — a lowercase id that reaches nothing (the `style_custom` class), an `injectionParams` key
+   naming a node or widget that does not exist (which would leave Character Sheet's baked recipe
+   running), and a missing `default` over a baked value. Derived from the declarations, so a new
+   flow is covered by existing. Proven to bite by breaking two keys and watching both fail.
+   It found two real things on its first run: `Input_Denoise` is consumed by `ltxSigmasInjector`
+   rather than by a node (documented exception, one-entry allow-list) and `Input_Language.language`
+   showed field ids can be dotted too.
+3. **`Input_Positive` / `Input_Negative` are exempt from the default check** — `_buildParams` writes
+   both on every run whatever the flow declares, which is why Character Sheet's undefaulted
+   `Input_Positive` is safe and this flow's `Input_Caption` was not.
+4. **The FlowDef's own defaults were run through the REAL converted graph** (`bench/sim_caption.py`
+   driven by `mapDeclaredValue`'s output, not by hand-typed values). Three cases — fresh open,
+   enhanced with a two-voice roster at 78 BPM, and instrumental with the lyrics and roster STILL
+   HOLDING their values. All three assemble a well-formed caption, the markers strip out of the
+   lyrics, and the instrumental clause swaps in with the lyrics emptied.

@@ -39,7 +39,7 @@ Design settled 2026-08-30 (hybrid). See `plan.md` for the full field surface and
       **13.34GB total, not 14.33GB** — the plan's figures were HuggingFace's DECIMAL display and
       every consumer here parses `size` as 1024-based. Measured by `--sizes`, never typed
 - [x] `sha256` for each (`/mpic-compute-dep-hashes`) — 3/3 written from HF `X-Linked-ETag`
-- [ ] `requiredDeps` on the FlowDef lists exactly those three
+- [x] `requiredDeps` on the FlowDef lists exactly those three
 - [x] Licence entry in `licences.js` — `MINIMAX_MUSIC3`, keyed **`flow:minimax-music`**, not a model
       id: the Flow Library installs flow deps under `flowDepKey(id)` and `downloadService.start()`
       keys the gate on whatever it is handed, so gating a no-model flow cost ZERO code. NO territory
@@ -86,7 +86,9 @@ Design settled 2026-08-30 (hybrid). See `plan.md` for the full field surface and
 
 ## Enhancer recipe
 
-- [ ] 🔴 **BLOCKER (GAP 3): the `enhance` action cannot carry a recipe.** `_runEnhance` passes only
+- [x] ✅ **GAP 3 CLOSED 2026-09-01 (Fabio chose "build it").** The `enhance` action now declares
+      `injectionParams`, spread in `_runEnhance` BEFORE the driven seed so a declaration cannot
+      freeze it. `FlowStepField.injectionParams` documents it. Was:** `_runEnhance` passes only
       `Input_Seed`; the action declares only `op`/`from`/`to`/`model`. The baked recipe is Character
       Sheet's ("You are a character designer"), so Enhance on this flow would write a wardrobe noun
       phrase. Fix = let the action declare `injectionParams`, merged over the driven seed. FOURTH
@@ -96,28 +98,36 @@ Design settled 2026-08-30 (hybrid). See `plan.md` for the full field surface and
       Attributes, the instrumental clause and the roster string around them. So the scrubs assert the
       prose blocks are present, NOT that "the three headings survived" — that wording in `plan.md`
       § The enhancer recipe predates the decision
-- [ ] Music caption recipe written for `Input_System_Prompt`. **It must emit the three blocks
+- [x] Music caption recipe written for `Input_System_Prompt`, hoisted as
+      `MINIMAX_MUSIC_ENHANCE_PARAMS` (declared on BOTH the Style step and the run slide, so one
+      object rather than two that drift). **It must emit the three blocks
       prefixed `[MOOD]`, `[VOCAL]` and `[ARRANGEMENT]`** — that is the contract the graph's three
       `RegexExtract` nodes parse. An unmarked caption is not an error: the whole text falls through
       into Global Metadata and the two empty headings are dropped, so a hand-typed brief still runs.
       It must also NAME the lead melodic instrument when instrumental — the graph cannot
-- [ ] `Input_Scrub_Negation` / `Input_Tidy` patterns assert the 3 PROSE BLOCKS survived (not the
+- [x] `Input_Scrub_Negation` DISABLED with `(?!)` (its baked pattern would eat "no drums until
+      the second verse") and `Input_Tidy` narrowed to `\s+$` (the baked one also eats a closing full
+      stop). Both verified against Python `re` with the node's own flags. Originally scoped as (not the
       headings — the graph writes those now, GAP 4 option B)
-- [ ] `max_length` raised past 512 — 250–450 words does not fit the baked default
+- [x] `max_length` raised to 1400. The shared enhancer graph's `TextGenerate` was UNTITLED —
+      now `Input_Text_Gen`, reconverted against the ENGINE, one line changed in the API file.
+      Character Sheet keeps 512 by not injecting
 - [ ] Measured: does Qwen3-VL-4B hold the format? If not, escalate per `plan.md` § If the 4B cannot hold format
 
 ## Flow
 
-- [ ] `FlowDef` restructured into the five steps (Song / Voices / Lyrics / Style / Run)
-- [ ] `FlowDef` + op registered in the 4 files
-- [ ] 🔴 **`style_custom` and `voice_notes` must be renamed `Input_Style_Custom` / `Input_Voice_Notes`.**
+- [x] `FlowDef` restructured into the five steps (Song / Voices / Lyrics / Style / Run)
+- [x] `FlowDef` + op registered in the 4 files
+- [x] 🔴 **DONE — `Input_Style_Custom` / `Input_Voice_Notes`, and a generic guard now catches the
+      whole class** (`inject-params-titles.test.cjs` § "every FlowDef field and enhance recipe
+      addresses a real node"). Was:**
       Both were written as lowercase LLM-bound fields under option A. Under B a lowercase field
       reaches NOTHING — `_runEnhance` sends only `from`, and a non-`Input_*` id is not injected — so
       the graph now carries a node for each and both are inert until the FlowDef renames them
 - [x] Roster markers STRIPPED at dispatch — done IN THE GRAPH (`Strip_Voice_Markers`, a
       `RegexReplace` on `<[^<>\n]*>[ \t]*` before the encoder), so nothing app-side has to know. The
       `[Section]` tags survive; a marker alone on a line leaves a blank line, which MiniMax ignore
-- [ ] `Input_Duration` labelled as a CAP, not a length — the model derives actual seconds from lyrics
+- [x] `Input_Duration` labelled "Maximum length", `format: 'duration'`, 30-240s — the model derives actual seconds from lyrics
 - [ ] Preview graphics (`/mpi-flow-graphics`)
 - [ ] `docs/playbooks/add-flow/existing-flows/minimax-music.md`
 - [ ] Live run verified in the user's own app
@@ -127,3 +137,30 @@ Design settled 2026-08-30 (hybrid). See `plan.md` for the full field surface and
 - [ ] Lyrics generator — user writes their own; revisit only if a lyrics model earns it
 - [ ] Saved custom styles as reusable chips
 - [ ] Music style-LoRA system
+
+## FlowDef pass — 2026-09-01
+
+- [x] The 18 style phrases WRITTEN, in our own words. MiniMax's taxonomy is an interface fact and
+      fine to conform to; their 1,000 template captions are unlicensed and their own skill forbids
+      copying them. Each option's `v` IS the phrase and each ends in a full stop, because
+      `Cat_Style` joins it to the custom box with a space and the two must read as two sentences
+
+- [x] 🔴 **A field with NO `default` runs the GRAPH'S BAKED VALUE.** `_seedField` returns undefined
+      and both seeding loops skip it, so the id never reaches `injectionParams`. `Input_Lyrics` and
+      `Input_Caption` are baked with the BENCH'S OWN DEMO SONG — this would have sung the bench's
+      lyrics to anyone who left the box empty, and replaced the brief outright for anyone who
+      skipped Enhance. `default: ''` on all four empty-able text fields
+- [x] New generic guard: *"every FlowDef field and enhance recipe addresses a real node"*. The THIRD
+      injection source, previously unchecked — the existing dotted-key test reads
+      `PromptBoxControls.js` only. Proven to bite by breaking one key on each path and watching both
+      fail. Found two real things on its first run (`Input_Denoise` is injector-derived; a field id
+      can itself be dotted)
+- [x] The FlowDef's OWN defaults run through the REAL converted graph via `bench/sim_caption.py`,
+      resolved through `mapDeclaredValue` rather than typed by hand — fresh open, enhanced with a
+      two-voice roster at 78 BPM, and instrumental with the lyrics and roster still holding values
+- [ ] 🔴 **GHOST STEP — needs Fabio.** `hiddenWhen` hides a FIELD, and Voices and Lyrics each
+      declare exactly one, so an instrumental run shows both steps with a title, a hint and an empty
+      body. Fix is derived, not declared (hide a `fields` step whose every field is hidden) but it
+      is a FIFTH frame addition — raised, not folded in
+- [ ] 🔴 **TITLE — needs Fabio.** Shipped as "Text to Music" (outcome naming, like every other
+      flow), not "MiniMax Music 3". `id` stays `minimax-music` either way
