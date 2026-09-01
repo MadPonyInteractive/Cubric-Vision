@@ -24,7 +24,10 @@ const path = require('node:path');
 // finds the developer's real app.log and pops a file-manager window on `npm test`.
 const TMP_USER_DATA = path.join(os.tmpdir(), `mpi675-${process.pid}`);
 process.env.APP_USER_DATA = TMP_USER_DATA;
-const LOG_PATH = path.join(TMP_USER_DATA, 'logs', 'app.log');
+
+// Required AFTER APP_USER_DATA is set, and shared with routes/system: the reveal test
+// below swaps `getLogPath` on this instance to pin the route's miss branch.
+const logger = require('../routes/logger');
 
 async function withServer(router, fn) {
     const app = express();
@@ -143,18 +146,31 @@ test('the credentialed auto-file route is gone', { concurrency: false }, async (
 });
 
 test('logs/reveal answers with the log path even when there is no log to reveal', { concurrency: false }, async () => {
-    // Remove the log so the route takes its miss branch: the point of the test
-    // is that the dialog can still tell the user where to look, and taking the
-    // success branch would open a real file-manager window on the test machine.
-    fs.rmSync(LOG_PATH, { force: true });
-    await withCredentiallessServer(async (baseUrl) => {
-        const res = await fetch(`${baseUrl}/logs/reveal`, { method: 'POST' });
-        assert.equal(res.status, 404);
-        const data = await res.json();
-        assert.equal(data.success, false);
-        assert.ok(data.logPath, 'logPath must be present on every outcome');
-        assert.equal(data.logPath, LOG_PATH);
-    });
+    // The route MUST take its miss branch here: the success branch spawns the OS
+    // file manager, and `npm test` may not open a window on anyone's desktop.
+    //
+    // Deleting app.log does not guarantee that. The logger appends ASYNCHRONOUSLY
+    // (routes/logger.js, one queued write per call), so a line emitted by an earlier
+    // test in this file can land after the delete and put the file back — which is
+    // exactly what happened on CI run 33489276364: 200, not 404, and a real reveal
+    // spawned on the runner. Point the route at a path nothing writes to instead;
+    // `getLogPath()` is the single place it resolves from, and `fresh()` below
+    // re-requires routes/system against this same logger instance.
+    const realGetLogPath = logger.getLogPath;
+    const missingLog = path.join(TMP_USER_DATA, 'logs', 'never-written.log');
+    logger.getLogPath = () => missingLog;
+    try {
+        await withCredentiallessServer(async (baseUrl) => {
+            const res = await fetch(`${baseUrl}/logs/reveal`, { method: 'POST' });
+            assert.equal(res.status, 404);
+            const data = await res.json();
+            assert.equal(data.success, false);
+            assert.ok(data.logPath, 'logPath must be present on every outcome');
+            assert.equal(data.logPath, missingLog);
+        });
+    } finally {
+        logger.getLogPath = realGetLogPath;
+    }
 });
 
 test.after(() => fs.rmSync(TMP_USER_DATA, { recursive: true, force: true }));
