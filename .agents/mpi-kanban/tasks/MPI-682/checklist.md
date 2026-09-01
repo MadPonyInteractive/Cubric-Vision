@@ -24,6 +24,8 @@
   - [x] `voice-changer` uninstall leaves `chatter-box`'s 3 shared deps on disk, both
         tiles stay Ready, toast names the reason
   - [x] User's `G:/CubricModels` verified intact afterwards (132 files, 193.3GB)
+  - [x] Re-run on the customRoot resolver branch (an `extra_model_paths.yaml` like
+        theirs) — identical result; that is the branch their machine actually takes
   - [x] **Caught a real defect the plan had ruled out** — no repaint, because
         `downloadService` re-syncs only in its SSE listener and no EventSource exists
         until a download starts. Fixed with `await reSyncInstalledModels()`; pinned.

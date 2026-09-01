@@ -54,8 +54,25 @@ its deps are Chatter Box's too. Both tiles stayed Ready, both weights stayed on 
 the toast said *"Voice Changer — every file is still needed by another installed flow."*
 At the HTTP layer the server reported them `keptShared` against the `(flow)` holder.
 
-**The user's data is intact.** `G:/CubricModels` re-counted after teardown: 132 files,
-193.3GB, and all three MiniMax weights back at `nlink=1`. Sandbox roots deleted.
+**Run twice, on BOTH resolver branches.** The first pass had no
+`extra_model_paths.yaml`, so `getCustomRoot()` returned null and `resolveComfyPath` took its
+`else` branch (`getDefaultModelsRoot()`). The user's engine carries that file
+(`base_path: G:/CubricModels`), so their uninstall takes the **customRoot** branch instead —
+direct path, then a recursive search inside the dep's own bucket, then a default-root
+fallback. That is the resolver MPI-607 and MPI-654 both broke invisibly, so the second pass
+copied their yaml with `base_path` repointed at the sandbox. `/comfy/get-path` confirmed
+`isDefault: false`, and every row of the table above came out identical: files deleted,
+drawer repainted, cache flipped, same toast.
+
+**The user's data is intact.** `G:/CubricModels` re-counted after each teardown: 132 files,
+193.3GB, and all three MiniMax weights back at `nlink=1`. Sandbox roots deleted, both times.
+
+## Not verified here — the install direction
+
+Re-installing Music Maker is a 13.4GB download and was not run. So `models:checked` is
+proven to fire for a deps-only change in the **uninstall** direction only (that is what
+repainted the drawer); MPI-681's install-direction fan-out is unchanged by this card and
+still rests on its own evidence. The user is re-installing to check it on their own machine.
 
 ## What the live run caught that neither test did
 
