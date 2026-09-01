@@ -4,10 +4,35 @@ Written 2026-08-31 after Fabio brought in `kat3ri/ComfyUI-MiniMax-H3-Extend`. Tw
 this plan and neither should be re-searched: `brief.md` (the H3 seam physics — every rule there
 fails SILENTLY) and `research/minimax-h3-extend-nodepack.md` (the pack, and what changed).
 
-## Current State (2026-09-01, after Phase 3b — the graph is finished)
+## Current State (2026-09-01, after 4b + 4c — only Phase 5 and Phase 6 are left)
+
+**Phases 1, 2, 3, 3b, 4, 4b and 4c are ALL CLOSED.** The graph is 40 nodes, both arms are
+bench-proven, and the app side is wired and tested. The card is in `doing` / `in-progress`.
+
+> **NEXT: Phase 5, and it is NO LONGER BLOCKED.** The handoff said 48188 was stale on `53c0198`;
+> Fabio has restarted his app since, and the 40-node graph — `force_rate`, `EasyCache` and
+> `ImageResizeKJv2` included — validates clean against it. Run the isolated app
+> (`npm run app:isolated`, never `:3000`), and fold in MPI-666's five licence-surface checks
+> (message `71214c6e`). **Look at a NON-TURBO extend, not only a turbo one:** its generated half
+> measures ~2x turbo's frame-to-frame luma energy and a luma diff cannot tell detail from flicker.
+> Then Phase 6 docs: `existing-flows/ltx-extend.md` (second candidate, the `byModel` contract, the
+> Turbo toggle, and that a non-32-divisible source is delivered centre-cropped) and
+> `any-of-models.md` ("a slot may pick a different GRAPH, not just different params"). The
+> `hiddenWhen` model clauses are ALREADY documented in `ui/carousel-frame/fields.md`.
+
+- **PHASE 4b — DONE.** Turbo is the user's choice, default TRUE. `#908 Input_is_Turbo` drives three
+  `MpiIfElse` plus `#915`'s strength math; `hiddenWhen` gained `{ model }` / `{ modelNot }` so the
+  toggle hides on LTX and the `negative` box finally hides on H3. Turbo re-earned at **69.5 s**
+  against the 70 s baseline (the LoRA/SigmaShift reorder cost nothing); non-turbo runs at
+  **102.3 s**, +47%, seam 0.333x against turbo's 0.327x. See § Plan Drift for the three corrections.
+- **PHASE 4c — DONE.** `#916 ImageResizeKJv2` (crop, `divisible_by 32`, centre) feeds BOTH `#902`
+  and `#904`; `#900/#901` deleted. A 1280x720 source now delivers **1280x704**, and the source half
+  is proved to be a crop rather than a rescale at 44.3 dB vs 27.5 dB.
+
+---
 
 **Phases 1, 2, 3 and 3b are all closed. The graph is done; what is left is wiring, verifying and
-documenting it.** The card is in `doing` / `in-progress`.
+documenting it.**
 
 - **PHASE 1 — GATE PASSED by Fabio on arm F2.** The route is the SIMPLE one and none of the
   masked-prefix machinery is in it: stock `MiniMaxH3ReferenceToVideo` generating the new frames
@@ -35,77 +60,13 @@ documenting it.** The card is in `doing` / `in-progress`.
   **ref2va** — see § Plan Drift for both. `npm test` 853/853, `eslint js/` clean, and the new
   MPI-591 test in `flow-model-choice` was mutation-checked red twice.
 
-**NEXT: item 4b — TURBO OR NOT, the user's choice.** Asked by Fabio 2026-09-01 and it is the
-next session's whole job. Phase 5 stays blocked behind the app restart anyway, so 4b comes first.
+**4b and 4c both LANDED 2026-09-01.** The planning block that stood here — the donor node table,
+the crop-vs-rescale question, the `hiddenWhen` decision and the 48188 stale-pin warning — described
+work that is now done and an engine that has since been restarted. What it decided is in § Plan
+Drift; what it proved is in `validation.md` § Phases 4b + 4c.
 
-> **It reverses a deliberate Phase 3 decision.** § PHASE 3 says "Turbo single-stage, deliberately
-> — a Flow bakes one proven path", because turbo is the configuration arm F2 ran and Fabio passed.
-> Exposing the choice means the NON-TURBO arm becomes shippable, and **nothing has ever run it on
-> this graph**. It needs its own bench proof, not just wiring.
-
-**The graph branch is already written — CLONE IT, do not invent it.** `minimax_h3_r2va.json` (and
-its `raw/minimax_h3_r2va_template.json` twin, the donor shelf bench-editing.md requires) carries
-the whole thing off ONE boolean, `MpiSimpleBoolean` #444 titled `Input_is_Turbo`:
-
-| what it switches | turbo (true) | non-turbo (false) | selector |
-|---|---|---|---|
-| model path | #454 `MiniMaxH3SigmaShift` 12/5 | #456 `EasyCache` 0.2 / 0.15 / 0.95 on the raw UNET | #459 `MpiIfElse` |
-| sigmas | #412 `BasicScheduler` beta / 6 | #425 `BasicScheduler` simple / **25** | #428 `MpiIfElse` |
-| sampler | #422 `KSamplerSelect` euler | #421 `KSamplerSelect` res_multistep | #419 `MpiIfElse` |
-| (a step/cfg int) | #416 `MpiInt` 3 | #414 `MpiMath` `10 if a else 5` off #379 | #417 `MpiIfElse` |
-| turbo LoRA strength | #453 `MpiMath` `1.0 if a else 0.2` straight off #444 | | |
-
-`flow_h3_extend.json` already carries the TRUE side under the same ids (#454, #412, #422) because
-Phase 3 cloned them from this very graph, and #464 `MpiVideoSamplingPreview` sits in the same place
-in both — so the port is additive: bring over #444, #456, #425, #421, #453, the `MpiIfElse` nodes,
-and decide whether #417's pair is wanted. #457's `strength_model` / `strength_clip` are currently
-CONSTANT 1.0 and must come off #453 instead.
-
-**The flow-side control has a blocker, and it is the one already on this card.** The field is an
-injection param, so it is `Input_is_Turbo` named for its node — but it must show on the **H3 arm
-only**, exactly like the `negative` box (§ Plan Drift, 2026-09-01). `hiddenWhen` keys on another
-FIELD's value, not on the picked model. **Two fields now need that hide, so it stops being
-cosmetic**: decide with Fabio whether 4b extends `hiddenWhen` to a model rule (the MPI-664
-follow-up) or ships with a dead control on the LTX arm.
-
-**Default MUST stay Turbo.** Fabio's own speed rule on the fps decision — *"mind the speed of
-execution"* — and non-turbo is 25 steps against turbo's 6, on top of dropping the 4-step LoRA.
-Quote the measured cost of both arms when the bench runs land; the turbo baseline is 70 s.
-
-**ALSO OPEN, and it is a live defect in the SHIPPED Phase 3 graph — item 4c.** The stitch
-refuses any source that is not 32-divisible on both axes. `MpiMath` #900/#901 snap the GENERATED
-canvas with `floor(a/32)*32`, but #904 `ImageBatchExtendWithOverlap` takes `source_images` straight
-from the loader at the raw size, and that node raises rather than resizing:
-
-```
-ValueError: Source and new images must have the same shape: torch.Size([720, 1280]) vs torch.Size([704, 1280])
-```
-
-Reproduced on the bench 2026-09-01 in 10 s with NO model — loader + an `ImageScale` standing in for
-the generated half + the same join node (`repro_720p_join.json`, this session's scratchpad). 720p,
-1080p and 1080x1920 portrait all fail; 640x352 is 32-divisible on both axes, which is the only
-reason thirteen arms and two flow runs never saw it.
-
-**`flow_ltx_extend.json` already solves it and the fix is a donor clone.** Its #28 is an
-`ImageResizeKJv2` — `keep_proportion: 'crop'`, `divisible_by: 32`, `crop_position: 'center'`,
-`width`/`height` off the loader's own outputs — and its stitch #43 reads `source_images` from #28
-rather than from the loader. Port that node in and re-point #904. **Fabio's call on the trade**: the
-LTX answer CROPS (up to 31px off an edge, so a 720p clip is delivered at 1280x704), the alternative
-is rescaling the original pixels. He asked the question that found this, so ask him which.
-
-**Then Phase 5** — verify in an isolated app, BLOCKED until Fabio restarts his app so 48188
-reinstalls MpiNodes at `f1ed110`. Phase 6 is docs. F3 (`ref_video_1` + its soundtrack) is built and
-unrun — hold it as the answer if a longer real source still steps at the join.
-
-**48188 IS STALE AND ONLY FABIO CAN FIX IT.** The shipped engine is spawned by his live app, so
-this session did not restart it; it is still on `53c0198` and therefore does not know `force_rate`.
-Until the app's engine restarts onto the new pin, `verify-workflow.mjs` against 48188 reports one
-line (`#331 MpiLoadVideo: input "force_rate" is not on the engine's signature`) and an H3 extend
-cannot run in the app. **Phase 5 cannot start before that restart.** The app is a user replica with
-no symlink — it reinstalls MpiNodes at the pin on boot, so a restart is the whole fix.
-
-**The negative field must HIDE on the H3 arm** (`hiddenWhen`, depends on MPI-664). If Phase 4 lands
-first the field stays visible with a one-line comment naming the dependency — never a bespoke twin.
+**F3 (`ref_video_1` + its soundtrack) is built and unrun** — hold it as the answer if a longer real
+source still steps at the join.
 
 **MPI-666 is parked in `validating` waiting on this card** (message `71214c6e`). Once Phase 4
 declares `minimax-h3` in `requiredModels`, its five licence-surface checks become runnable and they
@@ -678,6 +639,39 @@ not the changelog. The bench (`G:\ComfyUi`, 0.34.2) has the same. Nothing here w
   MPI-664 shipped `hiddenWhen`, but its rule is `{ field, is }` and keys on another FIELD's value,
   not on the picked model, so it cannot express this hide. The field carries a comment naming the
   dependency and nothing else was built — never a bespoke twin.
+  **SUPERSEDED by 4b (same day):** `hiddenWhen` gained `{ model }` / `{ modelNot }` and the box now
+  hides. Fabio's call — a dead Turbo TOGGLE is worse than a dead text box, so with two fields
+  wanting the rule it stopped being cosmetic.
+- **2026-09-01 (4b) — the branch closes BEFORE the LoRA, which REORDERS the proven turbo chain.**
+  The plan said "port #444 and the `MpiIfElse` nodes"; it did not say the port moves an existing
+  node. `#457 MpiLoraModelClip` is a SINGLE shared node whose strength comes off `#453` (1.0 turbo /
+  0.2 not), so the gate has to resolve before it — donor order `497 → 454 SigmaShift → IfElse → 457
+  LoRA`, where the flow graph shipped `497 → 457 LoRA → 454 SigmaShift`. Both are patches on one
+  `ModelPatcher` and the set is unchanged, but the shipped turbo arm is the arm Fabio passed, so the
+  turbo bench run was re-earned as a gate rather than assumed. The alternative — a second LoRA node
+  for the non-turbo arm — was rejected: it duplicates a weight load to avoid a reorder that the
+  donor graph already ships.
+- **2026-09-01 (4b) — `#417/#416/#414` are NOT ported, and that closes the plan's open question.**
+  The plan asked "decide whether #417's pair is wanted". They are not: that `MpiIfElse` feeds
+  `SplitSigmas #415` in the donor's TWO-STAGE sampler, and `flow_h3_extend` is single-stage with no
+  `SplitSigmas` at all. Porting them would have added three nodes wired to nothing.
+- **2026-09-01 (4c) — `#902 Last Frame` was a SECOND unsnapped consumer the plan missed.** It named
+  `#904`'s `source_images` only. `#902` also read the raw loader, so the frame `MiniMaxH3AddGuide`
+  pins would have been 1280x720 against a 1280x704 generated canvas. Both now read the resize node.
+- **2026-09-01 (4c) — `#900/#901` are DELETED, not kept beside the resize.** `ImageResizeKJv2`
+  reports the snapped size it actually produced on its own `width`/`height` outputs, so a second
+  independent `floor(a/32)*32` could only ever disagree with it. `#330`'s width/height come off the
+  resize node now.
+- **2026-09-01 (4b/4c) — `inject-params-titles`'s FlowDef guard only knew ONE graph per flow.**
+  It resolved `flow.workflow` alone, so it called the Turbo toggle a silent no-op — correct for the
+  LTX arm and wrong for the flow. Widened to the `byModel` candidate set: a field is legitimate when
+  it addresses a node in ANY arm, and the `hiddenWhen` model rule is what keeps it off the others.
+  Its baked-default check now walks every candidate too, since bench content baked into the H3 graph
+  is as shippable as content baked into LTX's. Mutation-checked: a bogus `Input_*` id still fails it.
+- **2026-09-01 — 48188 IS NO LONGER STALE.** The handoff recorded it on `53c0198` and warned that
+  `verify-workflow.mjs` would report the `force_rate` line. Fabio has restarted his app since:
+  the 40-node graph, `force_rate`, `EasyCache` and `ImageResizeKJv2` included, validates clean
+  against 48188. **Phase 5's blocker is gone.**
 - **2026-09-01 — `force_rate` is `optional`, not `required`.** Phase 3's fps block said `required`,
   after `block_if_empty`, so every saved `widgets_values` stays valid. That reasoning only covers
   the LiteGraph twin. The API file is what the app dispatches, and `execution.py`'s `validate_inputs`

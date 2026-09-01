@@ -1140,7 +1140,10 @@ export const MpiBaseFlow = ComponentFactory.create({
          */
         function _paintFieldConstraints() {
             const disabled = disabledFieldIds(_allDecls, _fieldValues);
-            const hidden = hiddenFieldIds(_allDecls, _fieldValues);
+            // MPI-591: the picked model can hide a field too, so the pick is read on
+            // every paint rather than captured once — `setFlowModel` writes to a session
+            // Map and the dropdown repaints this after changing it.
+            const hidden = hiddenFieldIds(_allDecls, _fieldValues, flowModelIds(flow));
             _allDecls.forEach((f) => {
                 const wrap = _liveFields.get(f.id);
                 if (!wrap) return;
@@ -1284,6 +1287,9 @@ export const MpiBaseFlow = ComponentFactory.create({
                         // Everything else on this slide (params, racks, the payload) is read
                         // at Run through the same session Map, so nothing else needs telling.
                         _paintModelSlots();
+                        // Except the fields — MPI-591 gave `hiddenWhen` a model rule, so a
+                        // field can belong to one candidate and not another.
+                        _paintFieldConstraints();
                     });
                     _modelBtns.push(dd);
                 } else {

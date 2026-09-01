@@ -164,6 +164,59 @@ test('hiddenWhen takes a field off screen, and only when the rule says so', asyn
     const onFalse = [{ id: 'x', hiddenWhen: { field: 'flag', is: false } }];
     assert.equal(hiddenFieldIds(onFalse, {}).has('x'), false, 'undefined is not false');
     assert.equal(hiddenFieldIds(onFalse, { flag: false }).has('x'), true);
+
+    // The field rule must not read the model list, and must survive being handed one.
+    assert.deepEqual([...hiddenFieldIds(fields, { Input_Instrumental: true }, ['anything'])].sort(),
+        ['Input_Lyrics', 'Input_Voice']);
+});
+
+// ── MPI-591 — hiding on the PICKED MODEL, not on another field ─────────────────
+
+test('hiddenWhen keys on the picked model, so a per-arm control is off screen elsewhere', async () => {
+    // Extend Video runs two different GRAPH FILES off one Model slot, and its declared
+    // fields are shared across both. The injector skips a title the picked graph does
+    // not carry IN SILENCE, so without this rule the H3 arm shows a dead `negative` box
+    // and the LTX arm shows a dead Turbo toggle — a control the user works and nothing
+    // happens, which reads as a broken app rather than an inapplicable one.
+    const { hiddenFieldIds } = await esm('js/utils/declaredFields.js');
+    const H3 = 'minimax-h3-ref2va';
+    const fields = [
+        { id: 'positive', type: 'text' },
+        { id: 'negative', type: 'text', hiddenWhen: { model: H3 } },
+        { id: 'Input_is_Turbo', type: 'toggle', hiddenWhen: { modelNot: H3 } },
+    ];
+
+    assert.deepEqual([...hiddenFieldIds(fields, {}, ['ltx-23-balanced'])], ['Input_is_Turbo'],
+        'the LTX arm keeps its negative and loses the Turbo toggle');
+    assert.deepEqual([...hiddenFieldIds(fields, {}, [H3])], ['negative'],
+        'the H3 arm keeps Turbo and loses the negative');
+
+    // A slot can hold more than one pick; membership, not identity.
+    assert.deepEqual([...hiddenFieldIds(fields, {}, ['some-lora', H3])], ['negative']);
+
+    // NO pick resolved yet (nothing installed, or the slot has not been read) must not
+    // leave a `modelNot` field on screen — it belongs to an arm that is not running.
+    assert.deepEqual([...hiddenFieldIds(fields, {}, [])], ['Input_is_Turbo']);
+    assert.deepEqual([...hiddenFieldIds(fields, {})], ['Input_is_Turbo'],
+        'the argument is optional and defaults to no pick');
+});
+
+test('the Extend Video FlowDef declares the Turbo toggle and hides each arm\'s dead control', async () => {
+    const { FLOWS } = await esm('js/data/flowsRegistry.js');
+    const flow = FLOWS.find(f => f.id === 'ltx-extend');
+    assert.ok(flow, 'the Extend Video flow is gone');
+
+    const turbo = (flow.fields || []).find(f => f.id === 'Input_is_Turbo');
+    assert.ok(turbo, 'the Turbo toggle is not declared');
+    assert.equal(turbo.type, 'toggle');
+    assert.equal(turbo.default, true,
+        'non-turbo is 25 steps against 6 — the default stays Turbo');
+    assert.deepEqual(turbo.hiddenWhen, { modelNot: 'minimax-h3-ref2va' },
+        'only the H3 graph carries Input_is_Turbo, so the toggle must hide on LTX');
+
+    const negative = (flow.steps || []).flatMap(s => s.fields || []).find(f => f.id === 'negative');
+    assert.deepEqual(negative.hiddenWhen, { model: 'minimax-h3-ref2va' },
+        'H3 takes no negative conditioning, so the box must hide on that arm');
 });
 
 test('format: duration spells a slider out instead of showing bare seconds', async () => {

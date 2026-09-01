@@ -64,15 +64,21 @@
     "inputs": {
       "lora_name": "minimax-h3\\minimax_h3_ref2v_lightx2v_turbo_4step_v0.1_resized_avg_rank_20_bf16.safetensors",
       "model": [
-        "497",
+        "910",
         0
       ],
       "clip": [
         "390",
         0
       ],
-      "strength_model": 1.0,
-      "strength_clip": 1.0
+      "strength_model": [
+        "915",
+        0
+      ],
+      "strength_clip": [
+        "915",
+        0
+      ]
     },
     "class_type": "MpiLoraModelClip",
     "_meta": {
@@ -84,7 +90,7 @@
       "shift_video": 12,
       "shift_audio": 5,
       "model": [
-        "457",
+        "497",
         0
       ]
     },
@@ -97,7 +103,7 @@
     "inputs": {
       "preview_rate": 24,
       "model": [
-        "454",
+        "457",
         0
       ],
       "vae": [
@@ -173,38 +179,12 @@
       "title": "Input_Video"
     }
   },
-  "900": {
-    "inputs": {
-      "math_expression": "floor(a/32)*32",
-      "a": [
-        "331",
-        5
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Width (snap to 32)"
-    }
-  },
-  "901": {
-    "inputs": {
-      "math_expression": "floor(a/32)*32",
-      "a": [
-        "331",
-        6
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Height (snap to 32)"
-    }
-  },
   "902": {
     "inputs": {
       "start_index": -1,
       "num_frames": 1,
       "images": [
-        "331",
+        "916",
         0
       ]
     },
@@ -233,12 +213,12 @@
         0
       ],
       "width": [
-        "900",
-        0
+        "916",
+        1
       ],
       "height": [
-        "901",
-        0
+        "916",
+        2
       ],
       "length": [
         "213",
@@ -342,11 +322,11 @@
         0
       ],
       "sampler": [
-        "422",
+        "914",
         0
       ],
       "sigmas": [
-        "412",
+        "912",
         0
       ],
       "latent_image": [
@@ -409,7 +389,7 @@
       "overlap_mode": "linear_blend",
       "overlap": 1,
       "source_images": [
-        "331",
+        "916",
         0
       ],
       "new_images": [
@@ -491,6 +471,154 @@
     "class_type": "MpiSaveVideo",
     "_meta": {
       "title": "Output_Video"
+    }
+  },
+  "908": {
+    "inputs": {
+      "boolean": true
+    },
+    "class_type": "MpiSimpleBoolean",
+    "_meta": {
+      "title": "Input_is_Turbo"
+    }
+  },
+  "909": {
+    "inputs": {
+      "reuse_threshold": 0.2,
+      "start_percent": 0.15,
+      "end_percent": 0.95,
+      "verbose": true,
+      "model": [
+        "392",
+        0
+      ]
+    },
+    "class_type": "EasyCache",
+    "_meta": {
+      "title": "EasyCache"
+    }
+  },
+  "910": {
+    "inputs": {
+      "true": [
+        "454",
+        0
+      ],
+      "false": [
+        "909",
+        0
+      ],
+      "boolean": [
+        "908",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Turbo ? SigmaShift : EasyCache"
+    }
+  },
+  "911": {
+    "inputs": {
+      "scheduler": "simple",
+      "steps": 25,
+      "denoise": 1,
+      "model": [
+        "464",
+        0
+      ]
+    },
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "BasicScheduler"
+    }
+  },
+  "912": {
+    "inputs": {
+      "true": [
+        "412",
+        0
+      ],
+      "false": [
+        "911",
+        0
+      ],
+      "boolean": [
+        "908",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Turbo ? 6 steps : 25 steps"
+    }
+  },
+  "913": {
+    "inputs": {
+      "sampler_name": "res_multistep"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "914": {
+    "inputs": {
+      "true": [
+        "422",
+        0
+      ],
+      "false": [
+        "913",
+        0
+      ],
+      "boolean": [
+        "908",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Turbo ? euler : res_multistep"
+    }
+  },
+  "915": {
+    "inputs": {
+      "math_expression": "1.0 if a else 0.2",
+      "a": [
+        "908",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Turbo LoRA strength"
+    }
+  },
+  "916": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "keep_proportion": "crop",
+      "pad_color": "0, 0, 0",
+      "crop_position": "center",
+      "divisible_by": 32,
+      "device": "cpu",
+      "image": [
+        "331",
+        0
+      ],
+      "width": [
+        "331",
+        5
+      ],
+      "height": [
+        "331",
+        6
+      ]
+    },
+    "class_type": "ImageResizeKJv2",
+    "_meta": {
+      "title": "Resize To Target (32-divisible)"
     }
   }
 }

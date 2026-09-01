@@ -59,17 +59,27 @@ do not tick an item until its gate is green.
       **Carried forward:** the `negative` box still SHOWS on the H3 arm and does nothing
       there. MPI-664 shipped `hiddenWhen`, but its rule keys on another FIELD's value, not
       on the picked model — extending it is the one-line follow-up the plan names.
-- [ ] 4b — TURBO OR NOT, the user's choice. Asked by Fabio 2026-09-01, and it
-      REVERSES Phase 3's deliberate "a Flow bakes ONE proven path" — so the non-turbo
-      arm needs its own bench proof, not just wiring. The graph branch already exists
-      and is DONOR-CLONEABLE from `raw/minimax_h3_r2va_template.json`: one
-      `MpiSimpleBoolean` titled `Input_is_Turbo` (#444) driving four `MpiIfElse` and one
-      `MpiMath`. Flow side: an `Input_is_Turbo` boolean field that must show on the H3
-      arm ONLY — the same per-model hide the `negative` box needs, so this makes the
-      MPI-664 `hiddenWhen`-on-model gap load-bearing rather than cosmetic. Default MUST
-      stay Turbo (Fabio's speed rule; non-turbo is 25 steps against 6). Gate: raw round
-      trip 0 differences, one bench run per arm, and both tests green.
-- [ ] 4c — THE STITCH REFUSES ANY SOURCE THAT IS NOT 32-DIVISIBLE. Found
+- [x] 4b — TURBO OR NOT. Done 2026-09-01. `#908 Input_is_Turbo` drives THREE `MpiIfElse`
+      (#910 SigmaShift vs #909 EasyCache, #912 beta/6 vs #911 simple/25, #914 euler vs
+      #913 res_multistep) plus #915 `MpiMath '1.0 if a else 0.2'` on the shared LoRA's
+      strengths. **Three corrections to what this line said:** it is THREE `MpiIfElse`,
+      not four — the donor's #417/#416/#414 feed a `SplitSigmas` this single-stage graph
+      does not have; the port REORDERS the proven turbo chain, because #457 is one shared
+      LoRA node so the gate must close before it (`497 → 454 → IfElse → 457`, where the
+      graph shipped `497 → 457 → 454`); and `hiddenWhen` DID get its model rule rather
+      than shipping a dead control — `{ model }` / `{ modelNot }` in `declaredFields.js`,
+      which also takes the `negative` box off the H3 arm at last. Default stays **Turbo**.
+      Gate green: raw round trip **0 differences**, both validators ✓ against 8188 AND
+      48188, `npm test` **872/872**, three mutants killed on real assertions, and one
+      bench run per arm — turbo **69.5 s** (vs the 70 s baseline, so the reorder cost
+      nothing) seam 0.327x, non-turbo **102.3 s** (+47%) seam 0.333x. Full numbers in
+      `validation.md` § Phases 4b + 4c.
+      **Carried forward:** the non-turbo arm's generated half carries ~2x the
+      frame-to-frame luma energy of turbo's. A luma diff cannot separate more DETAIL from
+      more FLICKER — Phase 5 must look at a non-turbo extend, not only a turbo one. Also
+      `PromptBoxControls.h3Turbo` defaults turbo OFF on the H3 MODEL surface for a
+      documented quality reason; the two surfaces now disagree on purpose.
+- [x] 4c — THE STITCH REFUSED ANY SOURCE THAT WAS NOT 32-DIVISIBLE. Fixed 2026-09-01. Found
       2026-09-01 from Fabio's question "the video does keep the same resolution as the
       input video, right?", and REPRODUCED on the bench with no model in 10 s:
       `ValueError: Source and new images must have the same shape: torch.Size([720,
@@ -80,9 +90,17 @@ do not tick an item until its gate is green.
       is why nothing caught it. **The fix is already shipped in the sibling flow**:
       `flow_ltx_extend.json` #28 is an `ImageResizeKJv2` (`keep_proportion: 'crop'`,
       `divisible_by: 32`, `crop_position: 'center'`) and its stitch reads `source_images`
-      from THAT, not from the loader — a donor clone, not new design. Decide with Fabio:
-      crop to the snapped canvas (LTX's answer, loses up to 31px) or rescale the source.
-      Gate: the 720p repro passes, plus one real bench run at 1280x720.
+      from THAT, not from the loader — a donor clone, not new design. **Fabio picked CROP**
+      (2026-09-01), so the LTX node was cloned as `#916` with `keep_proportion: 'crop'`,
+      `divisible_by: 32`, `crop_position: 'center'`. **The plan named ONE unsnapped
+      consumer and there were TWO** — `#902 Last Frame` also read the raw loader, so the
+      frame `MiniMaxH3AddGuide` pins would have been 1280x720 against a 1280x704 canvas.
+      Both now read `#916`. `#900/#901` are DELETED rather than kept: the resize node
+      reports the snapped size it actually produced, so a second independent `floor()`
+      could only disagree. Gate green: a real bench run on `mpi591_src720p.mp4` returns
+      **1280x704, 94 frames, 24 fps** with no `ValueError`, seam 0.104x — and the source
+      half is proved to be a CROP, not a rescale, at **PSNR 44.3 dB** against ffmpeg's own
+      centre crop versus **27.5 dB** against a lanczos rescale.
 - [ ] 5 — Verify in an isolated app. Gate: Fabio watches one H3 extend end to end.
 - [ ] 6 — Docs: `existing-flows/ltx-extend.md` + `any-of-models.md`.
 

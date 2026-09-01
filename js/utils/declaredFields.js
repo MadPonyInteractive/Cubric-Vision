@@ -272,8 +272,17 @@ export function disabledFieldIds(fields = [], values = {}) {
  * nothing else — a declared `text` box cannot be greyed at all today. Hiding is on
  * the wrapper the painter already holds, so it works for every field type.
  *
- * One clause, deliberately narrow:
+ * Three clauses, deliberately narrow:
  *   `{ hiddenWhen: { field: 'Input_Instrumental', is: true } }`
+ *   `{ hiddenWhen: { model: 'minimax-h3-ref2va' } }`
+ *   `{ hiddenWhen: { modelNot: 'minimax-h3-ref2va' } }`
+ *
+ * MPI-591 adds the two MODEL clauses. A Flow's declared fields are shared across
+ * every candidate its Model slot offers, and the injector skips a title a graph does
+ * not carry IN SILENCE — so a field meant for one arm renders dead on the others.
+ * That was cosmetic while it was only Extend Video's `negative` box; it stopped being
+ * cosmetic when the same flow gained a Turbo toggle, because a toggle the user flips
+ * with no effect reads as a broken app rather than an inapplicable one.
  *
  * DECLARATIVE, never a predicate function — the MPI-663 rule. A function in a
  * FlowDef is something only a first-party flow can ship, and FlowDefs are data so a
@@ -286,14 +295,18 @@ export function disabledFieldIds(fields = [], values = {}) {
  *
  * @param {Object[]} fields  the declarations
  * @param {Object} values    current values keyed by field id
+ * @param {string[]} modelIds  the ids the Model slots are currently resolved to
  * @returns {Set<string>}    ids to render hidden
  */
-export function hiddenFieldIds(fields = [], values = {}) {
+export function hiddenFieldIds(fields = [], values = {}, modelIds = []) {
+    const picked = modelIds || [];
     const out = new Set();
     (fields || []).forEach((f) => {
         const rule = f?.hiddenWhen;
-        if (!f?.id || !rule?.field) return;
-        if (values[rule.field] === rule.is) out.add(f.id);
+        if (!f?.id || !rule) return;
+        if (rule.field) { if (values[rule.field] === rule.is) out.add(f.id); return; }
+        if (rule.model) { if (picked.includes(rule.model)) out.add(f.id); return; }
+        if (rule.modelNot && !picked.includes(rule.modelNot)) out.add(f.id);
     });
     return out;
 }

@@ -361,3 +361,86 @@ dependency; extending `hiddenWhen` to a model rule is the one-line follow-up.
 
 **Not verified here, and it cannot be:** no H3 extend has run in the APP. That is Phase 5, and it
 is blocked on 48188 being restarted onto `f1ed110`.
+
+## Phases 4b + 4c — VERIFIED 2026-09-01, three bench runs
+
+Done in one pass because both edit the same two files. The graph goes **33 → 40 nodes**: nine added
+(`#908` `Input_is_Turbo`, `#909` EasyCache, `#911` BasicScheduler simple/25, `#913` KSamplerSelect
+res_multistep, `#910`/`#912`/`#914` `MpiIfElse`, `#915` the strength `MpiMath`, `#916`
+`ImageResizeKJv2`), two deleted (`#900`/`#901`, the `MpiMath` snap pair).
+
+### Static proofs
+
+| check | result |
+|---|---|
+| raw → API round trip, node by node | **0 differences** |
+| `verify-workflow.mjs` vs **8188** (bench) | ✓ 40 nodes |
+| `verify-workflow.mjs` vs **48188** (shipped) | ✓ 40 nodes — **no longer the stale-pin line; Fabio restarted his app** |
+| `validate-injection-rules.mjs` | ✓ |
+| `npm test` | **872 / 872** |
+| `eslint js/`, `node --check` on all four JS files | clean |
+
+### Proof 1 — 4c, the 32-divisible stitch, on a real 720p source
+
+The defect that produced `ValueError: Source and new images must have the same shape` is gone.
+`P4c_C_720p_00001.mp4`, from `mpi591_src720p.mp4` (1280x720):
+
+- **1280x704 out, 94 frames, 24 fps, 3.917 s.** The graph completes instead of raising.
+- **The source half is a CROP, not a rescale, and that is measured, not assumed.** Against ffmpeg's
+  own `crop=1280:704:0:8` of the source: **PSNR y 44.3 dB**. Against a `scale=1280:704:flags=lanczos`
+  of the same source: **27.5 dB**. A 16.8 dB gap — the delivered pixels are the original ones,
+  centre-cropped 8px top and bottom, exactly the LTX answer Fabio picked.
+- seam/tail **0.104x**, generated audio band cosine **0.9982**.
+
+### Proof 2 — 4b, both arms, same seed and same source
+
+`mpi591_src30fps.mp4`, seed 591000591, `Input_Duration` 2. Both produce 94 frames at 24 fps.
+
+| | turbo (`#908` true) | non-turbo (`#908` false) |
+|---|---|---|
+| wall clock | **69.5 s** (nothing cached) | **102.3 s** (loaders warm) |
+| sampler path | SigmaShift 12/5, beta/6, euler, LoRA 1.0 | EasyCache 0.2/0.15/0.95, simple/**25**, res_multistep, LoRA **0.2** |
+| seam / tail | **0.327x** | **0.333x** |
+| flash, generated half | 6.35 mean / 8.33 worst | **13.62 mean / 25.61 worst** |
+| flash, source half | 5.64 | 5.64 (identical — the resize is deterministic) |
+| generated audio band cos | 0.9988 | 0.9989 |
+| generated audio level | −0.51 dB | −0.70 dB |
+
+**The turbo arm survives the LoRA/SigmaShift reorder** — 69.5 s against Phase 3b's 70 s, and a seam
+ratio in the same band. That was the risk the reorder carried and it did not materialise.
+
+**Non-turbo costs +47% and its generated half carries ~2x the frame-to-frame luma energy.** A luma
+diff cannot tell more DETAIL from more FLICKER, so that number is not a verdict — it is the reason
+Phase 5 should look at a non-turbo extend with eyes on, not just at a turbo one.
+
+⚠️ **The metric scripts were REBUILT.** The Phase 1–3b originals were in a scratchpad `%TEMP%` has
+evicted, so `metrics.py` re-derives seam/tail and the band cosine from the definitions recorded
+above. Numbers in this section are comparable **to each other**; against Phase 3b's 0.22x / 0.991
+they are a sanity band, not an identity — a re-derived metric is not provably the same instrument.
+
+### The default is Turbo, and one shipped surface disagrees
+
+`fields[Input_is_Turbo].default = true`, per Fabio's speed rule (non-turbo is 25 steps against 6).
+**`PromptBoxControls.h3Turbo` defaults OFF** on the H3 *model* surface, documented as *"turbo quality
+is below the 25-step path here, so speed is the opt-in and quality is what a user gets without
+asking"*. Same model, same LoRA, opposite call — recorded so the two are reconciled deliberately
+rather than discovered later.
+
+This also closes the handoff's open question about Fabio's 2026-09-01 non-turbo run: it was the
+**r2va model in the app**, not a flow. `minimax_h3_r2va.json` ships `Input_is_Turbo` false and
+`h3Turbo` is the control that drives it.
+
+### The guard that had to widen
+
+`tests/inject-params-titles.test.cjs`'s FlowDef check resolved `flow.workflow` alone, so it called
+`Input_is_Turbo` a silent no-op — true for the LTX arm, wrong for the flow. It now resolves the
+`byModel` candidate set: a field is legitimate when it addresses a node in ANY arm, and the
+`hiddenWhen` model rule keeps it off the others. Its baked-default check walks every candidate too.
+
+Three mutants, all killed with real assertion failures (not load errors):
+
+- `!picked.includes(rule.modelNot)` → `picked.includes(...)` — *"the LTX arm keeps its negative and
+  loses the Turbo toggle"*.
+- the `{ model }` clause made a no-op — *"the H3 arm keeps Turbo and loses the negative"*.
+- `Input_is_Turbo` renamed `Input_Not_A_Node` in the FlowDef — *"names no node in
+  flow_ltx_extend.json / flow_h3_extend.json"*, so the widened guard still bites.

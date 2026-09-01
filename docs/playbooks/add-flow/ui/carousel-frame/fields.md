@@ -96,7 +96,7 @@ never reached the payload, defaults were never seeded, and Reuse read only `step
 
 ## Fields that constrain each other (MPI-663, MPI-664)
 
-Three DECLARATIVE clauses, evaluated in `js/utils/declaredFields.js` and painted by the frame in
+Five DECLARATIVE clauses, evaluated in `js/utils/declaredFields.js` and painted by the frame in
 one pass (`_paintFieldConstraints`). Declarative on purpose: a predicate in a FlowDef is a thing
 only a first-party flow can ship.
 
@@ -105,8 +105,26 @@ only a first-party flow can ship.
 | `group: '<name>', minActive: N` | every member | a member that is ON and would take the group below N is **locked**. Members that are OFF stay live — turning one on can never break a floor |
 | `enabledWhen: { group: '<name>', atLeast: N }` | a field OUTSIDE the group | disabled while fewer than N members are on |
 | `hiddenWhen: { field: '<id>', is: <value> }` | any field | **removed from the slide** while that field holds exactly that value |
+| `hiddenWhen: { model: '<id>' }` | any field | removed while a Model slot is resolved to that model |
+| `hiddenWhen: { modelNot: '<id>' }` | any field | removed **unless** a Model slot is resolved to that model — the per-arm control |
 
-The first two are `disabledFieldIds`, the third is `hiddenFieldIds`.
+The first two are `disabledFieldIds`, the last three are `hiddenFieldIds`. Only one clause fires
+per field; `field` wins over `model` wins over `modelNot`.
+
+### The model clauses (MPI-591)
+
+A flow's declared fields are shared across **every candidate its Model slot offers**, and when the
+pick selects a different GRAPH FILE (`byModel`, see [any-of-models.md](../../any-of-models.md)) the
+arms do not carry the same nodes. The injector skips a title the running graph does not have IN
+SILENCE, so a field belonging to one arm renders live and dead on the others.
+
+Extend Video has one of each: `negative` is `{ model: 'minimax-h3-ref2va' }` because H3 takes no
+negative conditioning, and `Input_is_Turbo` is `{ modelNot: 'minimax-h3-ref2va' }` because only the
+H3 graph carries that boolean. **A dead toggle is worse than a dead text box** — the user works the
+control and nothing happens, which reads as a broken app rather than an inapplicable one.
+
+With no pick resolved yet, a `modelNot` field stays hidden: it belongs to an arm that is not
+running, and an unresolved slot is not a reason to show it.
 
 Stems declares both disabling clauses: its four stem toggles are `{ group: 'stems', minActive: 1 }`,
 and its `combine` toggle is `{ enabledWhen: { group: 'stems', atLeast: 2 } }`.

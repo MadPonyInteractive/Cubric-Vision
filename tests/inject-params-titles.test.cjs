@@ -911,8 +911,21 @@ test('every FlowDef field and enhance recipe addresses a real node (MPI-664)', a
             ...(flow.fields || []),
             ...(flow.steps || []).flatMap(s => s.fields || []),
         ];
-        let graph;
-        try { graph = graphOf(flow.workflow); } catch { problems.push(`${flow.id}: cannot read ${flow.workflow}`); continue; }
+        // MPI-591 — a flow's picked model may select a different GRAPH FILE (`byModel`
+        // on the op), so "the flow's graph" is a SET. A declared field is legitimate
+        // when it addresses a node in ANY of them and its `hiddenWhen` model rule takes
+        // it off screen on the arms that lack it; it is a silent no-op only when NO
+        // candidate carries the node. Checking `flow.workflow` alone would have called
+        // Extend Video's Turbo toggle dead when it is the H3 arm's whole sampler gate.
+        const files = [flow.workflow,
+            ...Object.values(UNIVERSAL_WORKFLOWS[flow.operation]?.byModel || {})];
+        const graphs = [];
+        let unreadable = false;
+        for (const file of [...new Set(files)].filter(Boolean)) {
+            try { graphs.push([file, graphOf(file)]); } catch { problems.push(`${flow.id}: cannot read ${file}`); unreadable = true; }
+        }
+        if (unreadable || !graphs.length) continue;
+        const findNode = (title) => graphs.map(([, g]) => nodeByTitle(g, title)).find(Boolean);
 
         for (const d of decls) {
             // A declared `Input_*` id names a node in the FLOW's own graph — and it may
@@ -920,9 +933,10 @@ test('every FlowDef field and enhance recipe addresses a real node (MPI-664)', a
             // node that carries several, exactly like an injectionParams key.
             const [fieldTitle, fieldWidget] = String(d.id).split('.');
             if (/^input_/i.test(fieldTitle) && !INJECTOR_DERIVED.has(`${flow.id}:${d.id}`)) {
-                const node = nodeByTitle(graph, fieldTitle);
+                const node = findNode(fieldTitle);
                 if (!node) {
-                    problems.push(`${flow.id}: field "${d.id}" names no node in ${flow.workflow}`);
+                    problems.push(`${flow.id}: field "${d.id}" names no node in `
+                        + `${graphs.map(([f]) => f).join(' / ')}`);
                 } else if (fieldWidget && !(fieldWidget in (node.inputs || {}))) {
                     problems.push(`${flow.id}: field "${d.id}" — node "${fieldTitle}" has no "${fieldWidget}" input`);
                 }
@@ -942,12 +956,16 @@ test('every FlowDef field and enhance recipe addresses a real node (MPI-664)', a
             const ALWAYS_WRITTEN = /^input_(positive|negative)$/i;
             if (/^input_/i.test(fieldTitle) && d.default === undefined && !d.action
                 && !ALWAYS_WRITTEN.test(fieldTitle)) {
-                const node = nodeByTitle(graph, fieldTitle);
-                const baked = Object.entries(node?.inputs || {})
-                    .find(([, v]) => typeof v === 'string' && v.trim() !== '');
-                if (baked) {
-                    problems.push(`${flow.id}: field "${d.id}" declares no default, so the `
-                        + `baked ${fieldTitle}.${baked[0]} runs untouched — "${baked[1].slice(0, 40)}…"`);
+                // Every candidate graph, not just the first: a node baked empty on one
+                // arm and baked with bench content on another still ships that content.
+                for (const [file, g] of graphs) {
+                    const node = nodeByTitle(g, fieldTitle);
+                    const baked = Object.entries(node?.inputs || {})
+                        .find(([, v]) => typeof v === 'string' && v.trim() !== '');
+                    if (baked) {
+                        problems.push(`${flow.id}: field "${d.id}" declares no default, so the `
+                            + `baked ${fieldTitle}.${baked[0]} in ${file} runs untouched — "${baked[1].slice(0, 40)}…"`);
+                    }
                 }
             }
             if (!d.injectionParams) continue;

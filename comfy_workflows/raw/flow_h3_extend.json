@@ -1,8 +1,8 @@
 {
   "id": "a1b2c3d4-0000-4000-8000-h3v2vextend",
   "revision": 0,
-  "last_node_id": 907,
-  "last_link_id": 48,
+  "last_node_id": 916,
+  "last_link_id": 73,
   "nodes": [
     {
       "id": 195,
@@ -214,8 +214,7 @@
           "name": "images",
           "type": "IMAGE",
           "links": [
-            11,
-            38
+            48
           ]
         },
         {
@@ -252,7 +251,7 @@
           "name": "width",
           "type": "INT",
           "links": [
-            9
+            49
           ]
         },
         {
@@ -260,7 +259,7 @@
           "name": "height",
           "type": "INT",
           "links": [
-            10
+            50
           ]
         },
         {
@@ -498,7 +497,8 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            1
+            1,
+            57
           ]
         }
       ],
@@ -553,7 +553,7 @@
           "name": "SAMPLER",
           "type": "SAMPLER",
           "links": [
-            30
+            65
           ]
         }
       ],
@@ -754,7 +754,7 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            2
+            55
           ]
         }
       ],
@@ -770,136 +770,6 @@
         "attention": "comfy kitchen attention"
       },
       "title": "ModelAttentionBackend"
-    },
-    {
-      "id": 900,
-      "type": "MpiMath",
-      "pos": [
-        420,
-        720
-      ],
-      "size": [
-        210,
-        128
-      ],
-      "flags": {},
-      "order": 13,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "a",
-          "name": "a",
-          "type": "*",
-          "link": 9
-        },
-        {
-          "localized_name": "b",
-          "name": "b",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        },
-        {
-          "localized_name": "c",
-          "name": "c",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        },
-        {
-          "localized_name": "math_expression",
-          "name": "math_expression",
-          "type": "STRING",
-          "widget": {
-            "name": "math_expression"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "result",
-          "name": "result",
-          "type": "*",
-          "links": [
-            16
-          ]
-        }
-      ],
-      "title": "Width (snap to 32)",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiMath"
-      },
-      "widgets_values": [
-        "floor(a/32)*32"
-      ]
-    },
-    {
-      "id": 901,
-      "type": "MpiMath",
-      "pos": [
-        420,
-        960
-      ],
-      "size": [
-        210,
-        128
-      ],
-      "flags": {},
-      "order": 14,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "a",
-          "name": "a",
-          "type": "*",
-          "link": 10
-        },
-        {
-          "localized_name": "b",
-          "name": "b",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        },
-        {
-          "localized_name": "c",
-          "name": "c",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        },
-        {
-          "localized_name": "math_expression",
-          "name": "math_expression",
-          "type": "STRING",
-          "widget": {
-            "name": "math_expression"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "result",
-          "name": "result",
-          "type": "*",
-          "links": [
-            17
-          ]
-        }
-      ],
-      "title": "Height (snap to 32)",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "cd951391ae9f5aa068e48cd4252d7549f20550ab",
-        "Node name for S&R": "MpiMath"
-      },
-      "widgets_values": [
-        "floor(a/32)*32"
-      ]
     },
     {
       "id": 902,
@@ -922,7 +792,7 @@
           "name": "images",
           "shape": 7,
           "type": "IMAGE",
-          "link": 11
+          "link": 51
         },
         {
           "label": "masks",
@@ -1109,8 +979,8 @@
       "id": 457,
       "type": "MpiLoraModelClip",
       "pos": [
-        840,
-        240
+        1260,
+        480
       ],
       "size": [
         270,
@@ -1124,7 +994,7 @@
           "localized_name": "model",
           "name": "model",
           "type": "MODEL",
-          "link": 2
+          "link": 59
         },
         {
           "localized_name": "clip",
@@ -1148,7 +1018,7 @@
           "widget": {
             "name": "strength_model"
           },
-          "link": null
+          "link": 69
         },
         {
           "localized_name": "strength_clip",
@@ -1157,7 +1027,7 @@
           "widget": {
             "name": "strength_clip"
           },
-          "link": null
+          "link": 70
         }
       ],
       "outputs": [
@@ -1166,7 +1036,7 @@
           "name": "model",
           "type": "MODEL",
           "links": [
-            4
+            60
           ]
         },
         {
@@ -1428,7 +1298,7 @@
           "widget": {
             "name": "width"
           },
-          "link": 16
+          "link": 53
         },
         {
           "name": "height",
@@ -1436,7 +1306,7 @@
           "widget": {
             "name": "height"
           },
-          "link": 17
+          "link": 54
         },
         {
           "name": "length",
@@ -1496,7 +1366,7 @@
       "id": 454,
       "type": "MiniMaxH3SigmaShift",
       "pos": [
-        1260,
+        840,
         240
       ],
       "size": [
@@ -1510,7 +1380,7 @@
         {
           "name": "model",
           "type": "MODEL",
-          "link": 4
+          "link": 55
         }
       ],
       "outputs": [
@@ -1518,7 +1388,7 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            5
+            56
           ]
         }
       ],
@@ -1555,7 +1425,7 @@
         {
           "name": "model",
           "type": "MODEL",
-          "link": 5
+          "link": 60
         },
         {
           "name": "vae",
@@ -1569,7 +1439,8 @@
           "type": "MODEL",
           "links": [
             25,
-            26
+            26,
+            61
           ]
         }
       ],
@@ -1703,7 +1574,7 @@
           "name": "SIGMAS",
           "type": "SIGMAS",
           "links": [
-            31
+            62
           ]
         }
       ],
@@ -1801,14 +1672,14 @@
           "localized_name": "sampler",
           "name": "sampler",
           "type": "SAMPLER",
-          "link": 30
+          "link": 67
         },
         {
           "label": "sigmas",
           "localized_name": "sigmas",
           "name": "sigmas",
           "type": "SIGMAS",
-          "link": 31
+          "link": 64
         },
         {
           "label": "latent_image",
@@ -2060,7 +1931,7 @@
           "localized_name": "source_images",
           "name": "source_images",
           "type": "IMAGE",
-          "link": 38
+          "link": 52
         },
         {
           "label": "new_images",
@@ -2219,6 +2090,590 @@
         true,
         false
       ]
+    },
+    {
+      "id": 916,
+      "type": "ImageResizeKJv2",
+      "pos": [
+        420,
+        720
+      ],
+      "size": [
+        270,
+        336
+      ],
+      "flags": {},
+      "order": 33,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "image",
+          "localized_name": "image",
+          "name": "image",
+          "type": "IMAGE",
+          "link": 48
+        },
+        {
+          "label": "mask",
+          "localized_name": "mask",
+          "name": "mask",
+          "shape": 7,
+          "type": "MASK",
+          "link": null
+        },
+        {
+          "label": "width",
+          "localized_name": "width",
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 49
+        },
+        {
+          "label": "height",
+          "localized_name": "height",
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 50
+        },
+        {
+          "label": "upscale_method",
+          "localized_name": "upscale_method",
+          "name": "upscale_method",
+          "type": "COMBO",
+          "widget": {
+            "name": "upscale_method"
+          },
+          "link": null
+        },
+        {
+          "label": "keep_proportion",
+          "localized_name": "keep_proportion",
+          "name": "keep_proportion",
+          "type": "COMBO",
+          "widget": {
+            "name": "keep_proportion"
+          },
+          "link": null
+        },
+        {
+          "label": "pad_color",
+          "localized_name": "pad_color",
+          "name": "pad_color",
+          "type": "STRING",
+          "widget": {
+            "name": "pad_color"
+          },
+          "link": null
+        },
+        {
+          "label": "crop_position",
+          "localized_name": "crop_position",
+          "name": "crop_position",
+          "type": "COMBO",
+          "widget": {
+            "name": "crop_position"
+          },
+          "link": null
+        },
+        {
+          "label": "divisible_by",
+          "localized_name": "divisible_by",
+          "name": "divisible_by",
+          "type": "INT",
+          "widget": {
+            "name": "divisible_by"
+          },
+          "link": null
+        },
+        {
+          "label": "device",
+          "localized_name": "device",
+          "name": "device",
+          "shape": 7,
+          "type": "COMBO",
+          "widget": {
+            "name": "device"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "label": "IMAGE",
+          "localized_name": "IMAGE",
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            51,
+            52
+          ]
+        },
+        {
+          "label": "width",
+          "localized_name": "width",
+          "name": "width",
+          "type": "INT",
+          "links": [
+            53
+          ]
+        },
+        {
+          "label": "height",
+          "localized_name": "height",
+          "name": "height",
+          "type": "INT",
+          "links": [
+            54
+          ]
+        },
+        {
+          "label": "mask",
+          "localized_name": "mask",
+          "name": "mask",
+          "type": "MASK",
+          "links": []
+        }
+      ],
+      "title": "Resize To Target (32-divisible)",
+      "properties": {
+        "cnr_id": "comfyui-kjnodes",
+        "ver": "35e5956193769d18a13136cdedb73a36a05c73e6",
+        "Node name for S&R": "ImageResizeKJv2",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        512,
+        512,
+        "lanczos",
+        "crop",
+        "0, 0, 0",
+        "center",
+        32,
+        "cpu"
+      ]
+    },
+    {
+      "id": 908,
+      "type": "MpiSimpleBoolean",
+      "pos": [
+        420,
+        1680
+      ],
+      "size": [
+        244.3366780735778,
+        68.32596819981063
+      ],
+      "flags": {},
+      "order": 34,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "links": [
+            68,
+            71,
+            72,
+            73
+          ]
+        }
+      ],
+      "title": "Input_is_Turbo",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "aaa1d2d9fa713decae6843e64f5a81b84f9f443d",
+        "Node name for S&R": "MpiSimpleBoolean"
+      },
+      "widgets_values": [
+        true
+      ],
+      "widgets_values_named": {
+        "boolean": false
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 909,
+      "type": "EasyCache",
+      "pos": [
+        840,
+        720
+      ],
+      "size": [
+        270,
+        130
+      ],
+      "flags": {},
+      "order": 35,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 57
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            58
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.30.2",
+        "Node name for S&R": "EasyCache"
+      },
+      "widgets_values": [
+        0.2,
+        0.15,
+        0.95,
+        true
+      ],
+      "widgets_values_named": {
+        "reuse_threshold": 0.2,
+        "start_percent": 0.15,
+        "end_percent": 0.95,
+        "verbose": true
+      }
+    },
+    {
+      "id": 910,
+      "type": "MpiIfElse",
+      "pos": [
+        1260,
+        240
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 36,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "true",
+          "name": "true",
+          "type": "*",
+          "link": 56
+        },
+        {
+          "localized_name": "false",
+          "name": "false",
+          "type": "*",
+          "link": 58
+        },
+        {
+          "localized_name": "boolean",
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "boolean"
+          },
+          "link": 71
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "output",
+          "name": "output",
+          "type": "*",
+          "links": [
+            59
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "fe812d47626c01b4c15ce945bebcd1096e0e688b",
+        "Node name for S&R": "MpiIfElse"
+      },
+      "widgets_values": [
+        true
+      ],
+      "title": "Turbo ? SigmaShift : EasyCache"
+    },
+    {
+      "id": 911,
+      "type": "BasicScheduler",
+      "pos": [
+        2100,
+        480
+      ],
+      "size": [
+        270,
+        106
+      ],
+      "flags": {},
+      "order": 37,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 61
+        }
+      ],
+      "outputs": [
+        {
+          "name": "SIGMAS",
+          "type": "SIGMAS",
+          "links": [
+            63
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.30.2",
+        "Node name for S&R": "BasicScheduler"
+      },
+      "widgets_values": [
+        "simple",
+        25,
+        1
+      ],
+      "widgets_values_named": {
+        "scheduler": "beta",
+        "steps": 6,
+        "denoise": 1
+      }
+    },
+    {
+      "id": 912,
+      "type": "MpiIfElse",
+      "pos": [
+        2100,
+        720
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 38,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "true",
+          "name": "true",
+          "type": "*",
+          "link": 62
+        },
+        {
+          "localized_name": "false",
+          "name": "false",
+          "type": "*",
+          "link": 63
+        },
+        {
+          "localized_name": "boolean",
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "boolean"
+          },
+          "link": 72
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "output",
+          "name": "output",
+          "type": "*",
+          "links": [
+            64
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "fe812d47626c01b4c15ce945bebcd1096e0e688b",
+        "Node name for S&R": "MpiIfElse"
+      },
+      "widgets_values": [
+        true
+      ],
+      "title": "Turbo ? 6 steps : 25 steps"
+    },
+    {
+      "id": 913,
+      "type": "KSamplerSelect",
+      "pos": [
+        420,
+        1920
+      ],
+      "size": [
+        270,
+        68.88021087646484
+      ],
+      "flags": {},
+      "order": 39,
+      "mode": 0,
+      "inputs": [
+        {
+          "label": "sampler_name",
+          "localized_name": "sampler_name",
+          "name": "sampler_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "sampler_name"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "label": "SAMPLER",
+          "localized_name": "SAMPLER",
+          "name": "SAMPLER",
+          "type": "SAMPLER",
+          "links": [
+            66
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.75",
+        "Node name for S&R": "KSamplerSelect",
+        "hasSecondTab": false,
+        "widget_ue_connectable": {},
+        "secondTabText": "Send Back",
+        "enableTabs": false,
+        "secondTabOffset": 80,
+        "tabWidth": 65,
+        "secondTabWidth": 65,
+        "tabXOffset": 10
+      },
+      "widgets_values": [
+        "res_multistep"
+      ]
+    },
+    {
+      "id": 914,
+      "type": "MpiIfElse",
+      "pos": [
+        2100,
+        960
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 40,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "true",
+          "name": "true",
+          "type": "*",
+          "link": 65
+        },
+        {
+          "localized_name": "false",
+          "name": "false",
+          "type": "*",
+          "link": 66
+        },
+        {
+          "localized_name": "boolean",
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "boolean"
+          },
+          "link": 73
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "output",
+          "name": "output",
+          "type": "*",
+          "links": [
+            67
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "fe812d47626c01b4c15ce945bebcd1096e0e688b",
+        "Node name for S&R": "MpiIfElse"
+      },
+      "widgets_values": [
+        true
+      ],
+      "title": "Turbo ? euler : res_multistep"
+    },
+    {
+      "id": 915,
+      "type": "MpiMath",
+      "pos": [
+        840,
+        960
+      ],
+      "size": [
+        210,
+        128
+      ],
+      "flags": {},
+      "order": 41,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "a",
+          "type": "*",
+          "link": 68
+        },
+        {
+          "name": "b",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        },
+        {
+          "name": "c",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "result",
+          "type": "*",
+          "links": [
+            69,
+            70
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "fd9bdcae56a6792cbc6d39756b7dfe51d20596e0",
+        "Node name for S&R": "MpiMath"
+      },
+      "widgets_values": [
+        "1.0 if a else 0.2"
+      ],
+      "widgets_values_named": {
+        "math_expression": "1.0 if a else 0.2"
+      },
+      "title": "Turbo LoRA strength"
     }
   ],
   "links": [
@@ -2231,36 +2686,12 @@
       "MODEL"
     ],
     [
-      2,
-      497,
-      0,
-      457,
-      0,
-      "MODEL"
-    ],
-    [
       3,
       390,
       0,
       457,
       1,
       "CLIP"
-    ],
-    [
-      4,
-      457,
-      0,
-      454,
-      0,
-      "MODEL"
-    ],
-    [
-      5,
-      454,
-      0,
-      464,
-      0,
-      "MODEL"
     ],
     [
       6,
@@ -2285,30 +2716,6 @@
       213,
       0,
       "FLOAT"
-    ],
-    [
-      9,
-      331,
-      5,
-      900,
-      0,
-      "*"
-    ],
-    [
-      10,
-      331,
-      6,
-      901,
-      0,
-      "*"
-    ],
-    [
-      11,
-      331,
-      0,
-      902,
-      0,
-      "IMAGE"
     ],
     [
       12,
@@ -2341,22 +2748,6 @@
       330,
       21,
       "STRING"
-    ],
-    [
-      16,
-      900,
-      0,
-      330,
-      22,
-      "INT"
-    ],
-    [
-      17,
-      901,
-      0,
-      330,
-      23,
-      "INT"
     ],
     [
       18,
@@ -2455,22 +2846,6 @@
       "GUIDER"
     ],
     [
-      30,
-      422,
-      0,
-      435,
-      2,
-      "SAMPLER"
-    ],
-    [
-      31,
-      412,
-      0,
-      435,
-      3,
-      "SIGMAS"
-    ],
-    [
       32,
       330,
       1,
@@ -2517,14 +2892,6 @@
       409,
       0,
       "*"
-    ],
-    [
-      38,
-      331,
-      0,
-      904,
-      0,
-      "IMAGE"
     ],
     [
       39,
@@ -2597,6 +2964,214 @@
       442,
       1,
       "AUDIO"
+    ],
+    [
+      48,
+      331,
+      0,
+      916,
+      0,
+      "IMAGE"
+    ],
+    [
+      49,
+      331,
+      5,
+      916,
+      2,
+      "INT"
+    ],
+    [
+      50,
+      331,
+      6,
+      916,
+      3,
+      "INT"
+    ],
+    [
+      51,
+      916,
+      0,
+      902,
+      0,
+      "IMAGE"
+    ],
+    [
+      52,
+      916,
+      0,
+      904,
+      0,
+      "IMAGE"
+    ],
+    [
+      53,
+      916,
+      1,
+      330,
+      22,
+      "INT"
+    ],
+    [
+      54,
+      916,
+      2,
+      330,
+      23,
+      "INT"
+    ],
+    [
+      55,
+      497,
+      0,
+      454,
+      0,
+      "MODEL"
+    ],
+    [
+      56,
+      454,
+      0,
+      910,
+      0,
+      "MODEL"
+    ],
+    [
+      57,
+      392,
+      0,
+      909,
+      0,
+      "MODEL"
+    ],
+    [
+      58,
+      909,
+      0,
+      910,
+      1,
+      "MODEL"
+    ],
+    [
+      59,
+      910,
+      0,
+      457,
+      0,
+      "MODEL"
+    ],
+    [
+      60,
+      457,
+      0,
+      464,
+      0,
+      "MODEL"
+    ],
+    [
+      61,
+      464,
+      0,
+      911,
+      0,
+      "MODEL"
+    ],
+    [
+      62,
+      412,
+      0,
+      912,
+      0,
+      "SIGMAS"
+    ],
+    [
+      63,
+      911,
+      0,
+      912,
+      1,
+      "SIGMAS"
+    ],
+    [
+      64,
+      912,
+      0,
+      435,
+      3,
+      "SIGMAS"
+    ],
+    [
+      65,
+      422,
+      0,
+      914,
+      0,
+      "SAMPLER"
+    ],
+    [
+      66,
+      913,
+      0,
+      914,
+      1,
+      "SAMPLER"
+    ],
+    [
+      67,
+      914,
+      0,
+      435,
+      2,
+      "SAMPLER"
+    ],
+    [
+      68,
+      908,
+      0,
+      915,
+      0,
+      "BOOLEAN"
+    ],
+    [
+      69,
+      915,
+      0,
+      457,
+      3,
+      "FLOAT"
+    ],
+    [
+      70,
+      915,
+      0,
+      457,
+      4,
+      "FLOAT"
+    ],
+    [
+      71,
+      908,
+      0,
+      910,
+      2,
+      "BOOLEAN"
+    ],
+    [
+      72,
+      908,
+      0,
+      912,
+      2,
+      "BOOLEAN"
+    ],
+    [
+      73,
+      908,
+      0,
+      914,
+      2,
+      "BOOLEAN"
     ]
   ],
   "groups": [],

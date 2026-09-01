@@ -508,11 +508,10 @@ export const FLOWS = [
                         // MPI-591: this box does NOTHING on the MiniMax H3 arm — H3 takes no
                         // negative conditioning (models.js `negativePrompt: false`) and
                         // flow_h3_extend.json carries no Input_Negative node, so the injector
-                        // skips the title in silence. It must HIDE when the Model slot is on
-                        // `minimax-h3`. Blocked on MPI-664: `hiddenWhen` shipped, but its rule
-                        // is `{ field, is }` and keys on another FIELD's value, not on the
-                        // picked model. Extending it to a model rule is the one-line follow-up
-                        // — never a bespoke twin of this flow.
+                        // skips the title in silence. The model rule (MPI-591) is what takes
+                        // it off screen there; MPI-664's `{ field, is }` could not, because it
+                        // keys on another FIELD's value rather than on the pick.
+                        hiddenWhen: { model: 'minimax-h3-ref2va' },
                     },
                 ],
             },
@@ -528,6 +527,21 @@ export const FLOWS = [
                 // slider because it is a bounded coarse choice, not a typed number.
                 id: 'Input_Duration', type: 'slider', label: 'Seconds to add',
                 min: 1, max: 10, step: 1, default: 4,
+            },
+            {
+                // MPI-591 4b. The H3 graph gates its whole sampler path off one
+                // `MpiSimpleBoolean` — SigmaShift vs EasyCache, beta/6 vs simple/25,
+                // euler vs res_multistep, and the turbo LoRA at 1.0 vs 0.2. Phase 3
+                // baked the turbo side; this exposes the other one.
+                //
+                // DEFAULT TRUE, and it stays true: non-turbo is 25 steps against 6.
+                //
+                // The LTX arm's graph has no such node, so the injector would skip the
+                // title in silence and the toggle would sit there doing nothing — hence
+                // the model rule rather than a comment apologising for it.
+                id: 'Input_is_Turbo', type: 'toggle', label: 'Turbo', icon: 'bolt',
+                default: true,
+                hiddenWhen: { modelNot: 'minimax-h3-ref2va' },
             },
         ],
     },
