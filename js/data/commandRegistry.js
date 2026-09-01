@@ -1294,11 +1294,15 @@ export const commands = {
     // Basic Attributes, the instrumental clause and the serialised roster around them,
     // so the exact values a dropdown picked are never on the model's desk.
     //
-    // No `filePrefix`: `flowMinimaxMusic` would read as a model name rather than the
-    // Flow's title, so the OP is named after the outcome instead — `flowTextToMusic`
-    // spells out "Text to Music" and files as `flowTextToMusic_001`.
+    // The OP KEY IS NOT THE TITLE here. `flowTextToMusic` was coined when the Flow was
+    // called "Text to Music"; Fabio renamed it to "Music Maker" (2026-09-01) and the key
+    // stays put — it is referenced in four registries plus `operation_registry.json`, and
+    // a renamed op id is a tombstone problem (MPI-533), not a rename. So this joins
+    // `flowExtendVideo` / `flowAddFoley` / `flowTTS`: an explicit `filePrefix` carries the
+    // title, and files land as `flowMusicMaker_001.wav`.
     flowTextToMusic: {
-        label: 'Flow: Text to Music',
+        label: 'Flow: Music Maker',
+        filePrefix: 'flowMusicMaker',       // key says Text to Music; the Library says "Music Maker"
         progressLabel: 'Composing',
         mediaType: MEDIA_TYPE.AUDIO,        // OUTPUT type
         requiresImages: 0,

@@ -2110,7 +2110,11 @@ export const FLOWS = [
     // so the tile falls back rather than 404ing.
     {
         id: 'minimax-music',
-        title: 'Text to Music',
+        // Fabio, 2026-09-01: "Text to Music" is not a good name — it reads as the model's
+        // task, not the thing the user gets. "Music Maker" instead, the register Voice
+        // Changer and Head Swap already set. The `id` does NOT follow: `licences.js` keys
+        // MINIMAX_MUSIC3 on `flow:minimax-music` and a lookup miss is SILENT.
+        title: 'Music Maker',
         description: 'Describe a song and hear it. Say what it should feel like, pick a style, write your own lyrics or leave it instrumental, and cast the voices that sing it — MiniMax Music 3 writes and performs the whole track.',
         requiredModels: [],
         // The three weights, 13.34GB measured (never typed — `computeDepHashes.py

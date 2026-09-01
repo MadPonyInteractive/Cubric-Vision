@@ -5,18 +5,34 @@ read it first, and do not re-search it.
 
 ## Current State
 
-**THE FLOW IS WIRED. 2026-09-01.** Design, both original frame additions, the deps + licence, the
-graph, GAP 3, the FlowDef and the enhancer recipe are all DONE and green — 852/852, lint clean on
-every file this card owns, both workflow gates green. What is left is the LIVE RUN, the preview
-graphics and the flow's own doc page.
+🔴 **THE UI IS REJECTED. 2026-09-01, Fabio, on first sight of the running flow.** *"The UI is all
+over the place. We need to change it. There are way too many steps, and it's bad. It's a bad UI…
+I have a lot of changes to the UI to be made."*
 
-**Next action: the live run in Fabio's own app.** It is the only remaining proof, and it closes
-FOUR things at once — `hiddenWhen`, `format: 'duration'` and the `voices` roster have still never
-rendered, and nothing has measured whether Qwen3-VL-4B holds the three-marker format.
+**The five-step field surface is DEAD as designed.** Everything below in § The field surface,
+§ The steps split and § The voice roster describes the surface that was just rejected — read it as
+HISTORY, not as the spec, until Fabio's changes are written down. **Do not implement against it,
+and do not defend it.** The next session's first job is to take his UI direction; nothing in the
+plumbing below is in question — the graph, the deps, the licence, GAP 3, the enhancer recipe and
+the op are all independent of how the fields are laid out.
 
-🔴 **Two things need Fabio before or at that run — see § Open, needs Fabio:** the flow is titled
-**"Text to Music"**, not "MiniMax Music 3"; and a step whose only field is hidden leaves a GHOST
-STEP in the carousel.
+Also unresolved and now probably moot: the GHOST STEP (§ below). It was a defect of the five-step
+shape; a different shape may not have steps to ghost.
+
+**What IS settled and green — 870/870, lint clean, both workflow gates green:**
+- The FlowDef, the op in all four files, GAP 3, the enhancer recipe, the new injection guard.
+- The three weights, installed and verified on disk at their declared byte sizes.
+- **The title: `Music Maker`** (Fabio, 2026-09-01 — see § Open item 0). `id` stays
+  `minimax-music`, op key stays `flowTextToMusic`, `filePrefix: 'flowMusicMaker'`.
+
+**Still never proven, and now blocked behind the redesign:** the live run. `hiddenWhen`,
+`format: 'duration'` and the `voices` roster have still never rendered in a shape anyone accepts,
+and nothing has measured whether Qwen3-VL-4B holds the three-marker format. ComfyUI has still
+never EXECUTED the caption chain.
+
+⚠️ **`js/utils/declaredFields.js`, `MpiBaseFlow.js` and `tests/inject-params-titles.test.cjs` are
+under a live MPI-591 write claim (`0928f1f4`).** Any UI change that reaches the frame lands in
+files this card does not own — message or wait, do not edit.
 
 Settled: hybrid caption approach · the LLM question (Vision already ships `promptEnhance`) · the 18
 families as the style dropdown · the caption schema · the licence position · BPM as a 0-means-auto
@@ -631,12 +647,28 @@ declared wrong: hide a `fields` step whose every declared field is currently hid
 
 ## Open — needs Fabio
 
-0. **The title is "Text to Music", not "MiniMax Music 3".** Every other flow is named for its
-   OUTCOME — Head Swap, Voice Changer, Text to Speech, Stems — and naming this one for its model
-   would be the only exception, sitting directly beside "Text to Speech" in the same audio section.
-   The `id` stays `minimax-music` regardless (the licence gate keys on it), and §3.1 attribution is
-   already discharged on the About page, so nothing legal rides on the title. Say the word and it
-   changes — it costs a `filePrefix` line, because the op is `flowTextToMusic`.
+0. ~~**The title is "Text to Music", not "MiniMax Music 3".**~~ **ANSWERED 2026-09-01 — and the
+   answer was NEITHER.** Fabio: *"Text to Music is not a good name for this. It should be called
+   Music Maker or Music Generator"*, then chose **Music Maker**. The reasoning the plan had was
+   half right — outcome naming, yes, but "Text to Music" names the MODEL'S TASK, not the thing the
+   user walks away with, and it only looked right because it rhymed with "Text to Speech". "Music
+   Maker" sits in the register Voice Changer and Head Swap already set.
+   **SHIPPED, two files, one line each:**
+   - `js/data/flowsRegistry.js` — `title: 'Music Maker'`. The `id` is UNCHANGED and stays
+     `minimax-music`: `licences.js` keys `MINIMAX_MUSIC3` on `flow:minimax-music` and a lookup
+     miss is silent.
+   - `js/data/commandRegistry.js` — `label: 'Flow: Music Maker'` **plus** `filePrefix:
+     'flowMusicMaker'`. The op KEY stays `flowTextToMusic`: it is referenced in four registries
+     plus `operation_registry.json`, and a renamed op id is a tombstone problem (MPI-533), not a
+     rename. That is exactly the `flowExtendVideo` / `flowAddFoley` / `flowTTS` pattern — key says
+     one thing, `filePrefix` carries the title. Files land as `flowMusicMaker_001.wav`.
+   - Verified: 870/870, eslint clean on both files. No other reference to the old title exists in
+     `js/`, `tests/`, `docs/` or `operation_registry.json`.
+   - 🔴 `js/data/flowsRegistry.js` was under a FRESH MPI-591 write claim (`0928f1f4`) when this
+     landed. Not a takeover — the edit is four comment lines plus one string inside the
+     `minimax-music` FlowDef, several hundred lines below MPI-591's `ltx-extend` work, and it is
+     disclosed to their session as message `c27b08f5`. MPI-664 claims `commandRegistry.js`
+     (`54cfe83f`); it claims nothing else.
 1. Sign-off on the five-step field surface above.
 2. ~~Anything missing from the `Input_Voice` list?~~ **Closed** — the list was signed off, then the
    single dropdown was replaced by the roster outright, so the question no longer applies. The voice

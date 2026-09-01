@@ -158,9 +158,19 @@ Design settled 2026-08-30 (hybrid). See `plan.md` for the full field surface and
 - [x] The FlowDef's OWN defaults run through the REAL converted graph via `bench/sim_caption.py`,
       resolved through `mapDeclaredValue` rather than typed by hand — fresh open, enhanced with a
       two-voice roster at 78 BPM, and instrumental with the lyrics and roster still holding values
-- [ ] 🔴 **GHOST STEP — needs Fabio.** `hiddenWhen` hides a FIELD, and Voices and Lyrics each
-      declare exactly one, so an instrumental run shows both steps with a title, a hint and an empty
-      body. Fix is derived, not declared (hide a `fields` step whose every field is hidden) but it
-      is a FIFTH frame addition — raised, not folded in
-- [ ] 🔴 **TITLE — needs Fabio.** Shipped as "Text to Music" (outcome naming, like every other
-      flow), not "MiniMax Music 3". `id` stays `minimax-music` either way
+- [ ] 🔴 **GHOST STEP.** `hiddenWhen` hides a FIELD, and Voices and Lyrics each declare exactly one,
+      so an instrumental run shows both steps with a title, a hint and an empty body. Fix is derived,
+      not declared (hide a `fields` step whose every field is hidden) but it is a FIFTH frame
+      addition. **Probably MOOT** — the five-step shape it belongs to was rejected 2026-09-01
+- [x] **TITLE — ANSWERED 2026-09-01: `Music Maker`.** Fabio rejected "Text to Music" as the model's
+      task rather than the user's outcome, and chose Music Maker over Music Generator. `title` in
+      `flowsRegistry.js`; `label` + `filePrefix: 'flowMusicMaker'` in `commandRegistry.js`; `id`
+      stays `minimax-music` and the op key stays `flowTextToMusic`. 870/870, lint clean
+- [x] The three weights installed and verified on disk at their declared byte sizes (4,914,197,682 /
+      9,196,611,886 / 216,696,128). The stuck-at-100% drawer that hid this is **MPI-681**, a
+      pre-existing hole, not this flow's
+- [ ] 🔴 **THE UI IS REJECTED — Fabio, 2026-09-01, on first sight.** *"way too many steps… it's a
+      bad UI."* The five-step field surface is dead as designed; his changes are not yet written
+      down. **Take his direction before touching anything.** The plumbing is unaffected
+- [ ] THE LIVE RUN — still never done. Blocked behind the redesign. ComfyUI has never executed the
+      caption chain, and `hiddenWhen` / `format: 'duration'` / the `voices` roster are still unproven
