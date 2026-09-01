@@ -124,6 +124,16 @@ Three things the next session should know:
   (`audio-permission`, both `flow-clear-slot-advances`, `flow-reuse-opens-without-model`) —
   all 4 pass in 14.4s re-run alone. Re-run before believing a desktop red.
 
+**Folded in at the handoff: master's CI was RED, on this umbrella's own phase 1a.** Run
+33489276364 failed `issue-report-url.test.cjs` — it deleted `app.log` to force
+`/logs/reveal`'s 404, but `routes/logger` appends ASYNCHRONOUSLY, so a line queued by an
+earlier test in the file landed after the delete, the route took its SUCCESS branch and
+spawned a real file manager on the runner, and the assert read `200 !== 404`. Fixed by
+stubbing `getLogPath()` to a path nothing writes (`54f03caf`), which is deterministic
+instead of racing the writer. `--no-verify` was used for that push because it IS the fix.
+
+Both commits are on master: `fc6f4336` (MPI-673) and `54f03caf` (the CI repair).
+
 Next: **MPI-674** (phase 2) — import-aware health check plus the repair.
 
 Two things the next session inherits and did not cause:
