@@ -14,6 +14,12 @@ const _state = {
     // ── ComfyUI engine ────────────────────────────────────────────────────────
     comfyRootPath: null,        // Custom path to an external ComfyUI installation
     allComfyWorkflows: [],      // Workflow registry used by comfyController for id→file lookup
+    comfyDepsWarning: null,     // MPI-673: why the LOCAL engine's curated pip pass failed,
+                               // mirrored from /comfy/status. Non-null = the engine is up
+                               // but degraded (custom nodes failed to import), so every
+                               // generation would die on a missing class. comfyController
+                               // announces it once per new value and blocks dispatch on it.
+                               // Local-only: the remote Pod never runs that pass.
 
     // ── Remote engine transition phase (MPI-73) ───────────────────────────────
     remoteEnginePhase: null,    // null | 'connecting' | 'disconnecting'. Set while the

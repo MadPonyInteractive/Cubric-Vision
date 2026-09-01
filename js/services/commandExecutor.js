@@ -2153,6 +2153,22 @@ export function runCommand(payload) {
                 exec.onError?.(err);
                 return;
             }
+            // MPI-673: the local engine came up degraded — its curated Python packages
+            // failed to install, so the custom nodes this graph needs are not loaded.
+            // Blocked BEFORE dispatch by comfyController, which is the whole point: the
+            // alternative is ComfyUI's raw missing-class rejection (issue #2). Not a
+            // toast — nothing the user does will generate until the install succeeds —
+            // and the blocking dialog is also the one carrying "Show log file", which is
+            // the only way we learn WHY pip failed on their machine.
+            if (err?.code === 'python_deps_broken') {
+                clientLogger.error('comfy', `Generation blocked — engine packages missing: ${state.comfyDepsWarning}`);
+                Events.emit('ui:error', {
+                    title: 'Engine packages failed to install',
+                    message: err.message,
+                });
+                exec.onError?.(err);
+                return;
+            }
             // MPI-90: the Pod failed the pre-generation compatibility pre-check
             // (409). Expected + user-actionable — a warning toast with the backend's
             // own guidance, not the bug-reporter dialog.
