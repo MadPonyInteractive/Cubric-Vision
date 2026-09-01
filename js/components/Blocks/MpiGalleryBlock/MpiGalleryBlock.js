@@ -163,6 +163,15 @@ export const MpiGalleryBlock = ComponentFactory.create({
         const _visibleProjectGroups = () =>
             (state.currentProject?.itemGroups || []).filter(group => !_deletingGroupIds.has(group.id));
 
+        /**
+         * tempId → spinner card for an import still in flight (MPI-671). A big video
+         * import is a copy, an ffprobe, a poster and a 720p transcode inside one
+         * request, and until it lands the gallery showed nothing at all — a 474 MiB
+         * clip read as a hang and got killed halfway through its proxy.
+         * @type {Map<string, Object>}
+         */
+        const _importPlaceholders = new Map();
+
         for (const entry of _runningGallery) {
             _myGenIds.add(entry.id);
         }
@@ -361,7 +370,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 // sees the combined entry without leaving + re-entering the
                 // gallery. Keyed reuse in MpiGalleryGrid preserves DOM/state
                 // for existing cards, so this is safe.
-                grid.el.setGroups([populated, ...currentGroups]);
+                grid.el.setGroups([..._leadingGroups(), populated, ...currentGroups]);
             } catch (err) {
                 clientLogger.error('MpiGalleryBlock', 'combine failed', err);
                 const _short = String(err.message || 'unknown').split('\n')[0].slice(0, 160);
@@ -1035,7 +1044,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             for (const group of g) {
                 if (group?.id) _deletingGroupIds.add(group.id);
             }
-            grid.el.setGroups([..._placeholdersForFirst(), ..._visibleProjectGroups()]);
+            grid.el.setGroups([..._leadingGroups(), ..._visibleProjectGroups()]);
 
             const deletedGroups = [];
             for (const group of g) {
@@ -1072,7 +1081,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 await removeGroup(group.id);
                 _deletingGroupIds.delete(group.id);
             }
-            grid.el.setGroups([..._placeholdersForFirst(), ..._visibleProjectGroups()]);
+            grid.el.setGroups([..._leadingGroups(), ..._visibleProjectGroups()]);
             if (deletedGroups.length) Events.emit('media:deleted', { count: deletedGroups.length });
         }
 
@@ -1446,7 +1455,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 // re-fired gen invisible (no card, no latents) until it finished.
                 // Reconcile from the registry instead of assuming nothing runs.
                 const currentGroups = _visibleProjectGroups();
-                grid.el.setGroups([..._placeholdersForFirst(), ...currentGroups]);
+                grid.el.setGroups([..._leadingGroups(), ...currentGroups]);
                 const noRunning = !activeGenerations.list().some(e => e.status === 'running');
                 const queueIdle = (state.generationQueueCount || 0) === 0;
                 const continueBusy = _continuingGroupIds.size > 0 || _queuedContinueGroupIds.size > 0;
@@ -1482,11 +1491,19 @@ export const MpiGalleryBlock = ComponentFactory.create({
             return [first.placeholderGroup, ...(first.extraPlaceholders || [])].filter(Boolean);
         };
 
+        /**
+         * Everything that sits ABOVE the project's own groups: imports still landing,
+         * then the running generation. Every `setGroups` call goes through this — six
+         * of them used to spread `_placeholdersForFirst()` by hand and one (combine)
+         * forgot to, which is exactly the bug a helper prevents (MPI-671).
+         */
+        const _leadingGroups = () => [..._importPlaceholders.values(), ..._placeholdersForFirst()];
+
         _unsubs.push(Events.on('generation:started', ({ id, scope }) => {
             if (scope !== 'gallery') return;
             _myGenIds.add(id);
             const currentGroups = _visibleProjectGroups();
-            grid.el.setGroups([..._placeholdersForFirst(), ...currentGroups]);
+            grid.el.setGroups([..._leadingGroups(), ...currentGroups]);
             // MPI-271: seed the freshly-mounted placeholder from any held latent so a
             // card that mounts mid-gen (or between frames) isn't blank until the next frame.
             const first = _firstRunningEntry();
@@ -1537,7 +1554,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             const allTempIds = [tid, ...extraTempIds].filter(Boolean);
             for (const t of allTempIds) grid.el.removeCard(t);
             const currentGroups = _visibleProjectGroups();
-            grid.el.setGroups([..._placeholdersForFirst(), ...currentGroups]);
+            grid.el.setGroups([..._leadingGroups(), ...currentGroups]);
         };
 
         _unsubs.push(Events.on('generation:complete', ({ id, tempId: tid, extraTempIds = [] }) => {
@@ -1556,7 +1573,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // Keyed on the actual event (a group was added), not on a generation
         // ending, so any future deferred/out-of-band commit repaints for free.
         _unsubs.push(Events.on('project:group-added', () => {
-            grid.el.setGroups([..._placeholdersForFirst(), ..._visibleProjectGroups()]);
+            grid.el.setGroups([..._leadingGroups(), ..._visibleProjectGroups()]);
         }));
 
         _unsubs.push(Events.on('generation:error', ({ id, tempId: tid, extraTempIds = [] }) => {
@@ -1643,6 +1660,42 @@ export const MpiGalleryBlock = ComponentFactory.create({
             _refreshPbGenerating();
         }
 
+        // ── Import spinner cards (MPI-671) ────────────────────────────────────
+        // The shape is the one the grid already renders for a generation:
+        // `isGenerating` is what mounts `.mpi-group-card__spinner`, and an empty
+        // `history` is already a supported case (a t2i run with no start frame
+        // mounts exactly this). No new component, no new grid code.
+        _unsubs.push(Events.on('media:import-started', ({ tempId, filename, mediaType }) => {
+            if (!state.currentProject) return;
+            _importPlaceholders.set(tempId, {
+                id: tempId,
+                type: mediaType,
+                name: filename ? filename.replace(/\.[^.]+$/, '') : 'Importing...',
+                history: [],
+                selectedIndex: 0,
+                // 0/0 lets the card adopt a default box rather than claim an aspect
+                // it cannot know yet — the real dims arrive with the finished card.
+                width: 0,
+                height: 0,
+                // isGenerating gets the in-progress card; isImporting picks the
+                // spinner over the mascot, which would promise a model is working.
+                isGenerating: true,
+                isImporting: true,
+            });
+            grid.el.setGroups([..._leadingGroups(), ..._visibleProjectGroups()]);
+        }));
+
+        // Settled, not completed: this fires on failure too, so a refused import
+        // clears its card instead of spinning forever beside the ui:danger toast.
+        // It lands just BEFORE the `media:imported` that mounts the real card —
+        // the service settles in a `finally`, the caller emits `imported` on the
+        // next microtask — so the two setGroups drain before the frame paints and
+        // the swap is not visible as a gap.
+        _unsubs.push(Events.on('media:import-settled', ({ tempId }) => {
+            if (!_importPlaceholders.delete(tempId)) return;
+            grid.el.setGroups([..._leadingGroups(), ..._visibleProjectGroups()]);
+        }));
+
         // ── media:imported listener — registered unconditionally.
         // Must not be gated by promptBox presence; PromptBox may be remounted
         // later (post-install) and drops need to create cards regardless.
@@ -1702,7 +1755,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             const currentGroups = state.currentProject?.itemGroups || [];
             addGroup(finalGroup);
 
-            grid.el.setGroups([finalGroup, ...currentGroups]);
+            grid.el.setGroups([..._leadingGroups(), finalGroup, ...currentGroups]);
         }));
 
 

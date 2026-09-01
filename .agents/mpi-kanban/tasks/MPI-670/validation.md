@@ -44,7 +44,27 @@ Board validator: `validate_board.py .` reports one violation, and it is not this
 card — a legacy-schema file claim under `state/` owned by another session's
 MPI-591 work (`state/` is gitignored, so it never commits).
 
-## Client half — NOT verified by an agent
+## Human check — PASSED (2026-09-01)
+
+The user dragged the clip onto the gallery in their own app. It imported and the
+card reads **`imported_016` · 2160 x 3840 · 91S** — portrait, correct duration.
+Both halves of this card are confirmed in the real app: the file crosses the
+import path at 474 MiB, and it lands the right way up.
+
+`Media/imported_016.mp4` in the Grantiz project is the successful import.
+
+**One thing the drag-drop exposed that this card does not fix:** the import took
+long enough (474 MiB copy, then a 91 s 4K120 HEVC 10-bit source transcoded to a
+720p proxy, on a box with ComfyUI loaded) that the first attempt was killed
+mid-flight, because nothing in the UI says an import is running. That attempt
+left `Media/imported_015.mp4` (the full 497,657,819-byte copy), a complete
+`.meta/1adc25d2-….thumb.jpg` and a `.meta/1adc25d2-….proxy.mp4` truncated at 41%
+(3,145,776 of 7,673,004 bytes) — and **no sidecar**, because the route writes it
+last, after the derivatives. No card, and `/backfill-media-derivatives` iterates
+sidecars so it can never find the orphan either. Feedback during an import is
+its own card.
+
+## Client half — verified by the human check above, not by an agent
 
 `_sourcePathFor` is a 3-line reuse of the `window.require('electron').webUtils
 .getPathForFile` accessor that `MpiFolderDrop.js:114` and

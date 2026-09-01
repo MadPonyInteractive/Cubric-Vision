@@ -25,6 +25,6 @@
 - [x] The real clip now probes `2160x3840, rotation:270` instead of `3840x2160`.
 - [x] Full suite green after the probe change: `npm test` → 830 pass, 0 fail. Covers
       `videoConcat`'s `_canFastPath`, which compares these dimensions.
-- [ ] **Human check** — one real drag-drop of the clip onto the gallery in the user's
-      own app. Electron drag-drop with an OS file path cannot be driven from outside
-      the app, so no agent can close this one.
+- [x] **Human check** — the user dragged the clip onto the gallery in their own app.
+      Card reads `imported_016` · 2160 x 3840 · 91S. Portrait, right duration, right
+      file. Both halves confirmed in the real app.

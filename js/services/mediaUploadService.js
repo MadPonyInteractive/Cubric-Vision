@@ -42,6 +42,13 @@ export async function uploadMediaFile(file, mediaType, projectFolderPath, projec
         clientLogger.warn('mediaUploadService', 'Missing project context — cannot save media');
         return null;
     }
+    // Announced here rather than from a drop handler because this function IS the
+    // ingest path — gallery drop, PromptBox drop, snapshot and recorder all land
+    // here, so one pair of events gives every surface its spinner card (MPI-671).
+    // ponytail: fires for a 2 MB snapshot too, which flashes a card for an instant.
+    // Gate on file.size if that flicker turns out to annoy.
+    const tempId = crypto.randomUUID();
+    Events.emit('media:import-started', { tempId, filename: file?.name || '', mediaType });
     try {
         const ext = file.name.split('.').pop() || (mediaType === 'image' ? 'png' : 'mp4');
         const prefix = opts.filenamePrefix || 'imported';
@@ -99,6 +106,10 @@ export async function uploadMediaFile(file, mediaType, projectFolderPath, projec
         // files must not open ten modals.
         Events.emit('ui:danger', { message: `Could not import ${file?.name || 'media'}: ${e.message || e}` });
         return null;
+    } finally {
+        // In a `finally` so a failure clears the spinner card too — a card left
+        // running beside the toast above would read as an import still in flight.
+        Events.emit('media:import-settled', { tempId });
     }
 }
 

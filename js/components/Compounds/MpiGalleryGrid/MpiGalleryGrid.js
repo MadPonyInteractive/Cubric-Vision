@@ -1544,6 +1544,23 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 }
             };
 
+            /**
+             * The import twin of setGenerating (MPI-671). Same in-progress card, one
+             * deliberate difference: the SPINNER stays and the mascot never appears.
+             * The mascot means "a model is cooking this"; an import is a file copy and
+             * a transcode, so showing it would promise work that is not happening.
+             * There is never a preview frame to paint either, hence no previewUrl.
+             */
+            cardEl.setImporting = () => {
+                _generating = true;
+                cardEl.classList.add('mpi-group-card--generating');
+                preview.classList.add('mpi-group-card__preview--visible');
+                thumb.style.visibility = 'hidden';
+                _clearPreviewImage();
+                _setMascotState(null);
+                spinner.style.display = '';
+            };
+
             cardEl.updatePreview = (previewUrl, clip = null) => {
                 if (!_generating) return;
                 // First real preview frame = "latency coming in" → shrink to corner.
@@ -1724,6 +1741,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 group?.selectedIndex ?? '',
                 group?.favourite ? 'fav' : '',
                 group?.isGenerating ? 'generating' : '',
+                group?.isImporting ? 'importing' : '',
                 sel?.id || '',
                 sel?.filePath || '',
                 sel?.thumbPath || '',
@@ -1872,7 +1890,8 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         demoteObserver.observe(wrapper);
 
                         if (group.isGenerating) {
-                            card.el.setGenerating(group.latestPreviewUrl ?? null);
+                            if (group.isImporting) card.el.setImporting();
+                            else card.el.setGenerating(group.latestPreviewUrl ?? null);
                         }
 
                     });

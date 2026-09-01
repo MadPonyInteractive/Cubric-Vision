@@ -108,6 +108,15 @@ export const Events = new EventBus();
  * 'ui:warning'       { message: string }              — warning toast via StatusBar.notify()
  * 'ui:info'          { message: string }              — info toast via StatusBar.notify()
  * 'media:updated'    { projectId: string }           — any tool saving to library
+ * 'media:import-started' { tempId: string, filename: string, mediaType: string }
+ *                    — a file has begun importing. Emitted by `uploadMediaFile`, so it
+ *                      covers every ingest surface (gallery drop, PromptBox drop,
+ *                      snapshot, recorder). The gallery mounts a spinner card against
+ *                      `tempId`; a large import is otherwise silent until it finishes
+ *                      and reads as a hang (MPI-671).
+ * 'media:import-settled' { tempId: string }          — that import finished, either way.
+ *                      ALWAYS follows a start, including on failure, so the spinner card
+ *                      is never left running next to a `ui:danger` toast.
  * 'tool:running'     { tool: string, type: string }  — tool started a run
  * 'tool:loading-model' { tool: string }              — model loader node executing (VRAM load phase)
  * 'tool:sampling-start' { tool: string, operation?: string } — KSampler about to run (model loaded, sampling begins)
