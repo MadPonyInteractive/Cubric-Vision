@@ -425,6 +425,11 @@
     margin: 0 auto;
 }
 .mpi-base-flow__explainer p + p { margin-top: var(--s-3); }
+/* Licence block (MPI-666) — spacing ONLY. The rows are MpiModelManager's
+   `mpi-detail__licence*`, loaded app-wide by preloadStyles.js, so this surface
+   inherits the Model Library's layout instead of forking it; the column separates
+   its children by their own bottom margins, which an appended field has none of. */
+.mpi-base-flow__licence { margin-top: var(--s-5); }
 .mpi-base-flow__no-inputs {
     font-size: var(--t-sm);
     color: var(--ink-4);

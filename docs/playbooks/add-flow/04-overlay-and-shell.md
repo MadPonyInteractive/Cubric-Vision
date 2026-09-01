@@ -52,6 +52,42 @@ screen, too shy just never gets better — so the branch has a desktop probe,
 `tests/desktop/flow-library-skips-drawer.spec.js`, both halves mutation-checked. The drawer's LoRA
 cogwheel left with it ([ui/lora-rack.md](ui/lora-rack.md)).
 
+## The licence surface — on BOTH sides of the skip (MPI-666)
+
+`js/utils/flowLicences.js` owns it, and both surfaces import it. Extracted rather than copied
+for the reason `declaredFields.js` was (MPI-580): two copies drift into one surface attributing
+its licensor and the other not, and `poweredBy` is licence-mandated attribution while `report`
+is a channel MiniMax H3 §V.5 obliges us to keep reachable.
+
+- `flowInstallKeys(flow)` — the download-queue keys. Lives here because **the queue key IS the
+  licence key**: `getModelLicence` answers for a model id and a `flow:<id>` dep key alike.
+- `flowLicences(flow)` — the descriptors gating them, deduped by descriptor **id**, not by key
+  (H3 ships as two ModelDefs under one agreement).
+- `buildLicenceRows(flow, unsubs)` — the rows. `mpi-detail__licence*`, MpiModelManager's block,
+  loaded app-wide by `preloadStyles.js`; the caller supplies its own wrapper for spacing.
+
+**Pre-install** (`MpiFlowLibrary`): a `Licence required` tile chip and a `Licence` field in the
+drawer. Its `_licenceErrands(flow)` returns the OUTSTANDING descriptors, and an errand is
+`verify || territory` — a trip to the licensor standing between the click and the weights.
+Both shapes qualify but they are not the same: `verify` is a probe we run and it **mechanically**
+refuses the install (klein-9b, a Hugging Face grant); `territory` is **self-attested** — H3 has
+no `verify`, so a user ticks the box and the download proceeds. Keying on `verify` alone read H3
+as ungated, which is why the test is widened. The footer names what the click delivers:
+`Verify licence` / `Review licence` / `Install models`.
+
+**Post-install** (`MpiBaseFlow` step 0, under the explainer): the same rows, **unconditional and
+with no field heading**. Acceptance is a pre-install question and by step 0 the weights are on
+disk; what survives is the attribution and the report channel, which the gate dialog cannot carry
+because it fires once. No heading because step 0 is prose, not a spec sheet (Fabio, 2026-09-01).
+This half exists *because* of the skip above: a flow opened inside a project never sees the
+drawer, and a beginner living in Flows may never open the Model Library.
+
+Guarded by `tests/flow-licence-surface.test.cjs` — a data half over the descriptors and an
+anchoring half over all three files. **The anchors must be proved to bite against
+`git show HEAD:<path>`**; a green anchoring test that also passes on the unfixed tree proves
+nothing, and this card turned master red once by asserting a key that existed only in a peer's
+uncommitted tree.
+
 ## The result pane
 
 Three sections — the declared before/after comparison (`result.compare`), the real video

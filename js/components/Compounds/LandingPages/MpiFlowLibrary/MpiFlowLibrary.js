@@ -1,6 +1,6 @@
 import { ComponentFactory } from '../../../factory.js';
 import { MpiOverlay } from '../../../Primitives/MpiOverlay/MpiOverlay.js';
-import { MpiButton, mountButton } from '../../../Primitives/MpiButton/MpiButton.js';
+import { MpiButton } from '../../../Primitives/MpiButton/MpiButton.js';
 import { MpiTileSheet } from '../../../Primitives/MpiTileSheet/MpiTileSheet.js';
 import { Events } from '../../../../events.js';
 import { state } from '../../../../state.js';
@@ -15,8 +15,8 @@ import { sizeToGb } from '../../../../data/modelConstants/footprint.js';
 import { PAGE_GALLERY } from '../../../../router.js';
 import { qs, ce, on } from '../../../../utils/dom.js';
 import { renderIcon } from '../../../../utils/icons.js';
-import { getModelLicence, hasAcceptedLicence } from '../../../../data/modelConstants/licences.js';
-import { openExternal } from '../../../../utils/openExternal.js';
+import { hasAcceptedLicence } from '../../../../data/modelConstants/licences.js';
+import { flowInstallKeys, flowLicences, buildLicenceRows } from '../../../../utils/flowLicences.js';
 
 /**
  * Output-type sections, in render order (MPI-634). A flow's tile is the same 4/5
@@ -120,7 +120,7 @@ export const MpiFlowLibrary = ComponentFactory.create({
             // the Flow grid while the Model Library named it correctly for the same weights.
             // Naming it before the click is the whole affordance — the gate itself already
             // fires either way, in `downloadService.start()`.
-            if (_needsLicenceProof(flow)) {
+            if (_licenceErrands(flow).length) {
                 return `<span class="mpi-tile__chip mpi-tile__chip--available">Licence required</span>`;
             }
             return `<span class="mpi-tile__chip mpi-tile__chip--available">Get models</span>`;
@@ -144,46 +144,42 @@ export const MpiFlowLibrary = ComponentFactory.create({
             _detailBtns = [];
         }
 
-        // Every download-queue key this flow installs under: one per required MODEL,
-        // plus ONE for its own flow-only deps (MPI-304, keyed `flow:<id>` so it can never
-        // collide with a model id). Install/cancel/progress all iterate this same list,
-        // so the flow-deps row participates in the aggregated bar exactly like a model.
-        function _installKeys(flow) {
-            // Resolved ids (MPI-590): an any-of slot contributes the member that is
-            // installed — or the default to install — never both, so the aggregated bar
-            // and Cancel-all keep counting one job per slot exactly as before.
-            const keys = flowModelIds(flow);
-            if ((flow.requiredDeps || []).length) keys.push(flowDepKey(flow.id));
-            return keys;
-        }
+        // `flowInstallKeys` (every download-queue key this flow installs under) and
+        // `flowLicences` (the descriptors gating them) moved to js/utils/flowLicences.js
+        // in MPI-666 phase 2, because MpiBaseFlow's step 0 needs the same licence block
+        // after install and two copies would drift. The queue key IS the licence key —
+        // that identity is why one module owns both.
 
-        // MPI-666 — every licence descriptor gating anything this flow installs, deduped.
-        // Iterates `_installKeys` because the queue key IS the licence key: `getModelLicence`
-        // answers for a model id and for a `flow:<id>` dep key alike (MPI-664 filed
-        // `flow:minimax-music` in MODEL_LICENCES), so a flow's own weights are covered by
-        // the same lookup as its models with no special case.
+        // Does anything this flow needs send the user to the LICENSOR before it can install?
+        // That is the question the tile has to answer, because that is what turns "Get
+        // models" into a lie: not the existence of a licence, but an errand outside this app
+        // standing between the click and the weights. Two shapes qualify, and a licence in
+        // neither never matches — its consent is one dialog at install, mid-flow, which is
+        // not worth pre-announcing.
         //
-        // Deduped by DESCRIPTOR id, not by key: H3 ships as two ModelDefs under one
-        // agreement, so a flow pulling both must not print the same block twice.
-        function _flowLicences(flow) {
-            const seen = new Set();
-            const out = [];
-            for (const key of _installKeys(flow)) {
-                const licence = getModelLicence(key);
-                if (!licence || seen.has(licence.id)) continue;
-                seen.add(licence.id);
-                out.push({ key, licence });
-            }
-            return out;
-        }
-
-        // Does anything this flow needs still require PROOF the user has not given? Same
-        // test as the Model Library's `_needsLicenceProof`, over a set instead of one id:
-        // a `verify` licence (the licensor grants access on their own site) with no
-        // accepted receipt. A licence without `verify` never matches — its consent step is
-        // one dialog at install, which is not worth pre-announcing on a tile.
-        function _needsLicenceProof(flow) {
-            return _flowLicences(flow).some(({ key, licence }) => licence.verify && !hasAcceptedLicence(key));
+        //   `verify`    — the licensor grants access on their own site and we probe it
+        //                 (FLUX klein-9b: a Hugging Face access request, then a token).
+        //   `territory` — the licence excludes where the user is, and the gate's FIRST
+        //                 acknowledgement is "I am outside the excluded territories, or I
+        //                 hold my own authorization". MiniMax H3 excludes the EU, the UK,
+        //                 Korea and the USA, so most of our users cannot honestly tick that
+        //                 box until MiniMax answer their form. Widened here (MPI-666, once
+        //                 MPI-591 put H3 behind Extend Video): H3 carries no `verify` — the
+        //                 weights are not gated, only the RIGHT to use them is — so the
+        //                 original `verify`-only test read it as ungated and the tile
+        //                 promised a download that delivers a Feishu form. Same ambush the
+        //                 chip exists to stop, through the door the first test did not watch.
+        //
+        // Not gated on WHERE the user is: we do not geolocate, and asking the licence
+        // instead of the user is the honest test — the ones who are outside the bar lose
+        // nothing but a truer word on a tile.
+        // Returns the DESCRIPTORS, not a boolean, because the footer has to name which kind
+        // of errand is outstanding and a second pass over all of them would name one the
+        // user has already run.
+        function _licenceErrands(flow) {
+            return flowLicences(flow)
+                .filter(({ key, licence }) => (licence.verify || licence.territory) && !hasAcceptedLicence(key))
+                .map(({ licence }) => licence);
         }
 
         // Install every missing required model (each drives its own dep download —
@@ -215,7 +211,7 @@ export const MpiFlowLibrary = ComponentFactory.create({
 
         // Cancel EVERY in-flight install for this flow (Cancel-all) — models AND flow deps.
         function _cancelInstall(flow) {
-            for (const key of _installKeys(flow)) {
+            for (const key of flowInstallKeys(flow)) {
                 if ((state.downloadJobs || []).some(j => j.modelId === key)) {
                     downloadService.cancel(key);
                 }
@@ -228,7 +224,7 @@ export const MpiFlowLibrary = ComponentFactory.create({
         // `installing` = at least one model has a live download job. Returns overall 0–1.
         //   { installing, progress }
         function _installProgress(flow) {
-            const ids = _installKeys(flow);
+            const ids = flowInstallKeys(flow);
             if (!ids.length) return { installing: false, progress: 0 };
             const installed = state.s_installedModelIds || [];
             const jobs = state.downloadJobs || [];
@@ -354,18 +350,11 @@ export const MpiFlowLibrary = ComponentFactory.create({
             });
         }
 
-        // MPI-666 — the licence block, one per descriptor gating this flow. It is the SAME
-        // markup and the same `mpi-detail__licence*` classes the Model Library drawer uses;
-        // those rules live in MpiModelManager.css, which preloadStyles.js loads app-wide, so
-        // this surface inherits the layout rather than forking it.
-        //
-        // WHY EVERY LICENCE AND NOT A "one or more apply" NOTE: a note that names a licence
-        // without linking it is the same dead end this card closes — "Read the licence" is
-        // the affordance, not the word. N is 1 for every flow shipped today, so the common
-        // case renders exactly like the model drawer; a second descriptor stacks a second
-        // block, which is the only case the model drawer never has to handle.
+        // MPI-666 — the licence field's HOST. The rows themselves come from
+        // js/utils/flowLicences.js, which MpiBaseFlow's step 0 renders from too; only the
+        // drawer's `mpi-detail__field` wrapper is local, because only this surface has one.
         function _licenceFieldHtml(flow) {
-            if (!_flowLicences(flow).length) return '';
+            if (!flowLicences(flow).length) return '';
             return `
                 <div class="mpi-detail__field">
                     <span class="mpi-detail__field-label">Licence</span>
@@ -376,30 +365,7 @@ export const MpiFlowLibrary = ComponentFactory.create({
         function _mountLicences(flow) {
             const host = qs('#flow-detail-licences', detailBody);
             if (!host) return;
-            for (const { licence } of _flowLicences(flow)) {
-                const row = ce('div', { className: 'mpi-detail__licence' });
-                row.append(ce('div', { className: 'mpi-detail__licence-name', textContent: licence.name }));
-                // Required attribution (MPI-452/664) rides with the licence it belongs to,
-                // so a flow pulling two licensed weights attributes each to its own licensor.
-                if (licence.poweredBy) {
-                    row.append(ce('div', { className: 'mpi-detail__licence-powered', textContent: licence.poweredBy }));
-                }
-                const links = ce('div', { className: 'mpi-detail__licence-links' });
-                const linkTo = (text, url) => {
-                    const b = mountButton({ text, variant: 'ghost', size: 'sm', extraClasses: 'mpi-detail__licence-link' });
-                    _unsubs.push(on(b, 'click', () => openExternal(url)));
-                    return b;
-                };
-                links.append(linkTo('Read the licence', licence.licenceUrl));
-                // The link a BARRED user needs. Until now it existed only inside the gate
-                // dialog and in the Model Library drawer, so a Flow-only user who cancelled
-                // the dialog had no standing route to it (MPI-591 puts territory-restricted
-                // MiniMax H3 behind Extend Video, and Fabio's own machine is inside the bar).
-                if (licence.territory) links.append(linkTo('Request authorization', licence.territory.authorizationUrl));
-                if (licence.report) links.append(linkTo(licence.report.label, licence.report.url));
-                row.append(links);
-                host.append(row);
-            }
+            host.append(...buildLicenceRows(flow, _unsubs));
         }
 
         function openDetail(flow) {
@@ -465,10 +431,23 @@ export const MpiFlowLibrary = ComponentFactory.create({
                 detailActions.appendChild(open.el); _detailBtns.push(open);
             } else {
                 // Same button, same path — the gate fires inside `downloadService.start()`
-                // either way. Only the promise changes: "Verify licence" opens terms and a
-                // trip to the licensor, not a download (MPI-666, matching the Model Library).
+                // whatever this says. Only the PROMISE changes, and it has to match what the
+                // click actually delivers (MPI-666):
+                //   "Verify licence"  — a `verify` licence ends in a token probe we run, so
+                //                       the word is literal. Matches the Model Library.
+                //   "Review licence"  — a territory-restricted one has nothing to verify;
+                //                       the dialog is where the terms and the licensor's own
+                //                       authorization route live, and for an EU/UK/KR/US user
+                //                       reading them IS the step. Promising verification we
+                //                       never perform would be the same lie as "Get models".
+                //   "Install models"  — ungated: the click starts a download.
+                // Derived from the OUTSTANDING descriptors, not all of them: a flow whose
+                // klein-9b receipt is already filed and whose H3 one is not has nothing left
+                // to verify, and "Verify licence" would name the step the user already did.
+                const outstanding = _licenceErrands(flow);
                 const install = MpiButton.mount(ce('div'), {
-                    text: _needsLicenceProof(flow) ? 'Verify licence' : 'Install models',
+                    text: !outstanding.length ? 'Install models'
+                        : outstanding.some(l => l.verify) ? 'Verify licence' : 'Review licence',
                     variant: 'primary', size: 'md',
                 });
                 install.on('click', () => { _installMissing(flow, missing); });
@@ -646,7 +625,7 @@ export const MpiFlowLibrary = ComponentFactory.create({
         _unsubs.push(Events.on('download:progress', ({ modelId }) => {
             // MPI-304: match the flow-deps key too, or a flow-deps-only install ticks
             // the queue while the bar sits frozen at 0.
-            if (_activeDetail && _installKeys(_activeDetail).includes(modelId)) _patchProgress(_activeDetail);
+            if (_activeDetail && flowInstallKeys(_activeDetail).includes(modelId)) _patchProgress(_activeDetail);
         }));
         // State transitions rebuild the open panel (footer swaps Install↔Cancel↔Open,
         // required-models rows repaint). Only the open panel repaints; the grid badges

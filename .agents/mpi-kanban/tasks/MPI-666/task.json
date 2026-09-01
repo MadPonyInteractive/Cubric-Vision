@@ -4,10 +4,10 @@
   "title": "Flows are blind to licence gates - no licence in the Flow drawer, and a refused gate is a silent no-op",
   "description": "MpiFlowLibrary has no licence awareness at all: no \"Licence required\" chip on the tile, no licence row in its detail drawer, no read-the-licence / request-authorization / report-misuse links. The Model Library has all three. Consent is NOT bypassed - downloadService.start() is the chokepoint and fires for a flow key too - so this is an ambush plus a dead end: a refused gate returns undefined, creating no job and emitting no download:started, so the flow tile silently reverts to Install with no explanation. Live today on scribble, scribble-object and object-stamp, which all require klein-9b, the app's only verify licence (HF token + a grant taken on Black Forest Labs' own page). MPI-591 sharpens it by putting territory-gated MiniMax H3 behind Extend Video, where the \"Request authorization\" link a barred user needs exists only in the gate dialog and the Model Library drawer. Found while closing MPI-664, whose attribution decision rests on the same fact: a Flow user may never open the Model Library.",
   "column": "doing",
-  "maturity": "in-progress",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-08-31T18:27:16+01:00",
-  "updated_at": "2026-08-31T19:05:00+01:00",
+  "updated_at": "2026-09-01T08:29:49Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -17,5 +17,11 @@
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "research": "research/"
-  }
+  },
+  "attention": {
+    "state": "cleared",
+    "reason": "Held open on purpose: the H3 half cannot render until MPI-591 lands Extend Video. Check steps in validation.md; MPI-591 notified by message 71214c6e-3325-44bd-8161-e65e09092c9f.",
+    "updated_at": "2026-09-01T08:29:49Z"
+  },
+  "activeSessionTitle": "MPI-666 phase 2 - the post-install licence block on MpiBaseFlow step 0"
 }

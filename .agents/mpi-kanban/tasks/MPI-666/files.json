@@ -3,6 +3,9 @@
   "files": [
     ".agents/mpi-kanban/tasks/MPI-666/**",
     "js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js",
-    "tests/flow-licence-surface.test.cjs"
+    "tests/flow-licence-surface.test.cjs",
+    "js/utils/flowLicences.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.css"
   ]
 }

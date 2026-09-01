@@ -72,13 +72,52 @@ H3 is why this cannot wait for MPI-591 to ship: §V.5 obliges us to keep a repor
 (MPI-664) carries `report` too. Land this BEFORE 591, or H3 ships with its report channel
 reachable from one page only.
 
-- [ ] The same licence block on `MpiBaseFlow`'s step 0, over the same `_flowLicences` set.
-      Step 0 already paints title, hero and description — which is the model drawer's own
-      argument for where a licence belongs: *"where a user already comes to read what a model
-      is."* Extracting `_flowLicences` / the render out of the `MpiFlowLibrary` closure so both
-      surfaces share one implementation is the likely shape; two copies would drift into one
-      surface attributing and the other not.
-- [ ] Check `MpiBaseFlow` ownership before editing — it is on MPI-664's `files.json`.
+- [x] The same licence block on `MpiBaseFlow`'s step 0, over the same licence set. Landed as
+      the extraction, not a copy: `flowInstallKeys` / `flowLicences` / `buildLicenceRows` now
+      live in **`js/utils/flowLicences.js`**, which both surfaces import. `MpiFlowLibrary`
+      lost ~45 lines and renders byte-identically; `MpiBaseFlow` gained an import and a block
+      under the explainer. Precedent for a util that mounts Primitives:
+      `js/utils/declaredFields.js`, extracted from this same component by MPI-580.
+      - `flowInstallKeys` moved WITH the licence helpers on purpose — the queue key IS the
+        licence key, and that identity is the module's whole subject. `MpiFlowLibrary` still
+        uses it for install / cancel / progress, now as an import.
+      - The block is **unconditional** here, unlike the Library's chip: acceptance is a
+        pre-install question and by step 0 the weights are on disk. What matters post-install
+        is that the agreement, the attribution and the report channel stay reachable.
+      - **No `LICENCE` heading on step 0** (Fabio, 2026-09-01), unlike either drawer. A drawer
+        is a spec sheet and a field heading belongs there; step 0 is prose the user reads once
+        to learn what the flow does, so the attribution reads as its last line instead of a
+        form field bolted underneath. The obligation is to DISPLAY the attribution where the
+        model is presented (H3 §III.3.a), not to head it, and `Read the licence` still provides
+        the copy §III.1 asks for.
+      - ONE CSS rule, `.mpi-base-flow__licence { margin-top: var(--s-5) }` — step 0's right
+        column is a plain block whose children space themselves by their own bottom margins,
+        and an appended field has none. Everything else is inherited `mpi-detail__licence*`.
+- [x] **The chip's test was too narrow for H3** — folded in on Fabio's call, 2026-09-01, from
+      his question "is the same thing going to happen with MiniMax on Extend Video?"
+      `_needsLicenceProof` keyed on `verify`, which is a HUGGING FACE access grant. **H3 has
+      no `verify`** — MiniMax do not gate the weights, only the RIGHT to use them. So the
+      Extend Video tile would have read `Get models` and delivered a Feishu form: the same
+      ambush the chip exists to stop, arriving through the door the first test did not watch.
+      Acknowledgement #1 is *"I am outside the excluded territories, or I hold my own
+      authorization"*, and the EU / UK / KR / USA are excluded — that is most of our users,
+      Fabio included, and it is an errand off-app exactly like klein-9b's.
+      - `_needsLicenceProof` → **`_licenceErrands(flow)`**, returning the outstanding
+        descriptors rather than a boolean, on `verify || territory`. The footer needs to know
+        WHICH kind is outstanding, and a second pass over all of them would name one the user
+        has already run (klein-9b filed, H3 not).
+      - Footer wording follows the promise: `Verify licence` (a probe we actually run) /
+        **`Review licence`** (a territory bar has nothing to verify — the dialog is where the
+        terms and MiniMax's authorization route live) / `Install models`.
+      - The ungated majority is unaffected, and a test asserts it: neither field → no chip.
+      - Asserted against `minimax-h3`, which is COMMITTED at HEAD (`licences.js:243`), not
+        MPI-664's uncommitted tree. Checked with `git show HEAD:` before writing it.
+- [x] Ownership: `MpiBaseFlow.js` (+ `.css`) TAKEN from MPI-664, not negotiated — no live
+      claim exists (every `state/sessions` record is `closed`; the only `claimed` write is
+      MPI-591 on `ComfyUi-MpiNodes/h3.py`) and both files were CLEAN in the working tree, so
+      there was nothing of 664's to clobber. Recorded as message
+      `1347861f-c088-4c68-95f5-892b9f15448e`, claim `e73b575d-b1b7-4020-ad65-4aa0c40de5fb`.
+      Release on this card's close-out.
 
 ## Verified
 

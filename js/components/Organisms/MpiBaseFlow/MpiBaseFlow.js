@@ -25,6 +25,7 @@ import { flowModelSlots, flowModelIds, setFlowModel } from '../../../data/flowsR
 import { disambiguatedName } from '../../../data/modelRegistry.js';
 import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
 import { buildField, mapDeclaredValue, isInjectionParam, disabledFieldIds, hiddenFieldIds } from '../../../utils/declaredFields.js';
+import { buildLicenceRows } from '../../../utils/flowLicences.js';
 
 /**
  * MpiBaseFlow — THE flow frame: a step carousel (MPI-306 Phase 1).
@@ -1442,6 +1443,36 @@ export const MpiBaseFlow = ComponentFactory.create({
             p.textContent = flow.description || '';
             explainer.appendChild(p);
             right.appendChild(explainer);
+
+            // MPI-666 phase 2 — the licence, where an INSTALLED flow can still reach it.
+            // MPI-638's `_pick` skips the Flow Library drawer for an available flow inside a
+            // project, so the drawer's licence block (phase 1) is unreachable from the one
+            // surface a user lives in: the licence text, the required attribution, and — for
+            // MiniMax H3 (MPI-591) and minimax-music (MPI-664) — the misuse-report channel
+            // H3 §V.5 obliges us to keep accessible. Step 0 already paints title, hero and
+            // description, which is the Model Library drawer's own argument for where a
+            // licence belongs: where a user comes to read what a thing is.
+            //
+            // Unconditional, unlike the Library's chip: acceptance is a pre-install question,
+            // and by step 0 the weights are on disk. What matters here is that the agreement
+            // and its channels stay reachable, not whether proof is outstanding.
+            const licenceRows = buildLicenceRows(flow, unsubs);
+            if (licenceRows.length) {
+                // MpiModelManager's `mpi-detail__*` block deliberately — this IS the Model
+                // Library's licence block, and preloadStyles.js loads that stylesheet
+                // app-wide. Only the spacing is ours (`mpi-base-flow__licence`), because
+                // step 0's column separates its children by their own bottom margins.
+                //
+                // NO "LICENCE" LABEL, unlike either drawer (Fabio, 2026-09-01). A drawer is a
+                // spec sheet, so a field heading belongs there; step 0 is prose the user reads
+                // once to learn what the flow does, and the attribution reads as the last line
+                // of it rather than as a form field bolted underneath. The obligation is to
+                // DISPLAY the attribution where the model is presented (H3 §III.3.a), not to
+                // head it — and `Read the licence` still provides the copy §III.1 asks for.
+                const field = ce('div', { className: 'mpi-detail__field mpi-base-flow__licence' });
+                licenceRows.forEach(row => field.appendChild(row));
+                right.appendChild(field);
+            }
 
             split.appendChild(left);
             split.appendChild(divider);
