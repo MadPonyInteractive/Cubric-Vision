@@ -243,6 +243,48 @@ notes in [research/](research/).
 > standalone against `mpi623_flowtest`, ~20-30 min, and the splat lands. The bake does
 > NOT need repeating.
 
+> **Session note 2026-09-01 (twelfth). THE SPLAT LANDED - AND THE FOLD-BACK IT WAS
+> SUPPOSED TO UNLOCK IS RETRACTED INSTEAD.** The mechanical half went exactly as the
+> handoff said: proxies read off disk, four manifests over `frames/`, SfM ->
+> `MpiBrushTrain` -> `PreviewAny`, dispatched standalone against the intact
+> `mpi623_flowtest` bake. **`success` in 30.5 min, `export_5000.ply` 51.2 MB /
+> 216,810 splats, 984 images, ONE sparse model** with `on_split: stop` armed. Amendment
+> 46's `PreviewAny` capture returned the path through `/history` exactly as designed.
+> **Nothing was re-baked** and the by_traj copy the handoff prescribed was not needed.
+>
+> **Then the two findings that stop the next step - amendments 48 and 49.** ComfyUI
+> caches a node's WHOLE output tuple and never evicts anything the CURRENT prompt
+> produced (`caching.py:556-561`; no caller anywhere passes `free_active=True`), so any
+> link from a composite to the late SfM pins that composite's tensors - the STRING
+> manifest and the IMAGE outputs are one entry. And the four composites execute in
+> **reverse** slot order (proved off the bake's own mtimes), which kills the cheap
+> shared-folder `skip_first_images` wiring. Then the measurement: **this run peaked at
+> 8.59 GB with 30.6 GB still free**, doing the same SfM over the same 164 frames that
+> the merged graph did while holding 47.3 GB and hitting 0 MB. **[That 8.59 GB was
+> WRONG - see amendment 51. The run peaked at 42.79 GB with 3.76 GB free; I read a
+> RUNNING peak 7 minutes before the spike and quoted it as the run's.]** The spike sits
+> INSIDE the SfM node and does not care where the frames were read from - this run was
+> disk-fed and spiked anyway. So amendment 47's "ONE graph, ONE dispatch" is still
+> retracted and its diagnosis was closer to right than 49 credited: the 47 GB IS the SfM
+> stage. Two dispatches is the answer because that spike needs the machine otherwise
+> empty, and only a NEW PROMPT bumps the cache generation and frees the previous stage.
+> **Carry the risk: stage B alone left 3.76 GB free on a 68.5 GB box.**
+>
+> **The fold-back was deliberately NOT done** - it would have baked a non-fix into the
+> reference graph. **Fabio chose TWO DISPATCHES the same session, and amendment 50 builds
+> it:** `flow_3d_scene_a.api.json` (57 nodes, rails -> composites -> `Output_Image`) and
+> `flow_3d_scene_b.api.json` (14 nodes, proxies off disk -> SfM -> Brush ->
+> `Output_Splat`), both validated against the live `/object_info`, with B's path plumbing
+> proven on the bench in seconds. B needs no hires manifests at all - `hires_dir` +
+> `*.png` globs the shared folder in exactly the concat order and asserts the count.
+> **The app side is small:** `submitFlowGeneration` is one job with `onComplete`, so job 2
+> chains off job 1 - two ordinary jobs, no surgery in `commandExecutor`'s lane machinery.
+>
+> **Next, and it is repo wiring rather than bench work:** a second workflow name on
+> `FlowDef`, and which job owns the Scene card. **One gap found in passing and it is
+> real - `ComfyUI-SplatKit` is not in `dev_configs/node_lock.json`**, so every node this
+> card depends on is undeclared. Nothing is blocked.
+
 **Project mode:** `scalable-foundation`.
 
 A user bakes a Gaussian-splat scene once from a 360 equirect image, then re-enters
@@ -1266,6 +1308,197 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     0 and `POST /free` returned **200 having released nothing**, exactly the shape
     `~/.claude/memory/tools/` records. But "stalled" was a stronger claim than the
     evidence carried, and it is the claim that cost the tail of a 140-minute run.
+
+### Amendments from the disk-fed SfM session (2026-09-01)
+
+48. **THE FOLD-BACK IS NOT A ONE-LINE REWIRE, AND TWO OF AMENDMENT 47'S WORKING
+    ASSUMPTIONS DO NOT SURVIVE THE SOURCE.** Both facts below are read out of code and
+    off disk, not reasoned.
+
+    **(a) ComfyUI caches a node's WHOLE output tuple, and nothing produced by the
+    CURRENT prompt is ever evicted.** `RAMPressureCache.ram_release`
+    (`comfy_execution/caching.py:556-561`) skips every entry whose
+    `used_generation[key] == self.generation` unless `free_active=True` - and a grep of
+    the whole tree shows **no caller ever passes `free_active=True`**
+    (`comfy/memory_management.py:184-187` is the only wrapper, and it defaults to
+    `False`). RAM-pressure caching is the DEFAULT mode in this ComfyUI 0.34.2
+    (`comfy/cli_args.py:140`), so it was already on during the merged run and could not
+    help. Consequence: **any** link from a `SplatKit_HiResComposite` to the late SfM
+    node pins that composite's entire output tuple - including
+    `proxy_frames` and `gate_masks` - for the whole prompt. Feeding `pano_frames_*` off
+    disk while `hires_N` still comes off the composite's `hires_manifest` frees
+    **nothing**: the string and the tensors are one cache entry.
+
+    **(b) The four composites execute in REVERSE slot order.** Measured off the bake's
+    own mtimes in `mpi623_flowtest`: `traj03_frame_manifest.json` 16:08,
+    `traj02` 16:41, `traj01` 17:13, `traj00` 17:45. So the cheap disk-fed wiring - one
+    `VHS_LoadImagesPath` per rail on the SHARED `proxies/` folder with
+    `skip_first_images = 41*N` - is **unsafe**: the traj03 loader would run first, when
+    only 41 files exist, and slot 4 would load an empty batch. (The arithmetic itself is
+    sound - VHS does `sorted(os.listdir)` -> skip -> cap, `utils.py:137-141` /
+    `load_images_nodes.py:41-46`, and the folder does sort `traj00..traj03`, 41 each.
+    It is the ORDER that kills it.)
+
+    **What the fold-back therefore needs:** the SfM node must take **no direct link from
+    any composite** - not the frames, not the manifest - while something still forces the
+    composites to run first. The shape that does both is one small node per wire:
+    `composite_N.proxy_dir` -> a glob-to-IMAGE loader -> `pano_frames_N`, and
+    `composite_N.hires_dir` -> a glob-to-manifest node -> `hires_N`. **Neither node
+    exists**: SplatKit's `LoadDatasetImagesOrdered` (`upscale.py:531`) reads a FINISHED
+    COLMAP dataset, and `VHS_LoadImagesPath` has no glob. They are ~40 lines each in
+    `ComfyUi-MpiNodes`, which we own - but that is a node-pack change plus a
+    `node_lock.json` pin bump, i.e. `/mpi-nodes-sync` and **Fabio's call**, not a
+    silent edit to the reference graph.
+
+    **STILL OPEN, and it must be MEASURED not argued:** whether cutting those links
+    actually drops peak RAM enough to keep one graph and one dispatch. The composites'
+    cached tuples stay resident either way by (a), and `proxies`/`gates` are built at
+    proxy resolution (`core/hires_composite.py:1092-1126`), not at 8K - so the "four
+    decoded frame batches = 47 GB" in amendment 47 is not yet a measured claim. The
+    standalone run in this session does the SAME 164-frame concat with NO composites in
+    the prompt, so its peak is the SfM stage's cost on its own; that number is the one
+    that settles it. **Do not retract amendment 47 on arithmetic - retract it, or
+    confirm it, on that measurement.** *(Measured in 49 - it retracts.)*
+
+49. **THE SPLAT LANDED, AND THE MEASUREMENT RETRACTS AMENDMENT 47's CONCLUSION.**
+    `chunk8_sfm_brush_disk.json` (built by `make_sfm_disk.py`) - the four rails' proxies
+    read off disk, four `{dir,paths}` manifests over `_spheresfm_work/frames`, into
+    `SphereSfMDatasetDualRes` -> `MpiBrushTrain` (5000 / sh_degree 3 / max_splats 10M)
+    -> `PreviewAny` titled `Output_Splat`. Dispatched standalone against the INTACT
+    `mpi623_flowtest` bake; nothing was re-baked.
+
+    **Result: `success` in 30.5 min.** `/history` returned
+    `{"162": {"text": ["D:\\WORK\\Images\\Outputs\\splats\\mpi623_flowtest_sfm_90qi73e7\\export_5000.ply"]}}`,
+    which is amendment 46's `PreviewAny` capture working end to end. On disk:
+    **51.2 MB, 216,810 splats, SH degree 3**, against the 4-rail Draft bake's 53.3 MB -
+    comparable, as intended. Dataset `mpi623_flowtest_sfm`: **984 images** (164 frames x
+    6 cube faces) and **ONE** sparse model, with `on_split: stop` still armed, so the
+    four shipped rails merge.
+
+    **[THE PEAK FIGURE FIRST WRITTEN HERE - 8.59 GB - WAS WRONG AND IS CORRECTED BY
+    AMENDMENT 51. The real peak is 42.79 GB.]** It was read off the sampler at the 23
+    minute mark, which was BEFORE the spike; 8.59 GB was a running peak, not the run's.
+    The conclusion below survives, but not for the reason it gives - read 51.
+
+    **So the SfM's frame batches were never the 47 GB, and amendment 47's remedy does
+    not work.** ~~All 164 proxy frames, the concat, COLMAP and Brush together fit in
+    8.6 GB.~~ *(Wrong - 51.)* The claim that stands: feeding `pano_frames_*` off disk
+    does not save a merged graph, because by 48(a) nothing the current prompt produced is
+    evictable, and inside a merged graph it would ADD a second cached copy of the proxies
+    beside the composites' own.
+
+    **Consequence, and it reopens a question Fabio already had right.** "The Flow keeps
+    ONE graph and ONE dispatch" is retracted. The only shape ever measured to survive is
+    the split one, and the mechanism is now understood: **a new prompt bumps the cache
+    generation, which is the only thing that makes the previous stage's outputs
+    evictable.** Two dispatches - rails+composites, then SfM+Brush off disk - is
+    therefore the working design, and `MpiClearVram` is not the lever (that is VRAM;
+    this is host RAM). **This is Fabio's call**, together with whether the Flow layer
+    can issue two prompts for one Flow, and it should be settled before
+    `flow_3d_scene.api.json` is fed back into a canvas graph.
+
+    **Not done deliberately:** the disk-fed wiring was NOT folded back into
+    `flow_3d_scene.api.json`. The handoff called that mechanical; it is not - 48(b)
+    kills the cheap wiring and 49 removes the reason for it. Folding it in now would
+    bake a fix that does not fix anything into the reference graph.
+
+50. **FABIO CHOSE A: TWO DISPATCHES. The reference graph is split, both halves validate,
+    and the app shape turns out to be small.** Built by `make_flow_graphs_ab.py` under
+    asserts, checked by `validate_graph.py` against the **live** `/object_info` (amendment
+    45's rule - a saved `object_info.json` is evidence about the past):
+
+    | | nodes | injection surface |
+    |---|---|---|
+    | `flow_3d_scene_a.api.json` | 57 | `Input_Image`, `Input_Name`, `Input_Rail_1..4` -> `Output_Image` |
+    | `flow_3d_scene_b.api.json` | 14 | `Input_Name`, `Input_Steps` -> `Output_Splat` |
+
+    Both: every class installed, every required input set, every link typed and in range.
+
+    **A keeps all four composites even with the SfM gone**, because
+    `SplatKit_HiResComposite` has `OUTPUT_NODE = True` (`hires_composite.py:373`). That is
+    the opposite of `MpiBrushTrain` in amendment 46, and it is the reason A does not need
+    a keep-alive output per rail.
+
+    **B needs NO hires manifests at all.** With `hires_dir` set and `hires_glob = *.png`
+    the node takes `sorted(glob.glob(...))` over the shared `frames/` folder and asserts
+    the count equals the wired frame total (`upscale.py:1788-1798`). That sorted order IS
+    the concat order of `pano_frames_1..4`, so four `PrimitiveString` manifests collapse
+    into one directory string - and a mismatch fails loudly instead of silently pairing
+    the wrong 8K file to a pose.
+
+    **B's `skip_first_images` is safe, and 48(b) does not apply to it.** The reverse
+    execution order only matters when the composites are in the SAME prompt. In B there
+    are none: all 164 proxies are on disk before the prompt starts.
+
+    **Proved on the bench in seconds, no GPU work** (`test_pathwire.py`):
+    `Input_Name` -> `SplatKit_DatasetProject(reset=False)` -> `JoinStrings` returns
+    `...\mpi623_flowtest\_spheresfm_work\proxies` and `...\frames`, **164 files each**,
+    with the bake untouched. That was B's only untested edge - chunk8 hardcoded absolute
+    paths.
+
+    **The app shape, and it needs no surgery.** `submitFlowGeneration` ->
+    `enqueueGeneration` is ONE job carrying `onComplete` (`js/services/flowService.js:43`),
+    and the queue runs jobs in order. So A is **job 1, then job 2 chained from job 1's
+    `onComplete`** - two ordinary jobs, each one prompt, each honouring the lane-settle
+    invariants MPI-463/461 exist to protect. Nothing has to flow between them at runtime
+    because the dataset name is `Input_Name`, known before either starts. **Do not build a
+    two-prompt job inside `commandExecutor`'s lane machinery** - that is the expensive
+    version of the same thing.
+
+    **Two open wiring questions, both Fabio's at the time of wiring, neither blocking:**
+    a `FlowDef` carries ONE `workflow` field, so the registry needs a second workflow name
+    (or the second submit happens programmatically); and job 1 produces the still while
+    job 2 produces the splat, whereas Phase 1's contract is ONE image card carrying
+    `splatPath` - so either job 1's card is suppressed and job 2 re-emits the still, or
+    job 2 attaches `splatPath` to job 1's card.
+
+    **Found in passing, and it is a real gap: `ComfyUI-SplatKit` is NOT in
+    `dev_configs/node_lock.json`.** Every node this whole card depends on comes from an
+    UNDECLARED pack - it exists only on the bench. That belongs with the batch's task 2
+    (dependency declarations), and it is bigger than the weights.
+
+    **Deliberately not run: B end to end.** It is `chunk8_sfm_brush_disk.json` with the
+    two path edges now proven separately, and a full run is another 30 min of GPU on a
+    dataset that already has its splat. Run it when B is being wired, against a fresh
+    `Input_Name`, not now.
+
+51. **CORRECTION TO 49: THE DISK-FED SfM PEAKED AT 42.79 GB, NOT 8.59 GB - AND THE SPIKE
+    IS INSIDE THE SfM NODE, WHERE THE FRAMES COME FROM MAKES NO DIFFERENCE TO IT.**
+    The full 179-sample profile (`rammon.log`, 30 s interval), restricted to the run's own
+    0-30.6 min window:
+
+    | t | ComfyUI working set | system RAM available |
+    |---|---|---|
+    | 0-16 min | 8.6 -> 4.4 GB | ~36 GB |
+    | 24.2 min | 21.1 GB | 22.8 GB |
+    | **24.7 min** | **42.79 GB** | **3.76 GB** |
+    | 25.2 min | 2.6 GB | 44.7 GB |
+
+    One spike of about a minute near the END of `SphereSfMDatasetDualRes` - after the
+    cubic reprojection, as the COLMAP dataset is assembled - then fully released. The
+    proxy batches themselves are the flat 4-8 GB across the first 16 minutes, which is
+    what 49 mistook for the whole run. **How the error was made, because it is the same
+    shape as amendment 47's:** the sampler prints a RUNNING peak; it was read at 23.2 min,
+    quoted as the run's peak, and the run had 7 minutes and its entire spike still to go.
+    A number read from a live counter is a number about the past.
+
+    **What this changes, and what it does not.**
+    - **Amendment 47 was closer to right than 49 credited.** The 47.3 GB in the merged run
+      IS the SfM stage; it is not "everything else in the prompt". 49's *conclusion*
+      stands - reading proxies off disk does not fix a merged graph - but its reason was
+      wrong. The real reason is now measured: **this run was disk-fed and spiked to
+      42.79 GB anyway.** The spike does not care where the frames were read from.
+    - **Two dispatches (amendment 50) is more strongly justified, not less.** The SfM
+      stage needs ~43 GB of headroom at one moment. In the merged graph that spike lands
+      ON TOP of four composites, WAN and the models, none of it evictable by 48(a) - which
+      is exactly how the box reached 0 MB. Stage B needs the machine otherwise empty, and
+      a separate prompt is the only thing that gives it that.
+    - **A REAL RISK, now on the record: even standalone, stage B left only 3.76 GB free on
+      a 68.5 GB box.** A larger scene, more rails, or a bigger `face_size` could OOM stage
+      B on its own, and a user machine with 32 GB would likely not survive this scene at
+      all. Before this Flow ships, the spike needs a name - the prime suspect is the
+      float32 chain over the 984 cube faces on the way to disk - and either a bound or a
+      documented RAM floor. **Do not treat stage B as cheap because it is short.**
 
 ### Verified NOT drifted from the source workflow (checked 2026-08-29)
 

@@ -128,3 +128,48 @@ Delivered per plan.md amendments 18-20. `'splat'` is NOT a media type.
 - [x] ~~Decision for Fabio: registry exposure.~~ **Not a real question** - the registry
       has been unstuck for a long time and is on 1.2.x (Fabio, 2026-08-29). The two files
       in `ComfyUi-MpiNodes` that say otherwise are stale. plan.md amendment 23.
+
+## Phase 2 - the 3D Scene Flow (2026-08-31 / 2026-09-01)
+
+- [x] **Runtime graph BUILT and its injection surface proven.**
+      `D:\WORK\MPI-623-spike\flow_3d_scene.api.json`, 51 -> 61 nodes, accepted with no
+      `node_errors`, values set BY TITLE the way the app sets them. `MpiBrushTrain` is
+      not an `output_node`, so it feeds a `PreviewAny` titled `Output_Splat` - the same
+      text-capture shape the app already reads for `Output_prompt`. plan.md amendment 46.
+- [x] **SfM + Brush tail PROVEN reading proxies off disk (2026-09-01).**
+      `chunk8_sfm_brush_disk.json` from `make_sfm_disk.py`, dispatched standalone against
+      the intact `mpi623_flowtest` bake - nothing re-baked. `success` in **30.5 min**;
+      `/history` returned the `.ply` path through `Output_Splat`; **51.2 MB, 216,810
+      splats, SH3**, dataset `mpi623_flowtest_sfm` with **984 images and ONE sparse
+      model** under `on_split: stop`. **Peak ComfyUI working set 42.79 GB with only
+      3.76 GB free** - a one-minute spike inside the SfM node, disk-fed or not. plan.md
+      amendments 49 and 51 (51 corrects a wrong 8.59 GB figure in 49).
+- [ ] **NAME THE SfM SPIKE BEFORE THIS FLOW SHIPS.** ~43 GB at one moment on a 68.5 GB
+      box; a 32 GB user machine would not survive this scene. Suspect: the float32 chain
+      over the 984 cube faces. Needs a bound or a documented RAM floor. plan.md 51.
+- [x] **DECIDED (Fabio, 2026-09-01): TWO DISPATCHES.** One prompt cannot hold it -
+      ComfyUI never evicts what the current prompt produced, and only a NEW prompt bumps
+      the cache generation. plan.md amendments 48-49.
+- [x] **Reference graph SPLIT and both halves validated.** `flow_3d_scene_a.api.json`
+      (57 nodes: rails -> WAN -> composites -> `Output_Image`) and
+      `flow_3d_scene_b.api.json` (14 nodes: proxies off disk -> SfM -> Brush ->
+      `Output_Splat`), built by `make_flow_graphs_ab.py`, checked by `validate_graph.py`
+      against the LIVE `/object_info`. A keeps all four composites because
+      `HiResComposite` IS an `OUTPUT_NODE`; B drops all four hires manifests for
+      `hires_dir` + `*.png`. Path plumbing proven on the bench (`test_pathwire.py`):
+      164 files on both dirs, bake untouched. plan.md amendment 50.
+- [ ] **Wire A -> B as two jobs:** job 1, then job 2 from job 1's `onComplete`
+      (`flowService.js:43`) - NOT a two-prompt job inside `commandExecutor`'s lane
+      machinery. Needs a second workflow name on `FlowDef`, and a decision on which job
+      owns the Scene card. plan.md amendment 50.
+- [ ] **`ComfyUI-SplatKit` is NOT in `dev_configs/node_lock.json`** - the pack every node
+      in this card comes from is undeclared and exists only on the bench. Belongs with
+      task 2 below.
+- [ ] Output-capture layer: point the existing title-scoped text capture at
+      `Output_Splat`. Small, per amendment 46 - do NOT mirror the image-capture path.
+- [ ] Wire the Flow across the five registry files; coverage presets as scene-relative
+      waypoints; per-waypoint bounds check (NOT a radius cap - amendment 43); dev-gate
+      and tile still. See plan.md Phase 2.
+- [ ] Author the graph on the ComfyUI canvas at `G:\ComfyUi` - `flow_3d_scene.api.json`
+      is API-format and script-assembled, which the add-flow playbook forbids shipping.
+      **Fabio's half.**
