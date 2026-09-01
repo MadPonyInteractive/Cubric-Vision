@@ -66,9 +66,63 @@ pushed and NOT yet pinned. Phases 3-6 not started.
 
 - The plan's Phase 1 gate is **Fabio judging the seam**, on a static shot AND a moving one. Both
   are now run (E moving, G static) and neither has been looked at by him. Not a pass until he does.
-- **The sparkle defect is narrowed to the written VIDEO latent, and not diagnosed.** Four arms
-  bracket it (G/L/K/I) and the next steps are reading, not running — see the plan's ordered list:
-  the encoder's 3-token tail pad, the packing phase across the boundary, then attention drift.
+- **Fabio looked at G and M, 2026-08-31: the flashing is STILL THERE in both.** The speck metric
+  oversold arm M; a flash metric (regional luma jump) matches his eye and puts M at 3.73 against
+  the I/H clean floor of ~0.4 — about 7x, not "nearly clean". The straddle is a contributor, not
+  the cause. **The defect is open and the route is not proven.**
+- **The pack oracle has NOT been floored for flashes and cannot be from disk** —
+  `A_oracle_joined.mp4` is a concat with a literal splice at frame 39, `A_oracle_pack` is the new
+  frames only with no seam. Whether the pack's route flashes is unanswered, and it is the question
+  that decides whether the masked-prefix route is viable at all.
+- **Nothing is fixed yet.** The alignment change was an experiment and was reverted;
+  `ComfyUi-MpiNodes` is at `53c0198` with a clean `git status`. The node still ships the
+  straddling write.
+- **The 39 -> 51 minimum-context contract change is Fabio's call and has not been made.**
+
+## Verified 2026-08-31 — the sparkle diagnosed
+
+- **Candidates 1 and 2 are dead by reading `comfy/ldm/minimax/vae.py`.** `encode_temporal` (l.544)
+  chunks into fixed 17-frame clips, freeze-pads a short final clip, and then drops the last
+  `token_drop=3` tokens itself — so 39 frames encode to **12** tokens, matching the 12 latent steps
+  the C/D crash independently measured. No pad reaches the node, and a 15-token latent would have
+  made `plan_context` RAISE (reachable tail spans 42 and 38, never 39) rather than sparkle. The
+  encoder is a 3D **causal** CNN chunking on absolute frame 0, so the context's tokens 0-11 are
+  identical to a 73-frame encode's — the packing phase agrees token-for-token.
+- **Candidate 3 (attention drift) is dead by measurement.** A temporal-impulse metric (pixel
+  brighter than BOTH temporal neighbours by 16/255; static texture cancels, which is what makes the
+  locked-off arm G the right shot) run over all seven arms, each normalised to its own chunk 1:
+  every real-prefix arm (G 2.10x, L 2.02x, E 2.36x, B 2.58x) doubles in decode chunk 2 and spikes
+  6-19x on its worst frame; every arm without one is flat (K 1.04x, I 0.98x). **`c3/c1` is
+  0.89-0.93 for all four prefix arms** — the excess ends at frame 51. Drift would grow.
+- **The cause: a whole-clip prefix can never end on a decode-chunk boundary.** Every valid `17k+5`
+  length encodes to `5k+2` tokens, so a 12-token prefix in a 22-token target leaves decode chunk 2
+  (frames 34-50) built from tokens 10,11 written by `vae.encode` plus tokens 12,13,14 from the
+  sampler. Chunks 0-1 are pure encoder (the 38 dB head), chunk 3+ pure sampler (baseline at 51),
+  and only chunk 2 mixes — which is exactly where the artifact is.
+- **The guide is exonerated by a controlled pair, not by re-reading.** E and B share source, canvas
+  and seed and differ only by the frame-0 guide: 2.36x with, **2.58x without**.
+- **The missing static no-guide cell is NOT fillable from disk** — `B_masked_prefix` is 640x352,
+  the moving source. Probed, not assumed; a first pass at the metric that hardcoded 352x608
+  reshaped B's bytes as the wrong canvas and produced nonsense.
+- **Arm M confirms the mechanism on the bench.** 80 s, `execution_cached: []`, graph byte-identical
+  to `G_static.json` but for the output name; the only change was the node clamping its written
+  video prefix to a whole 5-token chunk (12 -> 10 tokens) taken from the front. **c2/c1 fell 2.10x
+  -> 1.16x and the worst frame 7.08x -> 3.00x**, while the preserved head held at **37.81 dB** over
+  its 34 frames against G's 38.13 dB over the same 34 — so the tail did not get clean by losing the
+  prefix. The experiment edit was reverted; `git status` on `ComfyUi-MpiNodes` is clean at
+  `53c0198` and `python h3.py` passes. The bench was restarted afterwards so its loaded modules
+  match disk again.
+- **A separate latent bug found while building arm M, not triggered by any arm yet.** The node
+  writes the context's TAIL at the target's FRONT, which only preserves the positional
+  `FRAME_PER_TOKEN` phase when the tail starts on a token index divisible by 5. Arm G satisfied
+  that by accident (`steps` equalled the whole token count, offset 0). `plan_context` enforces no
+  such constraint, so a longer source can legally pick a tail starting at token 2 or 7 and shift
+  every token into the wrong slot. Fix with the alignment work: require
+  `(total_steps - steps) % 5 == 0`.
+- **A first sparkle metric was built and DISCARDED.** Spatial isolated-speck counting scored arm
+  G's own preserved head (real, known-clean footage) *above* its generated tail — it was measuring
+  scene sharpness, not sparkle, and it ranked arms by how crisp their scene was. Recorded so it is
+  not tried again. Scripts: session scratchpad `sparkle.py` (dead), `sparkle2.py`, `chunks2.py`.
 - **The pin was bumped with that defect open**, deliberately: no shipped workflow calls either H3
   node until Phase 3, so the pin ships the code without exposing the bug to a user. If Phase 3
   lands before the defect closes, that stops being true.

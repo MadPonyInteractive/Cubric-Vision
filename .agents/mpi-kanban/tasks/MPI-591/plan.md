@@ -24,10 +24,32 @@ fails SILENTLY) and `research/minimax-h3-extend-nodepack.md` (the pack, and what
   `changelog.md` + `README.md` rows added for BOTH H3 nodes — `f6d2484` had shipped without them,
   which would have made them invisible to `/comfy-release`.
 
-**Next action, ordered by Fabio 2026-08-31: (1) DIAGNOSE THE SPARKLE, (2) then Phase 3.**
-Not the other way round — Phase 3 would author a shipped graph around a node whose output is known
-to be wrong. The diagnosis starts as reading, not running: the three places to look are listed at
-the end of § the sparkle is `MpiH3MaskedPrefix`, in order.
+**READ § THE AUTHOR'S OWN WORKFLOW FIRST — it reframes everything below it.** The pack passes the
+context as CONDITIONING at negative RoPE positions and never writes it into the denoised latent,
+so it cannot mix encoder and sampler tokens; it also emits only the new frames and joins the clips
+in pixel space, so it never generates across the seam. Our route does something strictly harder,
+and the flash is the price of it. The next arm to run is **F**, not another variation of E/G.
+
+**THE SPARKLE IS DIAGNOSED** — § DIAGNOSED, the prefix ends INSIDE a decode chunk. All three
+listed candidates are dead (two by reading, one by measurement) and the cause is a fourth:
+`token_drop=3` means a valid `17k+5` context always encodes to `5k+2` tokens, so a whole-clip
+prefix can never end on the VAE's 5-token decode boundary, and decode chunk 2 is built from a mix
+of encoder-written and sampler-generated tokens. The artifact is confined to exactly that chunk
+(frames 34-50) and is gone by frame 51 in all four prefix arms.
+
+Arm M (the confirm run) is DONE: chunk alignment cut the artifact but did not clear it, and Fabio
+confirmed by eye that G and M both still flash. The flash metric — not the discarded speck metric —
+is the instrument that matches his eye.
+
+**Next action: RUN ARM F.** It is already built and was skipped on a bad assumption. It is the
+pack author's own mechanism at stock's one-keyframe limit: no written prefix, so no encoder/sampler
+mixing, no patch and no fork. Every other variation of E/G writes a prefix and will keep flashing.
+
+**Three questions are open for Fabio and he has deferred them to the next session:** (1) scope —
+keep diagnosing, or unblock Phases 3-6 in parallel, since they do not depend on the flash; (2) is
+the 39 -> 51 minimum-context change still on the table now that alignment alone did not clear it;
+(3) Phase 1's seam verdict, open since 2026-08-31 — static ties the bar at 1.40x, moving misses at
+3.85x, and § THE AUTHOR'S OWN WORKFLOW now shows that bar was a pixel cut, not a continuous extend.
 
 Fabio has confirmed the artifact by eye (G has it, I does not) but has NOT yet given the Phase 1
 seam verdict — the static-vs-moving question in § the static arm is still his to answer, and it
@@ -138,6 +160,207 @@ wrong — it is correct content that nonetheless poisons what is generated after
 
 **Do NOT reach for a fix at the crash site.** There is no crash; there is correct-looking content
 producing wrong output downstream, which is precisely the shape a symptom-patch would hide.
+
+### DIAGNOSED 2026-08-31 — the prefix ends INSIDE a decode chunk
+
+All three candidates above are answered. Candidates 1 and 2 are dead by reading; the cause is a
+fourth thing neither of them named, and it is structural rather than a slip in our arithmetic.
+
+**Candidate 1 — the encoder's 3-token tail pad — DEAD, two ways.** `comfy/ldm/minimax/vae.py`
+`encode_temporal` (line 544) splits the clip into fixed 17-frame chunks, pads a short FINAL chunk
+by repeating its last frame, emits 5 tokens per chunk, then does `z = z[:, :, :-token_drop]` with
+`token_drop=3`. So the VAE removes the freeze-pad tokens itself: 39 frames -> 3 chunks -> 15 tokens
+-> **12**, which is exactly the 12 latent steps the C/D crash already measured (2640/220). Nothing
+padded ever reaches the node. And had a pad survived, the node would have **raised, not sparkled**:
+`plan_context(15, 39)` returns `(0,0,0)` because a 15-token clip's reachable tail spans are 42 and
+38, never 39. Corollary worth keeping: with 12 tokens `ctx_v[:, :, -steps:]` is the WHOLE latent —
+arm G never sliced a tail at all.
+
+**Candidate 2 — packing phase across the boundary — DEAD.** The encoder is a 3D **causal** CNN
+(`CausalConv3d`, front-only temporal padding, vae.py:39-55) chunking on absolute frame 0. A
+39-frame encode's tokens 0-11 are therefore identical to a 73-frame encode's: same chunk cuts
+(0-16, 17-33, 34-), same causal receptive field, and the freeze pad sits after token 11's span so
+causality keeps it out. The phase agrees token-for-token — which is also *why* the head is 38 dB.
+
+**Candidate 3 — attention drift — DEAD by measurement.** It predicts the artifact grows with
+distance from the seam. It does not. Measured with a temporal-impulse metric (a pixel brighter
+than BOTH its temporal neighbours by 16/255 — static texture cancels exactly, which is why the
+locked-off arm G was the right shot for it), each arm normalised against its OWN chunk 1:
+
+| arm | real prefix | c1 (17-33) | **c2 (34-50)** | c3 (51-67) | c2/c1 | c3/c1 | worst frame c2/c1 |
+|---|---|---|---|---|---|---|---|
+| G static | yes | 617 | **1297** | 574 | **2.10x** | 0.93x | **7.08x** |
+| L audio silent | yes | 617 | **1247** | 558 | **2.02x** | 0.91x | **6.22x** |
+| E moving | yes | 1800 | **4241** | 1603 | **2.36x** | 0.89x | **12.68x** |
+| B moving, NO GUIDE | yes | 1813 | **4683** | 1612 | **2.58x** | 0.89x | **19.02x** |
+| K content zeroed | no | 101 | 105 | 55 | 1.04x | 0.54x | 0.33x |
+| I no prefix | no | 211 | 207 | 119 | 0.98x | 0.57x | 0.93x |
+| H no prefix, no guide | no | 7 | 11 | 15 | 1.55x | 2.03x | 1.07x |
+
+Every arm with a real prefix doubles in chunk 2 and spikes 6-19x on its worst frame. Every arm
+without one is flat. **And `c3/c1` is 0.89-0.93 for all four prefix arms — the excess is GONE by
+frame 51.** Not drift; a localised defect that ends at a chunk boundary. (H's 1.55x/2.03x is on
+counts of 7-15, the metric's noise floor — read nothing into it.)
+
+**The cause: `token_drop=3` makes it impossible for a whole-clip prefix to end on a chunk
+boundary.** Every valid H3 length is `17k+5` and encodes to `T = 5k+2` tokens — 39 -> 12, 56 -> 17,
+73 -> 22. Always **two tokens into a five-token chunk, never on the boundary.** The VAE decodes in
+5-token chunks (0-4, 5-9, 10-14, ...), so with a 12-token prefix written into a 22-token target,
+decode chunk 2 (pixel frames 34-50) is built from tokens 10,11 written by `vae.encode` and tokens
+12,13,14 produced by the sampler. Encoder latents and sampler latents are not the same
+distribution; the ViT3D decoder mixing them inside ONE chunk is the sparkle. Chunks 0 and 1 are
+purely encoder-written (hence 38 dB), chunk 3 onward is purely sampler-produced (hence back to
+baseline at frame 51), and **only chunk 2 is mixed — which is exactly and only where the artifact
+is.**
+
+This also explains the two things that made the defect look paradoxical:
+- **Why the pack's oracle is clean.** It regenerates the head from keyframes, so every token in
+  every chunk is sampler-produced. It never mixes, so it cannot show this.
+- **Why arm K is clean with the mask identical.** A zeroed token is smooth. It still mixes, but a
+  flat token cannot produce a speck — so K exonerates the mask without exonerating the mixing.
+
+**The guide is exonerated too, and that is a NEW arm-pair, not a re-reading.** E and B share a
+source, a canvas and a seed and differ only by the frame-0 guide: 2.36x with it, **2.58x without
+it**. The sparkle does not need the guide. (The missing static no-guide cell is not fillable from
+disk — `B_masked_prefix` is 640x352, the MOVING source, not the static one. E-vs-B is the
+controlled pair that answers it.)
+
+**The fix this implies — do not write it before the confirm run.** Write a prefix that is a whole
+multiple of 5 tokens. The prefix's length and the ENCODE's length stop being the same number: the
+encode still has to be a valid `17k+5` clip, but only a chunk-aligned front slice of it gets
+written. Video-aligned counts are 17/34/51/68 frames; audio also needs frames divisible by 3, so
+the smallest that satisfies both is **51 frames = 15 tokens = 85 audio steps**, which needs a
+**56-frame** encode (56 -> 4 chunks -> 20 tokens -> drop 3 -> 17, of which the first 15 are
+written). That is a bigger minimum context than today's 39 and it changes the node's contract, so
+it is Fabio's call, not a silent edit.
+
+### Arm M — the confirm run. CONFIRMED, with a residual.
+
+Run 2026-08-31, 80 s, `execution_cached: []`. Graph byte-identical to `G_static.json` apart from
+the output name; the only change was inside the node, applied temporarily and **reverted before
+anything was committed** (the repo is back at `53c0198`, `git status` clean, self-check green):
+the written video prefix clamped DOWN to a whole 5-token chunk (12 → 10 tokens, 39 → 34 preserved
+frames) and taken from the FRONT so the packing phase holds.
+
+| arm | c1 | c2 | c3 | **c2/c1** | worst frame c2/c1 |
+|---|---|---|---|---|---|
+| G straddling prefix | 617 | 1297 | 574 | **2.10x** | **7.08x** |
+| **M chunk-aligned prefix** | 612 | **709** | 392 | **1.16x** | **3.00x** |
+| I no prefix (floor) | 211 | 207 | 119 | 0.98x | 0.93x |
+
+**And the head still works: M is 37.81 dB over its 34 preserved frames against G's 38.13 dB over
+the same 34.** The clamp did not buy a clean tail by throwing the prefix away.
+
+So the mixing is confirmed as the dominant term — one change, and the excess falls by roughly
+three quarters. **It is not the whole term.** M sits at 1.16x / 3.00x where I and K sit at ~1.0x /
+~0.9x. Two readings of the residual, not yet separated:
+
+- **Expected, and present in the oracle too.** In M the seam lands exactly on the chunk 1/2
+  boundary, so chunk 2 is the first generated chunk after a real head. I and K have no real head,
+  so they have no transition at all and are not a fair floor for it.
+- **A second, smaller contributor.** Would need its own arm to find.
+
+Do not report the sparkle as fixed. Report it as diagnosed, dominated by the straddle, and
+substantially reduced by alignment.
+
+### CORRECTION 2026-08-31 — the speck metric was the wrong instrument, and arm M is NOT close
+
+**Fabio looked at G and M and reports the flashing is still there in BOTH.** He is right and the
+`c2/c1` numbers above oversold it. A flash is a LUMINANCE jump over a frame or a region of one;
+the speck metric counted isolated bright PIXELS. Related, not the same, and the divergence is
+exactly where it mattered.
+
+Rebuilt as a flash metric: per-frame luma mean on a 4x4 block grid, each block against the mean of
+its two temporal neighbours, worst block reported. **It matches Fabio's eye where the speck metric
+did not** — the arms he calls clean sit flat at ~0.4 levels, the ones he calls flashing sit 6-16.
+
+| arm | prefix | c1 floor | **c2 (34-50)** | c3 (51-67) | worst |
+|---|---|---|---|---|---|
+| G straddling | yes | 0.59 | **6.46** | 1.62 | 15.6 @f41 |
+| **M chunk-aligned** | yes | 1.04 | **3.73** | 1.08 | 11.5 @f49 |
+| L audio silent | yes | 0.59 | **5.57** | 2.44 | 13.9 @f46 |
+| E moving | yes | 0.97 | **5.78** | 3.65 | 18.5 @f40 |
+| B moving, no guide | yes | 0.93 | **5.29** | 0.74 | 21.2 @f40 |
+| I no prefix | no | 0.44 | **0.51** | 0.42 | 0.9 |
+| H no prefix, no guide | no | 0.42 | **0.38** | 0.52 | 1.0 |
+
+**M is still ~7x above the I/H floor.** Alignment moved it (6.46 -> 3.73) and did not clear it, and
+the residual is not the harmless transition the previous entry allowed for — I and H prove a
+generated chunk can sit at 0.4. So the straddle is *a* contributor, not *the* cause. Treat the
+2.10x -> 1.16x speck result as an overstatement that a better instrument corrected.
+
+Where the flashes actually sit, per frame: G at 39-42 **and** 45-50; M only at 47-50 (plus one at
+34); both back to floor after 51. So even aligned, the tail END of decode chunk 2 still flashes.
+
+### THE AUTHOR'S OWN WORKFLOW, read 2026-09-01 — it never mixes, by construction
+
+Fabio downloaded the YouTuber's workflow (`~/Downloads/Minimaxh3-Ref2V-video_extend.json`, a
+contributor to the pack). It answers the diagnosis from the other side and it reframes the card.
+
+**1. The pack never writes an encoder latent into the latent being denoised.**
+`nodes.py:_context_keyframes` takes the last `context_frames` LATENT TOKENS and emits
+`{"kind": "context", "latent": ctx_video[:, :, ctx_t - n:]}` — a **keyframe**, i.e. conditioning.
+`patch.py:_context_k_distance` places those tokens at **negative RoPE positions**, before the
+target's origin. The denoised latent is therefore 100% sampler-produced. The encoder/sampler
+mixing our arms measured is not solved there; it is **structurally impossible** there.
+
+**2. `kind: "context"` is NOT reachable from stock.** Core knows `image`, `audio`, `video`,
+`video_audio`, `text` only (`comfy/ldm/minimax/model.py:107,366`); `context` / `context_audio` are
+the pack's own, implemented in its `PackedLayout.__init__` monkey-patch. Adopting the mechanism
+means the pack as a dependency, or reimplementing that patch — which is exactly what
+§ The decision rejected, and the rejection still stands.
+
+**3. The pack emits ONLY the new frames and the author JOINS the two clips in pixel space.**
+`length` is documented "for the continuation only (excludes context_frames)"; the graph has two
+`VHS_VideoCombine` and an `AudioConcat` "after". **It never generates across the seam.**
+So "does the oracle flash?" — the question from the previous entry — **is malformed.** The pack
+cannot have a mixed decode chunk because it has no shared latent at all. It also means Phase 1's
+1.40x "oracle bar" was measuring a **pixel-domain cut**, not a continuous extend. Ours ties that
+bar while doing a strictly harder thing; that comparison needs restating, not rerunning.
+
+**4. It is a generate-THEN-extend graph, not an extend-a-file graph.** Stage 1
+`MiniMaxH3ReferenceToVideo` -> `SamplerCustomAdvanced#37` -> `latent_1`; stage 2's `context_latent`
+is `GetNode(latent_1)` — **the sampler's own output**. The author never encodes a video file, so
+the reference workflow never exercises our actual case (extend a clip that already exists on
+disk), where an encode is unavoidable. `brief.md` already carried half this rule — "take the audio
+prefix from the sampled latent not a re-encode" — and it was never applied to the video half.
+
+**5. `context_frames` default is 2 LATENT TOKENS.** We write 12. The author's note claims "1 =
+roughly 24 decoded frames", which his own code contradicts (`FRAME_PER_TOKEN` gives 1-4 pixel
+frames per token) — and he knows: `_pin_last_context_frame` exists because "context_frames alone
+only carrying whole latent frames (each spans 1-4 pixel frames) ... can show up as the
+continuation re-playing a moment that already happened." That is `tail_span`'s trap 1,
+independently rediscovered. **Do not trust the note; trust `nodes.py`.**
+
+**6. His sampler settings differ from our shipped graph** and are model behaviour, not scene
+content, so the "widget values are the author's scene" rule does not dismiss them: turbo LoRA
+**0.7** (ours 1.0), `MiniMaxH3SigmaShift` 12/**3** (ours 12/5), `BasicScheduler` **simple/8**
+(ours beta/6), `KSamplerSelect` **res_multistep** (ours euler), plus `PathchSageAttentionKJ`.
+Worth one arm as a second-order factor, not as the explanation.
+
+> **The unrun arm this makes the interesting one: arm F.** The plan already records it — "stock
+> pin-last-frame, no prefix — built, not run (E made it unnecessary)". It is the pack's mechanism
+> at stock's one-keyframe limit plus a pixel join: no written prefix, so **no mixing**, and no
+> patch, no fork. It was skipped because arm E "worked" — and arm E is the arm that flashes.
+
+**The oracle cannot be floored from disk, and this is a trap for the next session.**
+`A_oracle_joined.mp4` reads 17.35 at frame 40 — but it is a CONCAT (`concat.txt`) of the source
+and the pack's output, so frame 39 is a literal splice and that spike is the edit, not the pack.
+`A_oracle_pack_00001_.mp4` is only the 39 new frames and contains no seam at all. **Neither file
+can say whether the pack's route flashes.** Answering that needs a fresh oracle run that emits ONE
+continuous clip — and it is the question that decides whether this route is viable, because if the
+oracle flashes too, the artifact is H3 turbo and not our node.
+
+### A separate latent bug this surfaced — `plan_context` can break the packing phase
+
+`out_v[:, :, :steps] = ctx_v[:, :, ctx_v.shape[2] - steps:]` writes the context's TAIL at the
+target's FRONT. That only preserves the packing phase when the tail begins at a token index
+divisible by 5, because `FRAME_PER_TOKEN` is positional (1,4,4,4,4). In arm G it did — `steps`
+came out equal to the context's whole token count, so the offset was 0 by accident, not by design.
+`plan_context` walks `steps` down freely and enforces no such constraint, so a longer source clip
+can legally select a tail starting at token 2 or 7 and write it at position 0, silently shifting
+every token into the wrong slot in the cycle. Not triggered by any arm run so far. Fix alongside
+the alignment work: the walk must require `(total_steps - steps) % 5 == 0`.
 
 ### The static arm (G), 2026-08-31 — the gate's second half
 
