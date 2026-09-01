@@ -4,6 +4,8 @@
     ".agents/mpi-kanban/tasks/MPI-670/**",
     "js/services/mediaUploadService.js",
     "js/services/clientLogger.js",
-    "routes/projects.js"
+    "routes/projects.js",
+    "services/ffprobeVideo.js",
+    "tests/video-rotation-dimensions.test.cjs"
   ]
 }

@@ -77,6 +77,39 @@ the V8 wall, and buffers ~600 MB of base64 in RAM twice).
    err)` signature `error` already has, and emit `ui:error` from
    `mediaUploadService` before returning `null`.
 
+## Folded in: the sidecar recorded a portrait clip as landscape
+
+Found while validating the above, and folded in on the user's call rather than
+split off. The same clip carries a quarter-turn display matrix: coded 3840x2160,
+**displays 2160x3840**. `probeVideo` read `vStream.width/height` and ignored the
+matrix, so the sidecar claimed landscape.
+
+Everything else downstream already works in display space — ffmpeg applies the
+turn before any filter sees a frame, which is why the 720p proxy of this clip
+comes out **406x720**, not 1280x720. The probe was the odd one out, and the
+sidecar and the proxy disagreed.
+
+Normally the renderer's own `measureVideoDimensions` wins (the route backfills
+only when `w` is falsy), but that returns `{0,0}` whenever the renderer cannot
+decode — exactly the HEVC Main 10 case here.
+
+**Fix:** `services/ffprobeVideo.js` swaps `width`/`height` on a quarter turn and
+exposes `rotation`. Two traps worth keeping:
+
+- ffprobe spells rotation two ways and **they disagree in sign on the same
+  file** — the real clip reports `tags.rotate: 90` and
+  `side_data_list[].rotation: -90`. Both normalise to a quarter turn, so the
+  swap is right either way, but never trust the sign of one alone.
+- The **bundled ffprobe is 4.0.2**, far older than a system ffprobe. It does
+  emit `side_data_list` under `-show_streams`, but it rejects
+  `-show_entries stream_side_data=...`, so a probe written against a modern
+  binary can fail on the shipped one.
+
+`_canFastPath` in `services/videoConcat.js` compares these dimensions to decide
+the `-c copy` concat path. It now sees display dims, so two clips coded alike but
+rotated differently correctly fail the fast path instead of concatenating into a
+broken output. No change needed there.
+
 ## Open question (separate card if it bites)
 
 The gallery hover uses the 720p H.264 `proxyPath`, but the full viewer plays the

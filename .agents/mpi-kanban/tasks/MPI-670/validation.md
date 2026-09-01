@@ -54,11 +54,36 @@ file onto the gallery — Electron drag-drop with a real file path cannot be
 driven from outside the app, and playwright-cli is a different client with no
 `window.require`. That check is one drag-and-drop by the user.
 
-## Found while verifying — NOT fixed here (MPI-671)
+## Rotation — folded in on the user's call, PASSED
 
-The clip carries `rotation: -90`: coded 3840x2160, **displays** 2160x3840
-(portrait). `probeVideo` reports the coded dimensions, so a sidecar written from
-the server probe alone claims landscape. In the real drop path the client's
-`measureVideoDimensions` returns the rotated display dims and wins (the route
-only backfills when `w` is falsy) — but only if the renderer can decode the
-file, and this one is HEVC Main 10. Separate card.
+Found while verifying the above; the user chose to fold it into this card rather
+than split it off.
+
+`probeVideo` now reports display dimensions. The real clip:
+
+```
+{ "width": 2160, "height": 3840, "rotation": 270,
+  "fps": 120, "duration": 91.282, "frameCount": 2738, "hasAudio": true }
+```
+
+was `3840x2160` before — the coded pair, which disagreed with the 406x720 proxy
+ffmpeg had already written from the same file.
+
+- `tests/video-rotation-dimensions.test.cjs` — 3/3 pass. 90 and 270 swap, 0 and
+  180 do not. Fixtures are generated with `-display_rotation`, since
+  `-metadata:s:v rotate=` is silently dropped by current ffmpeg and would have
+  produced an unrotated fixture that passed for the wrong reason.
+- `npm test` → **830 pass, 0 fail**. This matters beyond the new test:
+  `_canFastPath` in `services/videoConcat.js` compares these dimensions to pick
+  the `-c copy` concat path, and it now compares display dims.
+
+Two things measured here that a doc would otherwise get wrong:
+
+- **The two rotation spellings disagree in sign on the same file.** The clip
+  reports `tags.rotate: 90` *and* `side_data_list[].rotation: -90`. Both are
+  quarter turns so the swap is right either way — but never read the sign off
+  one alone.
+- **The bundled ffprobe is 4.0.2**, much older than a system ffprobe. It does
+  emit `side_data_list` under `-show_streams` (which is what `probeVideo` uses),
+  but it rejects `-show_entries stream_side_data=...` outright — so a probe
+  developed against a modern binary can fail on the one that ships.
