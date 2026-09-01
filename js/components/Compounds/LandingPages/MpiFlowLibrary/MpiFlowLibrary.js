@@ -9,9 +9,11 @@ import {
     flowModelIds, flowModelChoices, flowModelSlots, setFlowModel,
 } from '../../../../data/flowsRegistry.js';
 import { MpiDropdown } from '../../../Primitives/MpiDropdown/MpiDropdown.js';
+import { MpiOkCancel } from '../../MpiOkCancel/MpiOkCancel.js';
 import { getModelById, getModelDependencies, disambiguatedName } from '../../../../data/modelRegistry.js';
 import { downloadService } from '../../../../services/downloadService.js';
 import { sizeToGb } from '../../../../data/modelConstants/footprint.js';
+import { DEPS } from '../../../../data/modelConstants/dependencies.js';
 import { PAGE_GALLERY } from '../../../../router.js';
 import { qs, ce, on } from '../../../../utils/dom.js';
 import { renderIcon } from '../../../../utils/icons.js';
@@ -180,6 +182,57 @@ export const MpiFlowLibrary = ComponentFactory.create({
             return flowLicences(flow)
                 .filter(({ key, licence }) => (licence.verify || licence.territory) && !hasAcceptedLicence(key))
                 .map(({ licence }) => licence);
+        }
+
+        // ── Uninstall (MPI-682) ───────────────────────────────────────────────
+        //
+        // Until the audio section every flow's weight arrived through a MODEL, and the
+        // Model Library already uninstalls models — a flow's own `requiredDeps` were a
+        // small tail on top of that. `minimax-music`, `drama-box`, `chatter-box`,
+        // `voice-changer` and `stems` declare NO requiredModels at all, so their entire
+        // footprint is flow-owned and the Model Library never sees it. Without this the
+        // 13.4GB MiniMax Music writes to disk is install-only, permanently.
+        let _pendingConfirm = null; // { run: async () => void }
+        const _confirmDialog = MpiOkCancel.mount(ce('div'), {
+            title: 'Uninstall', okLabel: 'Uninstall', cancelLabel: 'Cancel',
+        });
+        _confirmDialog.on('ok', async () => {
+            const pending = _pendingConfirm;
+            _pendingConfirm = null;
+            await pending?.run();
+        });
+        _confirmDialog.on('cancel', () => { _pendingConfirm = null; });
+        // The body is set with textContent and MpiOkCancel.css declares no `white-space`,
+        // so a `\n` collapses. Keep the message prose — the Model Library's `\n• ` bullets
+        // render as one run-on line today, and fixing that is a change to the shared
+        // Compound, not to this card.
+        const _confirmText = qs('#text-slot', _confirmDialog.el);
+        function _showConfirm(text, run) {
+            if (_confirmText) _confirmText.textContent = text;
+            _pendingConfirm = { run };
+            _confirmDialog.el.show();
+        }
+
+        // The flow's OWN deps, and deliberately NOT `getFlowDependencies()`: that unions a
+        // `requiredPlugins` plugin's deps in for the INSTALL payload, and a plugin's deps
+        // are not this flow's to free — the server guard keeps them whatever we send, so
+        // counting them would make the dialog promise disk it cannot deliver. Required
+        // MODELS are excluded for the same reason from the other side: the Model Library
+        // owns those, and MiniMax does not get to delete Krea2. No flow declares
+        // `requiredPlugins` today; this is written correctly for the day one does.
+        function _ownDeps(flow) {
+            return (flow.requiredDeps || []).map(id => DEPS[id]).filter(Boolean);
+        }
+
+        function _uninstallFlow(flow) {
+            const deps = _ownDeps(flow);
+            if (!deps.length) return;
+            const gb = deps.reduce((n, d) => n + sizeToGb(d.size), 0);
+            _showConfirm(
+                `Uninstall ${flow.title}? ${gb ? `${gb.toFixed(1)}GB` : 'Its files'} will be freed. `
+                + 'Files shared with another installed flow will be kept.',
+                () => downloadService.uninstall(flowDepKey(flow.id), deps, true),
+            );
         }
 
         // Install every missing required model (each drives its own dep download —
@@ -429,6 +482,18 @@ export const MpiFlowLibrary = ComponentFactory.create({
                     Events.emit('flow:open', { flowId: flow.id });
                 });
                 detailActions.appendChild(open.el); _detailBtns.push(open);
+                // MPI-682 — the only route to freeing a deps-only flow's weights. Gated on
+                // the flow owning deps, exactly as the plugin row is (MpiModelManager
+                // `_pluginTile`): a models-only flow owns nothing to free, its weights come
+                // off in the Model Library, and a button here would read as an offer to
+                // delete the model itself.
+                if ((flow.requiredDeps || []).length) {
+                    const uninstall = MpiButton.mount(ce('div'), {
+                        text: 'Uninstall', variant: 'secondary', size: 'md',
+                    });
+                    uninstall.on('click', () => { _uninstallFlow(flow); });
+                    detailActions.appendChild(uninstall.el); _detailBtns.push(uninstall);
+                }
             } else {
                 // Same button, same path — the gate fires inside `downloadService.start()`
                 // whatever this says. Only the PROMISE changes, and it has to match what the
@@ -633,6 +698,31 @@ export const MpiFlowLibrary = ComponentFactory.create({
         _unsubs.push(Events.on('download:complete', () => { if (_activeDetail) openDetail(_activeDetail); }));
         _unsubs.push(Events.on('download:started', () => { if (_activeDetail) openDetail(_activeDetail); }));
         _unsubs.push(Events.on('download:cancelled', () => { if (_activeDetail) openDetail(_activeDetail); }));
+        // MPI-682 — nothing else reports a FLOW uninstall. MpiModelManager owns the
+        // removed/kept toast for models and plugins, and it only exists while the Model
+        // Library is mounted; its lookup resolves a `flow:` key to neither, so the two
+        // never both speak. No repaint here on purpose: at this instant the dep-status
+        // cache is still pre-uninstall, so painting now would redraw the flow as Ready and
+        // flash. The SSE twin of this event re-syncs, and MPI-681 made that sync fan out
+        // `models:checked` — the listener above — which is the actual repaint.
+        _unsubs.push(Events.on('download:uninstalled', ({ modelId, removed = [], keptShared = [], keptModelFiles = [] }) => {
+            const flow = listFlows().find(f => flowDepKey(f.id) === modelId);
+            if (!flow) return;
+            // MPI-469 — a dep reported 'already-absent' was not KEPT, it was never on disk,
+            // so it is gone and the uninstall is complete. Counting it as kept toasts
+            // "files kept" over a flow whose weights had all vanished.
+            const absent = keptModelFiles.filter(k => k.reason === 'already-absent').length;
+            const gone = removed.length + absent;
+            const kept = (keptModelFiles.length - absent) + keptShared.length;
+            // sound:false — this confirms a click the user just made; no chime.
+            if (gone && kept) {
+                Events.emit('ui:info', { title: 'Uninstalled', message: `${flow.title} uninstalled (some shared files kept).`, sound: false });
+            } else if (gone) {
+                Events.emit('ui:success', { title: 'Uninstalled', message: `${flow.title} uninstalled.`, sound: false });
+            } else {
+                Events.emit('ui:info', { title: 'Nothing freed', message: `${flow.title} — every file is still needed by another installed flow.`, sound: false });
+            }
+        }));
 
         // ── Open / close the Library overlay ──────────────────────────────────
         el.open = () => { overlay.el.show(); renderList(); };
@@ -646,6 +736,7 @@ export const MpiFlowLibrary = ComponentFactory.create({
             _destroyAllTiles();
             _destroyDetailBtns();
             closeBtn?.el?.destroy?.();
+            _confirmDialog?.el?.destroy?.();
             overlay?.el?.destroy?.();
         };
     },

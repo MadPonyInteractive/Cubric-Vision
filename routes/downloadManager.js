@@ -265,7 +265,8 @@ async function _localSharedDepsMap(excludeModelId) {
         map.get(depId).add('(installing)');
     }
     // MPI-304 — a flow's own deps belong to no model, so nothing above protects them.
-    for (const depId of _flowRequiredDepIds()) {
+    // MPI-682 — honours the exclusion so a flow's OWN uninstall can free its weights.
+    for (const depId of _flowRequiredDepIds(excludeModelId)) {
         if (!map.has(depId)) map.set(depId, new Set());
         map.get(depId).add('(flow)');
     }
@@ -401,13 +402,30 @@ function _pluginRequiredDepIds(excludeUninstallId) {
 // Apps have no engine-split weights and no per-op resolution, so this is a flat union
 // of every app's requiredDeps, protected for BOTH engines.
 //
-// Protection is unconditional (not gated on "is this app installed"): unlike a model,
-// a flow has no install state of its own — its deps ARE its install state, so gating
-// protection on their presence would be circular.
-function _flowRequiredDepIds() {
-    const { FLOWS } = _require('../js/data/flowsRegistry.js');
+// Protection is not gated on "is this flow installed": unlike a model, a flow has no
+// install state of its own — its deps ARE its install state, so gating protection on
+// their presence would be circular.
+//
+// MPI-682 — it DOES honour `excludeUninstallId`, exactly as the plugin twin above does,
+// because flows are the SECOND entity to gain a user-facing Uninstall (the Flow Library
+// drawer). Without it the guard cannot tell "an unrelated model is being uninstalled,
+// keep this" from "the OWNER is being uninstalled, delete it", so a deps-only flow's own
+// uninstall silently frees nothing — and the audio flows declare NO requiredModels, so
+// their entire footprint is flow-owned. Not the circularity above: this is an identity
+// test on the uninstall id, not a test of whether the files are on disk.
+//
+// A dep stays protected when ANOTHER flow requires it, so a shared weight survives until
+// its last owner is gone (chatter-box ∩ voice-changer = 3 deps — live, not hypothetical).
+//
+// Reads `requiredDeps` and deliberately NOT flowDepIds()/getFlowDependencies(): those
+// union a `requiredPlugins` plugin's deps in for the INSTALL payload, and a plugin's deps
+// are not a flow's to release. They stay protected by _pluginRequiredDepIds regardless,
+// since no pluginDepKey can ever equal a flowDepKey.
+function _flowRequiredDepIds(excludeUninstallId) {
+    const { FLOWS, flowDepKey } = _require('../js/data/flowsRegistry.js');
     const out = new Set();
     for (const flow of FLOWS) {
+        if (flowDepKey(flow.id) === excludeUninstallId) continue;
         for (const depId of (flow.requiredDeps || [])) out.add(depId);
     }
     return out;
@@ -496,7 +514,9 @@ async function _remoteSharedDepIds(excludeModelId) {
     // MPI-304 — mirror of the local guard: app-only deps belong to no model, so the
     // MODELS sweep above cannot protect them. Fixed in the SAME pass as the local twin
     // (CLAUDE.md engine-split rule — a one-engine fix here is a false done).
-    for (const depId of _flowRequiredDepIds()) keep.add(depId);
+    // MPI-682 — and the exclusion threads through here too, or a flow uninstall frees
+    // the local copy and the remote engine silently keeps the volume's.
+    for (const depId of _flowRequiredDepIds(excludeModelId)) keep.add(depId);
     // MPI-310 — plugin twin, fixed in the same pass for the same reason. Honours the
     // exclusion so a plugin's own uninstall can actually delete its weight (see the
     // local twin's comment for why this differs from the app guard above).
@@ -3443,6 +3463,7 @@ module.exports = {
     _isSameObjectUrl, // MPI-427 — exported for unit test
     _shouldResumePartial, // MPI-429 — exported for unit test
     _pluginRequiredDepIds, // MPI-310 — exported for unit test
+    _flowRequiredDepIds, // MPI-682 — exported for unit test
     _localSharedDepsMap, // MPI-310 — exported for unit test (model-side protection)
     _remoteSharedDepIds, // MPI-464 — exported for unit test (remote twin of the above)
     _orphanedDepIds, // MPI-462 — exported for unit test (orphan sweep)

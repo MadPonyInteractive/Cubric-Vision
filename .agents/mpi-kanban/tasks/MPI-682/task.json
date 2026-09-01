@@ -3,14 +3,16 @@
   "id": "MPI-682",
   "title": "A flow cannot be uninstalled - deps-only flows have no way to free their weights",
   "description": "Add Uninstall to the Flow Library drawer, and unblock it server-side (_flowRequiredDepIds protects unconditionally).",
-  "column": "todo",
-  "maturity": "planned",
+  "column": "doing",
+  "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-09-01T20:57:05+01:00",
-  "updated_at": "2026-09-01T20:57:05+01:00",
+  "updated_at": "2026-09-01T21:30:00+01:00",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "checklist": "checklist.md",
+    "files": "files.json"
   }
 }

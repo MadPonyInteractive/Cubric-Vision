@@ -197,6 +197,20 @@ before it broke) **and** pins the MPI-258 B1 tier-family case so a future fix
 cannot swing back to over-protection. Any change here must keep both green — they
 fail in opposite directions, which is the point.
 
+**Three entity guards, and only the OWNER's key releases a weight (MPI-304 / 310 / 682).**
+A dep that no MODEL declares is invisible to everything above, so `_flowRequiredDepIds` and
+`_pluginRequiredDepIds` union flow-owned and plugin-owned deps into **both** engines'
+protected sets. Each takes the uninstall id and skips the entity whose OWN key matches
+(`flowDepKey(id)` / `pluginDepKey(id)`) — without that, an entity's own Uninstall button
+protects the very files it is trying to free and silently no-ops. That is an identity test
+on the uninstall id, **not** a test of whether the files are on disk: a flow and a plugin
+have no install state of their own (their deps ARE it), so gating on presence would be the
+circularity the table above catalogues. A dep still declared by ANOTHER flow/plugin stays
+protected, so a shared weight survives to its last owner (`chatter-box` ∩ `voice-changer` =
+3 deps). The exclusion threads through BOTH call sites — `_localSharedDepsMap` and
+`_remoteSharedDepIds` — or a flow uninstall frees the local copy while the Pod volume keeps
+its twin. Guards: `tests/plugin-dep-gc.test.cjs`, `tests/flow-uninstall-guard.test.cjs`.
+
 The old local `_findOtherModelsUsingDep` filtered on `m.installed` → always `[]`
 → uninstalling one LTX-2.3 tier deleted the Gemma/VAE/LoRAs the other tier
 shares. **Trap:** the remote path was fixed (MPI-122) and the local twin was

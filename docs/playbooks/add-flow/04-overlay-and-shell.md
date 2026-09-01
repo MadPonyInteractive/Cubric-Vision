@@ -104,6 +104,36 @@ cancel-all. The bar ticks on `download:progress` via a light `_patchProgress` (w
 footer rebuild); state transitions (`download:started`/`complete`/`cancelled`) rebuild the footer
 so the button swaps Install↔Cancel↔Open. Reuses the Model Library's `.mpi-tile__prog` bar.
 
+## Uninstall — a flow frees its OWN deps, nothing else (MPI-682)
+
+The **Open** footer state also carries an **Uninstall**, but only when the flow declares
+`requiredDeps`. A models-only flow owns nothing to free — its weights come off in the Model
+Library, and a button here would read as an offer to delete the model itself. That gate is
+the same one the plugin row uses (`_pluginTile`, MpiModelManager).
+
+What it frees is `flow.requiredDeps` **only**: not `requiredModels` (the Model Library owns
+models — MiniMax does not get to delete Krea2) and not a `requiredPlugins` plugin's deps.
+So it reads `requiredDeps` directly and **never** `getFlowDependencies()`/`flowDepIds()`,
+which union plugin deps in for the *install* payload — counting those would make the
+dialog promise disk the server guard is going to keep anyway.
+
+The uninstall goes out under `flowDepKey(flow.id)`, and that key is load-bearing: it is what
+lets `_flowRequiredDepIds(excludeUninstallId)` release the weights (see
+`docs/download-manager.md` § shared-dep uninstall guard). A model id here leaves them
+protected and the button silently frees nothing — the whole reason this was unbuildable
+before MPI-682. Deps shared with another flow are still kept (last owner standing).
+
+**Nothing else reports the result.** MpiModelManager's `download:uninstalled` handler owns
+the removed/kept toast for models and plugins, and only exists while the Model Library is
+mounted; it resolves a `flow:` key to neither, so MpiFlowLibrary carries its own. That
+handler deliberately does **not** repaint: the dep-status cache is still pre-uninstall at
+that instant. The repaint is `models:checked`, fanned out by the re-sync the SSE twin
+triggers (MPI-681).
+
+Reachability: an installed flow clicked from the **Gallery** skips the drawer and opens the
+frame (MPI-638), so Uninstall is reached from the Landing page — the same surface as the
+Model Library.
+
 ## Ctrl+Enter runs the OPEN flow
 
 `generation.run` (Ctrl+Enter) is bound by BOTH the PromptBox and `MpiBaseFlow` — and `Hotkeys.bind`

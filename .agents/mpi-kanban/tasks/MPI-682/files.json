@@ -1,0 +1,11 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "routes/downloadManager.js",
+    "tests/flow-uninstall-guard.test.cjs",
+    "js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.js",
+    "js/components/Compounds/LandingPages/MpiFlowLibrary/MpiFlowLibrary.css",
+    "docs/playbooks/add-flow/04-overlay-and-shell.md",
+    "docs/download-manager.md"
+  ]
+}

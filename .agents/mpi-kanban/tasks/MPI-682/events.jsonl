@@ -1,1 +1,2 @@
 {"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-682", "at": "2026-09-01T20:57:05+01:00", "actor": "claude", "column": "todo", "title": "A flow cannot be uninstalled - deps-only flows have no way to free their weights"}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-682", "at": "2026-09-01T21:30:00+01:00", "actor": "claude", "from": "todo", "to": "doing", "summary": "Starting implementation - server guard exclude, then the drawer button."}
