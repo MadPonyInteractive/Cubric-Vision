@@ -82,6 +82,9 @@ second implementation of the shared-dep rule in the renderer, which is the mista
 `docs/download-manager.md` catalogues. The dialog's second sentence and the toast carry it,
 and the Model Library's plugin dialog is worded the same way.
 
-Out of scope, filed separately: `MpiOkCancel` renders `\n` as nothing (no `white-space` rule
-on `.mpi-ok-cancel__text`), so the Model Library's `\n• ` bullet dialogs have always run
-together. This card's dialog is prose to avoid a fourth copy of that bug.
+Spotted here and filed out of scope: `MpiOkCancel` rendered `\n` as nothing (no
+`white-space` rule on `.mpi-ok-cancel__text`), so the Model Library's `\n• ` bullet dialogs
+had always run together. This card's dialog was written as prose to avoid a fourth copy of
+that bug — **MPI-683 has since shipped the shared `white-space: pre-line`** (d0c31d9c), so
+the prose is now a preference rather than a workaround, and it stays because it is the
+wording that was live-verified above.
