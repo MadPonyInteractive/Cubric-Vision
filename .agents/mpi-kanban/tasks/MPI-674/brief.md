@@ -53,6 +53,17 @@ the umbrella's harness note. `check-classes.mjs <workflow> <base>` is the assert
 - `js/shell.js` — the boot gate that consumes `deps-status`
 - a user-reachable repair surface (new or an existing settings entry)
 
+## This card OWNS the repro harness — including deleting it
+
+`D:\tmp\cu126-repro` (~10 GB) is kept on disk **because this card needs it** (user call,
+2026-09-01). It is not stale scratch for a cleanup pass to sweep — leave it until this card
+closes.
+
+**Closing this card includes disposing of it.** At close-out: check whether anything else
+still needs it (another open member, an unreleased 1.4.3 verification, a follow-up card), and
+if not, delete `D:\tmp\cu126-repro` and say so in `validation.md`. If something does still
+need it, name what and move the ownership onto that card — do not leave 10 GB owned by nobody.
+
 ## Ordering
 
 Phase 2 of MPI-672 — after MPI-673 and MPI-675. Largest of the three. If it cannot land

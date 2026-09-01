@@ -71,6 +71,24 @@ every start — theirs is likely deterministic (proxy / AV / offline), not trans
 reporter's `%APPDATA%\Cubric Vision\logs\app.log`, which MPI-675 is what makes obtainable.
 None of the three fixes depend on that answer.
 
+## Current State
+
+**2026-09-01 — investigation session, no code written.** The four cards exist, are committed
+and pushed (`819a6f46`), and all sit in `todo`/`planned`. The root cause is reproduced and the
+release path is checked; nothing in the app has been changed yet.
+
+Next: **phase 1, MPI-675 first**, then MPI-673.
+
+Two things the next session inherits and did not cause:
+
+- **`.agents/mpi-kanban/events.jsonl` has 4 malformed uncommitted lines** (07:27–07:47 today,
+  missing `schema`/`type`/`id`), plus 17 legacy ones under `MPI-666`. `validate_board.py` exits
+  1 on them; none belong to this umbrella. They were left alone because they are another live
+  session's working copy. They will bounce a close-out — fix or hand back to that session then.
+- **A concurrent session's commit `54277eb4` swept this board's `board.json`** before the task
+  folders were committed, so origin briefly carried card ids with no cards behind them. Already
+  repaired by `819a6f46`; noted because the same race can recur — this tree runs peers.
+
 ## Phases
 
 **Phase 1 — make the failure visible and reportable (MPI-675, then MPI-673).**
@@ -117,5 +135,9 @@ Then follow `/mpi-release` (bump the 3rd digit) — and mind its two documented 
 (`install-nodes.mjs`, `check-classes.mjs`, `post-prompt.mjs`). Re-create with: extract the
 portable, `pip install -r python_deps.txt --no-deps`, install the locked packs, boot, then
 `check-classes.mjs <workflow> http://127.0.0.1:48199`. **Use it to prove MPI-674's detector
-actually fires** — it is the only place the broken state exists on demand. Delete it when
-the umbrella closes.
+actually fires** — it is the only place the broken state exists on demand.
+
+**MPI-674 owns the harness and owns deleting it** (user call, 2026-09-01). It is kept
+precisely because MPI-674 needs it, so it is not garbage to be swept by a cleanup pass: leave
+it alone until that card closes. MPI-674's own close-out is what checks whether anything else
+still needs it and removes it if not.
