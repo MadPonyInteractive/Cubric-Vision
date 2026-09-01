@@ -158,10 +158,18 @@ Delivered per plan.md amendments 18-20. `'splat'` is NOT a media type.
       `HiResComposite` IS an `OUTPUT_NODE`; B drops all four hires manifests for
       `hires_dir` + `*.png`. Path plumbing proven on the bench (`test_pathwire.py`):
       164 files on both dirs, bake untouched. plan.md amendment 50.
-- [ ] **Wire A -> B as two jobs:** job 1, then job 2 from job 1's `onComplete`
-      (`flowService.js:43`) - NOT a two-prompt job inside `commandExecutor`'s lane
-      machinery. Needs a second workflow name on `FlowDef`, and a decision on which job
-      owns the Scene card. plan.md amendment 50.
+- [x] **A -> B CHAIN BUILT (2026-09-01).** `flowService.js` runs a `chain: { operation }`
+      flow as two ordinary jobs - leg 1, then leg 2 from leg 1's `onComplete`, ONE
+      completion reported (on leg 2), leg 2 with no media and REUSING leg 1's `tempId`.
+      `tests/flow-chain.test.cjs`, 7 tests, four executing the real `chainCallbacks`;
+      860/860 on `npm test`, lint clean. **Q1 answered: a second OP, not a second
+      `workflow` field on `FlowDef`. Q2 answered: job 1 owns the card, job 2 attaches
+      `splatPath`.** plan.md amendment 52.
+- [ ] **BLOCKED ON A LIVE PEER, not a decision:** the descriptor + the two universal ops
+      need the five registry files MPI-664's session `d6f5361e` holds a fresh write claim
+      on, and the `Output_Splat` capture + the `splatPath` write need
+      `generationService.js` / `commandExecutor.js`, held by MPI-591's live session.
+      Re-check both claims before the next pass. plan.md amendment 52.
 - [ ] **`ComfyUI-SplatKit` is NOT in `dev_configs/node_lock.json`** - the pack every node
       in this card comes from is undeclared and exists only on the bench. Belongs with
       task 2 below.

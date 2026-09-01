@@ -26,6 +26,8 @@ import { Events } from '../events.js';
  * @param {Object} inputs - Collected by MpiBaseFlow from the FlowDef. Media are passed by
  *                          reference (content-addressed store paths), never base64.
  * @param {Object} [callbacks] - onComplete/onError/onCancel, forwarded to enqueueGeneration.
+ * @param {{operation?: string, tempId?: string}} [_leg] - INTERNAL, set only by the chain
+ *        below when this call IS the second leg. Never passed by a caller.
  * @returns {{queueJobId: string}|null} enqueue result, or null if the guard aborted.
  */
 /**
@@ -40,7 +42,44 @@ function _missingLabel({ missing, missingDeps }) {
     return missing.length === 1 && !missingDeps.length ? 'a model' : 'models';
 }
 
-export function submitFlowGeneration(flowOrId, inputs = {}, callbacks = {}) {
+/**
+ * TWO-LEG FLOWS (MPI-623). A flow declaring `chain: { operation }` runs as TWO ordinary
+ * jobs: leg 1, then leg 2 dispatched from leg 1's completion. The queue runs jobs in
+ * order and each leg is one prompt, so both honour the lane-settle invariants MPI-463/461
+ * protect — this is deliberately NOT a two-prompt job inside commandExecutor's lane
+ * machinery, which is the expensive version of the same thing.
+ *
+ * WHY two prompts rather than one graph: ComfyUI never evicts what the CURRENT prompt
+ * produced (`comfy_execution/caching.py`, and no caller passes `free_active=True`). The
+ * 3D Scene bake's second stage spikes to ~43 GB on its own, so it needs the machine
+ * otherwise empty — and only a NEW prompt bumps the cache generation that frees the
+ * first stage. Nothing flows between the legs at runtime: leg 2 addresses leg 1's output
+ * by name, which is known before either starts.
+ *
+ * The CALLER sees ONE completion, on leg 2 — the flow is not done until the second half
+ * is. Leg 1's own card still lands when leg 1 finishes; the run path commits it, not this
+ * callback. If leg 2 cannot enqueue (its model guard aborts), leg 1's completion is
+ * forwarded instead, so the pane reports done rather than hanging on a job that never ran.
+ *
+ * `submitLeg2` is passed in rather than closed over so this branch is reachable from a
+ * test — importing flowService is cheap, but reaching `enqueueGeneration` is not.
+ *
+ * @param {import('../data/flowsRegistry.js').FlowDef} flow
+ * @param {Object} callbacks - the CALLER's callbacks.
+ * @param {function():(Object|null)} submitLeg2 - dispatches the second leg.
+ * @returns {Object} callbacks to hand enqueueGeneration for leg 1.
+ */
+export function chainCallbacks(flow, callbacks, submitLeg2) {
+    if (!flow.chain?.operation) return callbacks;
+    return {
+        ...callbacks,
+        onComplete: (result) => {
+            if (!submitLeg2()) callbacks.onComplete?.(result);
+        },
+    };
+}
+
+export function submitFlowGeneration(flowOrId, inputs = {}, callbacks = {}, _leg = {}) {
     const flow = typeof flowOrId === 'string' ? getFlowById(flowOrId) : flowOrId;
     if (!flow) {
         Events.emit('ui:warning', { message: 'That flow could not be found.' });
@@ -83,10 +122,17 @@ export function submitFlowGeneration(flowOrId, inputs = {}, callbacks = {}) {
     // outpaint an already-outpainted picture. So `runMediaItems` is stripped here and
     // never reaches `flowInputs`.
     const { runMediaItems, ...snapshot } = inputs;
-    const mediaItems = Array.isArray(runMediaItems) ? runMediaItems
+    // ponytail: the chained leg takes NO media. Its graph reads what leg 1 wrote to
+    // disk, addressed by name (`Input_Name`), so re-sending the source image would only
+    // stage a file nothing loads. One rule, no per-flow knob — a chained leg that DID
+    // want media would be a different feature.
+    const mediaItems = _leg.operation ? []
+        : Array.isArray(runMediaItems) ? runMediaItems
         : Array.isArray(snapshot.mediaItems) ? snapshot.mediaItems : [];
     const config = {
-        operation: flow.operation,
+        // The op picks the GRAPH (universal_workflows.js). A two-leg flow declares one
+        // op per leg, which is why the chain needs no second `workflow` field on FlowDef.
+        operation: _leg.operation || flow.operation,
         model: { id: null, mediaType: flow.mediaType || 'image' },
         positive: inputs.positive || '',
         negative: inputs.negative || '',
@@ -126,7 +172,11 @@ export function submitFlowGeneration(flowOrId, inputs = {}, callbacks = {}) {
     // because it will not land there unless the user applies it. The flow's own
     // result pane is where the run is visible — live latents reach it by tempId
     // (preview:frame → activeGenerations.byPromptId, MPI-271).
-    const tempId = crypto.randomUUID();
+    // The chained leg REUSES leg 1's tempId. MpiBaseFlow holds exactly one `_myTempId`
+    // per run and matches live latents and Cancel through it, so a fresh id on leg 2
+    // would leave the pane unable to cancel or preview the second half. The two legs are
+    // sequential — leg 1 has ended before leg 2 enqueues — so nothing shares it at once.
+    const tempId = _leg.tempId || crypto.randomUUID();
 
     // NO getNextGeneration — arming the loop would re-fire flow gens. forceLocal only
     // when the user has explicitly pinned the local engine (mirrors state.engineOverride).
@@ -142,7 +192,11 @@ export function submitFlowGeneration(flowOrId, inputs = {}, callbacks = {}) {
     };
     if (state.engineOverride === 'local') opts.forceLocal = true;
 
-    const res = enqueueGeneration(config, callbacks, opts);
+    // Leg 2 never chains again — one chain, two legs.
+    const legCallbacks = _leg.operation ? callbacks : chainCallbacks(flow, callbacks,
+        () => submitFlowGeneration(flow, inputs, callbacks, { operation: flow.chain.operation, tempId }));
+
+    const res = enqueueGeneration(config, legCallbacks, opts);
     // Return the tempId so the caller (MpiBaseFlow) can match this job's live latent
     // previews (preview:frame → activeGenerations.byPromptId → entry.tempId; MPI-271).
     return res ? { ...res, tempId } : null;

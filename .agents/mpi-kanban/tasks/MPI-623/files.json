@@ -14,6 +14,8 @@
     "c:/AI/Mpi/ComfyUi-MpiNodes/help_funcs.py",
     "c:/AI/Mpi/ComfyUi-MpiNodes/__init__.py",
     "c:/AI/Mpi/ComfyUi-MpiNodes/README.md",
-    "c:/AI/Mpi/ComfyUi-MpiNodes/changelog.md"
+    "c:/AI/Mpi/ComfyUi-MpiNodes/changelog.md",
+    "js/services/flowService.js",
+    "tests/flow-chain.test.cjs"
   ]
 }

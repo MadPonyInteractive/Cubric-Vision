@@ -285,6 +285,28 @@ notes in [research/](research/).
 > real - `ComfyUI-SplatKit` is not in `dev_configs/node_lock.json`**, so every node this
 > card depends on is undeclared. Nothing is blocked.
 
+> **Session note 2026-09-01 (thirteenth). THE CHAIN IS BUILT AND BOTH OF 50's OPEN
+> QUESTIONS ARE ANSWERED - and the rest of the wiring is held by a LIVE PEER, not by a
+> decision.** `js/services/flowService.js` now runs a `chain: { operation }` flow as two
+> ordinary jobs: leg 1, then leg 2 from leg 1's `onComplete`, one completion reported to
+> the caller (on leg 2), leg 2 carrying no media and REUSING leg 1's `tempId` so Cancel
+> and live previews keep working without touching `MpiBaseFlow`. `tests/flow-chain.test.cjs`
+> - 7 tests, four of them EXECUTING the real `chainCallbacks`, and the important one was
+> watched go red first. **860/860 on `npm test`, lint clean.** Amendment 52.
+>
+> **Q1: a second OP, not a second `workflow` field** - the op picks the graph, and MPI-591's
+> `flowLtxExtend.byModel` is the precedent. **Q2: job 1 owns the card and job 2 attaches
+> `splatPath` to it** - leg 1's still is worth keeping if stage B dies at 3.76 GB free.
+>
+> **What is NOT done, and why.** MPI-664's session `d6f5361e` holds a FRESH write claim on
+> all five Phase 2 registry files plus `MpiBaseFlow.js`; MPI-591's live session holds
+> `generationService.js` / `commandExecutor.js`, where the `Output_Splat` capture and the
+> `splatPath` write belong. `flowService.js` + its test were the only unowned paths.
+> **And `comfy_workflows/flow_3d_scene_a.json` / `_b.json` still do not exist** - the canvas
+> authoring is Fabio's half, so the `chain` field has no consumer and nothing end-to-end is
+> verifiable yet. **Next:** re-check those claims, then descriptor + two ops + capture +
+> attach in one pass. Phase 2's `user-ux` gate is untouched and still owed.
+
 **Project mode:** `scalable-foundation`.
 
 A user bakes a Gaussian-splat scene once from a 360 equirect image, then re-enters
@@ -1500,6 +1522,60 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
       float32 chain over the 984 cube faces on the way to disk - and either a bound or a
       documented RAM floor. **Do not treat stage B as cheap because it is short.**
 
+### Amendments from the chain-wiring session (2026-09-01)
+
+52. **THE A -> B CHAIN IS BUILT, AND BOTH OPEN QUESTIONS FROM 50 ARE ANSWERED - but the
+    registry half of the wiring is BLOCKED BY A LIVE PEER, not by a decision.**
+
+    **What landed** (`js/services/flowService.js`, +59/-5, and `tests/flow-chain.test.cjs`,
+    7 tests): a flow declaring `chain: { operation }` runs as two ordinary jobs. Leg 1
+    enqueues normally; `chainCallbacks` wraps its `onComplete` to dispatch leg 2, and the
+    CALLER sees ONE completion, on leg 2 - the flow is not done until the second half is.
+    Leg 1's own card still lands when leg 1 finishes, because the run path commits it, not
+    this callback. Three details worth keeping:
+    - **Leg 2 carries no media** (`mediaItems = _leg.operation ? []`). Its graph reads what
+      leg 1 wrote to disk, addressed by `Input_Name`, so re-sending the source would stage
+      a file nothing loads.
+    - **Leg 2 REUSES leg 1's `tempId`.** `MpiBaseFlow` holds exactly one `_myTempId` per run
+      and matches live latents AND Cancel through it, so a fresh id would leave the pane
+      unable to cancel or preview the second half. The legs are sequential, so nothing
+      shares the id at one moment. This is what let the chain avoid touching `MpiBaseFlow`.
+    - **Leg 2 failing to enqueue forwards leg 1's completion** rather than leaving the pane
+      spinning on a job that never entered the queue.
+
+    **Q1 answered - a second op, NOT a second `workflow` field on `FlowDef`.** The op is
+    what picks the graph (`universal_workflows.js`); `FlowDef.workflow` is read only by the
+    title tests. MPI-591 already set the precedent for one flow spanning two graphs
+    (`flowLtxExtend.byModel`). So the Scene flow declares `flow3dSceneBake` and chains
+    `flow3dSceneSplat`, and no new workflow field exists.
+
+    **Q2 answered - JOB 1 OWNS THE CARD, job 2 attaches `splatPath` to it.** Lazier than
+    suppress-and-re-emit, and leg 1's still is worth keeping on its own if stage B dies at
+    3.76 GB free. **The attach itself is NOT built** - nothing yet writes `splatPath` on a
+    fresh generation (Phase 1 landed only the field and the add-from-cards copy).
+
+    **`chainCallbacks` takes the leg-2 dispatch as an ARGUMENT on purpose.** Importing
+    `flowService.js` in node works; reaching `enqueueGeneration` does not, and
+    `mock.module` needs `--experimental-test-module-mocks`, which `npm test` does not pass.
+    Injecting the one function is what turned an untestable branch into four executed
+    tests. The wrap was watched go red (forwarding leg 1 immediately) before being believed.
+
+    **BLOCKED, and it is a live claim rather than a decision.** MPI-664's session
+    `d6f5361e` holds a FRESH `write` claim on `js/data/flowsRegistry.js`,
+    `js/data/commandRegistry.js`, `js/data/modelConstants/universal_workflows.js`,
+    `js/core/operationRegistry.js`, `operation_registry.json` and `MpiBaseFlow.js` - the
+    whole Phase 2 registry surface. MPI-591's live session `e27d2b3f` additionally holds
+    `complete` claims on `generationService.js` and `commandExecutor.js`, which is where
+    the `Output_Splat` capture and the `splatPath` write belong. So the descriptor, the two
+    ops, the capture and the attach all wait; `flowService.js` and the test were the only
+    unowned paths and they are done.
+
+    **Also still true and unrelated to any claim: `comfy_workflows/flow_3d_scene_a.json`
+    and `_b.json` DO NOT EXIST.** The canvas authoring is Fabio's half, and a `FlowDef`
+    naming files that are not there reds `tests/inject-params-titles.test.cjs`. Nothing
+    end-to-end is verifiable until those land - the `chain` field has no consumer yet, by
+    design rather than by omission.
+
 ### Verified NOT drifted from the source workflow (checked 2026-08-29)
 
 **This list is not exhaustive and two things it omitted were wrong - see amendments 29 and
@@ -1665,7 +1741,9 @@ Disjoint ownership; the node lives in a different repo entirely. Run with
 
 ## Phase 2: The 3D Scene Flow
 
-Sequential - depends on the media type AND the bake path. One graph, one dispatch.
+Sequential - depends on the media type AND the bake path. ~~One graph, one dispatch.~~
+**TWO graphs, TWO dispatches** - retracted by amendments 48-51, decided by Fabio
+2026-09-01, and the chain is built (amendment 52).
 
 **Verify mode:** `user-ux`.
 
