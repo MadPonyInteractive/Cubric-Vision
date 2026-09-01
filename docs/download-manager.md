@@ -138,6 +138,20 @@ bucket stays (users nest). Widening it back to the whole custom root also aims t
 uninstall delete at a user's unrelated same-named file. Pinned by
 `tests/dep-path-agreement.test.cjs`.
 
+**The `models:checked` emit gate is keyed on the dep caches too, not just the model
+set (MPI-681).** `syncModelInstalled` writes three things — `MODELS[].installed`, the
+flow dep-status cache and the plugin dep-status cache — and only emits on a real diff,
+because the remote heartbeat re-syncs every ~5s and a no-change re-emit tore down open
+op dropdowns and slider drags (MPI-326). The gate was keyed on the installed MODEL set
+alone, so a **deps-only** install (every flow with `requiredDeps` and no
+`requiredModels` — the whole audio section) changed neither key and the fan-out never
+fired. `models:checked` is the only signal MpiFlowLibrary has for that install, so the
+drawer sat frozen at 100% with Cancel showing until the app restarted (the keys start
+`null`, so the first sync of a session always emits). Same stuck-at-100% symptom as
+MPI-607 above, different cause: there the disk read lied, here the read was right and
+nobody was told. Pinned by `tests/deps-only-install-fanout.test.cjs`, which asserts
+both directions — the deps-only edge fires, and a steady-state re-sync stays silent.
+
 **"Is this model installed?" is answered from its EXCLUSIVE deps (MPI-310).**
 A model protects every dep it *declares*, and it counts as installed when any dep
 that **no other model declares** is on disk. Both earlier rules conflated shared

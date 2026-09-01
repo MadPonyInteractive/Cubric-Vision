@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-681",
+  "title": "A flow-deps-only install never repaints - the models:checked diff gate is keyed on the MODEL set only",
+  "description": "Widen the models:checked diff gate past the model set so a flow- or plugin-deps-only install repaints.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-09-01T20:35:13+01:00",
+  "updated_at": "2026-09-01T20:48:42+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

@@ -63,6 +63,11 @@ export function getDriftedModelIds() { return _driftedNodeDeps.map(d => d.modelI
 // on a real diff so a steady-state re-sync stays silent.
 let _lastEmittedInstalledKey = null;
 let _lastEmittedDriftedKey = null;
+// MPI-681: flow deps and plugin deps are NOT models, so a deps-only install leaves the
+// two keys above byte-identical and the gate swallowed the one signal their consumers
+// have (MpiFlowLibrary/MpiModelManager repaint on 'models:checked'). Key on what the
+// sync actually rewrote — the dep-status caches — as well.
+let _lastEmittedDepKey = null;
 
 // ── Path Config ───────────────────────────────────────────────────────────────
 // Initialized asynchronously via initPaths() — defaults to Windows portable until server reports.
@@ -217,12 +222,19 @@ export async function syncModelInstalled() {
         }
         _driftedNodeDeps = drifted;
 
+        // MPI-681: every dep slice unpacked below also lands in the emit diff key, so a
+        // deps-only install still fans out. `id` is already namespaced (flow:/plugin:).
+        const depKeyParts = [];
+        const depKeyPart = (id, entry) => `${id}=${(entry.deps || [])
+            .filter(d => d.installed === true).map(d => d.id).sort().join('+')}`;
+
         // MPI-304 — hand each flow its dep slice. Keyed by flowDepKey() in the payload,
         // unpacked back to the bare flowId the availability check reads.
         for (const { id, flowId } of flowDepUniverse()) {
             const entry = results[id];
             if (!entry) continue;
             setFlowDepStatus(flowId, new Map((entry.deps || []).map(d => [d.id, d.installed === true])));
+            depKeyParts.push(depKeyPart(id, entry));
         }
 
         // MPI-310 — same unpack for plugins.
@@ -230,6 +242,7 @@ export async function syncModelInstalled() {
             const entry = results[id];
             if (!entry) continue;
             setPluginDepStatus(pluginId, new Map((entry.deps || []).map(d => [d.id, d.installed === true])));
+            depKeyParts.push(depKeyPart(id, entry));
         }
 
         // Emit installed model IDs for reactive listeners. Use isModelUsable (≥1
@@ -250,11 +263,17 @@ export async function syncModelInstalled() {
         // still counts as a change.
         const _driftedKey = _driftedNodeDeps
             .map(d => `${d.modelId}:${d.depIds.slice().sort().join('+')}`).sort().join(',');
-        if (_installedKey === _lastEmittedInstalledKey && _driftedKey === _lastEmittedDriftedKey) {
+        // MPI-681: …and on the flow/plugin dep status this sync just wrote, or a
+        // deps-only install (the whole audio section: no requiredModels) never repaints.
+        const _depKey = depKeyParts.sort().join(',');
+        if (_installedKey === _lastEmittedInstalledKey
+            && _driftedKey === _lastEmittedDriftedKey
+            && _depKey === _lastEmittedDepKey) {
             return true; // nothing changed — skip the models:checked fan-out
         }
         _lastEmittedInstalledKey = _installedKey;
         _lastEmittedDriftedKey = _driftedKey;
+        _lastEmittedDepKey = _depKey;
         Events.emit('models:checked', { installedModelIds, driftedModelIds: getDriftedModelIds() });
 
         return true;

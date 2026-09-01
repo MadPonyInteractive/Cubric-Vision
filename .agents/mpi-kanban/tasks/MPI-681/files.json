@@ -1,0 +1,8 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/data/modelRegistry.js",
+    "tests/deps-only-install-fanout.test.cjs",
+    "docs/download-manager.md"
+  ]
+}
