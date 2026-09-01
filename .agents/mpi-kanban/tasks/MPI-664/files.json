@@ -16,6 +16,12 @@
     "comfy_workflows/raw/qwen3vl_4b_prompt_enhancer.json",
     "docs/playbooks/add-flow/existing-flows/minimax-music.md",
     "docs/playbooks/add-flow/ui/README.md",
-    "tests/inject-params-titles.test.cjs"
+    "tests/inject-params-titles.test.cjs",
+    "js/data/modelConstants/assetDeps.js",
+    "js/data/modelConstants/licences.js",
+    "js/data/modelConstants/loraDeps.js",
+    "licences/minimax-music3/**",
+    "tests/licence-gate.test.cjs",
+    "js/components/Compounds/LandingPages/MpiAbout/MpiAbout.js"
   ]
 }

@@ -1,0 +1,1 @@
+MiniMax-Music3 is licensed under the MiniMax-Music3 Community License, Copyright (c) 2026 MiniMax. Section 3.1 of that License requires "MiniMax-Music3" to be displayed prominently on the user interface of any commercial product or service that uses the Software.

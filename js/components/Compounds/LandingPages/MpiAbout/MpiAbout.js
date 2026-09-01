@@ -52,7 +52,7 @@ export const MpiAbout = ComponentFactory.create({
                 ${_credits().length ? `
                 <div class="mpi-about__credits">
                     <h3 class="mpi-about__credits-title">Credits</h3>
-                    <p class="mpi-about__credits-intro">Style and control models by the community:</p>
+                    <p class="mpi-about__credits-intro">Models and styles by the community:</p>
                     <ul class="mpi-about__credits-list">
                         ${_credits().map(c => `
                         <li class="mpi-about__credits-item">

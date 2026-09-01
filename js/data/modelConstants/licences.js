@@ -238,6 +238,121 @@ const FLUX2_KLEIN_9B = {
     ],
 };
 
+// MiniMax-Music3 — MiniMax-Music3 Community License, Copyright (c) 2026 MiniMax (MPI-664).
+//
+// THE FIRST DESCRIPTOR THAT GATES A FLOW RATHER THAN A MODEL, and it needed no code to do
+// it: `downloadService.start()` takes whatever key the caller installs under, and the Flow
+// Library installs a flow's own deps under `flowDepKey(id)` = `flow:<id>` (MPI-304). So the
+// map key below is `flow:minimax-music`, the lookup hits, and the gate fires before the
+// 13.3GB moves. Music 3 has no ModelDef on purpose — it is a FLOW WITH DEPS, the Voice
+// Changer shape — so there was never a model id to key this on.
+//
+// DO NOT READ THIS AS H3's AGREEMENT. Same licensor, different instrument, and the two
+// differences that matter both cut in the user's favour:
+//   - NO TERRITORY BAR. There is no Applicable Territory clause at all, so no `territory`
+//     block and no authorization detour for EU/UK/KR/US users. H3's is the outlier.
+//   - REDISTRIBUTION IS GRANTED OUTRIGHT, so the weights could live on R2. They are
+//     HF-primary today only because the upload has not been done (see assetDeps.js).
+//
+// WHY GATE IT AT ALL, given there is no §V.2-style "bind each recipient" clause. Clause 4
+// puts a standing obligation on US, as the party shipping a product that generates outputs:
+// implement, maintain, test and periodically review safeguards against violating uses, and
+// do not permit their circumvention. Exhibit A is the list of what counts as violating. A
+// consent step that shows a user that list before they can generate is the cheapest
+// proportionate organizational safeguard available, and `report` is the route by which a
+// violation reaches us — which is the "test and periodically review" half.
+//
+// §1 is why the licence is BUNDLED rather than linked: the copyright notice and this
+// permission notice must be included in all copies. `licences/minimax-music3/LICENSE.txt`
+// is byte-identical to what MiniMaxAI/MiniMax-Music3 serves (7,373 bytes, fetched
+// 2026-08-31); NOTICE.txt sits beside it carrying the §1 notice and the §3.1 obligation.
+//
+// §3.1 ATTRIBUTION IS DISCHARGED ON THE ABOUT PAGE, NOT BY `poweredBy`. Settled 2026-08-31.
+//
+// `poweredBy` renders in MpiModelManager's model detail drawer, keyed by model id — and
+// this flow has no model card, deliberately. That is not merely a gap to route around: for
+// a model reached only through a Flow it is the WRONG surface, because a user can install
+// and run this entire flow from the Flow Library and never open the Model Library at all.
+// An attribution only that user never sees is not "prominent" in any reading.
+//
+// What discharges §3.1 is the `credit` block on all three deps in assetDeps.js. MpiAbout
+// derives its Credits list straight from DEPS, so the name "MiniMax-Music3" renders there
+// with no wiring, on a page that is reachable however the weights arrived. Its own comment
+// already treats that list as legal surface: "a missed credit is a licence breach, not a
+// cosmetic bug." Deleting a `credit` block off these deps therefore breaks the licence,
+// not the layout.
+//
+// `poweredBy` is KEPT rather than dropped: it is the exact string §3.1 asks for, it costs
+// one line, and it lights up for free the day anything renders licence attribution for a
+// flow. It is a record, not dead data — but it is not what is discharging the obligation.
+/** @type {LicenceDescriptor} */
+const MINIMAX_MUSIC3 = {
+    id: 'minimax-music3-community-2026-08-06',
+    version: 1,
+    name: 'MiniMax-Music3 Community License',
+    modelName: 'MiniMax Music 3',
+    summary: 'MiniMax-Music3 is free to use, including commercially, and carries no '
+           + 'territory restriction. Its licence does set out how the model may not be '
+           + 'used, and asks products built on it to say so. This step shows you those '
+           + 'terms before the download starts.',
+    licenceUrl: '/licences/minimax-music3/LICENSE.txt',
+    // §3.1 — "You shall prominently display “MiniMax-Music3” on the user interface of
+    // commercial product or service that uses the Software." The exact name is carried
+    // verbatim inside this string; do not paraphrase it away.
+    poweredBy: 'Powered by MiniMax-Music3',
+    sections: [
+        {
+            heading: 'Section 2 — Compliance',
+            items: [
+                'Your use of the Software must comply with applicable laws and regulations (including trade-compliance laws and regulations) and must comply with the Acceptable Use Policy in Exhibit A. Especially, you must not violate any third party’s intellectual-property or other rights while using the Software.',
+            ],
+        },
+        {
+            heading: 'Section 3 — Commercial Terms',
+            items: [
+                'You shall prominently display “MiniMax-Music3” on the user interface of commercial product or service that uses the Software.',
+                'You shall obtain a separate, prior written authorization from MiniMax by contacting api@minimax.io with the subject line “MiniMax-Music3 licensing - authorization request”, if the aggregate yearly revenue generated from such products and services provided by you and/or any of your affiliates exceeds 20 million US dollars (or equivalent in other currencies).',
+            ],
+        },
+        {
+            heading: 'Section 4 — Safeguards',
+            items: [
+                'If you provide or make available to any third party a product, service, or hosted service that permits the generation of outputs using the Software, you must, before making that product or service available and throughout its operation, implement, maintain, test, and periodically review reasonable and proportionate technical and organizational safeguards designed to prevent and mitigate access, uses, and outputs that violate this License, including uses or outputs that infringe, misappropriate, or otherwise violate any third party’s intellectual-property or other rights. You must not knowingly disable, materially weaken, or permit the circumvention of those safeguards. You are responsible for implementing and enforcing these requirements with respect to your products, services, systems, users, and downstream recipients.',
+            ],
+        },
+        {
+            heading: 'Exhibit A — Acceptable Use Policy',
+            intro: 'You agree not to use the Software and in any of the following ways:',
+            items: [
+                'Use in any manner that violates any applicable national, federal, state, local, or international law, regulation, or other legal requirement, or that infringes, misappropriates, or otherwise violates any third party’s intellectual-property or other proprietary rights, including without limitation, through unauthorized reproduction, distribution, public display, public performance, or creation of derivative works;',
+                'Use in any manner that may harm yourself or others;',
+                'Use to generate, repurpose or distribute any content to harm yourself or others;',
+                'Use to circumvent or bypass any safety guardrails or safeguards we have implemented;',
+                'Use in any manner that exploits or harms, or intends to exploit or harm, minors;',
+                'Use to generate or disseminate verifiably false information and/or content for the purpose of harming others or influencing elections;',
+                'Use to manufacture or facilitate false online engagement, including fake reviews and other means of false online engagement;',
+                'Use to intentionally defame, disparage, or otherwise harass others;',
+                'Use to generate and/or disseminate malware (including ransomware) or any other content intended to damage electronic systems;',
+                'Use to generate or disseminate personally identifiable information for the purpose of harming others;',
+                'Use to generate or disseminate information (including images, code, posts, or articles) in or to any public environment (including via bot tweets or similar means) without clearly and prominently disclosing that such information and/or content is machine-generated;',
+                'Use to impersonate another person without that person’s consent, authorization, or lawful right to do so;',
+                'Use to make high-risk automated decisions in critical domains that affect individual safety, rights, or well-being (such as law enforcement, immigration, healthcare or medical services, critical-infrastructure management, product-safety components, essential services, credit, employment, housing, education, social scoring, or insurance);',
+                'Use in any manner that violates or disregards the social, ethical, or moral standards of other countries or regions;',
+                'Use to carry out, assist, threaten, incite, plan, advocate for, or encourage violent extremism or terrorism;',
+                'Use for any purpose intended to discriminate against, or harm, individuals or groups based on protected characteristics or categories, online or offline social behavior, or known or predicted personality traits;',
+                'Use to intentionally exploit the vulnerabilities of specific populations based on age, social, physical, or psychological characteristics, so as to materially distort the behavior of a member of that group in a manner that causes, or is likely to cause, physical or psychological harm to that person or to others;',
+                'Use for military purposes; and',
+                'Use to engage in any unauthorized or unlicensed professional activity, including but not limited to financial, legal, medical or healthcare, or other professional practice.',
+            ],
+        },
+    ],
+    acknowledgements: [
+        'I accept the Acceptable Use Policy above, and understand it applies to me and to any music I generate with this model.',
+        'I understand the music I generate is mine to use commercially, and that a commercial product built on this model must display the name “MiniMax-Music3”.',
+    ],
+    report: CUBRIC_DISCORD,
+};
+
 /** @type {Record<string, LicenceDescriptor>} */
 export const MODEL_LICENCES = {
     'minimax-h3':        MINIMAX_H3,   // first/last-frame to video+audio
@@ -246,6 +361,11 @@ export const MODEL_LICENCES = {
     // 9B entry will take beside the existing `klein-4b`). Until it lands the lookup
     // simply misses, exactly as it does for every ungated model.
     'klein-9b':          FLUX2_KLEIN_9B,
+    // NOT a model id — a FLOW dep-queue key, `flowDepKey('minimax-music')` (MPI-664). The
+    // FlowDef has not landed yet, so like `klein-9b` above the lookup simply misses until
+    // it does. When it lands its `id` must be `minimax-music` or this gate never fires and
+    // 13.3GB of licensed weights install with nothing shown.
+    'flow:minimax-music': MINIMAX_MUSIC3,
 };
 
 /** Where a user requests access to a `verify` licence — the licensor's own model page. */

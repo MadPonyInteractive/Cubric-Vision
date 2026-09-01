@@ -459,7 +459,7 @@ export const assetDeps = {
         filename: 's3gen.safetensors',
         targetPath: 'models/chatterbox/chatterbox',
         url: 'https://huggingface.co/ResembleAI/chatterbox/resolve/main/s3gen.safetensors',
-        size: '1007.55MB',
+        size: '1007.54MB',
         bytes: 1056484620,
         sha256: '2b78103c654207393955e4900aac14a12de8ef25f4b09424f1ef91941f161d4e',
         noMirror: true,
@@ -497,7 +497,7 @@ export const assetDeps = {
         filename: 's3gen.pt',
         targetPath: 'models/chatterbox/chatterbox_vc',
         url: 'https://huggingface.co/ResembleAI/chatterbox/resolve/main/s3gen.pt',
-        size: '1008.20MB',
+        size: '1008.19MB',
         bytes: 1057165844,
         sha256: '9b9ff07e60b20c136e2b1b3d7563a24604e8d2c4c267888d1ee929dd0151d2a3',
         noMirror: true,
@@ -542,7 +542,7 @@ export const assetDeps = {
         filename: 't3_mtl23ls_v2.safetensors',
         targetPath: 'models/chatterbox/chatterbox_multilingual',
         url: 'https://huggingface.co/ResembleAI/chatterbox/resolve/main/t3_mtl23ls_v2.safetensors',
-        size: '2.00GB',
+        size: '2GB',
         bytes: 2143989752,
         sha256: 'b1237586127ce98e7800a68e49938eb5092846862aabcb6e17b2fda7889a6c75',
         noMirror: true,
@@ -1123,5 +1123,86 @@ export const assetDeps = {
         size: '577.22MB',
         bytes: 605254808,
         sha256: '8e505d95dd1561d47abd43d4238fd40d9bb1ae9e147ed0a4cba778d76ae4db48',
+    },
+
+    // ── MiniMax Music 3 support weights (MPI-664) ────────────────────────
+    // The text-to-music Flow's ENTIRE weight set — DiT, text encoder, VAE. They live here
+    // rather than in modelDeps.js because Music 3 ships as a FLOW WITH DEPS and has no
+    // ModelDef at all (the Voice Changer precedent, flowsRegistry.js § voice-changer): a
+    // ModelDef would force dead fields and an entry in the model picker, and nothing about
+    // a music generator belongs in an image/video picker.
+    //
+    // LICENCE — the MiniMax-Music3 Community License, read in full 2026-08-31 and bundled
+    // at `licences/minimax-music3/`. It is NOT H3's agreement and three differences bite:
+    //
+    //   1. NO TERRITORY BAR. The Applicable-Territory restriction that makes H3 painful is
+    //      simply absent, so the descriptor carries no `territory` block.
+    //   2. REDISTRIBUTION IS GRANTED OUTRIGHT — "distribute, sublicense, and/or provide
+    //      copies of the Software". So an R2 re-host is PERMITTED here. That is the exact
+    //      inverse of the H3 weights above, where the publisher URL is a licence POSITION
+    //      and R2 is closed forever. These three are HF-primary only because the 14.33GB
+    //      upload has not been done yet, which is why they carry NO `noMirror` flag:
+    //      check-dep-urls.mjs reporting "no second origin" is correct and actionable, not
+    //      a false positive to silence.
+    //   3. §3.1 obliges us to display the name "MiniMax-Music3" PROMINENTLY on the UI of a
+    //      commercial product. `credit` below is what discharges any of that today —
+    //      MpiAbout derives its Credits list straight from DEPS, so these entries put the
+    //      name on the About page with no wiring. The descriptor's `poweredBy` renders in
+    //      the Model Library detail drawer keyed by model id, and this flow has no model
+    //      card, so that field has NO surface. Open call, see licences.js § MINIMAX_MUSIC3.
+    //
+    // THE int8 TEXT ENCODER IS THE ONLY SHIPPABLE ONE. `pruned_bf16` (16.71GB) stages
+    // 15.9GB onto a 16GB card and runs ~9x slower — downloaded, tested, abandoned. The
+    // bench card and the target user card are both 16GB, so a better-sounding bf16 result
+    // would be unshippable anyway. Do not "upgrade" this entry; MPI-664 plan § The voice
+    // roster carries the measurements.
+    'minimax-music3-dit': {
+        id: 'minimax-music3-dit',
+        name: 'MiniMax Music 3 DiT (fp16)',
+        origin: 'Comfy-Org/MiniMax-Music-3',
+        filename: 'diffusion_models/minimax_music3_dit_fp16.safetensors',
+        url: 'https://huggingface.co/Comfy-Org/MiniMax-Music-3/resolve/main/diffusion_models/minimax_music3_dit_fp16.safetensors',
+        size: '4.58GB',
+        bytes: 4914197682,
+        sha256: '45494a2b6b69af115902ff28eaf54118d19067aa54da01000f3e3efce7ba0e34',
+        // §3.1 — attribution is a licence obligation here, not a courtesy. MpiAbout groups
+        // by author, so all three entries naming the same work render ONE row.
+        credit: {
+            author: 'MiniMax',
+            work: 'MiniMax-Music3',
+            url: 'https://huggingface.co/MiniMaxAI/MiniMax-Music3',
+        },
+    },
+    'minimax-music3-text-encoder': {
+        id: 'minimax-music3-text-encoder',
+        name: 'MiniMax Music 3 text encoder (pruned, int8_convrot)',
+        origin: 'Comfy-Org/MiniMax-Music-3',
+        filename: 'text_encoders/minimax_music3_text_encoder_pruned_int8_convrot.safetensors',
+        url: 'https://huggingface.co/Comfy-Org/MiniMax-Music-3/resolve/main/text_encoders/minimax_music3_text_encoder_pruned_int8_convrot.safetensors',
+        size: '8.57GB',
+        bytes: 9196611886,
+        sha256: '010b7416d2336a08c711bc22ee65849c9623069ddb7d89bec011a75699e52014',
+        credit: {
+            author: 'MiniMax',
+            work: 'MiniMax-Music3',
+            url: 'https://huggingface.co/MiniMaxAI/MiniMax-Music3',
+        },
+    },
+    // DAV = the Descript Audio Codec VAE Music 3 decodes through. Tiny beside the other
+    // two, and the graph cannot run without it.
+    'vae-minimax-music3-dav': {
+        id: 'vae-minimax-music3-dav',
+        name: 'MiniMax Music 3 DAV VAE',
+        origin: 'Comfy-Org/MiniMax-Music-3',
+        filename: 'vae/minimax_music3_dav.safetensors',
+        url: 'https://huggingface.co/Comfy-Org/MiniMax-Music-3/resolve/main/vae/minimax_music3_dav.safetensors',
+        size: '206.66MB',
+        bytes: 216696128,
+        sha256: '2a32155b769be01445fcc2a8663b910fc9e1751e18dc1c3ec528064512d9ef0c',
+        credit: {
+            author: 'MiniMax',
+            work: 'MiniMax-Music3',
+            url: 'https://huggingface.co/MiniMaxAI/MiniMax-Music3',
+        },
     },
 };

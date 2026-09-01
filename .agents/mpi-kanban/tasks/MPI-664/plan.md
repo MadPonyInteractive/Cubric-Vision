@@ -35,9 +35,15 @@ type whose UI value is not its graph value — it holds `{ name, type }` rows fo
 one-field-one-param law AND puts the agent connector on the widget's own serialisation call.
 819/819, lint clean, documented in `ui/carousel-frame/fields.md`.
 
-**Next action: the three `assetDeps.js` entries + the licence entry** (§ The flow's SHAPE, GAP 1 and
-GAP 2). The FlowDef cannot land before them — it would point at a workflow and deps that do not
-exist. Then the graph, then the FlowDef, then tier 3's `@` picker.
+**GAP 1 and GAP 2 both CLOSED 2026-08-31.** Three `assetDeps.js` entries (`minimax-music3-dit`,
+`minimax-music3-text-encoder`, `vae-minimax-music3-dav`), hashes measured, sizes measured, plus the
+`MINIMAX_MUSIC3` descriptor keyed `flow:minimax-music` and the licence bundled at
+`licences/minimax-music3/`. 819/819, lint clean. See § GAP 1 and § GAP 2 for what the work changed.
+
+**Next action: author `flow_minimax_music.json`** from the bench graph — the roster means
+variable-length STRING ASSEMBLY, not a fixed switch bank. Then the FlowDef's five steps, then
+tier 3's `@` picker. **The FlowDef's `id` MUST be `minimax-music`** or the licence gate never fires:
+the descriptor is keyed on `flow:minimax-music` and a lookup miss is silent.
 
 ⚠️ **THREE frame additions are now unproven in the app, not one:** `hiddenWhen`, `format: 'duration'`
 and the `voices` roster. All are unit-tested pure halves; no FlowDef declares any of them yet, so no
@@ -277,7 +283,7 @@ tells them apart** (MPI-573 built that; Voice Changer was its first consumer).
 rule: *"If a control is not expressible, add a PRIMITIVE plus the FIELD TYPE, never a bare input."*
 That is precisely tiers 2 and 3. No exception is being taken.
 
-### 🔴 GAP 1 — the weights are not in the dependency system
+### ✅ GAP 1 — CLOSED 2026-08-31. The weights are now in the dependency system
 
 `grep` over `dev_configs/` and `js/data/modelConstants/` finds **only MiniMax H3** (the video model).
 Music 3 has no entry anywhere. The bench runs because Fabio downloaded the weights by hand. Three
@@ -293,7 +299,7 @@ new `assetDeps.js` entries are needed, all from `Comfy-Org/MiniMax-Music-3`:
 roster). `sha256` for each via `/mpic-compute-dep-hashes`. Sizes above are HF's own figures, taken
 from the API rather than guessed.
 
-### 🔴 GAP 2 — the WEIGHTS licence was never examined, only the caption templates
+### ✅ GAP 2 — CLOSED 2026-08-31. The WEIGHTS licence, read whole and wired
 
 § Current State records the licence position as settled, but that covered MiniMax's 1,000 template
 captions. The weights are a separate instrument, and this vendor has form: H3 ships a
@@ -311,6 +317,52 @@ Read from `MiniMaxAI/MiniMax-Music3/LICENSE` on 2026-08-31 — the MiniMax-Music
 
 Comfy-Org's repackage is tagged `apache-2.0`, but the upstream Community License governs the
 weights — do not take the repackage's tag as the answer.
+
+**What shipped, and the three things reading the whole licence changed:**
+
+1. **The gate cost ZERO code, and that was not obvious.** `MODEL_LICENCES` looked model-only, but
+   `downloadService.start()` keys the gate on whatever id the caller installs under, and the Flow
+   Library installs a flow's own deps under `flowDepKey(id)` = `flow:<id>` (MPI-304). So the
+   descriptor is keyed **`flow:minimax-music`** and fires before the 13.3GB moves. `klein-9b` is the
+   precedent for landing a descriptor before its consumer exists — the lookup simply misses until
+   then. ⚠️ The FlowDef's `id` must therefore be exactly `minimax-music`.
+2. **§1 obliges a BUNDLED copy**, not a link — "the above copyright notice and this permission notice
+   shall be included in all copies". `licences/minimax-music3/LICENSE.txt` is byte-identical to what
+   `MiniMaxAI/MiniMax-Music3` serves (7,373 bytes, fetched 2026-08-31); `NOTICE.txt` beside it
+   carries the §1 notice and the §3.1 obligation. `licence-gate.test.cjs` asserts a root-relative
+   `licenceUrl` resolves on disk, so that bundle is now pinned by a test.
+3. **Why gate it at all**, given there is no §V.2-style "bind each recipient" clause the way H3 has:
+   **clause 4** puts a standing obligation on US to implement, maintain, test and periodically review
+   safeguards against violating uses in any product that generates outputs. Exhibit A is the list of
+   what counts. A consent step showing that list is the cheapest proportionate organizational
+   safeguard, and `report` is how a violation reaches us.
+
+✅ **§3.1 ATTRIBUTION LANDS ON THE ABOUT PAGE. Fabio's call, 2026-08-31 — and it rules the Model
+Library drawer OUT rather than merely working around it.** `poweredBy` renders only in
+`MpiModelManager`'s model detail drawer, keyed by model id (`MpiModelManager.js:954`), and this flow
+has no model card. Fabio's reasoning: **a user can install and run this entire flow from the Flow
+Library and never open the Model Library at all.** An attribution that user never sees is not
+"prominent" under any reading, so the drawer was the worse surface, not the better one that happened
+to be unavailable.
+
+What discharges §3.1 is the `credit` block on all three deps. `MpiAbout` derives its Credits list
+straight from `DEPS`, so the name renders on a page reachable however the weights arrived, and that
+list is already treated as legal surface — its own comment calls a missing credit *"a licence breach,
+not a cosmetic bug"*. **Deleting a `credit` block off these three deps breaks the licence, not the
+layout.** `poweredBy` is kept as the recorded §3.1 string; it lights up free the day anything renders
+licence attribution for a flow.
+
+One copy fix came with it: MpiAbout's intro read *"Style and control models by the community"* over a
+list that already held Chroma, Juggernaut XL, LUSTIFY!, Smooth Mix and MiniMax-H3 — base checkpoints,
+not styles. Now *"Models and styles by the community"*. Pre-existing drift, but the intro is what a
+reader uses to judge whether the list below it is complete, so it matters more now the list is the
+attribution surface.
+
+**Redistribution is granted outright** ("distribute, sublicense, and/or provide copies"), so an R2
+re-host of these three IS permitted — the exact inverse of the H3 weights, where the publisher URL is
+a licence position and R2 is closed forever. They are HF-primary only because the upload has not been
+done, which is why they carry no `noMirror` flag: `check-dep-urls.mjs` listing them under "no second
+origin" is correct and actionable.
 
 ## Frame work this needs (both new, both portable)
 
@@ -344,6 +396,79 @@ exactly this (`MpiMath`, `docs/playbooks/add-flow/existing-flows/ltx-extend.md`)
 
 Long durations get a **warning, not a cap**. Never cap work to fit a card.
 
+## 🔴 GAP 3 — the enhancer takes NO recipe from a flow. Found 2026-08-31, blocks the whole LLM half
+
+The plan says the op is *"deliberately reusable: its recipe and both scrub patterns are **injected by
+the caller**"*, and `commandRegistry.js`'s own comment says the same: *"A second flow wanting a
+different rewrite reuses this op with its own recipe rather than registering a twin."* **That route
+does not exist in the flow frame.** Verified by reading the code, not inferred:
+
+- `MpiBaseFlow._runEnhance()` (`MpiBaseFlow.js:1039`) calls `enqueueGeneration` with
+  `injectionParams: { Input_Seed }` — **and nothing else.** There is no path for a FlowDef to pass
+  `Input_System_Prompt`, either `RegexReplace.regex_pattern`, or `max_length`.
+- The `enhance` action's whole declared surface is `op` / `from` / `to` / `model`
+  (`flowsRegistry.js:212-236`). There is no field to put a recipe in.
+- So the baked value runs. And the baked value is **Character-Sheet-specific**:
+  `qwen3vl_4b_prompt_enhancer.json`'s `Input_System_Prompt` opens *"You are a character designer.
+  You write the CHARACTER half of a character reference sheet prompt, and nothing else."*
+- Character Sheet declares only `op`/`from`/`to` (`flowsRegistry.js:1099` and `:1127`) and is
+  therefore running on that baked recipe. Correct for it, which is exactly why the gap never showed.
+  The injection was proven at the BENCH (a translator recipe came back in French) — never through a
+  flow.
+
+**Consequence: a music caption is unreachable today.** Press Enhance on this flow as the frame
+stands and a character designer writes a noun phrase about someone's wardrobe. The checklist's
+"music caption recipe written for `Input_System_Prompt`" and "`max_length` raised past 512" are both
+blocked on the same missing plumbing.
+
+**The fix is portable and small, and it is the same shape as `hiddenWhen`:** let the `enhance` action
+declare `injectionParams`, merged over the driven `Input_Seed` in `_runEnhance`. One object on the
+declaration, one spread at the call site. It is not a Music-3 special case — it is the plumbing the
+op has claimed to have since MPI-504.
+
+⚠️ **This is the FOURTH frame addition on this card** (`hiddenWhen`, `format: 'duration'`, the
+`voices` roster, now this), and the third to touch `MpiBaseFlow` — a shared organism. Worth saying
+out loud before adding it.
+
+## ✅ GAP 4 — SETTLED: THE GRAPH ASSEMBLES THE CAPTION (option B). Fabio, 2026-08-31
+
+The plan reads both ways and the code forces a choice:
+
+- § The decision gives the **graph** the 3 headings, Basic Attributes, the instrumental clause and
+  vocal gender — the template half.
+- § The enhancer recipe has the scrubs *"assert the three headings survived"* — which only makes
+  sense if the **LLM** wrote the headings.
+
+`_runEnhance` sends **only `_fieldValues[d.from]`** as the prompt. So the style dropdown, the BPM box
+and the voices roster **cannot reach the LLM** through the enhance action as it stands. Two routes:
+
+| | Where the caption is built | Cost | What it means |
+|---|---|---|---|
+| **A — enhancer builds it** | LLM writes the whole caption; the graph passes `Input_Caption` through | Needs GAP 3's `injectionParams` **plus** a way to feed the dropdown values in as context | The dropdowns become SUGGESTIONS in a prompt. A 4B may round 78 BPM to "around 80" |
+| **B — graph builds it** | LLM writes prose only; the graph concatenates style fragment + BPM clause + roster string around it | Needs GAP 3 only (for the recipe). No extra frame work | The deterministic values **cannot be negotiated by the model** — which is § The decision's stated reason the template half exists |
+
+**CHOSEN: B — the graph assembles.** Fabio, 2026-08-31. It is what § The decision table already
+said, it is the cheaper frame change, and it keeps the exact values off the model's desk.
+
+What B fixes in the plan, so the next session does not re-derive it:
+
+- The LLM's job **shrinks to the three prose blocks** — Global Emotional Progression, Vocal Style,
+  the Arrangement timeline. It does NOT write the headings and does not write Basic Attributes.
+- Therefore the scrubs assert **those prose blocks are present**, NOT that "the three headings
+  survived" — § The enhancer recipe's wording predates this decision and is now wrong there.
+- `Input_Caption` holds the LLM's PROSE, not a finished caption. The graph concatenates the
+  deterministic blocks around it, so the box's label/`info` must not promise a full caption.
+- The style switch bank, the BPM clause, the instrumental clause and the serialised roster string
+  all live in `flow_minimax_music.json`, feeding one `StringConcatenate` chain into
+  `MiniMaxMusic3TextEncode`.
+- 🔴 The graph must **re-check `Input_Instrumental` itself** rather than trust the field being
+  hidden — a hidden field KEEPS ITS VALUE (§ Frame work / `hiddenWhen`), so an instrumental run
+  would otherwise splice in lyrics and a roster that are merely invisible.
+
+Still blocked on GAP 3 for the recipe itself: B needs `injectionParams` on the `enhance` action to
+deliver the music recipe and the raised `max_length`. B does NOT need anything beyond that — which
+is the whole reason it was chosen over A.
+
 ## The enhancer recipe
 
 Short and single-task — that is what a 4B obeys. It writes prose into a skeleton it does not have to
@@ -365,9 +490,13 @@ In order, cheapest first:
    must load through `CLIPLoader` as a declared type **and** implement `.generate()`. Not GGUF, not
    sharded. "Use Qwen3-30B" is not a drop-in (see `research/minimax-music-3.md` § `TextGenerate`).
 
-## LoRA — nodes yes, rack no
+## LoRA — no rack, and no nodes either
 
-The bench graph carries `Input_Lora` nodes. **Do not declare a rack in v1.** A declared rack is the
+⚠️ **Plan correction 2026-08-31: the bench graph does NOT carry `Input_Lora` nodes.** Dumped and
+counted — 15 nodes, no loader of any kind. The claim below was wrong on its premise; the conclusion
+is unchanged and if LoRA nodes are ever added they arrive with the rack question already answered.
+
+**Do not declare a rack in v1.** A declared rack is the
 *model's own* rack, shared with its ordinary generations, and both `flow_ltx_extend` and
 `flow_ltx_foley` deliberately carry LoRA nodes while declaring none, precisely to avoid injecting a
 user's rack into a flow unasked. Research also grades every published MiniMax music adapter as a
@@ -429,6 +558,18 @@ the same shape: the declarative half was easy, the PAINTING half had a hole.
    `{value}` and cannot format, and it rewrites `dataset.info` on every input, so an override from
    outside is clobbered. Passing `info: ''` when `f.format` is set stops the bar hovering
    "Length: 90" over a readout saying "1 minute 30 seconds".
+
+**2026-08-31 — the deps pass, and one number the plan had wrong.**
+
+- **13.34GB, not 14.33GB.** GAP 1's sizes were HuggingFace's DECIMAL display; `size` is parsed
+  1024-based by `footprint.js`, the smoke runner's volume preflight and `modelJob.totalBytes`. Both
+  fields are now measured by `computeDepHashes.py --sizes` — never type either by hand.
+- The `--sizes` pass also regenerated **five unrelated hand-typed `size` strings** it found stale
+  (`0.41GB`→`420.45MB`, `0.29GB`→`292.52MB` in loraDeps; three rounding fixes in assetDeps). Every
+  `bytes:` was already correct and is untouched — these are string-only. Left in rather than reverted,
+  because the next run of the sanctioned command would only re-dirty them.
+- 13 deps FAILED to measure (`chatterbox-tokenizer`, the `dramabox-gemma-*` JSON sidecars). Pre-
+  existing, unrelated to this card, and their `size` strings are unchanged. Noted, not chased.
 
 **Not proven yet:** the painter's DOM half. Both pure functions are unit-tested, but nothing declares
 `hiddenWhen` or `format: 'duration'` yet, so `wrap.hidden` + the CSS override have not run in the app.
