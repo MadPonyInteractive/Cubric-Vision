@@ -305,6 +305,23 @@
 > History workspace and the minimised preview window. The last two are real released bugs and
 > the entry is worth keeping; the Flow clause is the part to drop when folding.
 
+- Large videos and photos import properly. Dropping a file into a project used to send the
+  whole thing through the browser as text, which quietly capped an import at about 75 MB —
+  past that the app refused it, and past roughly 380 MB it gave up without so much as an
+  error, leaving nothing in the gallery and no clue why. Files are now handed to the app by
+  their location on disk, so size is no longer a limit: a 474 MB 4K clip imports in seconds.
+  Anything that does still fail now says so instead of failing silently.
+
+- Phone videos no longer arrive on their side. A clip filmed in portrait is stored by the
+  camera as a landscape frame plus a "turn this a quarter" note, and the app was reading only
+  the frame — so a tall video was recorded as a wide one and its card was the wrong shape.
+  The note is now read, and portrait footage stays portrait.
+
+- An import tells you it is happening. A big video takes a while to copy and prepare, and
+  until now the gallery showed nothing at all during it — long enough that an import in
+  progress was indistinguishable from a frozen app. A card with a spinner appears the moment
+  you drop a file and turns into the finished item when it lands.
+
 - MiniMax H3 installs far faster. Both H3 models share one very large file - a 24.55 GB
   text encoder - and it was the slowest thing in the app by a wide margin, arriving at well
   under 1 MB/s. On a normal connection that alone ran for hours, and installs could give up
