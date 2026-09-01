@@ -7,7 +7,7 @@
   "maturity": "complete",
   "status": "done",
   "created_at": "2026-09-01T08:07:06Z",
-  "updated_at": "2026-09-01T09:49:23+01:00",
+  "updated_at": "2026-09-01T09:39:42.992Z",
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl",
@@ -15,6 +15,5 @@
     "validation": "validation.md",
     "files": "files.json",
     "handoffs": "handoffs/"
-  },
-  "activeSessionTitle": "MPI-672 phase 1: make the log reachable without credentials"
+  }
 }

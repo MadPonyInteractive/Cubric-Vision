@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-676",
+  "title": "Master's red lands on the wrong commit: cancel-in-progress kills the run that would have caught it",
+  "description": "tests.yml sets cancel-in-progress on every ref. Agents push several commits minutes apart, so each push kills its predecessor's run: 17 of the last 60 master runs were cancelled and never produced a verdict. The breaking commit goes untested and a later innocent commit wears the failure — 3 of the last 5 reds landed on a chore/docs/ci commit. It also blinds .husky/pre-push, whose \"last completed run\" is usually `cancelled`, not `failure`.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "created_at": "2026-09-01T09:38:09.250Z",
+  "updated_at": "2026-09-01T09:38:09.250Z",
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "files": "files.json",
+    "events": "events.jsonl"
+  },
+  "activeSessionTitle": "MPI-675 follow-up: stop master reds landing on the wrong commit"
+}

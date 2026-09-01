@@ -66,3 +66,28 @@ Report button masked this by passing the same string to both.
 Fabio confirmed the dialog ("1"), and screenshotted the result of **Show log file**:
 Explorer open on `…\Temp\cubric-agent-profile\logs\`, with `app.log` (5 KB) selected.
 The reveal works end to end on Windows. Card closed on that evidence.
+
+## Reopened — the test this card shipped took master red (2026-09-01)
+
+`tests/issue-report-url.test.cjs` deleted `app.log` to force `/logs/reveal` down its
+404 branch. `routes/logger` appends ASYNCHRONOUSLY, so a line queued by an earlier
+test in the same file could land after the delete and put the file back. The route
+then took its SUCCESS branch — spawning a real file manager on the runner, the one
+thing the test exists to prevent — and asserted `200 !== 404`.
+
+Local runs never showed it: GPU detection is instant here (nvidia-smi answers) and
+slow on a GPU-less CI runner, so the queued `[gpu-detect]` lines land in a different
+order. Not a product regression — `/logs/reveal` behaves correctly either way.
+
+Fixed in `54f03caf` by stubbing `logger.getLogPath()` to a path inside the throwaway
+user-data that nothing ever writes (`never-written.log`), so the miss branch cannot
+be beaten by a stray write rather than merely being unlikely to be.
+
+| Check | Result |
+|---|---|
+| `node --test tests/issue-report-url.test.cjs` | 5/5 |
+| `npm test` | **840 pass, 0 fail** |
+| `npm run lint` | clean |
+| CI run 33492792421 on master | **success** — `npm test` + `npm run test:desktop` |
+
+Why it was found a commit late — and why that keeps happening — is **MPI-676**.

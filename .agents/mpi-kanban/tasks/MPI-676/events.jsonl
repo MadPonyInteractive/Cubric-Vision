@@ -1,0 +1,2 @@
+{"schema":"mpi-kanban/event/v1","type":"task.created","id":"MPI-676","at":"2026-09-01T09:38:09.250Z","actor":"claude","note":"Split out of the MPI-675 CI-red follow-up: the flake was one red, this is why the reds keep being found late and on the wrong commit."}
+{"schema":"mpi-kanban/event/v1","type":"task.moved","id":"MPI-676","at":"2026-09-01T09:38:09.250Z","actor":"claude","from":"todo","to":"doing","reason":"One-line workflow change, files.json written first."}

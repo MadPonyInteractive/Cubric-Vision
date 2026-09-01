@@ -1,0 +1,6 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    ".github/workflows/tests.yml"
+  ]
+}

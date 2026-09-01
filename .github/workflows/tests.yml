@@ -29,7 +29,14 @@ permissions:
 
 concurrency:
   group: tests-${{ github.ref }}
-  cancel-in-progress: true
+  # PR runs are superseded by their own next push, so cancelling them is right.
+  # A push to master or a release branch is a permanent point in history: cancel its
+  # run and the commit that broke the suite never gets a verdict, while the NEXT
+  # commit — usually an innocent chore or docs one — wears the red. That is how
+  # MPI-675 was found a commit late (33489156063 cancelled on the breaking commit,
+  # 33489276364 red on a handoff pointer), and how 17 of 60 master runs over two
+  # days ended with no result at all. (MPI-676)
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   tests:
