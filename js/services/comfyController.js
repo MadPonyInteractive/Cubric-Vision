@@ -29,19 +29,32 @@ import { findRejectedFile, rejectedBasename, MODEL_FILE_INPUTS } from '../utils/
 // the server was still coming up. Polling is 1s/iteration, so this is seconds.
 const COMFY_READY_TIMEOUT_S = 240;
 
-// MPI-673: what a user is told when the local engine's curated pip pass failed. The
-// engine still STARTS on that failure (deliberate — refusing to boot over an offline
-// pip is the worse regression, see routes/comfy.js) but comes up with several custom
-// node packs unimported, so a graph using them is rejected with a raw missing-class
-// name. That reads as a broken app; this says what actually broke.
+// MPI-673: what a user is told when the local engine came up degraded — its curated
+// Python packages are not installed, so several custom node packs failed to import.
+// The engine still STARTS on that failure (deliberate — refusing to boot over an
+// offline pip is the worse regression, see routes/comfy.js) but a graph using those
+// packs is rejected with a raw missing-class name. That reads as a broken app; this
+// says what actually broke.
 //
-// It names no repair button: the failed pass stamps no marker, so the retry is simply
-// the next fresh engine start, and an in-app control to force one is MPI-674's scope.
+// MPI-674: it now names the repair. The original wording promised only "retried every
+// time the engine starts fresh", which was true but unreachable — the sole restart
+// control was on the dev-only Ctrl+Tab radial, so a release user had no way to cause a
+// fresh start short of relaunching the app, and no way at all to get past a stamped
+// marker (`ensureCuratedPythonDeps` skips on a marker match, so the packages could go
+// missing after a successful pass and every later start would report a clean install).
+// Settings → Engine health does both, and appears only while this is true.
+// The copy carries NO internal identifiers — not the packs that failed, not the
+// packages behind them, not our vocabulary for either. This is an artist's app: the
+// user needs to know something broke, that it is not their models, and which button
+// fixes it. What actually failed is in app.log, which "Show log file" reaches and
+// MPI-675 made sendable. (User call, 2026-09-01.)
 export const DEPS_BROKEN_MESSAGE =
-    'Some of the Python packages the local engine needs could not be installed, so several '
-    + 'of its custom nodes did not load. Generations that use them will fail.\n\n'
-    + 'The install is retried every time the engine starts fresh. If it keeps failing, check '
-    + 'your internet connection or proxy — then use "Show log file" below and send us the log.';
+    'Part of the local engine did not install, so some models will fail to generate.\n\n'
+    + 'Open Settings and press "Repair engine" under Engine health. It reinstalls the '
+    + 'missing part and restarts the engine — a few minutes, and your models are '
+    + 'untouched.\n\n'
+    + 'If it keeps failing, check your internet connection or proxy, then use '
+    + '"Show log file" below and send us the log.';
 
 // Binary WS frames carry a 4-byte big-endian event-type header. Only event type 1
 // (PREVIEW_IMAGE) is an image; ComfyUI also sends OTHER binary event types on the
@@ -536,7 +549,7 @@ function createEngine({ engine, alwaysLocal }) {
         if (!warning) return;
         clientLogger.error('comfy', `Local engine is degraded — ${warning}`);
         Events.emit('ui:error', {
-            title: 'Engine packages failed to install',
+            title: 'Part of the engine did not install',
             message: DEPS_BROKEN_MESSAGE,
         });
     },
@@ -845,6 +858,43 @@ function createEngine({ engine, alwaysLocal }) {
             if (Date.now() >= deadline) return false;
             await new Promise(r => setTimeout(r, 2000));
         }
+    },
+
+    /**
+     * MPI-674: reinstalls the local engine's curated Python packages and restarts it —
+     * the repair for the degraded state `_noteDepsWarning` reports.
+     *
+     * Lives here rather than in the Settings component because this is engine
+     * lifecycle: the sequence, the idle guard and the readiness poll are all this
+     * service's, and the outcome is read back through the same `depsWarning` channel
+     * that raised the alarm. A successful repair clears `state.comfyDepsWarning` on the
+     * first poll of the new engine; a failed one re-announces with the new reason,
+     * because `_noteDepsWarning` fires on a CHANGE of value and this start produced one.
+     *
+     * @returns {Promise<boolean>} true = the engine restarted; false = refused (busy)
+     */
+    async repairPythonDeps() {
+        // Same guard, and the same opt-in, as the dev radial's restart
+        // (js/shell/navigation.js `_restartEngine`): a human explicitly asked to repair
+        // the engine, so an unreadable queue must not lock them out of fixing it. The
+        // short timeout is deliberate — refuse fast and let them decide, rather than
+        // leave a Settings button hanging for minutes.
+        if (!await this.waitForIdleQueue({ timeoutMs: 30000, unreachableMeansIdle: true })) {
+            Events.emit('ui:warning', {
+                message: 'Repair cancelled — a generation is still running on the engine. Stop it, or wait for it to finish.',
+            });
+            return false;
+        }
+        Events.emit('ui:info', { message: 'Reinstalling the engine packages…' });
+        const res = await fetch('/engine/repair-python-deps', { method: 'POST' });
+        if (!res.ok) throw new Error(`repair-python-deps ${res.status}`);
+        // The route SIGKILLs the engine and returns without waiting for the exit. Start
+        // too soon and /comfy/start hits its already-running early-return against the
+        // still-dying process, never spawns, and leaves the engine wedged — the same
+        // race js/shell/navigation.js:327 waits out.
+        await new Promise(r => setTimeout(r, 2000));
+        await this.ensureServerRunning();
+        return true;
     },
 
     /**

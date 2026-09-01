@@ -156,6 +156,13 @@ const processState = {
     // /comfy/status. A failed pass stamps no marker, so the next spawn retries and
     // clears this by writing null.
     lastDepsWarning: null,
+    // MPI-674: node packs the engine we spawned reported as failing to import, read
+    // from its own stdout (routes/comfy.js `_scanForImportFailures`). This is the half
+    // `lastDepsWarning` cannot cover: the curated pass is marker-gated, so once a pass
+    // HAS stamped its marker a later loss of those packages skips reinstall silently
+    // and the pip pass reports nothing to fail. The packs still do not import, and this
+    // is the only place that says so. Reset on every fresh spawn.
+    comfyImportFailures: [],
 };
 
 function stopComfyUI() {

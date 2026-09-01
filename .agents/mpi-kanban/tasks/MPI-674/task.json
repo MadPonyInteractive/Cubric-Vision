@@ -3,13 +3,18 @@
   "id": "MPI-674",
   "title": "deps-status is blind to node import failure, so the boot repair never fires",
   "description": "UMBRELLA: MPI-672 - Issue #2: a silent curated-deps failure ships a broken engine and the log can never reach us (2026-09-01). Members and phase order: tasks/MPI-672/plan.md. checkUniversalWorkflowDepsStatus checks folder presence + commit marker only. A pack that is present but failed to import reads as healthy for ever, so the state survives every restart. Make the health check import-aware and the repair reachable.",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-09-01T08:07:06Z",
-  "updated_at": "2026-09-01T08:07:06Z",
+  "updated_at": "2026-09-01T14:17:41+01:00",
   "links": {
     "brief": "brief.md",
-    "events": "events.jsonl"
-  }
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/"
+  },
+  "activeSessionTitle": "MPI-672 phase 2: MPI-674 import-aware engine health + a reachable repair"
 }

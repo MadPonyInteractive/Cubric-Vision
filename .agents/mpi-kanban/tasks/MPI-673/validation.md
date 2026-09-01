@@ -48,9 +48,9 @@ the unit test proves that write and its echo. `D:\tmp\cu126-repro` remains the p
 where the broken engine exists on demand — **MPI-674** owns it and will exercise the
 real chain when it proves the import-aware detector fires.
 
-## Judgement call left for the user
+## Judgement call left for the user — RESOLVED 2026-09-01
 
-The dialog copy is new user-facing text:
+The dialog copy shipped by this card was:
 
 > **Engine packages failed to install**
 > Some of the Python packages the local engine needs could not be installed, so several
@@ -59,5 +59,16 @@ The dialog copy is new user-facing text:
 > The install is retried every time the engine starts fresh. If it keeps failing, check
 > your internet connection or proxy — then use "Show log file" below and send us the log.
 
-It deliberately names no repair button: the dev radial's "Restart Engine" is dev-gated,
-so a release build has none. A reachable in-app repair is MPI-674.
+It deliberately named no repair button, because a release build had none. **MPI-674
+built one, so this text is no longer what ships** — and Fabio, reading the new Settings
+row in his own app, called the whole register wrong: *"a user should not be prompted
+with model names or anything like that. This is an artist app, not a geek app. We're the
+geeks, not them."*
+
+The copy was rewritten on that rule, title and body, at both mirrored sites
+(`comfyController.js` and `commandExecutor.js`). Current text, the reasoning, and the
+jargon-list guards that keep it that way live in **`tasks/MPI-674/validation.md`** —
+MPI-674 owns this copy now. The standing rule is in project memory as
+`feedback_no_internal_identifiers_in_user_copy.md`.
+
+Card closed on Fabio's word, 2026-09-01, after he saw the rendered result.

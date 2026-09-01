@@ -1454,7 +1454,9 @@ export function runCommand(payload) {
         try {
             // Universal workflows (not model-tied) win and have no engine/stage2
             // variance — resolve them first, verbatim.
-            const universal = getUniversalWorkflow(payload.operation);
+            // MPI-591: a Flow whose model slot picks a different GRAPH resolves here —
+            // `flowModelIds` is null for every non-Flow run, which keeps the old lookup.
+            const universal = getUniversalWorkflow(payload.operation, payload.flowModelIds);
             if (universal) {
                 workflowFile = universal;
             } else {
@@ -2223,7 +2225,7 @@ export function runCommand(payload) {
             if (err?.code === 'python_deps_broken') {
                 clientLogger.error('comfy', `Generation blocked — engine packages missing: ${state.comfyDepsWarning}`);
                 Events.emit('ui:error', {
-                    title: 'Engine packages failed to install',
+                    title: 'Part of the engine did not install',
                     message: err.message,
                 });
                 exec.onError?.(err);

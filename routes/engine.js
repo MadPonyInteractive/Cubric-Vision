@@ -12,7 +12,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs-extra');
 const path = require('path');
-const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI, getExtraModelFolders, getDefaultModelsRoot, resolveModelsRoot, getCustomRoot, resolveComfyPath, getUniversalWorkflowDeps, runPipCommand, NODE_COMMIT_MARKER } = require('./shared');
+const { SYS_DEPS_PATH, checkUniversalWorkflowDepsStatus, getUniversalWorkflowDepsTotalSize, processState, stopComfyUI, getExtraModelFolders, getDefaultModelsRoot, resolveModelsRoot, getCustomRoot, resolveComfyPath, getUniversalWorkflowDeps, runPipCommand, NODE_COMMIT_MARKER, curatedDepsMarkerPath } = require('./shared');
 const logger = require('./logger');
 const { broadcastEngineEvent, FileDownloader, registerEngineDownload, clearEngineDownload, startUniversalWorkflowInstall, finishCustomNodeInstall } = require('./downloadManager');
 const { COMFY_DIR, COMFY_VENV_DIR, COMFY_VERSION, TORCH_MAC, getPythonBin, getComfyPath, resolveDownloadConfig, resolveUvBin, getEngineRoot } = require('./platformEngine');
@@ -709,6 +709,43 @@ router.get('/engine/version-check', async (req, res) => {
         });
     } catch (e) {
         logger.error('system', 'Version check failed', e);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+/**
+ * POST /engine/repair-python-deps
+ * -> { success: true }
+ *
+ * MPI-674: the repair for a DEGRADED engine — one whose folders are all present at
+ * their pinned commits (so `/engine/deps-status` and `/engine/repair-deps` both see
+ * nothing to do) but whose node packs cannot import, because the curated Python
+ * packages they need are not installed.
+ *
+ * Two lines, and both are load-bearing:
+ *
+ * - Removing the marker is what makes the retry possible AT ALL. `ensureCuratedPythonDeps`
+ *   skips its whole pass when the marker matches the hash of `python_deps.txt`, so on an
+ *   engine whose packages went missing AFTER a successful pass, every subsequent start
+ *   reports a clean install and changes nothing. Deleting it forces the next start to
+ *   run pip for real. (A pass that never succeeded stamped no marker, so this is a
+ *   no-op for that case and correct in both.)
+ * - Stopping the engine is what makes the next start a FRESH one. The pass runs inside
+ *   /comfy/start with the engine down (MPI-459), so a running engine would never reach it.
+ *
+ * The start is deliberately NOT made here: the caller owns the readiness poll and the
+ * degraded-engine dialog, so it learns whether the repair worked from the same
+ * `depsWarning` channel that reported the breakage.
+ */
+router.post('/engine/repair-python-deps', async (req, res) => {
+    try {
+        const marker = curatedDepsMarkerPath();
+        await fs.remove(marker);
+        logger.info('engine', `curated deps marker removed (${marker}) — the next fresh start will re-run the pip pass`);
+        stopComfyUI();
+        res.json({ success: true });
+    } catch (e) {
+        logger.error('engine', `Python deps repair failed: ${e.message}`);
         res.status(500).json({ success: false, error: e.message });
     }
 });

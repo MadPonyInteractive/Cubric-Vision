@@ -25,11 +25,14 @@ Derived from `tasks/MPI-673/brief.md` § "What 'done' looks like" (this card has
       `/comfy/status` once a second and `state` is a Proxy that emits on every
       assignment, so announcing on presence would both reopen the dialog forever and
       spam `state:changed`. The desktop spec pins the no-reopen half.
-- [x] The message names no repair BUTTON. The dev radial's "Restart Engine" is
-      dev-gated (`js/shell/navigation.js`), so a release build has no engine restart
-      control — pointing at one would be a lie. It says the install is retried on the
-      next fresh engine start, which is true by construction (a failed pass stamps no
-      marker). A reachable in-app repair is MPI-674's scope.
+- [x] ~~The message names no repair BUTTON.~~ **Superseded by MPI-674, 2026-09-01.** It
+      was true when written: the dev radial's "Restart Engine" is dev-gated
+      (`js/shell/navigation.js`), so a release build had no engine restart control and
+      pointing at one would have been a lie. MPI-674 built the reachable repair
+      (Settings → Engine health), so the copy now names it — and was rewritten again on
+      Fabio's call to carry no internal identifiers at all. The current wording, and the
+      title change at both mirrored sites, are owned and evidenced by
+      `tasks/MPI-674/validation.md`.
 
 ## Left alone — deliberate
 

@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "routes/comfy.js",
+    "routes/shared.js",
+    "routes/engine.js",
+    "js/services/comfyController.js",
+    "js/services/commandExecutor.js",
+    "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js",
+    "tests/engine-import-failure.test.cjs",
+    "tests/desktop/engine-repair-reachable.spec.js",
+    "tests/desktop/deps-warning-blocks-generation.spec.js"
+  ]
+}

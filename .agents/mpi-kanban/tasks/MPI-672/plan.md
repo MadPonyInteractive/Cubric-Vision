@@ -134,7 +134,57 @@ instead of racing the writer. `--no-verify` was used for that push because it IS
 
 Both commits are on master: `fc6f4336` (MPI-673) and `54f03caf` (the CI repair).
 
-Next: **MPI-674** (phase 2) — import-aware health check plus the repair.
+**2026-09-01, later still — MPI-674 is BUILT and sits in `doing` / `validating`.**
+Evidence in `tasks/MPI-674/validation.md`: `npm test` 852/852, lint clean, 10 new unit
+tests, a new desktop spec on a real Electron shell, and the shipped scanner run against
+BOTH real repro logs at five chunkings (1/7/64/4096/whole) — 5 packs found on
+`comfy-nodeps.log` every time, silence on `comfy-boot.log` every time.
+
+What landed: `_scanForImportFailures()` in `routes/comfy.js` reads the packs the engine
+itself reports as unimportable straight off its stdout, with a carry so a chunk boundary
+cannot drop one; `processState.comfyImportFailures` holds them; `/comfy/status` folds
+them into the SAME `depsWarning` MPI-673 built, pip reason first. `POST
+/engine/repair-python-deps` removes the curated-deps marker and stops the engine;
+`localEngine.repairPythonDeps()` owns the sequence; Settings grows an "Engine health"
+section, hidden unless `state.comfyDepsWarning`. `DEPS_BROKEN_MESSAGE` now names it.
+
+Four things the next session should know:
+
+- **User-facing copy in this app carries NO internal identifiers.** The first cut of the
+  Settings row rendered `state.comfyDepsWarning` verbatim, so an artist read
+  `custom node packs failed to import: RES4LYF, comfyui-videohelpersuite`. Fabio, on
+  seeing it: *"This is an artist app, not a geek app. We're the geeks, not them."* The
+  rule read wider than the names — "Python packages", "custom nodes", "pip" are our
+  vocabulary too, and all of it went. **This changed MPI-673's dialog as well** (title
+  and body, at both of its mirrored sites), so the two cards' copy is now one voice.
+  Standing rule in project memory: `feedback_no_internal_identifiers_in_user_copy.md`.
+- **The brief's own premise was wrong, and the card documents why.** Making
+  `checkUniversalWorkflowDepsStatus` import-aware cannot work: `_bootApp` reads
+  `/engine/deps-status` at `js/shell.js:335` and does not start ComfyUI until line 541
+  of the same function, so there is no engine to ask when that gate answers. The disk
+  check is left alone and is correct for the question it does answer (missing/drifted
+  folders, which `_installOutstandingUwDeps` CAN repair). Import health is a second
+  question, answered where an engine exists.
+- **The `/object_info` class diff was rejected on a false-positive.** A workflow for a
+  model the user never installed names classes from a pack that is not on disk, so the
+  diff reports a hole on a perfectly healthy engine. The engine's own `IMPORT FAILED` /
+  `Cannot import` lines are exact — a pack never installed is never imported and prints
+  neither — and they name the packs, which the diff cannot.
+- **Removing the marker, not restarting, is the load-bearing half of the repair.** The
+  reporter's failed pass stamped no marker, so a fresh start alone would have retried
+  for them. The same broken state is reachable WITH a marker (a pass that succeeded,
+  packages lost afterwards), and there every later start reports a clean install and
+  changes nothing for ever.
+
+Still open on MPI-674, deliberately: **the ~10 GB `D:\tmp\cu126-repro` harness stays.**
+1.4.3 is unreleased and this is the only place the broken state exists on demand, so
+phase 3 may still want it. Dispose at the UMBRELLA's close-out and say so there — the
+card's own close-out is no longer the right moment, which supersedes the note at the
+bottom of this plan.
+
+Next: **phase 3** — the 1.4.3 release. Fabio has now seen the Settings section in his own
+app and the copy was rewritten on his call, so MPI-673's original open question is closed
+by the same change; both cards are ready for `done` on his word.
 
 Two things the next session inherits and did not cause:
 

@@ -15,6 +15,7 @@ import { clientLogger } from '../../../../services/clientLogger.js';
 import { loadAll as loadAssets } from '../../../../services/assetService.js';
 import { reSyncInstalledModels } from '../../../../data/modelRegistry.js';
 import { getPendingUpdate, runUpdate } from '../../../../services/updateChecker.js';
+import { localEngine } from '../../../../services/comfyController.js';
 import { ce, qs } from '../../../../utils/dom.js';
 
 const REUSE_PARTS = [
@@ -54,6 +55,26 @@ export const MpiSettings = ComponentFactory.create({
                             <span class="mpi-settings__plate-desc" id="mpiSettingsUpdateDesc"></span>
                         </div>
                         <div class="mpi-settings__plate-ctrl" id="mpiSettingsUpdateSlot"></div>
+                    </div>
+                </section>
+
+                <!-- MPI-674: present ONLY while the local engine is degraded — its
+                     curated Python packages are not installed, so node packs failed to
+                     import and any graph using them is rejected. Same reasoning as the
+                     Update section above: a permanently-present "repair engine" row is
+                     a control that does nothing on almost every open, and this one
+                     would additionally invite a multi-minute pip pass over a healthy
+                     engine. state.comfyDepsWarning is the condition (MPI-673), and it
+                     is the same value the blocking dialog announces. (No backticks in
+                     here — the template is a template literal, and one would end it.) -->
+                <section class="mpi-settings__section" id="mpiSettingsEngineHealthSection" hidden>
+                    <h3 class="mpi-settings__section-title">Engine health</h3>
+                    <div class="mpi-settings__plate mpi-settings__plate--on">
+                        <div class="mpi-settings__plate-main">
+                            <span class="mpi-settings__plate-label">Part of the engine did not install</span>
+                            <span class="mpi-settings__plate-desc">Some models will fail to generate until this is repaired. Repairing takes a few minutes and your models are untouched.</span>
+                        </div>
+                        <div class="mpi-settings__plate-ctrl" id="mpiSettingsEngineHealthSlot"></div>
                     </div>
                 </section>
 
@@ -429,9 +450,66 @@ export const MpiSettings = ComponentFactory.create({
             section.hidden = false;
         }
 
+        /**
+         * MPI-674: the Engine health section. Shown only while `state.comfyDepsWarning`
+         * says the local engine came up degraded — the same value the blocking dialog
+         * announces (MPI-673), so the two can never disagree about whether there is
+         * anything to repair.
+         *
+         * This is the reachable repair a release build had none of: "Restart Engine"
+         * lives on the dev-only Ctrl+Tab radial, and a restart alone would not have been
+         * enough anyway — a stamped curated-deps marker makes the pip pass skip, which
+         * `/engine/repair-python-deps` clears before the engine goes down.
+         */
+        function _initEngineHealth(root) {
+            const section = qs('#mpiSettingsEngineHealthSection', root);
+            const slot = qs('#mpiSettingsEngineHealthSlot', root);
+            if (!section || !slot) return;
+            section.hidden = true;              // re-evaluated per open; the engine may be fine now
+
+            // The warning is a CONDITION here, never content. Its value is a developer
+            // string — the node packs that failed to import, or a raw pip error — and it
+            // belongs in app.log, which is where `_noteDepsWarning` and the engine's own
+            // scanner already put it. This is an artist's app: what a user needs on this
+            // row is that something broke and which button fixes it. (User call,
+            // 2026-09-01: no internal identifiers in user-facing copy.)
+            if (!state.comfyDepsWarning) return;
+
+            slot.innerHTML = '';
+            const btn = MpiButton.mount(slot, {
+                text: 'Repair engine',
+                variant: 'primary',
+                size: 'sm',
+            });
+            btn.on('click', async () => {
+                // The pip pass runs inside the next engine start and takes minutes, so
+                // the button has to stop being clickable for the whole of it — a second
+                // repair would kill the engine the first one is waiting on.
+                btn.el.setDisabled(true);
+                btn.el.setLabel('Repairing…');
+                try {
+                    await localEngine.repairPythonDeps();
+                } catch (err) {
+                    clientLogger.error('MpiSettings', 'Engine repair failed:', err);
+                    Events.emit('ui:error', {
+                        title: 'Repair failed',
+                        message: `Could not reinstall the engine packages: ${err.message}`,
+                    });
+                } finally {
+                    // Re-read: a successful repair clears the warning and this section
+                    // goes away, a failed one leaves it with the new reason showing.
+                    _initEngineHealth(root);
+                }
+            });
+            section.hidden = false;
+        }
+
         function _initFields(root) {
             // ── Update (MPI-629) — first section, only when one is due ───────
             _initUpdate(root);
+
+            // ── Engine health (MPI-674) — only while the engine is degraded ──
+            _initEngineHealth(root);
 
             // ── Auto-start toggle ────────────────────────────────────────────
             _mountSwitchPlate('#mpiSettingsAutoStartSlot', Storage.getAutoStartComfy(),

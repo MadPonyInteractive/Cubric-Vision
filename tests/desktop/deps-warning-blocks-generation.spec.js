@@ -85,12 +85,12 @@ test('a degraded engine opens the error dialog and blocks the generation', async
 
     expect(result.announced.mirrored).toContain('curated python deps FAILED');
     expect(result.announced.dialogOpen).toBe(true);
-    expect(result.announced.title).toBe('Engine packages failed to install');
-    expect(result.announced.message).toContain('could not be installed');
+    expect(result.announced.title).toBe('Part of the engine did not install');
+    expect(result.announced.message).toContain('did not install');
     expect(result.reopened).toBe(false);
 
     expect(result.blocked.code).toBe('python_deps_broken');
-    expect(result.blocked.message).toContain('could not be installed');
+    expect(result.blocked.message).toContain('did not install');
 
     expect(pageErrors).toEqual([]);
   } finally {
