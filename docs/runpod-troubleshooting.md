@@ -144,6 +144,14 @@ end-to-end 2026-06-15 (CPU Pod → download → switch to RTX 2000 Ada, models p
   fix on 2026-08-31 — sized flavor ids (`cpu3c-2-4`), reasoned from "the console shows them
   available", committed and reverted in `8ae312c7`. The bare families are what created live
   on 2026-07-29, so do not "correct" them without evidence stronger than a screenshot.
+
+  **Resolved the same day (2026-08-31 evening).** The EU-RO-1 CPU grid went selectable
+  again and download mode connected on the BARE family ids, unchanged. The user also
+  confirmed the refusal reproduced in RunPod's own console while it lasted, which is the
+  check the app cannot make for itself. Supply from start to finish - so do not read the
+  reverted sized-id commit as an unfinished idea worth retrying. The flavor walk removes a
+  real single point of failure but cannot manufacture capacity, and nothing about the ids
+  needed changing.
 - **Slim image** (mpi-ci `cubric-vision-pod/Dockerfile.cpu` + `start-cpu.sh`): wrapper + aria2c
   only, no torch/ComfyUI. `/wrapper/models/install` (aria2c) is pure HTTP+disk. The wrapper's
   `/health` returns `ready:true, comfy_ready:false, download_mode:true` when `CUBRIC_DOWNLOAD_MODE`
