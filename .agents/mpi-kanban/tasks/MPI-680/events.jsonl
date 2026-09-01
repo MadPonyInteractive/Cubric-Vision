@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-680", "type": "task.created", "at": "2026-09-01T15:50:00Z", "actor": "claude", "summary": "Raised from MPI-679's release:deps run: 9 Klein deps (8 x 4B styles + klein-9b-lora-nsfw) have a healthy R2 primary and a 404 HF mirror."}

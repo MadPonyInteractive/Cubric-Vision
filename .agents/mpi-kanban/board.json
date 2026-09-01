@@ -1,8 +1,9 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 679,
+  "next_id": 681,
   "columns": {
     "todo": [
+      "MPI-680",
       "MPI-677",
       "MPI-668",
       "MPI-659",
@@ -77,6 +78,7 @@
       "MPI-664"
     ],
     "done": [
+      "MPI-679",
       "MPI-674",
       "MPI-673",
       "MPI-676",
@@ -173,8 +175,40 @@
       "MPI-647"
     ]
   },
-  "updated_at": "2026-09-01T09:48:49.094Z",
+  "updated_at": "2026-09-01T15:50:00.000Z",
   "events": [
+    {
+      "at": "2026-09-01T15:50:00Z",
+      "type": "task.moved",
+      "task": "MPI-679",
+      "actor": "claude",
+      "from": "doing",
+      "to": "done",
+      "note": "doing -> done. Uploaded our exact R2 bytes to the mirrored HF path (commit 28f55bab); no code change - the generic prefix rewrite already emitted that URL. Verified: repo lfs.sha256 == the dep's sha256, resolve URL 302 -> 200 with content-length 226709270, and release:deps no longer lists ltx23-lora-foley. Chose re-host over noMirror because the LTX-2 Community License grants redistribution and both sibling baked LoRAs are already on the repo. Did NOT mirror to Lightricks' upstream repo: same size, DIFFERENT sha256, so it would HEAD 200 and fail the hash check after download. release:deps still exits 1 on 9 pre-existing Klein mirror 404s, untouched here and raised as MPI-680."
+    },
+    {
+      "at": "2026-09-01T15:50:00Z",
+      "type": "task.created",
+      "task": "MPI-680",
+      "actor": "claude",
+      "note": "Nine Klein LoRA mirrors 404 - the release dep gate is red for all of them"
+    },
+    {
+      "at": "2026-09-01T15:35:00Z",
+      "type": "task.created",
+      "task": "MPI-679",
+      "actor": "claude",
+      "note": "ltx23-lora-foley is single-route - the HF mirror was never uploaded"
+    },
+    {
+      "at": "2026-09-01T15:35:00Z",
+      "type": "task.moved",
+      "task": "MPI-679",
+      "actor": "claude",
+      "from": "todo",
+      "to": "doing",
+      "note": "todo -> doing. Uploading the missing foley LoRA to the HF mirror path so release:deps stops reporting a single-route dep."
+    },
     {
       "at": "2026-08-27T15:31:00Z",
       "type": "task.moved",

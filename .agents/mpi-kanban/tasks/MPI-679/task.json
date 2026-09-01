@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-679",
+  "title": "ltx23-lora-foley is single-route - the HF mirror was never uploaded",
+  "description": "Found 2026-09-01 while cutting 1.4.3 and deliberately not fixed there; pre-existing on master and on the 1.4.2 branch. `npm run release:deps` exits 1: the generic HF prefix rewrite for js/data/modelConstants/loraDeps.js:493 emits huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/vision/models/loras/ltx-2.3/ltx-2.3-22b-lora-foley-v2a-1.0.safetensors and that path 404s - the repo answers 200 on its API, the file was simply never pushed to it. Its two sibling baked LTX-2.3 LoRAs (merged, transition) ARE there, so this is an upload gap, not a policy one. R2 primary is healthy (200, 226,709,270 B, sha256 matches the dep). Effect: the weight drops to a single route, the exact regression MPI-429's mirror system exists to prevent. Consumed only by the dev-gated flowLtxFoley Flow, so no released user hits it today. Resolution: re-host our exact R2 bytes to the mirrored path (LTX-2 Community License permits redistribution - docs/models/ltx/model-set.md:153).",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-09-01T15:35:00Z",
+  "updated_at": "2026-09-01T15:50:00Z",
+  "links": {
+    "events": "events.jsonl",
+    "files": "files.json",
+    "checklist": "checklist.md",
+    "validation": "validation.md"
+  }
+}
