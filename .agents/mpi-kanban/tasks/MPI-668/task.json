@@ -7,9 +7,10 @@
   "maturity": "planned",
   "status": "active",
   "created_at": "2026-08-31T20:29:07+01:00",
-  "updated_at": "2026-08-31T20:29:07+01:00",
+  "updated_at": "2026-09-01T08:40:25Z",
   "links": {
     "files": "files.json",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "checklist": "checklist.md"
   }
 }
