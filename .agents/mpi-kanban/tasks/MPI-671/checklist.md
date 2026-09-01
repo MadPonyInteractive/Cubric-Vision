@@ -24,6 +24,7 @@
 - [x] Verified against a real drop event on the real overlay: placeholder up within
       200 ms, replaced by the finished card at 1.6 s, no gap. Evidence: validation.md.
 - [x] `npx eslint --max-warnings=0` exit 0 on all four files; `npm test` 831 pass.
-- [ ] **Human check** — one real OS drag-drop in the user's own app, of a file big
-      enough to hold the spinner for a while. No agent can drive an Electron file
-      drag, same limit as MPI-670.
+- [x] **Human check** — the user drag-dropped the 474 MiB clip in their own app and
+      captured both states: a spinner card labelled `PXL_20260829_232809577` while
+      importing, then `imported_017 · 2160 x 3840 · 91S`, with the project going
+      43 assets / 751.8 MB → 44 assets / 1.2 GB.

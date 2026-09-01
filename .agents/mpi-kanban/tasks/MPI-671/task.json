@@ -1,13 +1,13 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-671",
-  "title": "An import shows nothing until it finishes, so a large one is indistinguishable from a hang \u2014 mount a spinner card the moment a file is dropped",
+  "title": "An import shows nothing until it finishes, so a large one is indistinguishable from a hang — mount a spinner card the moment a file is dropped",
   "description": "Requested by the user after a 474 MiB clip took long enough (copy, then a 91s 4K120 HEVC source transcoded to a 720p proxy) that they killed the app mid-import, leaving a 500 MB orphan with no sidecar and no card. Same complaint for a 10 GB LoRA drop, which at least toasts. A drop should mount a placeholder card immediately and swap it for the real media on completion. Reuses the generation placeholder shape the gallery grid already renders (isGenerating + mpi-group-card__spinner), not a new mechanism.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
   "created_at": "2026-09-01T09:15:00+01:00",
-  "updated_at": "2026-09-01T09:55:00+01:00",
+  "updated_at": "2026-09-01T10:20:00+01:00",
   "links": {
     "files": "files.json",
     "events": "events.jsonl",

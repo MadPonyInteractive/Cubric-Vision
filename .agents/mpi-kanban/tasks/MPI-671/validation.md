@@ -45,11 +45,24 @@ spinner ring on a blank card at the head of the grid, no mascot.
 ## Static checks
 
 - `npx eslint` on all four changed files — exit 0, `--max-warnings=0`.
-- `npm test` → **831 pass, 0 fail**.
+- `npm test` → **831 pass, 0 fail**. MPI-670 reported 830 the same day and no test
+  file changed between the two commits: the extra one is a live peer's uncommitted
+  edit to `tests/flow-licence-surface.test.cjs` (MPI-666), since `npm test` runs the
+  working tree, not HEAD. Flagged by the claim auditor as untraceable from git alone,
+  which is correct — noted here so the delta is not read as drift.
 
-## Not verified by an agent
+## Human check — PASSED (2026-09-01)
 
-The same limit as MPI-670: a real OS drag-drop, in the user's own app, of a file
-big enough that the spinner is up for a while. Everything above used a
-synthesised drop event in a different client. The mechanism is proven; what is
-unproven is that it feels right at 26+ seconds on a real drag.
+The user dragged the 474 MiB clip into the Grantiz project in their own app and
+captured both states:
+
+- **During the import** — a large spinner card at the head of the grid, labelled
+  with the SOURCE filename `PXL_20260829_232809577`, no mascot. Header reads
+  `43 ASSETS · 751.8 MB`.
+- **After it landed** — the same slot is `imported_017 · 2160 x 3840` with a
+  `91S` badge. Header reads `44 ASSETS · 1.2 GB`, a ~475 MB jump matching the
+  file.
+
+That is the designed behaviour end to end: the card carries the dropped file's
+name while the work is in flight and takes the project's sequenced name once the
+sidecar exists. Nothing left to verify.
