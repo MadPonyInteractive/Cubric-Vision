@@ -3677,4 +3677,4 @@
 {"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-675", "at": "2026-09-01T09:33:18+01:00", "actor": "claude", "from": "todo", "to": "doing", "reason": "Implementation started: phase 1 of MPI-672."}
 {"schema": "mpi-kanban/event/v1", "type": "task.updated", "id": "MPI-675", "at": "2026-09-01T08:33:35Z", "actor": "claude", "note": "Implementation started; links, ownership and session title set."}
 {"schema": "mpi-kanban/event/v1", "type": "checklist.updated", "id": "MPI-675", "at": "2026-09-01T08:33:35Z", "actor": "claude", "note": "Checklist derived from brief.md (card has no plan.md; umbrella plan is MPI-672)."}
-{"ts": "2026-09-01T08:40:25Z", "type": "task.updated", "task": "MPI-668", "actor": "implementer", "detail": "linked checklist.md - probe mechanism recorded from MPI-669"}
+{"schema": "mpi-kanban/event/v1", "type": "task.updated", "id": "MPI-668", "at": "2026-09-01T08:40:47Z", "actor": "claude", "note": "Linked checklist.md - probe mechanism recorded from MPI-669."}
