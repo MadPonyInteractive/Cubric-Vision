@@ -1,0 +1,30 @@
+name: Notify new issue
+
+# GitHub Mobile only pushes for mentions, assignments, review requests and deployment
+# approvals — watching a repo for Issues fills the in-app inbox but never rings the phone.
+# This posts to ntfy.sh instead, which the ntfy app subscribes to as a real push.
+#
+# The ntfy topic IS the credential: anyone who knows the string can subscribe to it (and
+# publish to it). This repo is public, so the topic lives in the NTFY_TOPIC repo secret,
+# never in this file. `issues` events only fire on this repo, never on a fork, so there is
+# no fork-without-the-secret case to guard.
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Push to ntfy
+        env:
+          TOPIC: ${{ secrets.NTFY_TOPIC }}
+          TITLE: ${{ github.event.issue.title }}
+          URL: ${{ github.event.issue.html_url }}
+          AUTHOR: ${{ github.event.issue.user.login }}
+          NUMBER: ${{ github.event.issue.number }}
+        # Title/author go through env, not ${{ }} interpolation, so an issue titled with
+        # shell metacharacters is data and not code.
+        run: |
+          curl -fsS -H "Title: Cubric Vision issue #${NUMBER}" -H "Tags: inbox_tray" -H "Click: ${URL}" -d "${TITLE} — by ${AUTHOR}" "https://ntfy.sh/${TOPIC}"
