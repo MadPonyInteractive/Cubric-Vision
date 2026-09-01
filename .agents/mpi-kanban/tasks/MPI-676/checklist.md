@@ -1,7 +1,11 @@
 # MPI-676 Checklist
 
-- [ ] `tests.yml` — `cancel-in-progress: ${{ github.event_name == 'pull_request' }}`,
-      with a comment naming why master must never be cancelled
-- [ ] Push and confirm the master run for that push runs to a conclusion
-- [ ] Confirm a second push landing on top does NOT cancel it
-- [ ] No change to `.husky/pre-push` — it works once verdicts exist
+- [x] `tests.yml` — a push gets a group of one (`github.run_id`); PRs keep the ref
+      group and keep cancelling. Comment names both failure modes.
+- [x] First attempt (`cancel-in-progress` off, ref group kept) proved wrong on a live
+      run — it queues rather than cancels, and the NEXT push cancels the pending run.
+      See brief.md § First attempt.
+- [ ] Push and confirm the master run starts immediately instead of pending
+- [ ] Confirm the run already in flight is not cancelled by it
+- [ ] Run goes green
+- [ ] No change to `.husky/pre-push`

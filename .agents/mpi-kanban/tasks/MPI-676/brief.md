@@ -44,20 +44,39 @@ looking at a verdictless run most of the time.
 ## The change
 
 ```yaml
+group: tests-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+cancel-in-progress: true
+```
+
+A PR run shares a group with the rest of its ref and is cancelled when superseded,
+which is correct — only the tip of a PR matters. A push gets `github.run_id` as its
+group, which is unique, so it is a group of one: it cannot cancel a sibling and no
+sibling can cancel it.
+
+Cost: master runs now overlap instead of replacing each other. The repo is public,
+so Actions minutes are free, and the free tier allows 20 concurrent jobs — far more
+than the push rate here.
+
+### First attempt, and why it was wrong
+
+The obvious one-liner is to keep the ref group and turn cancelling off for pushes:
+
+```yaml
 cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 ```
 
-A PR run is superseded by its own next push and cancelling it is right. A push to
-master or to a release branch is a permanent point in history — the only way to
-know which commit broke the suite is to let its run finish.
-
-Cost: more runner minutes. The repo is public, so Actions minutes are free.
+That was committed in `668a9041` and **it does not work**. With the group kept and
+cancelling off, a second push does not cancel the running job — it *queues* behind
+it as `pending`. Measured live: run 33493472210 sat pending for 37s behind
+33493351437. GitHub keeps only ONE pending run per group, so the third push cancels
+the second while it waits. Intermediate commits still end up with no verdict; the
+cancellation just moves from in-progress to pending. Superseded by the unique-group
+version above.
 
 ## What "done" looks like
 
-- `tests.yml` cancels PR runs only.
-- A push to master leaves the previous master run alive (verified on the next
-  two commits that land close together, or by the run list showing no new
-  `cancelled` on master).
-- No other change. The pre-push hook is left alone — once every master commit
-  has a verdict, it already does what it was written to do.
+- A push to master starts its run IMMEDIATELY, in parallel with any run already
+  going, and neither is cancelled.
+- PR runs still cancel their own superseded predecessors.
+- No change to `.husky/pre-push` — once every master commit has a verdict, it
+  already does what it was written to do.

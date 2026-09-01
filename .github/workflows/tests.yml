@@ -28,15 +28,20 @@ permissions:
   contents: read
 
 concurrency:
-  group: tests-${{ github.ref }}
-  # PR runs are superseded by their own next push, so cancelling them is right.
-  # A push to master or a release branch is a permanent point in history: cancel its
-  # run and the commit that broke the suite never gets a verdict, while the NEXT
-  # commit — usually an innocent chore or docs one — wears the red. That is how
-  # MPI-675 was found a commit late (33489156063 cancelled on the breaking commit,
-  # 33489276364 red on a handoff pointer), and how 17 of 60 master runs over two
-  # days ended with no result at all. (MPI-676)
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # A PR run is superseded by its own next push, so cancelling it is right — group
+  # those by ref. A push to master or a release branch is a permanent point in
+  # history and has to get its own verdict, so give it a group of ONE (the run id):
+  # it can neither cancel a running sibling nor be cancelled while queued behind one.
+  #
+  # Both failure modes were measured. `cancel-in-progress: true` grouped by ref meant
+  # 17 of 60 master runs over two days ended cancelled with no verdict, and the commit
+  # that broke the suite was rarely the one that went red — MPI-675 broke it in
+  # e152cc10 (run 33489156063, cancelled a minute later) and 79faec57, a handoff
+  # pointer adding one 4-line JSON file, wore the failure. Keeping the ref group and
+  # setting cancel-in-progress FALSE only moves the problem: the run waits as pending
+  # and the next push cancels it there instead. (MPI-676)
+  group: tests-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   tests:
