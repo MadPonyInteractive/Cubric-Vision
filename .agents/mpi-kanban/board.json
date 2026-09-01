@@ -3,7 +3,6 @@
   "next_id": 681,
   "columns": {
     "todo": [
-      "MPI-680",
       "MPI-677",
       "MPI-668",
       "MPI-659",
@@ -77,6 +76,7 @@
       "MPI-664"
     ],
     "done": [
+      "MPI-680",
       "MPI-672",
       "MPI-679",
       "MPI-674",
@@ -175,8 +175,26 @@
       "MPI-647"
     ]
   },
-  "updated_at": "2026-09-01T15:50:00.000Z",
+  "updated_at": "2026-09-01T16:25:00.000Z",
   "events": [
+    {
+      "at": "2026-09-01T16:25:00Z",
+      "type": "task.moved",
+      "task": "MPI-680",
+      "actor": "claude",
+      "from": "doing",
+      "to": "done",
+      "note": "doing -> done. All nine mirrored to Mad-Pony-Interactive/cubric-studio, 1.09 GB, one file at a time, hash-verified both sides: R2 bytes checked against the dep sha256 before upload, repo lfs.sha256 and size checked after - 9/9 OK. Mirror paths derived from the real _mirrorUrlsFor, not hand-written. No code change; the rewrite already emitted those URLs. release:deps now exits 0, 'All 290 URLs reachable', and no Klein dep is single-route. Users could always download these - every primary was 200 throughout; what was missing was the failover copy."
+    },
+    {
+      "at": "2026-09-01T16:10:00Z",
+      "type": "task.moved",
+      "task": "MPI-680",
+      "actor": "claude",
+      "from": "todo",
+      "to": "doing",
+      "note": "todo -> doing. Mirroring all nine to Mad-Pony-Interactive/cubric-studio. Licences were already settled (docs/models/klein/licences.md + the credit blocks, MPI-358); re-host cleared by Fabio 2026-09-01. Card description corrected - it wrongly called this a licence call."
+    },
     {
       "at": "2026-09-01T15:50:00Z",
       "type": "task.moved",
