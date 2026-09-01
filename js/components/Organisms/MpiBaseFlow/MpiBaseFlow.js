@@ -1043,12 +1043,23 @@ export const MpiBaseFlow = ComponentFactory.create({
                     model: { id: d.model || null, mediaType: 'image' },
                     positive: source,
                     negative: '',
-                    // The enhancer seed is DRIVEN, never a user field, and never
-                    // stored: step 3's loop is Enhance → Generate → Enhance, and a
-                    // fixed seed returns the same phrase on every press. What the
-                    // sidecar keeps is the enhanced TEXT, which is why storing the
-                    // seed as well was considered and rejected.
-                    injectionParams: { Input_Seed: Math.floor(Math.random() * 2 ** 31) },
+                    injectionParams: {
+                        // The declaration's OWN params (MPI-664). The enhancer op is
+                        // deliberately reusable — its recipe and both scrub patterns are
+                        // meant to be injected by the caller, and commandRegistry's own
+                        // comment has said so since MPI-504 — but until now no route
+                        // existed: a second flow got Character Sheet's baked "You are a
+                        // character designer" whatever it asked for. One object on the
+                        // declaration, spread here, IS that route.
+                        ...(d.injectionParams || {}),
+                        // The seed is spread LAST, so a declaration cannot reach it. It is
+                        // DRIVEN, never a user field, and never stored: the loop is
+                        // Enhance → Generate → Enhance, and a fixed seed returns the same
+                        // phrase on every press. What the sidecar keeps is the enhanced
+                        // TEXT, which is why storing the seed as well was considered and
+                        // rejected.
+                        Input_Seed: Math.floor(Math.random() * 2 ** 31),
+                    },
                 },
                 {
                     // A text op never fires onComplete — GenerationCallbacks.onText.

@@ -196,6 +196,16 @@
             "name": "block_if_empty"
           },
           "link": null
+        },
+        {
+          "localized_name": "force_rate",
+          "name": "force_rate",
+          "shape": 7,
+          "type": "FLOAT",
+          "widget": {
+            "name": "force_rate"
+          },
+          "link": null
         }
       ],
       "outputs": [
@@ -221,9 +231,7 @@
           "localized_name": "fps",
           "name": "fps",
           "type": "FLOAT",
-          "links": [
-            48
-          ]
+          "links": []
         },
         {
           "localized_name": "frame_count",
@@ -272,7 +280,8 @@
       },
       "widgets_values": [
         "",
-        true
+        true,
+        24
       ]
     },
     {
@@ -2165,7 +2174,7 @@
           "widget": {
             "name": "fps"
           },
-          "link": 48
+          "link": null
         },
         {
           "localized_name": "filename_prefix",
@@ -2588,14 +2597,6 @@
       442,
       1,
       "AUDIO"
-    ],
-    [
-      48,
-      331,
-      2,
-      442,
-      2,
-      "FLOAT"
     ]
   ],
   "groups": [],

@@ -40,7 +40,7 @@
     },
     "class_type": "TextGenerate",
     "_meta": {
-      "title": "Generate Text"
+      "title": "Input_Text_Gen"
     }
   },
   "4": {

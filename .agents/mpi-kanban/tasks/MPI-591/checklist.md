@@ -28,13 +28,61 @@ do not tick an item until its gate is green.
       `validate-injection-rules.mjs` both ✓ against **48188** (the shipped engine),
       raw → API round trip **0 differences**, and the graph RAN on the bench in 70 s
       (94 frames, seam 0.65x, generated audio 0.989 vs source).
-- [ ] 3b — fps, DECIDED by Fabio 2026-09-01: convert the source to 24 so both halves
-      are true 24 fps. Add `force_rate` to `MpiLoadVideo` (sibling repo,
-      `/mpi-nodes-sync`, then bump the pin), then set `Input_Video.force_rate = 24`
-      and `MpiSaveVideo.fps` to a constant 24 in `flow_h3_extend`. Gate: the raw
-      round trip and the bench run re-earned, since the graph changes.
-- [ ] 4 — Wire the pick: `byModel` + `getUniversalWorkflow(key, modelIds)` +
-      the `flowsRegistry` slot. Gate: `tests/flow-model-choice.test.cjs` green.
+- [x] 3b — fps. Done 2026-09-01. `force_rate` on `MpiLoadVideo` (`f1ed110`, pushed,
+      pin bumped off `53c0198`, archive 200), `Input_Video.force_rate = 24` and
+      `MpiSaveVideo.fps` a constant 24. **Two corrections to what the plan specified:**
+      the widget is `optional`, not `required` — a required input missing from an API
+      prompt is a hard `required_input_missing` and eleven shipped graphs call this node
+      without it (all eight other API graphs re-verified green); and the resample is
+      `-vf fps=N`, not the output `-r N`, which overshoots by 4.6% on a 30 fps source.
+      Gate green: raw round trip **0 differences** against the engine that has the node
+      (48188 reports the one stale-pin `force_rate` line and nothing else), and a bench
+      run on a deliberately 30 fps source — 94 frames at a true 24 fps, seam 0.22x,
+      generated audio 0.991, source half within 8.3 ms (0.51%) of its own duration
+      against 25% slow without it. Full evidence in `validation.md` § Phase 3b.
+      **Carried forward: 48188 is still on the old pin.** It is the live app's engine, so
+      this session did not restart it — Phase 5 needs Fabio to restart the app first.
+- [x] 4 — Wire the pick. Done 2026-09-01. `byModel` on `flowLtxExtend`
+      (`universal_workflows.js`), `getUniversalWorkflow(key, modelIds)`
+      (`modelRegistry.js`), `flowModelIds` threaded through the `runCommand` payload
+      (`generationService.js` — a FIFTH file the plan's table missed; that payload is a
+      whitelist, the exact hop MPI-504's `loraModelId` was lost at), the executor
+      resolving with it (`commandExecutor.js`), and the slot
+      `[{ label: 'Model', models: ['ltx-23-balanced', 'minimax-h3-ref2va'] }]`.
+      **The candidate is `minimax-h3-ref2va`, NOT `minimax-h3`** — the card's original
+      text predates Phase 1's pivot to ref2va, and the shipped graph bakes the ref2va
+      transformer and its ref2v turbo LoRA. Gate green: `flow-model-choice` 23/23 with a
+      new MPI-591 test, `npm test` **853/853**, `eslint js/` clean, `node --check` clean
+      on all five. The new test was mutation-checked twice — it goes red when the executor
+      drops the ids, and red on the fl2va id with the exact
+      `no dependency of that model supplies` message.
+      **Carried forward:** the `negative` box still SHOWS on the H3 arm and does nothing
+      there. MPI-664 shipped `hiddenWhen`, but its rule keys on another FIELD's value, not
+      on the picked model — extending it is the one-line follow-up the plan names.
+- [ ] 4b — TURBO OR NOT, the user's choice. Asked by Fabio 2026-09-01, and it
+      REVERSES Phase 3's deliberate "a Flow bakes ONE proven path" — so the non-turbo
+      arm needs its own bench proof, not just wiring. The graph branch already exists
+      and is DONOR-CLONEABLE from `raw/minimax_h3_r2va_template.json`: one
+      `MpiSimpleBoolean` titled `Input_is_Turbo` (#444) driving four `MpiIfElse` and one
+      `MpiMath`. Flow side: an `Input_is_Turbo` boolean field that must show on the H3
+      arm ONLY — the same per-model hide the `negative` box needs, so this makes the
+      MPI-664 `hiddenWhen`-on-model gap load-bearing rather than cosmetic. Default MUST
+      stay Turbo (Fabio's speed rule; non-turbo is 25 steps against 6). Gate: raw round
+      trip 0 differences, one bench run per arm, and both tests green.
+- [ ] 4c — THE STITCH REFUSES ANY SOURCE THAT IS NOT 32-DIVISIBLE. Found
+      2026-09-01 from Fabio's question "the video does keep the same resolution as the
+      input video, right?", and REPRODUCED on the bench with no model in 10 s:
+      `ValueError: Source and new images must have the same shape: torch.Size([720,
+      1280]) vs torch.Size([704, 1280])`. The generated canvas is snapped by `MpiMath`
+      #900/#901 (`floor(a/32)*32`) but #904's `source_images` comes STRAIGHT from the
+      loader, unsnapped — so 1280x720, 1920x1080 and 1080x1920 all raise, and only a
+      source that is 32-divisible on BOTH axes survives. Every arm ran on 640x352, which
+      is why nothing caught it. **The fix is already shipped in the sibling flow**:
+      `flow_ltx_extend.json` #28 is an `ImageResizeKJv2` (`keep_proportion: 'crop'`,
+      `divisible_by: 32`, `crop_position: 'center'`) and its stitch reads `source_images`
+      from THAT, not from the loader — a donor clone, not new design. Decide with Fabio:
+      crop to the snapped canvas (LTX's answer, loses up to 31px) or rescale the source.
+      Gate: the 720p repro passes, plus one real bench run at 1280x720.
 - [ ] 5 — Verify in an isolated app. Gate: Fabio watches one H3 extend end to end.
 - [ ] 6 — Docs: `existing-flows/ltx-extend.md` + `any-of-models.md`.
 

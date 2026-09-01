@@ -873,6 +873,106 @@ test('every dotted injection key addresses a real node AND a real widget (MPI-35
     assert.deepStrictEqual(problems, [], `dotted injection would silently no-op:\n  ${problems.join('\n  ')}`);
 });
 
+test('every FlowDef field and enhance recipe addresses a real node (MPI-664)', async () => {
+    // The THIRD injection source, and the only one nothing guarded: a FlowDef's own
+    // declared fields, and the `injectionParams` an `enhance` action carries.
+    //
+    // Both fail in silence, and this card produced one of each:
+    //   - `style_custom` / `voice_notes` were written as LOWERCASE ids. A non-`Input_*`
+    //     id is a top-level run input, not an injection param, so once the GRAPH started
+    //     assembling the caption both controls reached NOTHING — the user typed into a
+    //     box that was wired to nowhere, with no error anywhere.
+    //   - `injectionParams` addresses the ENHANCER's graph, not the flow's, and its keys
+    //     are dotted (`Input_Text_Gen.max_length`). A rename on either side leaves the
+    //     BAKED recipe running, which is Character Sheet's — so a music flow would answer
+    //     a song brief with a phrase about someone's wardrobe.
+    //
+    // Derived from the declarations rather than listed, so a new flow is covered by
+    // existing here rather than by remembering to add a case.
+    const esmImport = p => import('file://' + path.join(ROOT, p).replace(/\\/g, '/'));
+    const { FLOWS } = await esmImport('js/data/flowsRegistry.js');
+    const { UNIVERSAL_WORKFLOWS } = await esmImport('js/data/modelConstants/universal_workflows.js');
+    assert.ok(FLOWS.length >= 10, 'the flow registry came back nearly empty — the import has drifted');
+
+    const graphOf = (file) => JSON.parse(fs.readFileSync(path.join(WORKFLOWS, file), 'utf8'));
+    const nodeByTitle = (graph, title) => Object.values(graph)
+        .find(n => (n?._meta?.title || '').toLowerCase() === title.toLowerCase());
+
+    // A declared `Input_*` that a JS INJECTOR consumes instead of the graph. The only
+    // one: LTX upscale's `Input_Denoise` is read by `ltxSigmasInjector`, which derives a
+    // four-value schedule from it and injects THAT into `Input_Sigmas` — so a node named
+    // for the dial would be a node nothing writes. Keep this list at one entry if you
+    // can: every addition is a control whose wiring this guard stops checking.
+    const INJECTOR_DERIVED = new Set(['ltx-upscale:Input_Denoise']);
+
+    const problems = [];
+    for (const flow of FLOWS) {
+        const decls = [
+            ...(flow.fields || []),
+            ...(flow.steps || []).flatMap(s => s.fields || []),
+        ];
+        let graph;
+        try { graph = graphOf(flow.workflow); } catch { problems.push(`${flow.id}: cannot read ${flow.workflow}`); continue; }
+
+        for (const d of decls) {
+            // A declared `Input_*` id names a node in the FLOW's own graph — and it may
+            // be DOTTED itself (`Input_Language.language`), addressing one widget on a
+            // node that carries several, exactly like an injectionParams key.
+            const [fieldTitle, fieldWidget] = String(d.id).split('.');
+            if (/^input_/i.test(fieldTitle) && !INJECTOR_DERIVED.has(`${flow.id}:${d.id}`)) {
+                const node = nodeByTitle(graph, fieldTitle);
+                if (!node) {
+                    problems.push(`${flow.id}: field "${d.id}" names no node in ${flow.workflow}`);
+                } else if (fieldWidget && !(fieldWidget in (node.inputs || {}))) {
+                    problems.push(`${flow.id}: field "${d.id}" — node "${fieldTitle}" has no "${fieldWidget}" input`);
+                }
+            }
+            // A field with NO `default` is never seeded — `_seedField` returns
+            // undefined and both seeding loops skip it — so the id never reaches
+            // `injectionParams` and the GRAPH'S BAKED VALUE RUNS instead. Harmless when
+            // the node is baked empty; when it is baked with the author's own bench
+            // content, an untouched control silently ships that content. MPI-664's
+            // lyrics and caption nodes both carry a full demo song.
+            //
+            // `Input_Positive` / `Input_Negative` are exempt: `_buildParams` writes both
+            // on EVERY run whatever the flow declares, so neither can ever be left
+            // sitting on its baked value. Character Sheet relies on exactly that — its
+            // `Input_Positive` box is filled by Enhance, and by the top-level `positive`
+            // when Enhance is never pressed.
+            const ALWAYS_WRITTEN = /^input_(positive|negative)$/i;
+            if (/^input_/i.test(fieldTitle) && d.default === undefined && !d.action
+                && !ALWAYS_WRITTEN.test(fieldTitle)) {
+                const node = nodeByTitle(graph, fieldTitle);
+                const baked = Object.entries(node?.inputs || {})
+                    .find(([, v]) => typeof v === 'string' && v.trim() !== '');
+                if (baked) {
+                    problems.push(`${flow.id}: field "${d.id}" declares no default, so the `
+                        + `baked ${fieldTitle}.${baked[0]} runs untouched — "${baked[1].slice(0, 40)}…"`);
+                }
+            }
+            if (!d.injectionParams) continue;
+
+            // ...but an action's `injectionParams` names nodes in the OP IT RUNS.
+            const opFile = UNIVERSAL_WORKFLOWS[d.op]?.workflow;
+            if (!opFile) {
+                problems.push(`${flow.id}: field "${d.id}" injects into op "${d.op}", which has no workflow`);
+                continue;
+            }
+            const opGraph = graphOf(opFile);
+            for (const key of Object.keys(d.injectionParams)) {
+                const [title, widget] = key.split('.');
+                const node = nodeByTitle(opGraph, title);
+                if (!node) {
+                    problems.push(`${flow.id}: "${key}" names no node in ${opFile}`);
+                } else if (widget && !(widget in (node.inputs || {}))) {
+                    problems.push(`${flow.id}: "${key}" — node "${title}" has no "${widget}" input`);
+                }
+            }
+        }
+    }
+    assert.deepStrictEqual(problems, [], `declared controls that would silently no-op:\n  ${problems.join('\n  ')}`);
+});
+
 test('the Krea2 master graph carries its branch selector and speed toggle', () => {
     // Pins the same regression the old branch-boolean test pinned, at the node the
     // design moved to (MPI-365). All SIX Krea2 ops run ONE file and select their branch

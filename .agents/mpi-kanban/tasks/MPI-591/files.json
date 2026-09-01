@@ -11,6 +11,7 @@
     "tests/inject-params-titles.test.cjs",
     "tests/flow-model-choice.test.cjs",
     "docs/playbooks/add-flow/existing-flows/ltx-extend.md",
-    "docs/playbooks/add-flow/any-of-models.md"
+    "docs/playbooks/add-flow/any-of-models.md",
+    "js/services/generationService.js"
   ]
 }

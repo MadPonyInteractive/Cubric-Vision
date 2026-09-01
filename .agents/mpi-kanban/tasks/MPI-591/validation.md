@@ -191,3 +191,173 @@ Artifacts: `F_stock_pin_last_00001_` / `F_joined` / `F_seam.png` / `F_tail.png`,
 scratchpad: `flash_F.py`, `audio_match.py`, `join_F.py`, `build_F2.py`, `h3/F2_ref_audio.json`,
 and `h3/F3_ref_audio.json` — built, UNRUN, the stronger arm (source frames + soundtrack as a
 reference video pair) held in reserve if a longer real source still steps at the join.
+
+## Phase 3b — VERIFIED 2026-09-01, both proofs re-earned
+
+`force_rate` on `MpiLoadVideo` (sibling repo), then `Input_Video.force_rate = 24` and a constant
+`MpiSaveVideo.fps = 24` in `flow_h3_extend`. Pin bumped `53c0198` -> **`f1ed110`**, archive URL 200.
+
+### Two corrections the plan did not anticipate, both caught before they shipped
+
+**1. `optional`, NOT `required`.** The plan said `required`, after `block_if_empty`, reasoning that
+every saved `widgets_values` stays valid. True for the LiteGraph twin, and irrelevant to the file the
+app actually dispatches: `execution.py`'s `validate_inputs` (the `required_input_missing` branch)
+makes a *required* input absent from an API-format prompt a hard rejection, and **eleven** shipped
+workflows call this node without it. `optional` is skipped when absent and falls through to the
+Python default; widget order is required-then-optional either way, so `force_rate` still lands at
+widget index 2. The pack's own `.claude/commands/update-node.md` step 2 already said "prefer
+`optional` for new inputs". Proved rather than argued: all eight other MpiLoadVideo API graphs
+re-validate green against the engine that HAS the new node.
+
+**2. `-vf fps=N`, NOT the output `-r N`.** The first commit (`a0754b1`) used `-r`, which is ffmpeg's
+CFR conversion — it decides each output frame by rounding a timestamp, and it overshoots. Measured on
+the 49-frame 30 fps clip (1.633 s): `-r 24` returns **41** frames, which declared as 24 fps play
+1.708 s — 4.6% slow, the exact defect `force_rate` exists to remove, just small enough to pass a
+glance. `-vf fps=24` returns **39** (1.625 s). Checked at 12 / 24 / 29.97 / 30 / 48 against both a
+24 fps and a 30 fps source: every rate lands within one frame of the source duration. Fixed in
+`f1ed110`.
+
+### Proof 1 — the raw round trip
+
+`raw/flow_h3_extend.json` -> `workflow-to-api.mjs` -> the API file, node by node and input by input:
+
+| converted against | result |
+|---|---|
+| **8188** (has the new node) | **33 nodes, 0 differences** |
+| 48188 (shipped, still on the old pin) | 1 difference: `#331 MpiLoadVideo.force_rate '<absent>' != 24` |
+
+The 48188 line is the stale-pin signature and **nothing else**, which is itself the evidence that
+`force_rate` is the only delta. The standing rule is "convert against 48188, never the bench", and
+48188 is Fabio's LIVE app engine (PID 15684, parent `electron.exe`, `:3000` answering) — restarting
+it is his call, not this session's. So the deviation was bounded instead of assumed: `engine_parity.py`
+compares both engines' widget **names and order** for every class in this graph and finds exactly one
+difference, `MpiLoadVideo.force_rate`. (Two more classes differ only in COMBO option lists —
+`MpiLoraModelClip.lora_name`, `UNETLoader.unet_name` — i.e. which weights each install has on disk,
+which the converter never reads.) A conversion against 8188 is therefore the conversion 48188 will
+make once it is restarted onto the new pin.
+
+**The API twin was edited surgically, not regenerated.** `workflow-to-api` emits nodes in ascending id
+order and drops trailing `.0`s, while the committed file came out of the Phase 3 build script in graph
+order with `1.0` on the LoRA strengths; regenerating churned 472 lines and threw that ordering away.
+The round-trip proof has always compared node-by-node, never byte order.
+
+### Proof 2 — the bench run, on a source that is deliberately NOT 24 fps
+
+Every earlier arm ran on `mpi591_src39.mp4`, which is already 24 fps — `force_rate` is a no-op there
+and would have proved nothing. So the run used `mpi591_src30fps.mp4`: same shot, same duration, 49
+frames at 30 fps.
+
+`P3b_flow_h3_extend_00001.mp4`, 70 s, `execution_cached: []` (nothing served from cache), same seed
+591000591, `Input_Duration` 2 s:
+
+| | 3b (30 fps source) | Phase 3 (24 fps source) | F2 | pack oracle |
+|---|---|---|---|---|
+| output | **94 frames, 24 fps, 3.9167 s** | 94 frames | — | — |
+| seam / tail | **0.22x** | 0.65x | 0.94x | 1.40x |
+| flash, generated region | **1.22 mean / 3.14 worst** | 1.23 / 5.05 | 1.05 / 2.03 | 1.71 / 6.42 |
+| flash, source (resampled) region | **0.74 mean / 2.19 worst** | — | — | — |
+| generated audio alone, band cos | **0.991** | 0.989 | 0.973 | 0.981 |
+| generated audio level vs source | **-0.3 dB** | — | -0.4 dB | — |
+
+94 frames out of a 49-frame source is itself the arithmetic: 39 resampled + 56 generated - 1 crossfade.
+
+### Proof 3 — the speed, which is the whole point of 3b
+
+`check_speed_3b.py`, and it asserts rather than prints:
+
+- source 49 @ 30 fps = 1.6333 s; output's source half 39 @ 24 fps = 1.6250 s. **Drift 8.3 ms (0.51%),
+  under half a frame.** Had `force_rate` been off, those 49 frames declared 24 fps would run 2.0417 s
+  — **25% slow** beside a generated half that is not.
+- Frame for frame against ffmpeg's own `fps=24` resample of the source: **PSNR mean 41.1 dB, min 37.0
+  dB** (the minimum is f38, the `linear_blend` crossfade frame, as expected). The same frames shifted
+  by one score **26.4 dB**, so the half is genuinely aligned and not an off-by-one, a reversal or a
+  decimation.
+
+### Everything else that was run
+
+| check | result |
+|---|---|
+| `verify-workflow.mjs` vs 8188 | ✓ 33 nodes |
+| `verify-workflow.mjs` vs 48188 | 1 risk — the stale-pin `force_rate` line, nothing else |
+| the 8 other `MpiLoadVideo` API graphs vs 8188 | ✓ all green (this is what `optional` bought) |
+| `validate-injection-rules.mjs` | ✓ |
+| `inject-params-titles` + `workflow-input-staging-gate` + `flow-model-choice` + `flow-required-media` + `flow-output-filename` | ✓ 52/52 |
+| `node-drift` + `comfy-port-lockstep` | ✓ 30/30 |
+| `python -m py_compile video.py` | ✓ |
+
+### Open, and it is Fabio's to close
+
+**48188 has not been restarted onto the new pin.** It is spawned by the live app, so this session did
+not touch it. Until Fabio restarts the app's engine, `verify-workflow.mjs` against 48188 reports that
+one `force_rate` line, and the app cannot run an H3 extend. The re-run belongs in this file when it
+happens.
+
+**No self-check lives in `video.py`.** It cannot: the module imports `folder_paths` and
+`from .help_funcs import ...`, so `python video.py` never runs, unlike `h3.py`'s. The pack has no test
+harness to add one to (`.github/workflows/` holds only `publish_action.yml`). The durable record is the
+measured comparison in `_decode_cmd`'s docstring and the commit body; the runnable checks are
+`check_speed_3b.py` and the bench run itself.
+
+Artifacts: `D:/WORK/Images/Outputs/mpi591/P3b_flow_h3_extend_00001.mp4`,
+`G:/ComfyUi/ComfyUI/input/mpi591_src30fps.mp4` (the 30 fps source, built for this proof). Scripts in
+this session's scratchpad: `engine_parity.py`, `verify_raw.py`, `check_3b.py`, `check_speed_3b.py`,
+`build_run_3b.py`, `patch_raw_h3.py`, `patch_api_h3.py`.
+
+## Phase 4 — VERIFIED 2026-09-01
+
+The pick selects the GRAPH. Five files:
+
+| file | edit |
+|---|---|
+| `js/data/modelConstants/universal_workflows.js` | `byModel: { 'minimax-h3-ref2va': 'flow_h3_extend.json' }` on `flowLtxExtend` |
+| `js/data/modelRegistry.js` | `getUniversalWorkflow(key, modelIds = null)` — `byModel` hit wins, everything else falls through |
+| `js/services/generationService.js` | `flowModelIds` named in the `runCommand` payload |
+| `js/services/commandExecutor.js` | `getUniversalWorkflow(payload.operation, payload.flowModelIds)` |
+| `js/data/flowsRegistry.js` | `requiredModels: [{ label: 'Model', models: ['ltx-23-balanced', 'minimax-h3-ref2va'] }]` |
+
+**The candidate is ref2va, and finding that out was the substance of this phase.** The card said
+`minimax-h3`; that id is the **fl2va** DiT. Phase 1 pivoted to ref2va on disk arithmetic and Phase 3
+baked it, so the shipped graph loads `minimax_h3_ref2va_pruned_int8_convrot` plus lightx2v's
+ref2v-trained turbo LoRA — neither supplied by `minimax-h3`. The two transformers are the same
+architecture, the same quant and within bytes of the same size, so the wrong id gates a 19.53GB
+download the graph never loads and then dies `value_not_in_list` at the loader with the picker
+looking perfectly correct. `licences.js` maps both ids to the same `MINIMAX_H3` descriptor and
+receipts are keyed by LICENCE id, so MPI-666's consent checks read the same either way.
+
+**A fifth file the plan's table missed.** It said `commandExecutor.js` passes
+`payload.generationSettings?.flowModelIds`. That property does not exist on the executor's payload:
+`runCommand`'s argument is an explicit whitelist assembled in `generationService.js`, which is the
+exact hop `loraModelId` was lost at in MPI-504. `flowModelIds` is threaded there, and the executor
+reads `payload.flowModelIds`.
+
+**The gate, and it is mutation-checked rather than merely green:**
+
+| check | result |
+|---|---|
+| `tests/flow-model-choice.test.cjs` | ✓ **23/23**, including the new MPI-591 case |
+| `npm test` | ✓ **853/853** |
+| `eslint js/ --max-warnings=0` | ✓ clean |
+| `node --check` on all five files | ✓ |
+
+The new test asserts resolution (`['minimax-h3-ref2va']` → the H3 file, no ids / `[]` / `null` /
+the LTX id → the LTX file, an op with no `byModel` ignores the ids), anchoring (every `byModel`
+key is a real slot member; every arm's graph carries the flow's declared `Input_*` fields,
+`Input_Positive`, `Input_Video` and an `Output_*`; **every weight an arm's graph loads is supplied
+by that arm's model**), and the whitelist hop in both service files.
+
+Both mutations were run and both went red, then were restored and re-confirmed green:
+
+- executor reverted to `getUniversalWorkflow(payload.operation)` → 22 pass / 1 fail.
+- the arm pointed back at `minimax-h3` → `flow_h3_extend.json: the minimax-h3 arm loads
+  "minimax_h3_ref2va_pruned_int8_convrot.safetensors" (UNETLoader.unet_name), which no dependency
+  of that model supplies`.
+
+**Carried forward: the `negative` box still shows on the H3 arm and does nothing there.** H3 takes
+no negative conditioning and `flow_h3_extend.json` carries no `Input_Negative`, so the injector
+skips the title in silence — the MPI-475 shape. MPI-664 shipped `hiddenWhen`, but its rule is
+`{ field, is }` and keys on another FIELD's value, not on the picked model, so it cannot express
+this hide. Per the plan's own fallback the field stays visible with a comment naming the
+dependency; extending `hiddenWhen` to a model rule is the one-line follow-up.
+
+**Not verified here, and it cannot be:** no H3 extend has run in the APP. That is Phase 5, and it
+is blocked on 48188 being restarted onto `f1ed110`.

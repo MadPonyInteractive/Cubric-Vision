@@ -165,7 +165,8 @@
   "331": {
     "inputs": {
       "string": "",
-      "block_if_empty": true
+      "block_if_empty": true,
+      "force_rate": 24
     },
     "class_type": "MpiLoadVideo",
     "_meta": {
@@ -485,10 +486,7 @@
         "907",
         0
       ],
-      "fps": [
-        "331",
-        2
-      ]
+      "fps": 24
     },
     "class_type": "MpiSaveVideo",
     "_meta": {

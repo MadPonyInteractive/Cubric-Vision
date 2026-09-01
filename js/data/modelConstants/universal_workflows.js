@@ -9,6 +9,12 @@
 /**
  * @typedef {Object} UniversalWorkflowDef
  * @property {string} workflow - Workflow filename in comfy_workflows/
+ * @property {Record<string, string>} [byModel] - MPI-591. For a Flow whose picked model selects
+ *   a DIFFERENT GRAPH rather than different params inside one. Keyed by model id; a run whose
+ *   `flowModelIds` names one of these gets that file, and anything else falls through to
+ *   `workflow`. Reach for `modelParams` (flowsRegistry) FIRST — it swaps widgets inside one
+ *   graph and is the right answer whenever the candidates share a node set. This is only for
+ *   candidates that do not.
  */
 
 /** @type {Record<string, UniversalWorkflowDef>} */
@@ -49,8 +55,23 @@ export const UNIVERSAL_WORKFLOWS = {
     flowHeadSwap: {
         workflow: 'flow_head_swap.json',
     },
+    // MPI-591 — the first op whose graph is chosen by the model. Extending a clip on
+    // LTX 2.3 and on MiniMax H3 are different node sets end to end (LTXVAudioVideoMask +
+    // LTXVConcatAVLatent + LTXVSeparateAVLatent against an H3 nested AV latent +
+    // MiniMaxH3AddGuide), so no widget swap inside one file could express it.
+    // `workflow` stays the LTX graph because `requiredModels[0]` is `ltx-23-balanced` —
+    // the candidate every existing extend ran on, and the one the picker stars.
     flowLtxExtend: {
         workflow: 'flow_ltx_extend.json',
+        byModel: {
+            // ref2va, NOT 'minimax-h3' (which is the fl2va DiT). The card's original text said
+            // 'minimax-h3' because v1 was meant to be fl2va; Phase 1 ran on ref2va instead and
+            // Phase 3 BAKED it — the graph's UNETLoader takes
+            // minimax_h3_ref2va_pruned_int8_convrot and its turbo LoRA is the ref2v-trained
+            // one, both supplied only by this model's dep set. Naming the fl2va id would gate
+            // on a 19.53GB weight the graph never loads and then fail value_not_in_list.
+            'minimax-h3-ref2va': 'flow_h3_extend.json',
+        },
     },
     flowLtxFoley: {
         workflow: 'flow_ltx_foley.json',
@@ -105,6 +126,12 @@ export const UNIVERSAL_WORKFLOWS = {
     // AudioSeparation (Hybrid Demucs v3), out through four SaveAudioAdvanced saves.
     flowStems: {
         workflow: 'flow_stems.json',
+    },
+    // MPI-664 — MiniMax Music 3. Forty-six nodes: the bench graph's DiT + text encoder
+    // + audio VAE, plus 31 string nodes that assemble the structured caption around the
+    // enhancer's three prose blocks.
+    flowTextToMusic: {
+        workflow: 'flow_minimax_music.json',
     },
     // MPI-504 — Krea2 t2i, plus a SAM3 + Klein 4B pass that removes the head from the
     // front body panel. Both run on models the flow declares in `requiredModels`, so

@@ -90,6 +90,8 @@ export const OPERATION_REGISTRY = {
     flowDramaBox: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
     flowChatterBox: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
     flowStems: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
+    // MPI-664 — MiniMax Music 3, the text-to-music flow. Same stamping reason.
+    flowTextToMusic: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
 };
 
 /**

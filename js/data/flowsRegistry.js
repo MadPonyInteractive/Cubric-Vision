@@ -235,6 +235,19 @@
  *                               into. Enhance is its ONLY writer besides the user.
  * @property {string}  [model] - For `action: 'enhance'`: optional model id for the run. Omit for
  *                               an op whose weights are a dep rather than a ModelDef.
+ * @property {Object<string, *>} [injectionParams] - For `action: 'enhance'`: params injected into
+ *                               the enhancer's OWN graph on every press (MPI-664). This is what
+ *                               makes `promptEnhance` the reusable op it has claimed to be since
+ *                               MPI-504 — its recipe (`Input_System_Prompt`), both scrub patterns
+ *                               and `Input_Text_Gen.max_length` are all meant to be the CALLER's,
+ *                               so a second flow supplies its own rewrite rather than registering
+ *                               a twin op. Without it the graph's BAKED recipe runs, and that
+ *                               recipe is Character Sheet's: press Enhance on a music flow and a
+ *                               character designer writes a wardrobe phrase. Ordinary injection
+ *                               keys, so `Title.widget` addressing works.
+ *                               `Input_Seed` is NOT settable here — the frame spreads its driven
+ *                               seed last, because a fixed one returns the same phrase on every
+ *                               press and the Enhance → Generate → Enhance loop is the point.
  */
 
 'use strict';
@@ -253,6 +266,67 @@ import { getPlugin } from './pluginsRegistry.js';
 export function flowDepKey(flowId) {
     return `flow:${flowId}`;
 }
+
+/**
+ * The MiniMax Music enhance action's injected params (MPI-664) — the recipe, both
+ * scrub overrides and the raised token budget.
+ *
+ * Hoisted because the `enhance` pair is declared on BOTH the Style step and the run
+ * slide (that duplication is what gives the run slide its condensed form), and two
+ * copies of a 15-line recipe is two recipes that drift. The DECLARATION is the
+ * carrier — there is no other route into the enhancer's graph — so it has to be on
+ * each, but it can be the same object.
+ *
+ * WHY EACH KEY IS HERE:
+ *
+ * `Input_System_Prompt` — the graph parses `[MOOD]` / `[VOCAL]` / `[ARRANGEMENT]`
+ * with three `RegexExtract` nodes, so emitting those three markers IS the contract.
+ * The recipe never names the genre, the BPM or the key: the graph writes those from
+ * the controls, and a 4B asked to carry "78 BPM" through prose rounds it to "around
+ * 80". Short and single-task is what a 4B holds.
+ *
+ * `Input_Scrub_Negation` is DISABLED with `(?!)`, a pattern that can never match. Its
+ * baked value strips negation clauses out of a Character Sheet noun phrase, and on a
+ * music caption it would eat "no drums until the second verse" — a real arrangement
+ * instruction. Overriding it to a no-op is safer than deleting the node, which
+ * Character Sheet still needs.
+ *
+ * `Input_Tidy` is narrowed to trailing whitespace. Its baked `[\s,.]+$` also eats a
+ * closing full stop, which is right for a phrase spliced mid-sentence and wrong for
+ * three prose blocks.
+ *
+ * `Input_Text_Gen.max_length` — 512 tokens cannot hold 250-450 words. That widget sits
+ * on the shared enhancer graph's `TextGenerate`, which was UNTITLED until this card;
+ * Character Sheet keeps 512 by not injecting, so titling it was purely additive.
+ *
+ * Not a concern, though it looks like one: the enhancer's `StringReplace` flattens the
+ * output to a single line. The three blocks are delimited by their MARKERS, not by
+ * newlines, so the parse is unaffected — and one line per block is the shape a caption
+ * paragraph wants anyway.
+ */
+const MINIMAX_MUSIC_ENHANCE_PARAMS = {
+    Input_System_Prompt: [
+        '<|im_start|>system',
+        'You are a music producer writing three prose blocks for a song caption, and nothing else.',
+        '',
+        'Output EXACTLY three blocks, in this order, each opening with its marker on the same line:',
+        '[MOOD] The emotional arc from first bar to last, and where the song would be heard. Name how the energy moves — where it lifts, where it falls away.',
+        '[VOCAL] Timbre, delivery and backing vocals. Describe how the voice sounds and how it is sung.',
+        '[ARRANGEMENT] The instrumentation and how it enters and leaves across the song, section by section.',
+        '',
+        'Rules:',
+        '- 250 to 450 words in total, weighted towards [ARRANGEMENT].',
+        '- Write musical changes, never an equipment list.',
+        '- Do not invent a key, a BPM, a time signature or a named artist. Do not name the genre — it is written for you.',
+        '- Do not write headings, section tags, lyrics, or any text outside the three blocks.',
+        '- If the brief says the track is instrumental, write [VOCAL] as a single sentence naming which instrument carries the lead melodic line, and give that instrument its own entrances in [ARRANGEMENT].',
+        '<|im_end|>',
+        '<|im_start|>user',
+    ].join('\n'),
+    'Input_Scrub_Negation.regex_pattern': '(?!)',
+    'Input_Tidy.regex_pattern': '\\s+$',
+    'Input_Text_Gen.max_length': 1400,
+};
 
 /** @type {FlowDef[]} */
 export const FLOWS = [
@@ -390,9 +464,16 @@ export const FLOWS = [
         // rail complete, over the walk it bought.
         preview: 'flow-ltx-extend.webp',
         video: 'flow-ltx-extend.mp4',
-        description: 'Continue a video past its last frame. Drop a clip, describe what happens next, and LTX 2.3 generates the new seconds — with matching audio — onto the end of it.',
-        requiredModels: ['ltx-23-balanced'],
+        description: 'Continue a video past its last frame. Drop a clip, describe what happens next, and the model generates the new seconds — with matching audio — onto the end of it.',
+        // MPI-591 — the first slot whose members do not share a graph. `modelParams` cannot
+        // express it: LTX 2.3 and MiniMax H3 extend with different node sets end to end, so
+        // the choice is resolved in `universal_workflows.js` (`flowLtxExtend.byModel`) and
+        // reaches the executor as `flowModelIds`. LTX stays FIRST because it is the
+        // recommended candidate the picker stars, and what every existing extend ran on.
+        requiredModels: [{ label: 'Model', models: ['ltx-23-balanced', 'minimax-h3-ref2va'] }],
         operation: 'flowLtxExtend',
+        // The LTX graph. The H3 arm's file is NOT named here — `byModel` owns that, and this
+        // field is read only by the tests that check declared fields against node titles.
         workflow: 'flow_ltx_extend.json',
         mediaType: 'video',
         inputSchema: {
@@ -424,6 +505,14 @@ export const FLOWS = [
                         // The bench-proven negative, kept as the default because it is what
                         // the approved runs used — an empty box here is a different graph.
                         default: 'letterbox, black bars, cinematic bars, pillarbox, border, vignette, blurry, low quality, still frame, frames, watermark, overlay, titles, unrealistic, plastic, fake, out-of-focus, low-detail, slow motion',
+                        // MPI-591: this box does NOTHING on the MiniMax H3 arm — H3 takes no
+                        // negative conditioning (models.js `negativePrompt: false`) and
+                        // flow_h3_extend.json carries no Input_Negative node, so the injector
+                        // skips the title in silence. It must HIDE when the Model slot is on
+                        // `minimax-h3`. Blocked on MPI-664: `hiddenWhen` shipped, but its rule
+                        // is `{ field, is }` and keys on another FIELD's value, not on the
+                        // picked model. Extending it to a model rule is the one-line follow-up
+                        // — never a bespoke twin of this flow.
                     },
                 ],
             },
@@ -1983,6 +2072,293 @@ export const FLOWS = [
                         'Describe the object and the angle you want in the box above.',
                     ],
                 },
+            },
+        ],
+    },
+    // MPI-664 — MiniMax Music 3. A brief in, a finished song out: lyrics optional, a
+    // cast of voices optional, and one of eighteen style families to route it.
+    //
+    // 🔴 `id` MUST STAY `minimax-music`. `licences.js` keys `MINIMAX_MUSIC3` on
+    // `flow:minimax-music` (= `flowDepKey(id)`), and a lookup MISS IS SILENT — rename
+    // this and 13.3GB of licensed weights install with no gate shown at all.
+    //
+    // NO MODEL and NO MEDIA. `requiredModels: []` with the three weights in
+    // `requiredDeps` is the Voice Changer shape — a FLOW WITH DEPS, deliberately not a
+    // ModelDef (nothing about a music model belongs in the image/video model picker).
+    // And no `inputSchema.media`: text is the entire input, so step 0 renders its own
+    // "this flow needs no input media" panel. `mediaType: 'audio'` is what routes the
+    // graph's `Output_Audio` to a real gallery card rather than a video's soundtrack
+    // side-channel (MPI-573).
+    //
+    // THE CAPTION IS BUILT BY THE GRAPH, not by the model (GAP 4 option B, Fabio
+    // 2026-08-31). The enhancer writes only three PROSE blocks — marked `[MOOD]`,
+    // `[VOCAL]`, `[ARRANGEMENT]` — into `Input_Caption`; the graph writes the three
+    // headings, Basic Attributes, the instrumental clause and the serialised roster
+    // around them. So the style phrase, the BPM and the cast reach the encoder EXACTLY
+    // as chosen: a 4B asked to hold "78 BPM" in prose rounds it to "around 80".
+    // An UNMARKED caption is not an error — the graph falls the whole string through
+    // into Global Metadata and drops the two headings left empty, so a hand-typed brief
+    // still runs.
+    //
+    // FIVE STEPS, and the ORDER IS FORCED: the roster must exist before the lyrics box
+    // or `@` has nothing to offer. Every middle step is `kind: 'fields'` (FRAME_KINDS) —
+    // no canvas, no `role`, values in the FLOW store — which is also what lets the brief
+    // be ONE value edited on step 1 and on the run slide.
+    //
+    // ⚠️ NO PREVIEW ASSETS YET. `preview`/`video` are deliberately absent until
+    // `/mpi-flow-graphics` cuts them from a real run; both render sites guard on the key,
+    // so the tile falls back rather than 404ing.
+    {
+        id: 'minimax-music',
+        title: 'Text to Music',
+        description: 'Describe a song and hear it. Say what it should feel like, pick a style, write your own lyrics or leave it instrumental, and cast the voices that sing it — MiniMax Music 3 writes and performs the whole track.',
+        requiredModels: [],
+        // The three weights, 13.34GB measured (never typed — `computeDepHashes.py
+        // --sizes`, because `size` is parsed 1024-based and HuggingFace displays
+        // decimal). `ComfyUI-MpiNodes` is deliberately NOT here even though the graph
+        // runs MpiText/MpiIfElse/MpiInt: every model in the registry declares it, so
+        // listing it would pin it for every uninstall — the same reasoning spelled out
+        // on `voice-changer` above.
+        requiredDeps: [
+            'minimax-music3-dit',           // 4.58GB — the DiT
+            'minimax-music3-text-encoder',  // 8.57GB — pruned int8. The bf16 twin was
+                                            // tested and abandoned: 15.9GB staged on a
+                                            // 16GB card, ~33min for the AR stage alone
+                                            // against 240s end to end. Do not retry it.
+            'vae-minimax-music3-dav',       // 206.66MB — the DAV VAE
+        ],
+        operation: 'flowTextToMusic',
+        workflow: 'flow_minimax_music.json',
+        mediaType: 'audio',
+        // No `inputSchema` at all, and no `result.compare` — there is no BEFORE.
+        steps: [
+            {
+                kind: 'fields',
+                tickerLabel: 'Song',
+                title: 'Describe your song',
+                hint: 'What it should feel like, where it would be heard, how it moves. The style and tempo are set two steps on — this is the feeling.',
+                fields: [
+                    {
+                        id: 'positive', type: 'text', rows: 4, label: 'Your song',
+                        placeholder: 'A late-night drive through empty streets, warm and unhurried, headlights on wet tarmac…',
+                    },
+                    {
+                        // Hides the whole Voices step, the lyrics box and the voice
+                        // notes. The GRAPH re-checks this flag itself rather than
+                        // trusting the fields to be hidden — a hidden field KEEPS ITS
+                        // VALUE, so an instrumental run would otherwise splice in lyrics
+                        // and a cast that are merely invisible.
+                        id: 'Input_Instrumental', type: 'toggle', label: 'Instrumental',
+                        icon: 'audio', default: false,
+                    },
+                ],
+            },
+            {
+                kind: 'fields',
+                tickerLabel: 'Voices',
+                title: 'Cast the voices',
+                hint: 'Add a voice for each part you want sung differently, then reference them in your lyrics. This STEERS who sings what — the model honours it, but it blends rather than switching cleanly.',
+                fields: [
+                    {
+                        // The roster (MPI-664 tier 2). Its `v` values are the CAPTION
+                        // WORDS, not indices: `serialiseVoices` writes `Name (Type)`
+                        // straight into the caption's Vocal Details, so there is no
+                        // switch bank and no lookup table to drift.
+                        //
+                        // `Any` is the catch-all and emits the bare NAME — writing
+                        // "Ana (Any)" would state a vocal quality the user never chose.
+                        id: 'Input_Voices', type: 'voices', label: 'Voices',
+                        namePlaceholder: 'Singer A',
+                        default: [{ name: 'Singer A', type: 'Any' }],
+                        options: [
+                            { v: 'Any', label: 'Any' },
+                            { v: 'Female', label: 'Female' },
+                            { v: 'Male', label: 'Male' },
+                            { v: 'Child', label: 'Child' },
+                            { v: 'Duet', label: 'Duet' },
+                            { v: 'Choir', label: 'Choir' },
+                        ],
+                        hiddenWhen: { field: 'Input_Instrumental', is: true },
+                    },
+                ],
+            },
+            {
+                kind: 'fields',
+                tickerLabel: 'Lyrics',
+                title: 'Write the lyrics',
+                // The official tag set, verbatim — and the caveat, because a user who
+                // does not know these are generative CONTROL rather than a guarantee
+                // reads a loose section as a bug.
+                hint: 'Mark sections with [Intro] [Verse] [Pre-Chorus] [Chorus] [Post-Chorus] [Bridge] [Instrumental] [Solo] [Outro]. These steer the arrangement rather than guarantee it. To hand a line to one of your voices, put its name in angle brackets on its own line — <Singer A>.',
+                fields: [
+                    {
+                        // The markers are STRIPPED IN THE GRAPH before the encoder sees
+                        // this (`Strip_Voice_Markers`), because `<Name>` is not in
+                        // MiniMax's tag set and the lyrics reach the model verbatim.
+                        //
+                        // 🔴 `default: ''` IS LOAD-BEARING, not tidiness. `_seedField`
+                        // returns undefined for a field with no `default`, and the
+                        // seeding loops skip an undefined — so the id never reaches
+                        // `injectionParams` and the GRAPH'S BAKED VALUE RUNS. This node
+                        // is baked with the bench's own demo song, so without this line
+                        // a user who leaves the lyrics empty hears that song's words.
+                        // Same for `Input_Caption` below, where the baked value is a
+                        // full lo-fi caption that would override the user's brief
+                        // outright. Every empty-able text field here declares one.
+                        id: 'Input_Lyrics', type: 'text', rows: 10, label: 'Lyrics',
+                        placeholder: '[Verse]\nMidnight and the canvas glows…',
+                        default: '',
+                        hiddenWhen: { field: 'Input_Instrumental', is: true },
+                    },
+                ],
+            },
+            {
+                kind: 'fields',
+                tickerLabel: 'Style',
+                title: 'Style and sound',
+                hint: 'Enhance writes the mood, vocal and arrangement prose from your brief. Everything else on this step is written into the caption exactly as you set it.',
+                fields: [
+                    {
+                        // 18 families, and the option's `v` IS THE GENRE PHRASE — the
+                        // same shape the roster uses. NOT an int into an MpiAnySwitch
+                        // bank: `MpiAnySwitch` holds 5 arms and `MpiAnySwitch10` holds
+                        // 10, so 18 fit neither and chaining two banks would cost ~21
+                        // nodes for one string.
+                        //
+                        // The phrases are OURS. MiniMax's 1,000 template captions are
+                        // unlicensed and their own skill forbids copying them, so we
+                        // conform to their taxonomy and write our own prose for it.
+                        // Each ends in a full stop: `Cat_Style` joins this to the custom
+                        // box with a space, so the two must read as separate sentences.
+                        id: 'Input_Style', type: 'select', label: 'Style',
+                        default: 'Contemporary pop ballad, radio-ready production.',
+                        options: [
+                            { v: 'Contemporary pop ballad, radio-ready production.', label: 'Pop ballad',
+                              info: 'The fallback family — reach for it when the brief is a mood rather than a genre.' },
+                            { v: 'Alternative pop-rock, live band instrumentation with guitars up front.', label: 'Pop / alt rock',
+                              info: 'Guitars, bass and kit playing together, with a chorus built to be sung back.' },
+                            { v: 'Dance pop with disco and funk instrumentation, four-on-the-floor groove.', label: 'Dance / disco funk',
+                              info: 'Live groove — slap bass, clipped guitar, horn stabs over a steady kick.' },
+                            { v: 'Club electronic dance music, house and trance production.', label: 'Club / EDM',
+                              info: 'Synthesised and programmed: risers, drops and a sidechained pulse.' },
+                            { v: 'Electronic synth pop with ambient textures and processed atmospheres.', label: 'Synth / ambient pop',
+                              info: 'Softer and more spacious than club — texture carries it, not the drop.' },
+                            { v: 'Hip-hop and rap, sampled or programmed beat with a rhythmic vocal lead.', label: 'Hip-hop / rap',
+                              info: 'The vocal is rhythmic rather than sung; the beat is the arrangement.' },
+                            { v: 'Modern R&B and neo-soul, laid-back groove with rich extended harmony.', label: 'R&B / neo-soul',
+                              info: 'Behind the beat, jazz-leaning chords, vocal runs and stacked harmonies.' },
+                            { v: 'Soul, blues and gospel with organ, choir and a raw lead vocal.', label: 'Soul / blues / gospel',
+                              info: 'Older and rawer than neo-soul — church organ, choir answering the lead.' },
+                            { v: 'Jazz swing and big band, brass section over an upright rhythm section.', label: 'Jazz / big band',
+                              info: 'Swung time, sectional brass, an upright bass walking underneath.' },
+                            { v: 'Contemporary folk and acoustic, fingerpicked guitar and close-miked vocal.', label: 'Folk / acoustic',
+                              info: 'Small and intimate — a few instruments, played rather than produced.' },
+                            { v: 'Country and Americana with pedal steel, acoustic guitar and close harmony.', label: 'Country / Americana',
+                              info: 'Pedal steel and storytelling; harmony sung a third above the lead.' },
+                            { v: 'Roots and traditional music from around the world, played on regional acoustic instruments.', label: 'Roots / world',
+                              info: 'Reggae, afrobeat, cumbia and their neighbours — regional instruments and grooves.' },
+                            { v: 'Metal and heavy rock, distorted guitars and a driving double-kick rhythm section.', label: 'Metal / heavy rock',
+                              info: 'High gain, tight low end, tempo held by the kit rather than the riff.' },
+                            { v: 'Cinematic pop ballad with orchestral backing behind a lead vocal.', label: 'Cinematic pop ballad',
+                              info: 'A ballad with strings behind it — the voice still leads.' },
+                            { v: 'Cinematic orchestral epic, full symphonic scoring with percussion and choir.', label: 'Cinematic epic',
+                              info: 'Score, not song — the orchestra is the lead. Good with Instrumental on.' },
+                            { v: 'Traditional vocal stage repertoire, operatic and musical-theatre delivery.', label: 'Stage / operatic',
+                              info: 'Trained, projected delivery — theatre and opera rather than pop singing.' },
+                            { v: 'East Asian modern pop production with contemporary arrangement.', label: 'East Asian modern',
+                              info: 'Mandopop, C-pop, K-pop and J-pop production values.' },
+                            { v: 'East Asian ballad in the heritage style, traditional instrumentation and phrasing.', label: 'East Asian heritage',
+                              info: 'Traditional instruments and phrasing rather than modern pop arrangement.' },
+                        ],
+                    },
+                    {
+                        // Appended to the style phrase VERBATIM, as its own sentence.
+                        // Renamed from `style_custom` under GAP 4 option B: a lowercase
+                        // id reaches NOTHING now that the graph builds the caption, so
+                        // it must be `Input_*` or the control is inert.
+                        id: 'Input_Style_Custom', type: 'text', rows: 2, label: 'Your own style',
+                        placeholder: 'Anything the list above does not cover — an era, an instrument, a reference sound…',
+                        default: '',
+                    },
+                    {
+                        // 0 = AUTO, and it has to have an unset state: MiniMax's own
+                        // contract says not to fabricate a precise BPM, so a box with no
+                        // zero would ship an invented exact tempo on every run. At 0 the
+                        // graph OMITS the tempo clause entirely and the rewriter infers
+                        // it. Ceiling is 250, not a textbook 220 — Fabio has mastered
+                        // tracks at that tempo and a 220 cap would clip real material.
+                        id: 'Input_Bpm', type: 'number', label: 'Tempo (BPM)',
+                        min: 0, max: 250, step: 1, default: 0,
+                    },
+                    {
+                        // Timbre, delivery and backing vocals — the three Vocal Details
+                        // sub-labels a roster slot cannot express. Renamed from
+                        // `voice_notes` for the same reason as the style box above.
+                        id: 'Input_Voice_Notes', type: 'text', rows: 2, label: 'Voice notes',
+                        placeholder: 'Raspy and close-miked, conversational in the verses, layered harmonies on the chorus…',
+                        default: '',
+                        hiddenWhen: { field: 'Input_Instrumental', is: true },
+                    },
+                    {
+                        // Set-once machine fact, so it sits HERE rather than on the run
+                        // slide: it drives the tiled/plain VAE decode switch and nothing
+                        // about it changes between runs.
+                        id: 'Input_Low_Vram', type: 'toggle', label: 'Low VRAM',
+                        icon: 'gpu', default: true,
+                    },
+                    {
+                        // GAP 3 CLOSED (MPI-664): the action carries its OWN recipe now.
+                        // Until this shipped, `_runEnhance` sent only the driven seed, so
+                        // the enhancer's BAKED recipe ran — and that recipe is Character
+                        // Sheet's, which would answer a song brief with a wardrobe noun
+                        // phrase. See `injectionParams` on FlowStepField.
+                        id: 'enhance', type: 'button', label: 'Enhance', icon: 'enhance',
+                        action: 'enhance', op: 'promptEnhance',
+                        from: 'positive', to: 'Input_Caption',
+                        injectionParams: MINIMAX_MUSIC_ENHANCE_PARAMS,
+                    },
+                    {
+                        // The enhancer's PROSE, not a finished caption — the graph writes
+                        // the headings and the exact values around it. Shown here and
+                        // nowhere else: a phrase the user cannot see is a phrase they
+                        // cannot repair. Leave it empty and the brief runs raw, which the
+                        // graph handles (an unmarked caption falls through to one block).
+                        id: 'Input_Caption', type: 'text', rows: 12,
+                        label: 'Mood, vocal and arrangement',
+                        placeholder: 'Press Enhance, or write the three blocks yourself using [MOOD], [VOCAL] and [ARRANGEMENT].',
+                        default: '',
+                    },
+                ],
+            },
+        ],
+        // The run slide: the brief, Enhance, and the one control that genuinely changes
+        // between runs. The caption box is omitted exactly as Character Sheet omits its
+        // phrase — the run slide generates, it does not read — which makes the Enhance
+        // button's heat the only signal that the current brief is un-enhanced.
+        fields: [
+            {
+                id: 'positive', type: 'text', rows: 3, label: 'Your song',
+                placeholder: 'A late-night drive through empty streets, warm and unhurried…',
+            },
+            {
+                id: 'enhance', type: 'button', label: 'Enhance', icon: 'enhance',
+                action: 'enhance', op: 'promptEnhance',
+                from: 'positive', to: 'Input_Caption',
+                // Declared on BOTH surfaces to get the run slide's condensed form; the
+                // same object, because the declaration IS the carrier and two copies
+                // would drift into two different recipes.
+                injectionParams: MINIMAX_MUSIC_ENHANCE_PARAMS,
+            },
+            {
+                // 🔴 A CEILING, NOT A LENGTH — and the label has to say so.
+                // `MiniMaxMusic3TextEncode` derives the real `seconds` from the lyrics
+                // and feeds the latent from its OWN output; `max_duration` only caps it.
+                // Measured on the bench: set to 150, the model returned 80.76s.
+                //
+                // No seconds -> frames conversion either. This is an `MpiFloat` straight
+                // into the encoder, so the LTX Extend `MpiMath` pattern does not apply.
+                id: 'Input_Duration', type: 'slider', label: 'Maximum length',
+                min: 30, max: 240, step: 5, default: 150, format: 'duration',
             },
         ],
     },

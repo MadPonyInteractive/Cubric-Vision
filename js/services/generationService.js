@@ -844,6 +844,12 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
         // is a whitelist — a key not named here never reaches the executor, which is the
         // hop `loraModelId` was missing in MPI-504.
         loraPhases: Array.isArray(config.loraPhases) ? config.loraPhases : [],
+        // MPI-591 — one resolved model id per `requiredModels` slot, so the executor can
+        // pick the GRAPH the chosen model needs (`byModel`, universal_workflows.js). Threaded
+        // for the same reason `loraPhases` is: this payload is a whitelist, and a key not
+        // named here never reaches the executor. It also rides into `generationSettings`
+        // below, which is what Reuse Prompt reads back off the sidecar (MPI-620).
+        flowModelIds: Array.isArray(config.flowModelIds) ? [...config.flowModelIds] : null,
         previewOnly: config.previewOnly === true,
         historyMode: config.historyMode === true,
         isStage2: config.isStage2 === true,

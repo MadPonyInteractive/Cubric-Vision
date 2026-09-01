@@ -1284,6 +1284,30 @@ export const commands = {
         universal: true,
     },
 
+    // MPI-664 — MiniMax Music 3. A brief, optional lyrics and a voice roster in; one
+    // song out. NO media at all: text is the whole input, which makes this the first
+    // audio-producing flow with an empty `mediaInputs` — Voice Changer, TTS and Stems
+    // all take a clip.
+    //
+    // The graph ASSEMBLES the caption (GAP 4 option B): the enhancer writes three
+    // marked prose blocks into `Input_Caption` and 31 string nodes write the headings,
+    // Basic Attributes, the instrumental clause and the serialised roster around them,
+    // so the exact values a dropdown picked are never on the model's desk.
+    //
+    // No `filePrefix`: `flowMinimaxMusic` would read as a model name rather than the
+    // Flow's title, so the OP is named after the outcome instead — `flowTextToMusic`
+    // spells out "Text to Music" and files as `flowTextToMusic_001`.
+    flowTextToMusic: {
+        label: 'Flow: Text to Music',
+        progressLabel: 'Composing',
+        mediaType: MEDIA_TYPE.AUDIO,        // OUTPUT type
+        requiresImages: 0,
+        // No `mediaInputs` — the flow takes no media. `inputSchema` has no `media`
+        // group either, so step 0 renders its own "needs no input media" panel.
+        promptRequired: true,               // the brief IS the input
+        universal: true,
+    },
+
     flowCharacterSheet: {
         label: 'Flow: Character Sheet',
         progressLabel: 'Drawing the sheet',

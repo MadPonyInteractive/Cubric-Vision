@@ -647,6 +647,100 @@ test('flowService carries the resolved model into the run', () => {
     );
 });
 
+test('the Extend Video pick selects the GRAPH, not just params (MPI-591)', async () => {
+    // The first slot whose members do not share a workflow file. Every other any-of slot
+    // swaps widgets inside ONE graph through `modelParams`; LTX 2.3 and MiniMax H3 extend a
+    // clip with different node sets end to end, so the choice picks the FILE. The failure
+    // this guards is the whole-graph version of the MPI-590 silent picker: the badge flips
+    // to MiniMax and the LTX graph runs anyway, producing a plausible video off the wrong
+    // model with nothing anywhere saying so.
+    const { registry } = await load();
+    const { getUniversalWorkflow, getModelDependencies } = await import('../js/data/modelRegistry.js');
+    const { UNIVERSAL_WORKFLOWS } = await import('../js/data/modelConstants/universal_workflows.js');
+
+    const flow = registry.getFlowById('ltx-extend');
+    assert.deepEqual(
+        registry.flowModelSlots(flow).map(s => s.models),
+        [['ltx-23-balanced', 'minimax-h3-ref2va']],
+        'one slot, two candidates, LTX first — models[0] is the recommended one the picker stars',
+    );
+
+    // BEHAVIOUR — resolution, including the shapes that must NOT change the answer.
+    assert.equal(getUniversalWorkflow('flowLtxExtend'), 'flow_ltx_extend.json',
+        'no ids at all is every non-Flow caller, and it must resolve exactly as before');
+    assert.equal(getUniversalWorkflow('flowLtxExtend', []), 'flow_ltx_extend.json');
+    assert.equal(getUniversalWorkflow('flowLtxExtend', null), 'flow_ltx_extend.json');
+    assert.equal(getUniversalWorkflow('flowLtxExtend', ['ltx-23-balanced']), 'flow_ltx_extend.json');
+    assert.equal(getUniversalWorkflow('flowLtxExtend', ['minimax-h3-ref2va']), 'flow_h3_extend.json',
+        'the pick has to reach the FILE — this is the whole card');
+    assert.equal(getUniversalWorkflow('interpolate', ['minimax-h3-ref2va']), 'video_interpolate.json',
+        'an op with no byModel must ignore the ids rather than resolve to null');
+    assert.equal(getUniversalWorkflow('notAnOperation', ['minimax-h3-ref2va']), null);
+
+    // ANCHORING — a byModel arm that names a non-member, a missing file, or a graph without
+    // the titles this flow drives resolves happily and then injects into thin air.
+    for (const [op, def] of Object.entries(UNIVERSAL_WORKFLOWS)) {
+        if (!def.byModel) continue;
+        const owner = registry.listFlows().find(f => f.operation === op);
+        assert.ok(owner, `${op} declares byModel but no flow declares that operation`);
+        const members = new Set(registry.flowModelSlots(owner).flatMap(s => s.models));
+
+        for (const [modelId, file] of Object.entries(def.byModel)) {
+            assert.ok(members.has(modelId),
+                `${op}.byModel names "${modelId}", which is in no requiredModels slot of ${owner.id}`);
+            const graph = readJson(`comfy_workflows/${file}`);
+            const titles = new Set(Object.values(graph)
+                .map(n => n?._meta?.title).filter(Boolean));
+
+            // Every injection-param field the flow declares (an `Input_*` id names its node
+            // directly) must exist in EVERY arm, not just the default one.
+            for (const f of [...(owner.fields || []),
+                             ...(owner.steps || []).flatMap(s => s.fields || [])]) {
+                if (!/^Input_/.test(f.id)) continue;
+                assert.ok(titles.has(f.id),
+                    `${owner.id}: field "${f.id}" names no node in the ${modelId} arm (${file}) — ` +
+                    'injection matches titles and skips a miss in SILENCE');
+            }
+            // The prompt, the media the flow takes, and a capture node to read back.
+            assert.ok(titles.has('Input_Positive'), `${file} has no Input_Positive`);
+            assert.ok(titles.has('Input_Video'), `${file} has no Input_Video for a video flow`);
+            assert.ok([...titles].some(t => /^Output_/.test(t)), `${file} has no Output_* capture node`);
+
+            // THE WEIGHTS, and this is the assertion that earns its keep. The arm was first
+            // written against 'minimax-h3' because the card said so — but that id is the
+            // fl2va DiT, and this graph bakes the ref2va transformer. Same architecture,
+            // same quant, same byte SIZE, different weights: the slot would have gated on a
+            // 19.53GB download the graph never loads and then died value_not_in_list at the
+            // loader, with the picker looking perfectly correct the whole way.
+            const supplied = new Set(getModelDependencies(modelId)
+                .map(d => path.basename(d.filename || '')));
+            for (const node of Object.values(graph)) {
+                for (const key of ['unet_name', 'lora_name', 'vae_name', 'clip_name']) {
+                    const val = node?.inputs?.[key];
+                    if (typeof val !== 'string' || !val || val === 'None') continue;
+                    const base = path.basename(val.split('\\').pop());
+                    assert.ok(supplied.has(base),
+                        `${file}: the ${modelId} arm loads "${base}" (${node.class_type}.${key}), ` +
+                        'which no dependency of that model supplies');
+                }
+            }
+        }
+    }
+
+    // THE HOP — the executor cannot pick what never reaches it. `runCommand`'s payload is a
+    // whitelist, which is exactly where MPI-504's loraModelId was lost.
+    assert.match(
+        read('js/services/generationService.js'),
+        /flowModelIds: Array\.isArray\(config\.flowModelIds\) \? \[\.\.\.config\.flowModelIds\] : null,\n\s*previewOnly/,
+        'flowModelIds must be named in the runCommand payload, not only in generationSettings',
+    );
+    assert.match(
+        read('js/services/commandExecutor.js'),
+        /getUniversalWorkflow\(payload\.operation, payload\.flowModelIds\)/,
+        'the executor must resolve the workflow WITH the picked ids',
+    );
+});
+
 test('the Draw It In arm matches the weights, and the encoder moves with it (MPI-567)', async () => {
     // WAS two independent slots — an SDXL checkpoint for a render phase and a Klein model
     // for a blend phase. MPI-621 deleted the render phase outright, so there is ONE slot

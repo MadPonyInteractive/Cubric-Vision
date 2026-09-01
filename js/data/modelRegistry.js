@@ -398,11 +398,24 @@ export function getWorkflowFile(modelId, operation) {
 /**
  * Returns the workflow filename for a universal (non-model-tied) operation.
  * Returns null if the key does not exist in UNIVERSAL_WORKFLOWS.
+ *
+ * MPI-591 — `modelIds` is a Flow run's resolved `flowModelIds`, one id per `requiredModels`
+ * slot. When the op declares `byModel` and one of those ids names an entry, that file wins;
+ * otherwise the plain `workflow` does. Passing nothing keeps the old behaviour exactly, which
+ * is what every non-Flow caller does.
+ *
  * @param {string} key - Command key (must have universal: true in commandRegistry)
+ * @param {string[]|null} [modelIds] - Resolved flowModelIds for this run, if it is a Flow
  * @returns {string|null}
  */
-export function getUniversalWorkflow(key) {
-    return UNIVERSAL_WORKFLOWS[key]?.workflow ?? null;
+export function getUniversalWorkflow(key, modelIds = null) {
+    const def = UNIVERSAL_WORKFLOWS[key];
+    if (!def) return null;
+    if (def.byModel && Array.isArray(modelIds)) {
+        const hit = modelIds.find((id) => def.byModel[id]);
+        if (hit) return def.byModel[hit];
+    }
+    return def.workflow ?? null;
 }
 
 /**

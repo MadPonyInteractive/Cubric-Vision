@@ -4,94 +4,121 @@ Written 2026-08-31 after Fabio brought in `kat3ri/ComfyUI-MiniMax-H3-Extend`. Tw
 this plan and neither should be re-searched: `brief.md` (the H3 seam physics — every rule there
 fails SILENTLY) and `research/minimax-h3-extend-nodepack.md` (the pack, and what changed).
 
-## Current State (2026-08-31, after the static arm and the Phase 2 node)
+## Current State (2026-09-01, after Phase 3b — the graph is finished)
 
-**Phase 1's static arm is RUN and it is the best result on the card — but it also turned the
-"open for Fabio" question into a measured one.** The card is in `doing` / `in-progress`.
+**Phases 1, 2, 3 and 3b are all closed. The graph is done; what is left is wiring, verifying and
+documenting it.** The card is in `doing` / `in-progress`.
 
-- **Arm G (static shot) matches the pack oracle exactly on the seam: 1.40x against 1.40x**
-  (§ Phase 1 results, the seam table). Head preserved at PSNR 38.0 dB, scene continuous.
-- **Arm E's moving-shot seam is 3.85x — measurably worse than the oracle.** The camera drift is
-  real and it is a mechanism, not a budget: one frame-0 guide anchors CONTENT, not camera velocity.
-- **The sparkle artifact is NOT camera-related — it reproduces on the locked-off shot.** Fabio,
-  2026-08-31: he has never seen it in turbo, which points at the prefix rather than the sampler.
-  **Arm I is queued to settle it** (frame-0 guide kept, `MpiH3MaskedPrefix` removed, nothing else).
-- **PHASE 2 IS DONE — gate green.** `MpiH3EncodeAV` written, self-check green, both nodes verified
-  REGISTERED on a live restarted bench via `/object_info`, and the pin bumped off `5e07043` to
-  **`53c0198`** (archive URL checked, 200). `MpiH3EncodeAV` is **bit-identical to the pack's
-  `MiniMaxH3EncodeAVPatched`** — arm J against arm G2, `PSNR y:inf`, head at the same 38.035 dB.
-  The fork dependency is gone, proven equivalent rather than merely non-crashing.
-  `changelog.md` + `README.md` rows added for BOTH H3 nodes — `f6d2484` had shipped without them,
-  which would have made them invisible to `/comfy-release`.
+- **PHASE 1 — GATE PASSED by Fabio on arm F2.** The route is the SIMPLE one and none of the
+  masked-prefix machinery is in it: stock `MiniMaxH3ReferenceToVideo` generating the new frames
+  only, `MiniMaxH3AddGuide` pinning the source's last frame at generated frame 0, the source's
+  audio in as `ref_audio_1`, and a PIXEL join. Flash 1.05 / 2.03 against the prefix arms' 5.37 /
+  18.51, seam 0.94x against the oracle's 1.40x, audio 0.973. Thirteen arms; the history and the
+  sparkle diagnosis are in the § sections below and stay there as record. `MpiH3MaskedPrefix` and
+  `MpiH3EncodeAV` remain shipped in MpiNodes, documented and proven equivalent to the pack's
+  encode — simply unused by this Flow. **Nothing to revert.**
+- **PHASE 2 — DONE.** Both H3 nodes written, registered on a live bench, changelog + README rows
+  added, pin bumped off `5e07043`.
+- **PHASE 3 — DONE.** `comfy_workflows/flow_h3_extend.json` (33 nodes) + its `raw/` LiteGraph twin,
+  0-difference round trip, both validators green, and a 70 s bench run: 94 frames, seam 0.65x,
+  generated audio 0.989. See § PHASE 3.
+- **PHASE 3b — DONE, and it cost two corrections the plan got wrong.** `force_rate` on
+  `MpiLoadVideo`, `Input_Video.force_rate = 24`, `MpiSaveVideo.fps` a constant 24. Pin now
+  **`f1ed110`** (archive 200). Round trip 0 differences, and a bench run on a deliberately 30 fps
+  source: 94 frames at a true 24 fps, seam **0.22x**, generated audio **0.991**, and the source
+  half lands within **8.3 ms (0.51%)** of its own duration where leaving `force_rate` off would
+  have played it **25% slow**. Both corrections and every number are in `validation.md` § Phase 3b.
 
-**READ § THE AUTHOR'S OWN WORKFLOW FIRST — it reframes everything below it.** The pack passes the
-context as CONDITIONING at negative RoPE positions and never writes it into the denoised latent,
-so it cannot mix encoder and sampler tokens; it also emits only the new frames and joins the clips
-in pixel space, so it never generates across the seam. Our route does something strictly harder,
-and the flash is the price of it. The next arm to run is **F**, not another variation of E/G.
+- **PHASE 4 — DONE.** The pick selects the GRAPH: `byModel` on `flowLtxExtend`,
+  `getUniversalWorkflow(key, modelIds)`, `flowModelIds` through the `runCommand` whitelist, and
+  the slot `['ltx-23-balanced', 'minimax-h3-ref2va']`. FIVE files, not four, and the candidate is
+  **ref2va** — see § Plan Drift for both. `npm test` 853/853, `eslint js/` clean, and the new
+  MPI-591 test in `flow-model-choice` was mutation-checked red twice.
 
-**THE SPARKLE IS DIAGNOSED** — § DIAGNOSED, the prefix ends INSIDE a decode chunk. All three
-listed candidates are dead (two by reading, one by measurement) and the cause is a fourth:
-`token_drop=3` means a valid `17k+5` context always encodes to `5k+2` tokens, so a whole-clip
-prefix can never end on the VAE's 5-token decode boundary, and decode chunk 2 is built from a mix
-of encoder-written and sampler-generated tokens. The artifact is confined to exactly that chunk
-(frames 34-50) and is gone by frame 51 in all four prefix arms.
+**NEXT: item 4b — TURBO OR NOT, the user's choice.** Asked by Fabio 2026-09-01 and it is the
+next session's whole job. Phase 5 stays blocked behind the app restart anyway, so 4b comes first.
 
-Arm M (the confirm run) is DONE: chunk alignment cut the artifact but did not clear it, and Fabio
-confirmed by eye that G and M both still flash. The flash metric — not the discarded speck metric —
-is the instrument that matches his eye.
+> **It reverses a deliberate Phase 3 decision.** § PHASE 3 says "Turbo single-stage, deliberately
+> — a Flow bakes one proven path", because turbo is the configuration arm F2 ran and Fabio passed.
+> Exposing the choice means the NON-TURBO arm becomes shippable, and **nothing has ever run it on
+> this graph**. It needs its own bench proof, not just wiring.
 
-**ARM F IS RUN (2026-09-01) AND IT WINS — read § ARM F.** Stock `MiniMaxH3ReferenceToVideo` +
-`MiniMaxH3AddGuide` pinning the source's last frame, new frames only, joined to the source in pixel
-space. Flash 1.05 mean / **1.82 worst** where the pack oracle peaks at 6.42 and every prefix arm at
-11-21; seam **0.95x**, i.e. the cut is quieter than the tail's own noise, against the oracle's
-1.40x. **No custom node, no fork, no monkey-patch, no masked prefix.** Fabio's read on 2026-09-01
-— "we were overcomplicating it" — is correct and now measured.
+**The graph branch is already written — CLONE IT, do not invent it.** `minimax_h3_r2va.json` (and
+its `raw/minimax_h3_r2va_template.json` twin, the donor shelf bench-editing.md requires) carries
+the whole thing off ONE boolean, `MpiSimpleBoolean` #444 titled `Input_is_Turbo`:
 
-**Fabio judged F on 2026-09-01: video good, AUDIO wrong** — it changed to a different soundtrack.
-Arm F2 fixes it with ONE stock link (`ref_audios.ref_audio_0` = the source's audio): band cosine
-0.973 against the source where F was 0.801 and the pack oracle is 0.981, level within 0.4 dB, and
-the video metrics unchanged. See § the audio metric.
+| what it switches | turbo (true) | non-turbo (false) | selector |
+|---|---|---|---|
+| model path | #454 `MiniMaxH3SigmaShift` 12/5 | #456 `EasyCache` 0.2 / 0.15 / 0.95 on the raw UNET | #459 `MpiIfElse` |
+| sigmas | #412 `BasicScheduler` beta / 6 | #425 `BasicScheduler` simple / **25** | #428 `MpiIfElse` |
+| sampler | #422 `KSamplerSelect` euler | #421 `KSamplerSelect` res_multistep | #419 `MpiIfElse` |
+| (a step/cfg int) | #416 `MpiInt` 3 | #414 `MpiMath` `10 if a else 5` off #379 | #417 `MpiIfElse` |
+| turbo LoRA strength | #453 `MpiMath` `1.0 if a else 0.2` straight off #444 | | |
 
-**PHASE 1'S GATE IS PASSED.** Fabio on F2, 2026-09-01: *"the soundtrack carried on. That was a bit
-of a jump, but I think that's just because the model didn't have enough reference to go about, as
-it's a short video... these would work really well in longer references."* So the residual jump is
-attributed to a 1.625 s reference, not to the mechanism, and **arm F2's graph is the v1 route**.
-The masked-prefix route is DEAD for v1: `MpiH3MaskedPrefix` is not in the shipped graph. (The node
-and `MpiH3EncodeAV` stay in MpiNodes — shipped, documented and proven equivalent to the pack's
-encode; nothing to revert. They are simply unused by this Flow.)
+`flow_h3_extend.json` already carries the TRUE side under the same ids (#454, #412, #422) because
+Phase 3 cloned them from this very graph, and #464 `MpiVideoSamplingPreview` sits in the same place
+in both — so the port is additive: bring over #444, #456, #425, #421, #453, the `MpiIfElse` nodes,
+and decide whether #417's pair is wanted. #457's `strength_model` / `strength_clip` are currently
+CONSTANT 1.0 and must come off #453 instead.
 
-**PHASE 3 IS DONE — gate green.** `comfy_workflows/flow_h3_extend.json` (33 nodes) and its
-`raw/` LiteGraph twin both exist, and the raw round-trips to the API file with **0 differences**.
-The graph RAN end to end on the bench (70 s): 94 frames, canvas 640x352 derived from the source,
-seam **0.65x**, generated audio alone **0.989** band cosine against the source — above the pack
-oracle's 0.981, and above F2's 0.973 because 56 generated frames give the model more room than 38.
-That is Fabio's "longer references will work better" reading, measured. See § PHASE 3.
+**The flow-side control has a blocker, and it is the one already on this card.** The field is an
+injection param, so it is `Input_is_Turbo` named for its node — but it must show on the **H3 arm
+only**, exactly like the `negative` box (§ Plan Drift, 2026-09-01). `hiddenWhen` keys on another
+FIELD's value, not on the picked model. **Two fields now need that hide, so it stops being
+cosmetic**: decide with Fabio whether 4b extends `hiddenWhen` to a model rule (the MPI-664
+follow-up) or ships with a dead control on the LTX arm.
 
-**Next: Phase 4** — `byModel` + `getUniversalWorkflow(key, modelIds)` + the `flowsRegistry` slot.
-F3 (`ref_video_1` + its soundtrack) is built and unrun — hold it as the answer if a longer real
-source still steps at the join.
+**Default MUST stay Turbo.** Fabio's own speed rule on the fps decision — *"mind the speed of
+execution"* — and non-turbo is 25 steps against turbo's 6, on top of dropping the 4-step LoRA.
+Quote the measured cost of both arms when the bench runs land; the turbo baseline is 70 s.
 
-**Three questions are open for Fabio** (all three were asked 2026-09-01; two are now answered by
-arm F and only need his ratification): (1) scope — Phases 3-6 were held for F and F landed, so they
-are unblocked; (2) the 39 -> 51 minimum-context change is MOOT on arm F's route — there is no
-prefix to align; (3) Phase 1's seam verdict — F clears the bar outright, and the bar itself was a
-pixel cut, so like is now being compared with like.
+**ALSO OPEN, and it is a live defect in the SHIPPED Phase 3 graph — item 4c.** The stitch
+refuses any source that is not 32-divisible on both axes. `MpiMath` #900/#901 snap the GENERATED
+canvas with `floor(a/32)*32`, but #904 `ImageBatchExtendWithOverlap` takes `source_images` straight
+from the loader at the raw size, and that node raises rather than resizing:
 
-Fabio has confirmed the artifact by eye (G has it, I does not) but has NOT yet given the Phase 1
-seam verdict — the static-vs-moving question in § the static arm is still his to answer, and it
-does not block the diagnosis.
+```
+ValueError: Source and new images must have the same shape: torch.Size([720, 1280]) vs torch.Size([704, 1280])
+```
 
-**The app engine reinstalls MpiNodes at the new pin on its next boot** — it is a user replica with
-no symlink. Restart the app before generating, or it stays at `5e07043` for that session.
+Reproduced on the bench 2026-09-01 in 10 s with NO model — loader + an `ImageScale` standing in for
+the generated half + the same join node (`repro_720p_join.json`, this session's scratchpad). 720p,
+1080p and 1080x1920 portrait all fail; 640x352 is 32-divisible on both axes, which is the only
+reason thirteen arms and two flow runs never saw it.
 
-**The bench is shared and it is not free.** GPU 0 was held from 11:49 by another session's MPI-664
-voice bench, on the SAME ComfyUI at `:8188`. `gpu_lease.py run --` queues correctly behind it;
-check `gpu_lease.py status` before assuming a slow run is your own, and check the QUEUE is empty
-before restarting the bench — a restart kills whatever another session has in flight.
+**`flow_ltx_extend.json` already solves it and the fix is a donor clone.** Its #28 is an
+`ImageResizeKJv2` — `keep_proportion: 'crop'`, `divisible_by: 32`, `crop_position: 'center'`,
+`width`/`height` off the loader's own outputs — and its stitch #43 reads `source_images` from #28
+rather than from the loader. Port that node in and re-point #904. **Fabio's call on the trade**: the
+LTX answer CROPS (up to 31px off an edge, so a 720p clip is delivered at 1280x704), the alternative
+is rescaling the original pixels. He asked the question that found this, so ask him which.
+
+**Then Phase 5** — verify in an isolated app, BLOCKED until Fabio restarts his app so 48188
+reinstalls MpiNodes at `f1ed110`. Phase 6 is docs. F3 (`ref_video_1` + its soundtrack) is built and
+unrun — hold it as the answer if a longer real source still steps at the join.
+
+**48188 IS STALE AND ONLY FABIO CAN FIX IT.** The shipped engine is spawned by his live app, so
+this session did not restart it; it is still on `53c0198` and therefore does not know `force_rate`.
+Until the app's engine restarts onto the new pin, `verify-workflow.mjs` against 48188 reports one
+line (`#331 MpiLoadVideo: input "force_rate" is not on the engine's signature`) and an H3 extend
+cannot run in the app. **Phase 5 cannot start before that restart.** The app is a user replica with
+no symlink — it reinstalls MpiNodes at the pin on boot, so a restart is the whole fix.
+
+**The negative field must HIDE on the H3 arm** (`hiddenWhen`, depends on MPI-664). If Phase 4 lands
+first the field stays visible with a one-line comment naming the dependency — never a bespoke twin.
+
+**MPI-666 is parked in `validating` waiting on this card** (message `71214c6e`). Once Phase 4
+declares `minimax-h3` in `requiredModels`, its five licence-surface checks become runnable and they
+belong in Phase 5's verification — tile reads LICENCE REQUIRED not GET MODELS, footer reads REVIEW
+LICENCE not VERIFY LICENCE, the drawer block carries the three links, step 0 shows the attribution
+inside a project, and re-opening does not re-fire the gate but does keep the attribution.
+
+**The bench is shared and it is not free.** Same ComfyUI at `:8188` that other cards use. Wrap every
+run in `gpu_lease.py run --`; it queues correctly. Check the QUEUE is empty before restarting it — a
+restart kills whatever another session has in flight.
 
 **A `RuntimeError: HostBuffer.read_file_slice failed` inside `SamplerCustomAdvanced` is an engine
-hiccup, not a graph bug.** Seen once right after the other session's job released the GPU; the
+hiccup, not a graph bug.** Seen once right after another session's job released the GPU; the
 identical graph succeeded on retry. Retry before diagnosing.
 
 ## Phase 1 results (2026-08-31) — six arms, on the bench
@@ -631,6 +658,51 @@ the per-stream `audio_denoise_mask` (PR 15375) are both in that tag — read off
 not the changelog. The bench (`G:\ComfyUi`, 0.34.2) has the same. Nothing here waits on anything.
 
 ## Plan Drift
+
+- **2026-09-01 — the H3 candidate is `minimax-h3-ref2va`, not `minimax-h3`.** The card's text
+  (2026-08-20) says `requiredModels` becomes `[['ltx-23-balanced', 'minimax-h3']]`, written when v1
+  was meant to be fl2va. Phase 1 ran on ref2va instead — § Disk, fl2va did not fit — and Phase 3
+  BAKED it: the graph's `UNETLoader` takes `minimax_h3_ref2va_pruned_int8_convrot` and its turbo
+  LoRA is lightx2v's ref2v-trained one, both supplied only by `minimax-h3-ref2va`'s dep set. The
+  fl2va id would have gated the slot on a 19.53GB download the graph never loads and then failed
+  `value_not_in_list` at the loader, with the picker looking correct the whole way. `licences.js`
+  maps BOTH ids to the same `MINIMAX_H3` descriptor and receipts are keyed by LICENCE id, so
+  MPI-666's consent checks are unaffected by which one is declared. `tests/flow-model-choice`
+  now asserts every `byModel` arm's loader weights against that model's own dependencies.
+- **2026-09-01 — Phase 4 is FIVE files, not four.** The table said `commandExecutor.js` passes
+  `payload.generationSettings?.flowModelIds`. There is no `generationSettings` on that payload:
+  `runCommand`'s argument is an explicit WHITELIST built in `generationService.js`, and a key not
+  named there never reaches the executor — the exact hop `loraModelId` was lost at in MPI-504. So
+  `flowModelIds` is threaded there first and the executor reads `payload.flowModelIds`.
+- **2026-09-01 — the negative box stays VISIBLE on the H3 arm, as the plan's fallback allows.**
+  MPI-664 shipped `hiddenWhen`, but its rule is `{ field, is }` and keys on another FIELD's value,
+  not on the picked model, so it cannot express this hide. The field carries a comment naming the
+  dependency and nothing else was built — never a bespoke twin.
+- **2026-09-01 — `force_rate` is `optional`, not `required`.** Phase 3's fps block said `required`,
+  after `block_if_empty`, so every saved `widgets_values` stays valid. That reasoning only covers
+  the LiteGraph twin. The API file is what the app dispatches, and `execution.py`'s `validate_inputs`
+  rejects a *required* input missing from an API prompt outright (`required_input_missing`) — which
+  would have broken the eleven shipped workflows that call `MpiLoadVideo` without it. `optional` is
+  skipped when absent, and widget order is required-then-optional either way, so the widget still
+  sits at index 2 and the plan's actual goal survives. The pack's own `update-node.md` step 2 says
+  the same thing. Verified, not argued: all eight other MpiLoadVideo API graphs re-validate green.
+- **2026-09-01 — the resample is `-vf fps=N`, not the output `-r N`.** Shipped as `-r` in `a0754b1`
+  and fixed in `f1ed110`. `-r` is CFR conversion by per-frame timestamp rounding and it overshoots:
+  on the 49-frame 30 fps test clip it returns 41 frames, which at 24 fps play 4.6% slow — a smaller
+  version of the exact defect this input exists to remove. `fps=` returns 39 and preserves the
+  duration at every rate tried (12 / 24 / 29.97 / 30 / 48, both a 24 and a 30 fps source).
+- **2026-09-01 — the bench, not 48188, converted the graph, and that is bounded not assumed.** The
+  standing rule is "convert against 48188". 48188 is Fabio's live app engine, still on the old pin,
+  so it drops the new widget and the converter silently omits it. `engine_parity.py` compares both
+  engines' widget names and order across all 30 classes in this graph and finds exactly one
+  difference — `MpiLoadVideo.force_rate` — with two more classes differing only in which weights are
+  on each disk, which the converter never reads. So the 8188 conversion IS the conversion 48188 will
+  make once restarted.
+- **2026-09-01 — the API twin is edited surgically, never regenerated.** `workflow-to-api` emits
+  nodes in ascending id order and drops trailing `.0`s; the committed file came out of the Phase 3
+  build script in graph order with `1.0` on the LoRA strengths. Regenerating churns 472 lines and
+  discards that ordering for no gain — the round-trip proof compares node by node and never
+  compared byte order.
 
 - **2026-08-31 — Phase 1 and Phase 2 merged.** Phase 1 said "build the masked-prefix graph by
   hand". It could not be built: a live `/object_info` probe showed nothing in core or in MpiNodes
