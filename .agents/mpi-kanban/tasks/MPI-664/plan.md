@@ -51,6 +51,56 @@ marked string for the graph to re-split was a round trip for nothing.
 `guard-claim` never honoured it, and its work is already on origin (`1144f138`). Nothing of it was
 reverted. This card's claim is `b7f21c04`.
 
+## 🔴 THE FIRST REAL GENERATION RAN — 2026-09-02 — AND IT FAILED HARD
+
+Fabio ran it: brief *"Dark heavy soundtrack for a horror movie trailer."*, style **Cinematic
+epic**, tempo 120, Instrumental **OFF**, roster left at `Singer A (Any)`, length **45s**. He wrote
+his OWN mood/vocal/arrangement, then pressed Enhance.
+
+**What he got:** *"hopeful"* music, a drop at ~38s, a hard cut at 45s. Verbatim: *"it failed very
+hard."*
+
+**Three separate causes, and only the first is fixed.**
+
+### 1. Enhance ate his writing — FIXED (`3769f8c9`)
+
+He wrote *"Starting with a single drum hit"*; Enhance replaced it with *"The track opens with a
+single dissonant chord."* Same for his mood and his church-chorus vocal. Enhance now writes only
+into a box that is EMPTY or that it wrote itself, and editing the brief clears only its own output.
+
+### 2. 🔴 THE BRIEF NEVER REACHES THE MODEL — NOT FIXED, AND IT IS THE LIKELY HEADLINE CAUSE
+
+`positive` is the ENHANCER'S INPUT ONLY. No graph node carries it — `inject-params-titles.test.cjs`
+actively asserts there is no `input_positive`, because `_buildParams` would overwrite it. So
+*"Dark heavy soundtrack for a horror movie trailer"* — the single sentence that carries his whole
+intent — is read by a 4B, paraphrased, and then **thrown away**. Only the paraphrase reaches
+MiniMax.
+
+**And the no-clobber fix makes this WORSE, not better:** a user who writes all three boxes himself
+now gets no enhancement at all, so his brief reaches nothing whatsoever. The brief is dead weight
+on both paths.
+
+The caption also fought him: `Cinematic orchestral epic, full symphonic scoring with percussion and
+choir.` is a HEROIC phrase, and it is stated verbatim next to prose about dread — the style
+dropdown and the brief can contradict each other with nothing to arbitrate. Vocals were on
+(Instrumental off, roster `Any`) for a trailer cue that wanted none.
+
+**Decision needed before the next attempt** — do NOT implement unilaterally, it changes the caption
+contract: does the brief get its own heading in the caption, or get prepended to Global Metadata?
+Either is a new `Input_Brief` MpiText node plus one `StringConcatenate` in `raw/`.
+
+### 3. Length is a CEILING and cannot be asked for — NOT FIXED
+
+He asked for 45s and reads the cut at 45s as the model obeying badly. It is not obeying at all:
+`max_duration` only CAPS, and `MiniMaxMusic3TextEncode` derives the real `seconds` from the
+LYRICS. With no lyrics there is nothing to derive from, so the model ran to the cap and was
+truncated mid-phrase — which is exactly the "drop at 38s, cut at 45s" he heard.
+
+**The only lever that exists today is PROSE:** naming the length inside the arrangement text
+("a 45-second trailer cue that resolves by 0:40") is the sole way to ask. Worth testing before
+building anything — and if it works, the label "Maximum length" is a lie that should say so, or
+the flow should write the duration into the caption itself.
+
 🔴 **STILL UNPROVEN, and it is the same gap as before: NOBODY HAS LOOKED AT IT RUNNING.** No
 ComfyUI execution has touched the new caption chain, and the two-column split, the reveal, the
 inline tempo, the step skip and the three-box Enhance have never rendered. The last UI was rejected
