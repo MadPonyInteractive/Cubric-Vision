@@ -358,4 +358,38 @@ export const nodesDeps = {
         installRequirements: true,
         size: '0.3MB',
     },
+
+    // MPI-623. The 3D-scene pipeline's two third-party packs, both MIT, both pinned by
+    // git commit at the Phase 0 SHAs. SplatKit builds the COLMAP dataset (it produces
+    // datasets, never a trained splat - the training is Brush, a native binary); the
+    // Mickmumpitz pack carries the MickmumpitzPano* nodes the equirect half needs.
+    //
+    // SplatKit FETCHES TWO THINGS AT RUNTIME, neither of them declared here yet: the MoGe
+    // checkpoint (-> ComfyUI/models/MoGe) and a colmap_sphere SphereSfM binary (-> bin/,
+    // SHA-256 verified, per-platform, BSD-3-Clause - its NOTICE must ship if we ever
+    // redistribute it). Pre-staging MoGe as a real dep is the remaining half of the card's
+    // dependency task, and it needs an R2 upload; these two pins do not.
+    //
+    // Requirements are covered by the curated dev_configs/python_deps.in set like every
+    // other baked node - SplatKit declares opencv-python, trimesh, scikit-image, click,
+    // matplotlib and huggingface_hub; the Mickmumpitz pack numpy, Pillow, opencv-python
+    // and ultralytics. Nothing in either is compiled and neither pins torch.
+    'ComfyUI-SplatKit': {
+        id: 'ComfyUI-SplatKit',
+        name: 'ComfyUI SplatKit',
+        type: 'custom_nodes',
+        filename: 'ComfyUI-SplatKit',
+        url: lockUrl('ComfyUI-SplatKit'),
+        installRequirements: true,
+        size: '0.55MB',
+    },
+    'ComfyUI-Mickmumpitz-Nodes': {
+        id: 'ComfyUI-Mickmumpitz-Nodes',
+        name: 'ComfyUI Mickmumpitz Nodes',
+        type: 'custom_nodes',
+        filename: 'ComfyUI-Mickmumpitz-Nodes',
+        url: lockUrl('ComfyUI-Mickmumpitz-Nodes'),
+        installRequirements: true,
+        size: '0.18MB',
+    },
 };

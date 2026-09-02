@@ -105,6 +105,9 @@ opencv-contrib-python-headless==5.0.0.93
 accelerate>=0.25.0
 addict
 albumentations
+# click — SplatKit only, and not for a CLI we run: matrix3d_pipeline importlib-execs its
+# vendored MoGe scripts/infer_panorama.py, whose module-level @click decorators run on load.
+click
 conformer
 diffusers
 filelock

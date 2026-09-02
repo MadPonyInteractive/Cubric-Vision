@@ -21,6 +21,10 @@
     "js/services/commandExecutor.js",
     "tests/flow-splat-capture.test.cjs",
     "js/services/generationService.js",
-    "js/services/projectService.js"
+    "js/services/projectService.js",
+    "dev_configs/node_lock.json",
+    "js/data/modelConstants/nodesDeps.js",
+    "dev_configs/python_deps.in",
+    "dev_configs/python_deps.txt"
   ]
 }

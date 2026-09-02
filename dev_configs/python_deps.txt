@@ -41,7 +41,9 @@ charset-normalizer==3.4.9
     #   requests
     #   trimesh
 click==8.4.2
-    # via huggingface-hub
+    # via
+    #   -r dev_configs/python_deps.in
+    #   huggingface-hub
 color-matcher==0.6.0
     # via -r dev_configs/python_deps.in
 colorama==0.4.6 ; sys_platform == 'win32'
