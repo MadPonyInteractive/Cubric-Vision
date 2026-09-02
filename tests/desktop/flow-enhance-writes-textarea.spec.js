@@ -20,9 +20,23 @@ const { launchApp, closeApp } = require('./launch');
  * Both halves of the one broken line are covered, and neither needs a GPU:
  *   1. text IN  — `MpiInput.setValue` on the live field, the API `_writeFieldValue`
  *      now calls, on the element it now finds;
- *   2. text OUT — clear-on-edit, which runs the same `_writeFieldValue` and was
- *      silently broken in the same way: editing the source prompt is supposed to
- *      discard an enhancement written for the old wording.
+ *   2. text OUT — the same `_writeFieldValue`, reached through the edit of the source
+ *      prompt that used to blank the target.
+ *
+ * 🔴 STEP 2'S EXPECTATION FLIPPED ON 2026-09-02 (MPI-664), and the flip is the point.
+ * It used to assert that editing the source ALWAYS blanked the target. That is no
+ * longer true, deliberately: Enhance now owns only what Enhance wrote, and typing in a
+ * box takes ownership back (`_enhanceWrote` in MpiBaseFlow). Fabio wrote his own mood,
+ * vocal and arrangement, pressed Enhance to fill the rest, and watched all three get
+ * replaced — *"starting with a single drum hit"* became *"the track opens with a single
+ * dissonant chord"*. So a HAND-TYPED target must now survive an edit to the source, and
+ * this spec asserts that instead. The old assertion failed CI from `3769f8c9` until
+ * here, and it was the test that was stale, not the fix.
+ *
+ * The enhancer-owned half — where clear-on-edit still fires — is NOT covered here and
+ * cannot be: `_enhanceWrote` is closure-private and only `_setEnhanced` adds to it, so
+ * reaching that state needs a real `promptEnhance` run and therefore a model CI does
+ * not have. `_mayEnhanceWrite` is unit-tested; this spec owns the DOM half.
  */
 // Electron boot (splash → local server → shell) plus the settle wait runs past the
 // 30s default.
@@ -73,9 +87,10 @@ test('a programmatic write into a Flow text field reaches the textarea', async (
     await expect(phrase).toHaveValue('ENHANCED-SENTINEL');
 
     // 2. TEXT OUT. `setValue` emits nothing, so the flow's own store has not seen that
-    //    text — type it in first so clear-on-edit has something to discard. Value plus
-    //    a bubbling `input` is the pair a real keystroke produces, and it is what
-    //    MpiInput's own listener consumes, so `_setFlowField` runs for real.
+    //    text — type it in first. Value plus a bubbling `input` is the pair a real
+    //    keystroke produces, and it is what MpiInput's own listener consumes, so
+    //    `_setFlowField` runs for real. Typing is ALSO what claims the box for the
+    //    user, which is what the assertion below turns on.
     await window.evaluate(() => {
       const type = (label, text) => {
         const wrap = [...document.querySelectorAll('.mpi-base-flow__field')].find(
@@ -88,9 +103,11 @@ test('a programmatic write into a Flow text field reaches the textarea', async (
       type('The character phrase', 'ENHANCED-SENTINEL');
       type('Your character', 'a knight in a dented breastplate');
     });
-    // Editing the source discards the enhancement: it was written for the old
-    // wording. Same `_writeFieldValue`, so a regression on that line fails here too.
-    await expect(phrase).toHaveValue('');
+    // The phrase was TYPED, so it is the user's, and editing the source must leave it
+    // alone (MPI-664). The write path is the same `_writeFieldValue` either way, so a
+    // regression on that line still fails here — it just fails by blanking a box the
+    // user owns, which is the bug this now guards.
+    await expect(phrase).toHaveValue('ENHANCED-SENTINEL');
   } finally {
     await closeApp(app);
   }
