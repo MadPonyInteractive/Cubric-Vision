@@ -412,6 +412,19 @@ notes in [research/](research/).
 > it uncontrolled today) and the Wan 2.1 / Matrix-3D weights — that half is the R2 upload
 > and stays parked. And `max_resolution` on `MpiBrushTrain` is still unwritten: the value
 > is a decision, not a default to inherit.
+>
+> **AMENDED SAME SESSION - `max_resolution` IS WRITTEN AND THE VALUE IS 2048.** Fabio
+> called it. `MpiBrushTrain` now takes an optional `max_resolution` INT (default 2048,
+> 256-8192) and passes `--max-resolution`; MpiNodes `30b8ed1f`, pinned in
+> `dev_configs/node_lock.json` (`78f5630c`). Appended below `brush_path` so no saved
+> workflow moves a socket. The flag name and arity were read off `brush_app.exe --help`
+> on the pinned v0.3.0 binary, not from memory - `--max-resolution <MAX_RESOLUTION>`,
+> `[default: 1920]`. 876/876 on `npm test`.
+>
+> **What 2048 buys and costs:** the chain renders 2048 faces, so nothing is discarded any
+> more; the view cache goes from ~10 GB to ~11.5 GB, which stage B at ~18 GB absorbs.
+> 1280 remains the escape hatch at 4.5 GB. **NOT YET VERIFIED BY A BAKE** - that needs the
+> GPU, and the sharpening claim is arithmetic until a run shows it.
 
 **Project mode:** `scalable-foundation`.
 
