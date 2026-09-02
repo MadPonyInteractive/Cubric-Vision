@@ -79,6 +79,20 @@ zero Enhance buttons, `Cut off at 5:00`. 876/876 unit, eslint clean.
 music graph; that is Fabio's card and his call. Nothing here proves the 4B holds the marker format
 when its input is a labelled block rather than a bare sentence.
 
+🟡 **THIS CARD REDDED MASTER FOR ~55 MINUTES AND A PEER FIXED IT.** The push at 10:20
+(`33618991865`) failed CI: the fourth `requiredDep` moved the uninstall dialog's total 13.4GB →
+18.2GB, and MPI-682's desktop spec had 13.4 TYPED IN. `npm test` does NOT cover `tests/desktop/` —
+Playwright desktop runs in CI only — so the three `.cjs` uninstall tests updated in the same commit
+reported green while the desktop half only spoke up minutes later, on someone else's card. MPI-682
+fixed both ends (`4c9a359b` derives the figure; `5440cd34` stops a docs-only push being collateral)
+and wrote the rule into `docs/playbooks/add-flow/05-verify.md`:
+
+    npx playwright test --config=playwright.desktop.config.js tests/desktop/flow-*.spec.js
+
+**Run that before ANY push touching `js/data/flowsRegistry.js`.** ~10s each, own port, leaves a dev
+app on `:3000` alone. Run here after the fact: **12/12 pass** on this tree, so nothing of this
+card's is still red. Master is green.
+
 🟢 **The length question is CLOSED and needs no code** — see § 3 below. Measured over 8 encode-only
 runs: the prose lever does nothing, the AR picks its own length (33.84 → 90.0+ on ONE caption across
 four seeds), and `max_duration` is a guillotine. What remains there is a labelling decision, also
