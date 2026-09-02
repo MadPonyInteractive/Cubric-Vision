@@ -6,8 +6,8 @@ const { launchApp, closeApp } = require('./launch');
  *
  * Until the audio section every flow's weight arrived through a MODEL, and the Model
  * Library already uninstalls models. `minimax-music` declares NO requiredModels, so its
- * 13.4GB is flow-owned and the Model Library never sees it — before this, install-only
- * and permanently.
+ * whole footprint is flow-owned and the Model Library never sees it — before this,
+ * install-only and permanently.
  *
  * WHY THIS NEEDS A REAL RENDERER. Three things have to line up and each fails silently on
  * its own:
@@ -46,6 +46,8 @@ test('a deps-only flow offers Uninstall, and sends its OWN deps under the flow k
       const { state } = await import('/js/state.js');
       const { PAGE_LANDING } = await import('/js/router.js');
       const { getFlowById, setFlowDepStatus, flowModelIds } = await import('/js/data/flowsRegistry.js');
+      const { DEPS } = await import('/js/data/modelConstants/dependencies.js');
+      const { sizeToGb } = await import('/js/data/modelConstants/footprint.js');
 
       const DEPS_FLOW = 'minimax-music';   // no requiredModels — its whole footprint is its own
       const MODELS_FLOW = 'outpaint';      // one model, no own deps — the negative case
@@ -53,6 +55,17 @@ test('a deps-only flow offers Uninstall, and sends its OWN deps under the flow k
       const ownDeps = (id) => getFlowById(id).requiredDeps || [];
       const markDeps = (id, present) =>
         setFlowDepStatus(id, new Map(ownDeps(id).map(d => [d, present])));
+
+      // The dialog's figure is DERIVED, so any flow-registry edit moves it — a literal
+      // here is a landmine for whoever next touches a flow's deps, and it went off on
+      // 2026-09-02 (MPI-664 rewrote minimax-music, master went red on `13.4GB`).
+      // Restate the RULE instead: own deps only, no requiredModels, no plugin deps. A
+      // dialog that starts promising disk it cannot free now fails here.
+      const expectedGb = (id) => {
+        const gb = ownDeps(id).map(d => DEPS[d]).filter(Boolean)
+          .reduce((n, d) => n + sizeToGb(d.size), 0);
+        return gb ? `${gb.toFixed(1)}GB` : 'Its files';
+      };
 
       // Capture the uninstall POST instead of performing it. Everything else falls
       // through, or the app under test loses its own plumbing mid-spec.
@@ -123,6 +136,7 @@ test('a deps-only flow offers Uninstall, and sends its OWN deps under the flow k
       return {
         readyButtons, modelsOnlyButtons, notReadyButtons, dialogText, sent, toasts, urls,
         expectedDeps: ownDeps(DEPS_FLOW),
+        expectedGb: expectedGb(DEPS_FLOW),
         title: getFlowById(DEPS_FLOW).title,
       };
     });
@@ -135,7 +149,7 @@ test('a deps-only flow offers Uninstall, and sends its OWN deps under the flow k
       .toEqual(['Install models']);
 
     expect(result.dialogText, 'the dialog must name the flow').toContain(result.title);
-    expect(result.dialogText, 'and the disk it frees').toContain('13.4GB');
+    expect(result.dialogText, 'and the disk it frees').toContain(result.expectedGb);
     expect(result.dialogText, 'and warn that a sibling flow keeps what it shares')
       .toContain('Files shared with another installed flow will be kept.');
 
