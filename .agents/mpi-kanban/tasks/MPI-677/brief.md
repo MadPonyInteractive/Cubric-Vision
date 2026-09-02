@@ -148,6 +148,106 @@ because the user is looking at the same image.
    writes a good prompt in conversation"*, which is what this design actually
    uses.
 
+## The enhance surfaces — PROPOSED, not decided (Fabio, 2026-09-01)
+
+**Nothing here is agreed yet. It is Fabio's design conversation written down so
+it survives a session boundary; treat every "should" below as a proposal.**
+
+### Three surfaces exist today, and two of them can both fire on the same prompt
+
+| | Where it runs | Cost | What the user sees |
+|---|---|---|---|
+| **A** prompt-bar wand | Cubric Prompt over the connector | off-GPU | **overwrites** the prompt box |
+| **B** settings-panel toggle | the model's OWN graph — `Input_enhance_prompt` (`MpiIfElse`) → `TextGenerate` | **free**, see below | nothing until Reuse on the card |
+| **C** Flow enhance button | the standalone `qwen3vl_4b_prompt_enhancer.json` | separate queue job + a duplicate encoder | an editable second field |
+
+**A and B can both be active right now.** Krea 2 declares
+`capabilities.promptEnhance: true` and the wand is gated only on Cubric Prompt
+being reachable, so a user can enhance with the wand *and* still have the graph
+toggle on — the graph then enhances the already-enhanced text. Nothing prevents
+it. Worse than double-running: **they are two different recipes.** B's system
+prompt is baked into the workflow (`krea2_t2i_sfw.json` node 420, title
+`Text String (System Prompt)`); A uses Cubric-Prompt's `krea-2` recipe. Same
+model, same user, two behaviours depending on which control was touched.
+
+### Measured — the in-graph enhancer (B) is genuinely free
+
+All four `promptEnhance` models load **one** `CLIPLoader`, and `TextGenerate`
+hangs off the same node as the conditioning encoders:
+
+| Workflow | `TextGenerate` | CLIP node | encoders sharing it |
+|---|---|---|---|
+| `krea2_t2i_sfw` / `_nsfw` | 58 | 69 `qwen3vl_4b_abliterated_fp8_scaled` | 7 |
+| `klein_t2i` | 6 | 14 `qwen_3_4b` | 5 |
+| `klein_9b_t2i` | 6 | 14 `qwen_3_8b_int8_convrot` | 5 |
+
+So B spends weights the generation must load anyway: no second model, no second
+queue job, nothing evicted. **C is the opposite** — for Krea 2 the standalone
+graph loads `qwen3vl_4b_abliterated_fp8_scaled.safetensors`, the exact file
+node 69 already holds, as a separate job.
+
+Also measured: `Text String (System Prompt)` is a **unique title in all four
+graphs**, so a recipe's `systemPrompt` is injectable into B with zero graph
+edits, by the same title-addressing the injector already uses. Re-titling it
+`Input_Enhance_System_Prompt` would be tidier and is purely additive.
+
+### Fabio's proposal — one control, a Flow-shaped overlay
+
+The reason today's overwrite behaviour is wrong is the iteration loop: *"a man
+is walking a dog"* → Enhance → the man should have had a red shirt → edit the
+**short** prompt → Enhance again. Once the prompt box holds the enhanced
+paragraph that loop is gone; the user is editing a paragraph, and the next
+Enhance enhances an enhancement.
+
+So: **one button**, promoted to where the wand sits now and removed from the
+settings panel. It opens an overlay — short prompt at the top, Enhance in the
+middle, the enhanced text in a large editable box below, OK / Cancel at the
+bottom. On OK the control changes colour to show the current prompt is
+enhanced, **and the prompt box still shows only the short prompt**. Pressing the
+button again reopens it to edit or regenerate. Same shape as the Flows, which
+already do exactly this (Character Sheet's *"whatever is in the lower box is
+what runs"*).
+
+### Four things that proposal needs to survive contact
+
+1. **Staleness, and it is invisible by construction.** OK, then edit the short
+   prompt directly in the prompt box: the stored enhancement now contradicts
+   what is on screen, and the design deliberately shows only the short prompt,
+   so nothing says so. Store the short prompt that *produced* the enhancement,
+   compare, and drop the control back to un-enhanced on any difference. Losing
+   an enhancement that costs one press to regenerate beats silently generating
+   the wrong scene.
+2. **Two texts now exist, so history must carry both**, or Reuse is lossy — it
+   either drops the enhancement or pastes the paragraph into the box, which is
+   the overwrite problem one step removed. Store both on the item; Reuse
+   restores both plus the enhanced state.
+3. **The overlay's lower box mirrors the model's fields.** `sdxl`, `kling-3.0`,
+   `pony` and `illustrious` are `separate-field` recipes that also emit a
+   negative block. One flat box has nowhere to put it, and MPI-35 Phase 2
+   measured what happens when a negative loses its channel: it silently becomes
+   positive tags.
+4. **Removing the settings toggle means pinning the graph node to `false`.**
+   `Input_enhance_prompt` still exists in all four workflows; without the pin an
+   approved enhanced prompt gets enhanced again inside the graph.
+
+Smaller: an empty lower box on OK should mean *"not enhanced, run my words
+raw"* — the rule Character Sheet already states in its own help text.
+
+### What this costs and what it makes a prerequisite
+
+- Dropping B gives up the free in-graph enhance on four models. Not recoverable
+  by any design: in-graph cannot hand text back before generating, so it can
+  never fill the overlay. It is fire-and-forget by construction, and
+  fire-and-forget is what the overlay replaces.
+- **Cubric-Prompt MPI-27 becomes a prerequisite, not a loose end.** The overlay
+  needs no mode picker because the operation implies the mode — but only once
+  `operation` is wired through instead of discarded. The same field carries the
+  edit/inpaint exemption, which here means the control is *absent* on those ops
+  rather than present and unhelpful.
+- Endgame: the standalone enhancer graph (C) has no long-term job — both its
+  callers move to the LLM client of gap 2. Consistent with MPI-35 Phase 2's
+  recommendation, and stronger than it.
+
 ## Corrections recorded (so they do not recur)
 
 - **`MpiClearVram` is free and is a safety device.** Cleared or not, the repeat
@@ -166,9 +266,67 @@ because the user is looking at the same image.
 
 ## Cross-references
 
-- **Cubric-Prompt MPI-35** — Prompt's half: measure recipe portability, then
-  export recipes, playbook, harness and alias map. Its `plan.md` Plan Drift
-  section carries the cloud-default reasoning in full.
+- **Cubric-Prompt MPI-35** — Prompt's half: export recipes, playbook, harness
+  and alias map, with two button-path measurements taken on the way. Its
+  `plan.md` Plan Drift section carries the cloud-default reasoning in full.
+  **Re-scoped 2026-09-01 against this brief**, and three of those decisions land
+  here:
+  - Its Phases 2 and 3 (the enhancer graph, then the encoder ladder) are now
+    **PromptBox-button validation, not the consolidation gate** — enhancement
+    rides the agent's LLM, so neither blocks this card.
+  - **Its Phase 2 is DONE (2026-09-01) and the answer is: do not build
+    per-recipe plumbing into `qwen3vl_4b_prompt_enhancer.json`. Repoint the
+    recipe-driven enhance at the LLM client gap 2 needs anyway, and change
+    nothing in the graph now.** Full measurement, with every number:
+    `Cubric-Prompt/.agents/mpi-kanban/tasks/MPI-35/validation.md`. Four things
+    from it this card should not re-derive:
+    - **That graph is not on the PromptBox Enhance path.** PromptBox goes
+      `connectorOps.enhancePrompt()` → `/connector/enhance` → the broker →
+      Cubric Prompt. `promptEnhance` has exactly two callers, both buttons
+      *inside Flows* (Character Sheet, MiniMax Music) — `commandRegistry.js:1332`
+      says so outright. None of the 12 recipes has ever traversed those nodes,
+      so the defects below describe a future local enhance path, not a live
+      regression.
+    - **The graph is already caller-parameterised, so "fixing" it is far cheaper
+      than the question assumed** — four `injectionParams` keys, zero graph
+      edits, three of them with shipped precedent in
+      `MINIMAX_MUSIC_ENHANCE_PARAMS`. The fourth (the `StringReplace` newline
+      flatten) is addressable today as `'Replace Text.replace': '\n'`, because
+      that title is unique in the graph.
+    - **The decider is runtime cost, not correctness.** Any enhance on this
+      graph queues behind generation and evicts the resident generation models
+      on a 16 GB card; the LLM client is new work regardless, defaults to
+      DeepInfra, and already has to carry `systemPrompt` for the agent.
+    - **Measured damage if it is ever wired without those overrides:** 37 of 45
+      recipe example prompts come out altered. The newline strip welds
+      `sdxl` / `kling-3.0`'s NEGATIVE block into the positive one — and
+      `Output_prompt` is one text string, so there is no second channel to
+      recover it through. One `no …` clause deletes `minimax-h3`'s entire
+      `overall_soundscape` field. `max_length: 512` ≈ 345 words and truncates
+      `minimax-h3` t2v/i2v/r2v only (est. 615 / 589 / 830 tokens at their
+      budgets); 1024 covers every mode. The one case that flips the
+      recommendation is uncensored/offline local enhance — DeepInfra carries no
+      abliterated model ([[MPI-13]]).
+  - **Gap 3, the corpus format — WRITTEN DOWN, awaiting Fabio's agreement.**
+    The format now lives in ONE place, `docs/agent-corpus.md` (2026-09-02), and
+    both cards reference that path rather than restating it. Five decisions:
+    render the brief from the recipe data (never author a second document),
+    `js/data/recipes/` in the dual-loadable idiom `resolveModelDeps.js` already
+    uses, `validateRecipe()` + one `.test.cjs` in place of Zod (validation moves
+    from module load to test time — stated, not hidden), one `listCorpus()`
+    retrieval path with lazy `text()` over both corpora, and `draft` stays
+    human-only. Nothing ports until it is agreed. The paragraph below is the
+    proposal it was built from. A recipe already carries both faces in one
+    object: `systemPrompt` is the *instruction* face the button injects, and
+    `structureOrder` / `vocabulary` / `wordBudget` / `dos` / `donts` /
+    `examplePrompts` / `notes` are the *readable-brief* face the agent reads. So
+    **one artefact serves both — render the brief from the data**, never author a
+    second document that can drift from the first. Same shape for app knowledge.
+  - **Gap 6 stays here.** MPI-35 deliberately created neither a phase nor a card
+    for "nothing validates the agent's prompt path": the subject does not exist
+    until gap 2 does, and a second owner across two repos is worse than an
+    unstarted phase. Prompt's only obligation to it is exporting the
+    readable-brief face, so the test has something to read.
 - **Never archive Cubric-Prompt before the export is verified here.**
   `@cubric/ui` is public npm: deprecate and archive, never unpublish, and only
   on Fabio's explicit go.
