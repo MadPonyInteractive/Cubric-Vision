@@ -2174,8 +2174,36 @@ export const FLOWS = [
                 kind: 'fields',
                 tickerLabel: 'Song',
                 title: 'Describe your song',
-                hint: 'Everything on the left is written into the caption exactly as you set it. On the right, say what the song should feel like — then press Enhance and it fills the three boxes underneath. It never touches your description.',
+                // THE HINT NAMES WHAT REACHES THE MODEL, and nothing else (Fabio,
+                // 2026-09-02: *"it needs to say that Mood, Vocal and Arrangement are what
+                // the model is going to look at, and Your song is actually a guide for the
+                // Enhance feature… at the moment I don't even know what happens here"*).
+                // The old line opened on the left-hand column, which needs no explaining —
+                // those controls say what they are — and then described Enhance as a
+                // mechanism rather than saying which box ends up in front of the model.
+                // It also has to name the SECOND route: writing the three boxes by hand is
+                // a first-class path, not a fallback, and nothing on screen said so.
+                hint: 'Everything on the left describes the song you want. Enhance turns it into the three boxes on the right — and those are what the model reads. Write them yourself if you prefer.',
                 fields: [
+                    // ── the LEFT column: EVERYTHING YOU WRITE AND SET ───────
+                    // The column is now INPUT and the right column is OUTPUT (Fabio,
+                    // 2026-09-02). That is the arrangement that makes the step
+                    // self-explaining: the brief is not a peer of the three prose boxes,
+                    // it is one of the things Enhance reads to WRITE them, and putting it
+                    // beside them said the opposite.
+                    {
+                        // The brief, at the TOP of the input column. ONE value, edited
+                        // here and on the run slide — `col` changes where it sits, never
+                        // which store it lives in.
+                        id: 'positive', type: 'text', rows: 5, label: 'Your song',
+                        // A SONG BRIEF, not a picture (Fabio, 2026-09-02: "a late-night
+                        // drive through empty streets… what the fuck is that, mate? Are
+                        // we prompting for an image?"). The old line was a visual scene
+                        // borrowed from the image flows' register, and it taught the
+                        // wrong thing on the one control that sets the tone for the rest.
+                        // This is his own wording, and it names a KIND OF TRACK.
+                        placeholder: 'Dark heavy soundtrack for a horror movie trailer.',
+                    },
                     {
                         // 18 families, and the option's `v` IS THE GENRE PHRASE — the
                         // same shape the roster uses. NOT an int into an MpiAnySwitch
@@ -2296,21 +2324,15 @@ export const FLOWS = [
                         id: 'Input_Instrumental', type: 'toggle', label: 'Instrumental',
                         icon: 'audio', default: false,
                     },
-                    // ── the RIGHT column: the writing ───────────────────────
                     {
-                        // The brief. ONE value, edited here and on the run slide —
-                        // `col` changes where it sits, never which store it lives in.
-                        id: 'positive', type: 'text', rows: 6, label: 'Your song',
-                        col: 'right',
-                        // A SONG BRIEF, not a picture (Fabio, 2026-09-02: "a late-night
-                        // drive through empty streets… what the fuck is that, mate? Are
-                        // we prompting for an image?"). The old line was a visual scene
-                        // borrowed from the image flows' register, and it taught the
-                        // wrong thing on the one control that sets the tone for the rest.
-                        // This is his own wording, and it names a KIND OF TRACK.
-                        placeholder: 'Dark heavy soundtrack for a horror movie trailer.',
-                    },
-                    {
+                        // THE BUTTON CLOSES THE LEFT COLUMN, because the column is now an
+                        // INPUT column and Enhance is what you press when you have
+                        // finished filling it in (Fabio, 2026-09-02: *"at the end you put
+                        // the Enhance, which makes a lot more sense"*). It sat in the
+                        // right column while the right column held the brief; once the
+                        // brief moved left, a button above the boxes it writes would have
+                        // been pointing backwards.
+                        //
                         // GAP 3 CLOSED (MPI-664): the action carries its OWN recipe now.
                         // Until this shipped, `_runEnhance` sent only the driven seed, so
                         // the enhancer's BAKED recipe ran — and that recipe is Character
@@ -2322,12 +2344,11 @@ export const FLOWS = [
                         // `[VOCAL]`, `[ARRANGEMENT]`; the frame splits it and each block
                         // lands in its own box. That is the answer to *"what is he now
                         // going to do? Replace my prompt?"* — three boxes visibly filling
-                        // while the brief sits untouched above them says what no label
+                        // while the brief sits untouched beside them says what no label
                         // could. An unmarked answer is not lost: it all goes to the first
                         // box (MpiBaseFlow § _writeEnhanced).
                         id: 'enhance', type: 'button', label: 'Enhance', icon: 'enhance',
                         action: 'enhance', op: 'promptEnhance',
-                        col: 'right',
                         from: 'positive',
                         to: {
                             MOOD: 'Input_Mood',
@@ -2336,6 +2357,7 @@ export const FLOWS = [
                         },
                         injectionParams: MINIMAX_MUSIC_ENHANCE_PARAMS,
                     },
+                    // ── the RIGHT column: WHAT THE MODEL READS ──────────────
                     // THE THREE PROSE BLOCKS, one box each. They were a single 12-row
                     // `Input_Caption` and it read as nothing at all: *"I don't know what
                     // to do in moods, what to do in vocal, or what to do in arrangement.
@@ -2349,19 +2371,19 @@ export const FLOWS = [
                     // `injectionParams` and THE GRAPH'S BAKED VALUE RUNS — here, the
                     // bench's own lo-fi caption, overriding the user's brief outright.
                     {
-                        id: 'Input_Mood', type: 'text', rows: 4, label: 'Mood',
+                        id: 'Input_Mood', type: 'text', rows: 7, label: 'Mood',
                         col: 'right', default: '',
                         placeholder: 'Wistful and held back to start, opening out at the chorus into something hopeful, then settling again for the last verse.',
                         info: 'How the song FEELS, and how that feeling moves from start to end.',
                     },
                     {
-                        id: 'Input_Vocal', type: 'text', rows: 4, label: 'Vocal',
+                        id: 'Input_Vocal', type: 'text', rows: 7, label: 'Vocal',
                         col: 'right', default: '',
                         placeholder: 'Warm female alto, close-miked and breathy through the verses, belting with a little rasp on the chorus.',
                         info: 'How the singing SOUNDS — timbre, delivery, how it changes between sections.',
                     },
                     {
-                        id: 'Input_Arrangement', type: 'text', rows: 4, label: 'Arrangement',
+                        id: 'Input_Arrangement', type: 'text', rows: 7, label: 'Arrangement',
                         col: 'right', default: '',
                         placeholder: 'Rhodes and a soft kick alone at the top, bass and brushed drums from the first verse, strings joining the final chorus.',
                         info: 'Which instruments play, and WHEN each one comes in or drops out.',
@@ -2435,21 +2457,47 @@ export const FLOWS = [
                 ],
             },
         ],
-        // The run slide: the brief, the length, and the one machine fact. NO ENHANCE
-        // BUTTON — Fabio asked "what does the last enhance button do?" TWICE, and that
-        // is the answer. It wrote three boxes this slide does not show, so pressing it
-        // looked like nothing happening; a control whose only feedback is its own colour
-        // is not a control. Enhance lives on the song stage, beside the boxes it fills.
+        // The run slide: the brief, Enhance, the length, and the one machine fact.
+        //
+        // ENHANCE IS BACK HERE (Fabio, 2026-09-02: *"now that I understand it, I think
+        // the Enhance button should also be placed at the end, on the last phase, under
+        // the input text box"*). It was removed earlier this same day because he asked
+        // "what does the last enhance button do?" twice — it writes three boxes this
+        // slide does not show, so pressing it looked like nothing happening. That reason
+        // has NOT gone away; what changed is that he now knows what it writes. 🔴 If it
+        // reads as dead again, the fix is to show the three boxes here too, not to
+        // delete the button a second time.
         fields: [
             {
                 id: 'positive', type: 'text', rows: 3, label: 'Your song',
                 placeholder: 'Dark heavy soundtrack for a horror movie trailer.',
             },
             {
-                // 🔴 A CEILING, NOT A LENGTH — and the label has to say so.
-                // `MiniMaxMusic3TextEncode` derives the real `seconds` from the lyrics
-                // and feeds the latent from its OWN output; `max_duration` only caps it.
-                // Measured on the bench: set to 150, the model returned 80.76s.
+                id: 'enhance', type: 'button', label: 'Enhance', icon: 'enhance',
+                action: 'enhance', op: 'promptEnhance',
+                from: 'positive',
+                to: {
+                    MOOD: 'Input_Mood',
+                    VOCAL: 'Input_Vocal',
+                    ARRANGEMENT: 'Input_Arrangement',
+                },
+                injectionParams: MINIMAX_MUSIC_ENHANCE_PARAMS,
+            },
+            {
+                // 🔴 A GUILLOTINE, NOT A LENGTH — and the label still does not say so.
+                //
+                // MEASURED 2026-09-02, and it corrects what this comment used to claim.
+                // `seconds` is NOT derived from the lyrics. The AR text encoder generates
+                // the acoustic sequence autoregressively and ENDS WHERE IT WANTS, on
+                // `<|audio_end|>`; `max_duration` only sets `decode_limit`, the frame at
+                // which an unfinished track is cut off mid-phrase. One caption at four
+                // seeds returned 33.84 / 53.24 / 38.64 / 90.0 (capped) — the length is
+                // the model's, and it is not steerable by asking: naming a duration in
+                // the prose produced no ordering at all (20s→35.48, 45s→52.20,
+                // 75s→32.12). Describing MORE music does nudge it longer (~30s median
+                // sparse vs ~55s dense), which is worth having the enhancer do, but it
+                // is a nudge and cannot be sold as a length control.
+                // Full table: `.agents/mpi-kanban/tasks/MPI-664/plan.md` § 3.
                 //
                 // No seconds -> frames conversion either. This is an `MpiFloat` straight
                 // into the encoder, so the LTX Extend `MpiMath` pattern does not apply.
@@ -2466,8 +2514,14 @@ export const FLOWS = [
                 // beside a question about how the song should feel. The run slide is the
                 // machine surface — it sits with the length, where the other thing you
                 // set for your own hardware already lives.
+                // OFF by default, and the note says when to reach for it rather than
+                // restating the label (Fabio, 2026-09-02). A machine fact the user only
+                // needs on a card that cannot hold the decode is the wrong thing to bill
+                // everyone for by default — and "Low VRAM", on its own, tells someone
+                // who has never seen an OOM nothing about whether it is for them.
                 id: 'Input_Low_Vram', type: 'toggle', label: 'Low VRAM',
-                icon: 'gpu', default: true,
+                icon: 'gpu', default: false,
+                note: 'Turn this on if you run out of memory, or if your card has little VRAM.',
             },
         ],
     },

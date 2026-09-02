@@ -5,6 +5,34 @@ read it first, and do not re-search it.
 
 ## Current State
 
+🟢 **2026-09-02, second session — THE SONG STAGE IS NOW INPUT-LEFT / OUTPUT-RIGHT.** Fabio's own
+direction once he understood the data flow: *"let's place the input on the left and the output on
+the right."* Left, top to bottom: **Your song · Style · (Your own style) · Tempo · Instrumental ·
+Enhance**. Right: **Mood · Vocal · Arrangement**, `rows: 7` so they are comfortable to edit.
+Verified on real pixels in an isolated app (`:53808`, his `:3000` untouched, killed by its ROOT pid).
+Also this session: Low VRAM `default: false` + a note saying when to use it; Enhance restored to the
+run slide; the voices row's name box fixed. 35/35, eslint clean.
+
+🔴 **STILL BLOCKING ALL GRAPH CODE: where does the brief go in the caption?** Its own heading
+(off-schema — MiniMax's interface is exactly three), or prepended into `Global Metadata` (in-schema;
+the brief IS an `Application Scenarios & Imagery` sentence). Asked twice, recommendation is the
+second, **not answered**. No graph file was touched this session.
+
+🟡 **AND A BIGGER DESIGN QUESTION IS OPEN — the one-box rewrite.** Fabio: *"can we not have one
+single text box where the user just expresses whatever he wants… Enhance doesn't even need to
+exist. It should probably happen in the background before the track starts… it only enhances if the
+user changes the original prompt."* He is right that this is what the web tools do, and the
+machinery already fits — `_runEnhance` is already one input → three marked outputs, and the
+no-clobber provenance Set is already the cache key. **What is unanswered: do Mood/Vocal/Arrangement
+stay visible (filled, overridable) or hide behind an Advanced disclosure?** He then spent the rest
+of the session refining the CURRENT two-column surface instead, so treat the one-box rewrite as
+proposed-and-liked, NOT approved.
+
+🟢 **The length question is CLOSED and needs no code** — see § 3 below. Measured over 8 encode-only
+runs: the prose lever does nothing, the AR picks its own length (33.84 → 90.0+ on ONE caption across
+four seeds), and `max_duration` is a guillotine. What remains there is a labelling decision, also
+Fabio's.
+
 🟢 **THE REDESIGN IS BUILT AND PUSHED — `cbe49ed0`, 2026-09-02.** Fabio gave his direction and the
 UI is now his shape, not the rejected one. 874/874, eslint clean, `flow_minimax_music.json`
 validates against the engine, `sync-raw-workflows` clean.
@@ -85,21 +113,83 @@ choir.` is a HEROIC phrase, and it is stated verbatim next to prose about dread 
 dropdown and the brief can contradict each other with nothing to arbitrate. Vocals were on
 (Instrumental off, roster `Any`) for a trailer cue that wanted none.
 
+🔴 **And on an INSTRUMENTAL run that same phrase contradicts the graph's own clause outright**
+(found 2026-09-02 while building the length bench). The caption then carries both
+`...percussion and choir.` (from `flowsRegistry.js:2222`) and `Instrumental. No vocals of any kind:
+… no vocoder or choir pads.` (`Instrumental_Clause`). The graph builds that collision itself, in
+one caption, with nothing to arbitrate — it is not a user error and no prompt wording avoids it.
+Same edit as the brief plumbing if the style phrase is made to yield.
+
 **Decision needed before the next attempt** — do NOT implement unilaterally, it changes the caption
 contract: does the brief get its own heading in the caption, or get prepended to Global Metadata?
 Either is a new `Input_Brief` MpiText node plus one `StringConcatenate` in `raw/`.
 
-### 3. Length is a CEILING and cannot be asked for — NOT FIXED
+### 3. ✅ MEASURED 2026-09-02 — length CANNOT be asked for at all, by any means we have
 
-He asked for 45s and reads the cut at 45s as the model obeying badly. It is not obeying at all:
-`max_duration` only CAPS, and `MiniMaxMusic3TextEncode` derives the real `seconds` from the
-LYRICS. With no lyrics there is nothing to derive from, so the model ran to the cap and was
-truncated mid-phrase — which is exactly the "drop at 38s, cut at 45s" he heard.
+He asked for 45s and reads the cut at 45s as the model obeying badly. It is not obeying at all —
+but the mechanism in this plan was **wrong**, and the fix it implied does not exist.
 
-**The only lever that exists today is PROSE:** naming the length inside the arrangement text
-("a 45-second trailer cue that resolves by 0:40") is the sole way to ask. Worth testing before
-building anything — and if it works, the label "Maximum length" is a lie that should say so, or
-the flow should write the duration into the caption itself.
+**What the source actually does** (`comfy_extras/nodes_minimax_music.py:34-41`,
+`comfy/text_encoders/minimax_music.py:50-58`, `comfy/ldm/minimax_music/prompt.py:56`,
+`comfy/ldm/minimax_music/ar.py:281-294`): `seconds` is NOT derived from the lyrics. The AR
+text encoder **generates the acoustic sequence autoregressively and decides its own length**,
+stopping when it emits `<|audio_end|>` or when it is guillotined at
+`decode_limit = round(max_duration * 25)`. `build_prompt` feeds it caption AND lyrics, so the
+caption IS in its context — which is why the prose lever was worth testing.
+
+**Tested, encode-stage only (`PreviewAny` on the encoder's `seconds`, no DiT, no VAE — ~50s a
+run instead of a full generation). Eight runs, `max_duration` 90 throughout.**
+
+| caption | asks for | seed 12345 | other seeds |
+|---|---|---|---|
+| control, no duration language | — | **33.84** | 53.24 · 38.64 · **90.0 (capped)** |
+| lever prose | 20 s | 35.48 | — |
+| lever prose | 45 s | 52.20 | **90.0 (capped)** |
+| lever prose | 75 s | 32.12 | — |
+
+**The number in the prose does nothing.** Ask for 20 → longer than control. Ask for 75 → shorter
+than control. No ordering. And the control caption ALONE spans 33.84 → 90.0+ across four seeds, so
+the whole spread is seed noise; the 52.2 that first looked like obedience reproduced as 90.0 on a
+second seed.
+
+**Second test — Fabio's own hypothesis, and it is the one that moves the needle (2026-09-02).**
+His argument: a stated number is not what a track's length follows; the amount of music DESCRIBED
+is — *"if I want a one-minute track, I need to provide information for a one-minute track… very
+similar to text-to-speech."* Tested sparse (one-line arrangement) vs dense (five-stage arrangement,
+~4× the words), 4 seeds each, `max_duration` 150:
+
+| seed | sparse | dense |
+|---|---|---|
+| 12345 | **73.80** | 54.92 |
+| 999 | 33.40 | 56.08 |
+| 4242 | 25.84 | 29.92 |
+| 777 | 24.92 | 54.56 |
+| **median** | **~29.6** | **~54.7** |
+
+**He is directionally right, and it is the only thing that moved anything.** Dense is longer on 3
+of 4 seed-matched pairs, the medians are nearly 2× apart, and the dense spread is far tighter
+(29.9–56.1 vs 24.9–73.8). Contrast the stated-number test above, which produced no ordering at all.
+**But it is a nudge, not a dial** — n=4 a side, the ranges overlap, and one sparse run came back
+the longest of all eight. You cannot promise "60 seconds" with it.
+
+So the enhancer SHOULD size its arrangement prose to whatever length the user asks for — it is
+writing that prose anyway, so the nudge is free — but the UI must not sell it as a length control,
+and deterministic length still needs trim+fade after decode.
+
+**What this means for the product — there is no exact length control to ship, only a nudge and
+honest labelling:**
+- `max_duration` is a **guillotine**, not a length. It is the only thing in the graph that touches
+  duration, and all it can do is cut mid-phrase.
+- Fabio's cut was **not bad luck**. At a 45s cap, 4 of these 8 runs would have been truncated.
+  A low cap makes the mid-phrase cut the DEFAULT outcome, not the edge case.
+- Options, all labelling/post, none a new lever: rename it to what it is ("Cut off after") and add
+  a fade so the cut is not a cliff; drop it from the creative step and cap high; or keep the number,
+  cap high, and trim+fade to the asked length after decode. **Fabio's call.**
+
+**Bench payloads kept** — `scratchpad/len_{A,B,C,D}.json` + the seed variants are throwaway, but the
+recipe is worth reusing: a 3-node graph (`CLIPLoader` → `MiniMaxMusic3TextEncode` → `PreviewAny` on
+output 1) answers any "what length / does the caption reach the model" question for ~50s of GPU,
+because the AR runs at ENCODE time and the expensive DiT never has to.
 
 🔴 **STILL UNPROVEN, and it is the same gap as before: NOBODY HAS LOOKED AT IT RUNNING.** No
 ComfyUI execution has touched the new caption chain, and the two-column split, the reveal, the
@@ -749,6 +839,34 @@ declared wrong: hide a `fields` step whose every declared field is currently hid
 
 ## Open — needs Fabio
 
+A. 🔴 **THE BRIEF'S SHAPE IN THE CAPTION.** Own heading (off-schema) vs prepended into
+   `Global Metadata` (in-schema, recommended). One `Input_Brief` MpiText + one `StringConcatenate`
+   either way. **Asked twice, still unanswered — no graph work can start without it.**
+
+B. 🟡 **THE ONE-BOX REWRITE** — his idea, liked, not approved. Open sub-question: do the three
+   prose boxes stay visible or hide behind an Advanced disclosure? See § Current State.
+
+C. 🟡 **"Maximum length" — what happens to it**, now that it is measured as a guillotine with no
+   steering (§ 3). Rename to "Cut off after" + a fade · drop it and cap high · or keep it, cap high
+   and trim+fade after decode. He said either of the first two is fine; no decision recorded.
+
+D. 🟡 **The enhancer LLM is NOT a declared dependency of this flow.** `requiredDeps` names only the
+   three MiniMax weights; the enhancer runs on `qwen3vl-abliterated-clip` (4.88GB), which arrives
+   only via Krea2, Qwen, or the Image Describer plugin. Survivable today (Enhance is a button that
+   warns). **Fatal under the one-box design**, where Enhance runs inside Generate. Adding it takes
+   the flow 13.34GB → 18.22GB — a product call, and B cannot ship without it.
+
+E. 🟡 **`MpiInput` and `MpiDropdown` do not agree on control height — a PRIMITIVE-level mismatch,
+   not this flow's.** Measured in the running app: input `padding: 9.6px`, `border-radius: 4px`,
+   **h=38**; dropdown trigger `padding: 10px`, `border-radius: 0`, **h=39**. Same `font-size: 13px`.
+   Fabio (2026-09-02): *"it should have the exact same height"*. The big half of that complaint is
+   FIXED — the name box was mounted `size: 'sm'`, which on `MpiInput` means the NUMERIC size
+   (`width: 6ch`, centred, `--t-xs`), while `MpiDropdown` has no `sm` at all and silently ignored
+   it. That is gone. The residual 1px and the radius are the two primitives disagreeing app-wide,
+   and the fix belongs in `MpiInput.css` / `MpiDropdown.css`, NOT in a consumer override — a
+   `.mpi-base-flow__` height rule here would be exactly the chrome-restating the rules forbid.
+   **Deliberately left alone: it changes every input and dropdown in the app.**
+
 0. ~~**The title is "Text to Music", not "MiniMax Music 3".**~~ **ANSWERED 2026-09-01 — and the
    answer was NEITHER.** Fabio: *"Text to Music is not a good name for this. It should be called
    Music Maker or Music Generator"*, then chose **Music Maker**. The reasoning the plan had was
@@ -780,6 +898,14 @@ declared wrong: hide a `fields` step whose every declared field is currently hid
 so a 220 cap would clip real material. Do not "tidy" it down to a textbook range.
 
 ## Plan Drift
+
+**2026-09-02 — this plan's account of how the length is decided was WRONG, and the fix it pointed
+at does not exist.** It said `MiniMaxMusic3TextEncode` "derives the real `seconds` from the LYRICS"
+and that naming the length in prose was "the only lever that exists". Neither holds: the AR decides
+its own length autoregressively and the caption cannot steer it (measured, § 3). The mistake was
+reading `seconds` as an input-derived number instead of reading the node source — 40 lines of
+`nodes_minimax_music.py` + `ar.py` would have caught it before the plan ever proposed the lever.
+Corrected in § 3, with the eight measurements.
 
 **2026-08-31 — three things the frame additions needed that the plan did not name.** All three are
 the same shape: the declarative half was easy, the PAINTING half had a hole.

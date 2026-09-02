@@ -707,9 +707,16 @@ export function buildField(f, cur, onChange, unsubs, opts = {}) {
                 const line = ce('div', { className: cls('field-voice-row') });
 
                 const nameHost = ce('div', { className: cls('field-voice-name') });
+                // NO `size: 'sm'` — that is the NUMERIC size, not a small one. It sets
+                // `width: 6ch`, centres the text and drops to `--t-xs`, which is right
+                // for a stepper and wrong for a name: it is what truncated "Singer A" to
+                // "Sing", and it is why this box never matched the dropdown beside it
+                // (Fabio, 2026-09-02: *"it should have the exact same height"*).
+                // `MpiDropdown` has no `sm` at all, so the two could not agree while one
+                // of them was asking for one. At the default size both render `--t-sm`
+                // with comparable padding and the row lines up.
                 const nameInst = MpiInput.mount(nameHost, {
                     type: 'text',
-                    size: 'sm',
                     placeholder: f.namePlaceholder || 'Name',
                     value: String(row.name ?? ''),
                 });
