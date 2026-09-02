@@ -246,7 +246,11 @@ LISTENS: `state:changed` `{ key: 's_installedModelIds' }` — re-renders the til
          `download:started` `{}` — full grid re-render (started tile shows progress bar; detail footer → Pause/Cancel)
          `download:paused` / `download:resumed` / `download:installing` `{ modelId }` — patch that tile in place
          `download:cancelled` / `download:complete` `{}` — `awaitReSync()` (re-render; install state moved sections)
-         `download:uninstalled` `{ modelId, ... }` — emits a `ui:success`/`ui:info` toast summarizing kept/removed
+         `download:uninstalled` `{ modelId, ... }` — emits a `ui:success`/`ui:info` toast summarizing kept/removed.
+         **NOT the only listener since MPI-682:** `MpiFlowLibrary` carries its own, because this
+         one resolves a `flow:<id>` key to neither a MODEL nor a PLUGIN and only exists while the
+         Model Library is mounted. The two never both speak — each returns early on a key it does
+         not own. A new uninstallable entity needs its own handler for the same reason
          `download:failed` `{}` — `awaitReSync()`
          `ui:close-all-popups` — closes the detail drawer
 API:     `el.open()` — shows the hosted overlay + re-syncs installed state + one-shot hardware fetch (alias: `el.onOpen`)
