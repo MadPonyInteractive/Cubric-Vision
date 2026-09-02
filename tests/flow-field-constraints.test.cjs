@@ -250,17 +250,21 @@ test('the Extend Video FlowDef declares the Turbo toggle and hides each arm\'s d
         'H3 takes no negative conditioning, so the box must hide on that arm');
 });
 
-test('format: duration spells a slider out instead of showing bare seconds', async () => {
+test('format: duration reads as m:ss, short enough to sit beside its slider', async () => {
     const { formatDeclaredValue } = await esm('js/utils/declaredFields.js');
     const f = { format: 'duration' };
 
-    assert.equal(formatDeclaredValue(f, 45), '45 seconds');
-    assert.equal(formatDeclaredValue(f, 62), '1 minute 2 seconds');
-    assert.equal(formatDeclaredValue(f, 180), '3 minutes');
-    assert.equal(formatDeclaredValue(f, 60), '1 minute');
-    assert.equal(formatDeclaredValue(f, 1), '1 second', 'singular, or it reads as broken');
-    assert.equal(formatDeclaredValue(f, 0), '0 seconds');
-    assert.equal(formatDeclaredValue(f, 300), '5 minutes');
+    // "2 minutes 30 seconds" RAN OVER THE SLIDER in the run slide's 236px column
+    // (Fabio, 2026-09-02). The readout shares the track's line by design, so the string
+    // is what had to shrink — m:ss is the form every player, editor and DAW writes.
+    assert.equal(formatDeclaredValue(f, 45), '0:45');
+    assert.equal(formatDeclaredValue(f, 62), '1:02', 'zero-padded, or 1:2 reads as broken');
+    assert.equal(formatDeclaredValue(f, 180), '3:00');
+    assert.equal(formatDeclaredValue(f, 60), '1:00');
+    assert.equal(formatDeclaredValue(f, 0), '0:00');
+    assert.equal(formatDeclaredValue(f, 150), '2:30');
+    // Never wider than 4ch — that is what __field-value's min-width is cut to.
+    assert.ok(formatDeclaredValue(f, 240).length <= 4, 'must fit the readout column');
 
     // No `format` is the untouched path — every existing slider still shows its number.
     assert.equal(formatDeclaredValue({}, 90), '90');

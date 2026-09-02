@@ -203,12 +203,13 @@ export const isInjectionParam = (id) => /^input_/i.test(String(id));
 export function formatDeclaredValue(f, v) {
     if (f?.format !== 'duration') return String(v);
     const total = Math.max(0, Math.round(Number(v) || 0));
-    const mins = Math.floor(total / 60);
-    const secs = total % 60;
-    const part = (n, unit) => `${n} ${unit}${n === 1 ? '' : 's'}`;
-    if (!mins) return part(secs, 'second');
-    if (!secs) return part(mins, 'minute');
-    return `${part(mins, 'minute')} ${part(secs, 'second')}`;
+    // `m:ss`, not "2 minutes 30 seconds" (Fabio, 2026-09-02). The long form was three
+    // words wide and RAN OVER THE SLIDER on the run slide's 236px column — the readout
+    // sits on the same line as the track by design, so a long string has nowhere to go.
+    // Shortening the string is the fix rather than moving the readout below: a length
+    // control reads best beside its own number, and "2:30" is the form every player,
+    // editor and DAW already writes.
+    return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 
 /**
@@ -584,6 +585,17 @@ export function buildField(f, cur, onChange, unsubs, opts = {}) {
             ...(f.step != null ? { step: Number(f.step) } : {}),
             ...(dp !== undefined ? { decimals: dp } : {}),
         });
+        // The UNIT, after the box (MPI-664, Fabio 2026-09-02: "can we please have Tempo
+        // in the same row? [tempo [90] Bpm]"). It belongs beside the number rather than
+        // inside the caption — "Tempo (BPM)" makes the label carry a parenthetical that
+        // is really a property of the value, and reads as a longer caption than it is.
+        // A span, not a Primitive: it is static text with no state, no focus and nothing
+        // to mount.
+        if (f.suffix) {
+            const suf = ce('span', { className: cls('field-suffix') });
+            suf.textContent = f.suffix;
+            host.appendChild(suf);
+        }
         inst.on('change', ({ value: v }) => {
             // `fieldNumber` stays the authority even though MpiInput clamps too: it is
             // the one place that also falls back to the declared default on a value

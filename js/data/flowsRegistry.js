@@ -2274,7 +2274,11 @@ export const FLOWS = [
                         // `inline` because it is three digits. Stacked, it got a
                         // full-width box — *"does it make sense that such a small number
                         // is displayed on an input box that has room for trillions"*.
-                        id: 'Input_Bpm', type: 'number', label: 'Tempo (BPM)',
+                        // The unit sits AFTER the box, not inside the caption (Fabio,
+                        // 2026-09-02: "can we please have Tempo in the same row?
+                        // [tempo [90] Bpm]"). "Tempo (BPM)" made the label carry a
+                        // parenthetical that is really a property of the value.
+                        id: 'Input_Bpm', type: 'number', label: 'Tempo', suffix: 'BPM',
                         min: 0, max: 250, step: 1, default: 120, inline: true,
                         note: 'Set it to 0 and the model picks the tempo to suit the song.',
                     },
@@ -2292,20 +2296,19 @@ export const FLOWS = [
                         id: 'Input_Instrumental', type: 'toggle', label: 'Instrumental',
                         icon: 'audio', default: false,
                     },
-                    {
-                        // Set-once machine fact, so it sits HERE rather than on the run
-                        // slide: it drives the tiled/plain VAE decode switch and nothing
-                        // about it changes between runs.
-                        id: 'Input_Low_Vram', type: 'toggle', label: 'Low VRAM',
-                        icon: 'gpu', default: true,
-                    },
                     // ── the RIGHT column: the writing ───────────────────────
                     {
                         // The brief. ONE value, edited here and on the run slide —
                         // `col` changes where it sits, never which store it lives in.
                         id: 'positive', type: 'text', rows: 6, label: 'Your song',
                         col: 'right',
-                        placeholder: 'A late-night drive through empty streets, warm and unhurried, headlights on wet tarmac…',
+                        // A SONG BRIEF, not a picture (Fabio, 2026-09-02: "a late-night
+                        // drive through empty streets… what the fuck is that, mate? Are
+                        // we prompting for an image?"). The old line was a visual scene
+                        // borrowed from the image flows' register, and it taught the
+                        // wrong thing on the one control that sets the tone for the rest.
+                        // This is his own wording, and it names a KIND OF TRACK.
+                        placeholder: 'Dark heavy soundtrack for a horror movie trailer.',
                     },
                     {
                         // GAP 3 CLOSED (MPI-664): the action carries its OWN recipe now.
@@ -2432,32 +2435,15 @@ export const FLOWS = [
                 ],
             },
         ],
-        // The run slide: the brief, Enhance, and the one control that genuinely changes
-        // between runs. The caption box is omitted exactly as Character Sheet omits its
-        // phrase — the run slide generates, it does not read — which makes the Enhance
-        // button's heat the only signal that the current brief is un-enhanced.
+        // The run slide: the brief, the length, and the one machine fact. NO ENHANCE
+        // BUTTON — Fabio asked "what does the last enhance button do?" TWICE, and that
+        // is the answer. It wrote three boxes this slide does not show, so pressing it
+        // looked like nothing happening; a control whose only feedback is its own colour
+        // is not a control. Enhance lives on the song stage, beside the boxes it fills.
         fields: [
             {
                 id: 'positive', type: 'text', rows: 3, label: 'Your song',
-                placeholder: 'A late-night drive through empty streets, warm and unhurried…',
-            },
-            {
-                id: 'enhance', type: 'button', label: 'Enhance', icon: 'enhance',
-                action: 'enhance', op: 'promptEnhance',
-                from: 'positive',
-                // The SAME three targets as the song stage. None of the three boxes is
-                // shown here — the run slide generates, it does not read — so the
-                // button's heat is the only signal that the current brief is
-                // un-enhanced, and it goes cold only once all three are filled.
-                to: {
-                    MOOD: 'Input_Mood',
-                    VOCAL: 'Input_Vocal',
-                    ARRANGEMENT: 'Input_Arrangement',
-                },
-                // Declared on BOTH surfaces to get the run slide's condensed form; the
-                // same object, because the declaration IS the carrier and two copies
-                // would drift into two different recipes.
-                injectionParams: MINIMAX_MUSIC_ENHANCE_PARAMS,
+                placeholder: 'Dark heavy soundtrack for a horror movie trailer.',
             },
             {
                 // 🔴 A CEILING, NOT A LENGTH — and the label has to say so.
@@ -2467,8 +2453,21 @@ export const FLOWS = [
                 //
                 // No seconds -> frames conversion either. This is an `MpiFloat` straight
                 // into the encoder, so the LTX Extend `MpiMath` pattern does not apply.
+                //
+                // `format: 'duration'` reads `m:ss` — the long "2 minutes 30 seconds"
+                // ran over the slider in this 236px column (Fabio, 2026-09-02).
                 id: 'Input_Duration', type: 'slider', label: 'Maximum length',
                 min: 30, max: 240, step: 5, default: 150, format: 'duration',
+            },
+            {
+                // A SET-ONCE MACHINE FACT, and it is here because it is not a creative
+                // choice (Fabio, 2026-09-02: "move Low VRAM off the creative step"). It
+                // drives the tiled/plain VAE decode switch and nothing about it belongs
+                // beside a question about how the song should feel. The run slide is the
+                // machine surface — it sits with the length, where the other thing you
+                // set for your own hardware already lives.
+                id: 'Input_Low_Vram', type: 'toggle', label: 'Low VRAM',
+                icon: 'gpu', default: true,
             },
         ],
     },

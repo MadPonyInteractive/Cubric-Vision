@@ -1045,6 +1045,26 @@ export const MpiBaseFlow = ComponentFactory.create({
          */
         const _enhanceTargets = d => (typeof d.to === 'string' ? [d.to] : Object.values(d.to || {}));
 
+        /**
+         * Target ids whose current text ENHANCE wrote, rather than the user.
+         *
+         * 🔴 ENHANCE MUST NEVER DESTROY THE USER'S OWN WRITING (Fabio, 2026-09-02). He
+         * typed his own mood, vocal and arrangement — "Dark, mysterious", a church chorus
+         * sung by children, a build to a drop with choir hits — pressed Enhance to fill
+         * the rest, and watched all three replaced by the model's prose. A button that
+         * eats what you just wrote is worse than one that does nothing.
+         *
+         * So the rule is: Enhance fills a box that is EMPTY, or one it wrote itself and
+         * may therefore refresh. A hand-typed box is left alone. The same set decides
+         * what editing the brief clears — the enhancer's own output is stale once the
+         * wording changes, but the user's sentence is not.
+         *
+         * A Set of ids rather than a flag per field, because the provenance is a property
+         * of the CURRENT TEXT and dies with it: typing in a box removes it here, and that
+         * is the only place ownership changes hands.
+         */
+        const _enhanceWrote = new Set();
+
         function _paintEnhance() {
             _enhanceDecls.forEach((d) => {
                 const wrap = _liveFields.get(d.id);
@@ -1079,11 +1099,19 @@ export const MpiBaseFlow = ComponentFactory.create({
          *
          * @param {Object} d  the enhance field declaration
          */
-        /** Write one enhanced value into the store AND every live copy of its box. */
+        /**
+         * Write one enhanced value into the store AND every live copy of its box,
+         * recording that ENHANCE owns the text now (an empty write disowns it).
+         */
         function _setEnhanced(id, v) {
             _fieldValues[id] = v;
             _writeFieldValue(id, v);
+            if (v) _enhanceWrote.add(id); else _enhanceWrote.delete(id);
         }
+
+        /** May Enhance write here? Empty, or text Enhance itself put there. */
+        const _mayEnhanceWrite = id =>
+            !String(_fieldValues[id] || '').trim() || _enhanceWrote.has(id);
 
         /**
          * Land the enhancer's answer in the declaration's target(s).
@@ -1103,14 +1131,21 @@ export const MpiBaseFlow = ComponentFactory.create({
          * @param {string} text  the op's answer, trimmed
          */
         function _writeEnhanced(d, text) {
-            if (typeof d.to === 'string') { _setEnhanced(d.to, text); return; }
+            if (typeof d.to === 'string') {
+                if (_mayEnhanceWrite(d.to)) _setEnhanced(d.to, text);
+                return;
+            }
             const blocks = Object.entries(d.to || {}).map(([marker, id]) => [
                 id,
                 (text.match(new RegExp(`\\[${marker}\\]([\\s\\S]*?)(?=\\[[A-Z_]+\\]|$)`, 'i'))?.[1] || '').trim(),
             ]);
             if (!blocks.length) return;
-            if (blocks.every(([, v]) => !v)) { _setEnhanced(blocks[0][0], text); return; }
-            blocks.forEach(([id, v]) => _setEnhanced(id, v));
+            // Hand-typed boxes are not targets. Filtered BEFORE the unmarked fallback so
+            // an unmarked answer cannot land on top of the user's first box either.
+            const open = blocks.filter(([id]) => _mayEnhanceWrite(id));
+            if (!open.length) return;
+            if (blocks.every(([, v]) => !v)) { _setEnhanced(open[0][0], text); return; }
+            open.forEach(([id, v]) => { if (v) _setEnhanced(id, v); });
         }
 
         function _runEnhance(d) {
@@ -1185,7 +1220,11 @@ export const MpiBaseFlow = ComponentFactory.create({
             _enhanceDecls.forEach((d) => {
                 if (d.from !== id) return;
                 _enhanceTargets(d).forEach((t) => {
-                    if (!_fieldValues[t]) return;
+                    // ONLY the enhancer's own output. Its prose was written for the old
+                    // wording and is stale; a sentence the USER typed is not, and wiping
+                    // it because they fixed a typo in the brief is the same defect as
+                    // overwriting it on Enhance.
+                    if (!_fieldValues[t] || !_enhanceWrote.has(t)) return;
                     _setEnhanced(t, '');
                 });
             });
@@ -1246,6 +1285,10 @@ export const MpiBaseFlow = ComponentFactory.create({
 
         function _onFlowField(f, val) {
             if (f.action === 'enhance') { _runEnhance(f); return; }
+            // Typing in a target box takes it back off Enhance: from here the text is
+            // the user's, so Enhance may not replace it and editing the brief may not
+            // clear it. The ONLY place ownership changes hands.
+            _enhanceWrote.delete(f.id);
             _writeDeclaredField(f.id, val);
             _paintFieldConstraints();
             // A field may gate a whole STEP, not just its neighbours (MPI-664).
