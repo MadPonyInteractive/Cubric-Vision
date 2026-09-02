@@ -69,11 +69,39 @@ Not a formality. Four things close on it and only on it:
 ComfyUI has also still never EXECUTED the caption chain — the string half is proven in Python
 against the real graph, and structurally by both gates, but no engine has run it.
 
+## 2026-09-02, third session — what the one-box rewrite closed, and what it did not
+
+**Closed on real pixels** (isolated app `:52799`, his `:3000` untouched, killed by ROOT pid):
+
+- `disabledWhen` + `inert` — Instrumental ON leaves Voices and Voice notes `inert: true` and
+  `--disabled`, with Instrumental and Lyrics live. Item 3 above is closed with it: the roster
+  rendered, and its greyed state is what was observed.
+- `hidden: true` — the run slide reports Mood / Vocal / Arrangement `hidden: true` and **zero**
+  buttons matching /enhance/. Item 1 is closed by the same paint pass.
+- `format: 'duration'` — the slider reads **5:00**. Item 2 closed.
+
+**Closed by pure evaluation of the API graph** (every node between the `Input_*` text nodes and the
+encoder is a string op, so the caption is computable without a GPU):
+
+- The brief lands FIRST: `Global Metadata: Dark heavy soundtrack for a horror movie trailer.
+  Cinematic orchestral epic, full symphonic scoring. …`
+- Instrumental ON replaces the cast with `Instrumental_Clause` **and the lyrics still pass**, which
+  is the whole point of deleting `Lyrics_Gate`.
+- No caption now contradicts itself — the `choir` phrase is gone from the Cinematic epic style.
+
+🔴 **STILL NOT MEASURED, and it is item 4 above, now sharper.** The 4B's input is no longer one
+sentence — it is a labelled block (`Your song:` / `Style:` / `Instrumental`). Nothing proves it
+still emits `[MOOD]` / `[VOCAL]` / `[ARRANGEMENT]` under that shape, and the failure is QUIET:
+`_writeEnhanced`'s unmarked fallback drops the entire answer into Mood, and the caption ships with
+two empty headings the graph strips. **One Generate press in Fabio's own app answers it.**
+
+ComfyUI has still never EXECUTED the caption chain end to end.
+
 ## Open decisions carried to Fabio
 
-- The flow is titled **"Text to Music"**, not "MiniMax Music 3". Outcome naming, like every other
-  flow. `id` stays `minimax-music` either way.
-- A step whose only field is hidden leaves a **ghost step** in the carousel. Shipped as declared;
-  the fix would be a fifth frame addition. See `plan.md`.
+- ~~The flow is titled "Text to Music"~~ — **closed**, it is **Music Maker**.
+- ~~A step whose only field is hidden leaves a ghost step~~ — moot: no step is gated any more.
+  🟡 What remains is a different empty slide — `01 Inputs` renders "This flow needs no input media"
+  on a flow that declares no `inputSchema`. Pre-existing, not introduced here.
 - No preview graphics yet (`/mpi-flow-graphics`), and no `existing-flows/minimax-music.md` — held
   deliberately until the live run, so the page documents what actually happened.
