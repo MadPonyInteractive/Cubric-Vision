@@ -2,8 +2,27 @@
 
 ## Current State
 
-Nothing built. Root cause and precedent fully established (`brief.md`) — **do not re-derive
-them**, every claim below was read from the code on 2026-09-01.
+**All three phases shipped, 2026-09-01. Card is in `done`.** Evidence: `validation.md`.
+Commits: 7dd159da (guard + button), 664d2a43 (the repaint fix), bb1b6f59 (customRoot
+re-run), 2287a542 (component maps). 874/874 node tests, 46/46 desktop specs, every new
+assertion mutation-checked.
+
+**Phase 2 shipped WRONG and phase 3 caught it.** The plan below asserts the repaint was
+already wired and only needed verifying. It was not: `downloadService` re-syncs only inside
+its `download:uninstalled` **SSE** listener, and `_eventSource` is created lazily by the
+first download — so a session that has installed nothing has none, that listener can never
+fire, and `downloadService.uninstall()` itself never re-syncs. Measured live
+(`_eventSource === false`), not guessed. `_uninstallFlow` now awaits the uninstall then
+`await reSyncInstalledModels()`, exactly as the Model Library does. Read `validation.md`
+§ "What the live run caught" before trusting any repaint claim in this file.
+
+**One thing is still unverified: the INSTALL direction.** Re-installing Music Maker is a
+13.4GB download and was never run, so `models:checked` is only shown firing for a deps-only
+change on the uninstall side. That is what the next session does, on the user's own app —
+they will uninstall and re-install Music Maker themselves.
+
+Root cause and precedent were fully established at planning time (`brief.md`) — **do not
+re-derive them**, every claim below was read from the code on 2026-09-01.
 
 Facts established at planning time:
 
