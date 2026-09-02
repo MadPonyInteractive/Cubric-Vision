@@ -34,6 +34,17 @@ never EXECUTED the caption chain.
 under a live MPI-591 write claim (`0928f1f4`).** Any UI change that reaches the frame lands in
 files this card does not own — message or wait, do not edit.
 
+**2026-09-02 — the rename is on origin as `3b9dcee4`, and the tree moved on while this session was
+paused.** Nothing of this card's is uncommitted. Two peer commits matter to the next session:
+
+- **MPI-681 is FIXED AND CLOSED** (`8c5290f8`, a peer, ~10 minutes after this session carded it).
+  `syncModelInstalled` now keys its gate on a third key built from the flow AND plugin dep slices,
+  so a deps-only install fans out. Both twins, one primitive, `tests/deps-only-install-fanout.test.cjs`
+  proven to fail without the fix. **The app no longer needs a restart to unstick the drawer** — do
+  not repeat that workaround, and do not re-diagnose it.
+- **MPI-682 shipped flow uninstall** (`7dd159da`) and touched `MpiFlowLibrary`'s `openDetail` footer
+  block. Any drawer work reads that file as it is now, not as this plan described it.
+
 Settled: hybrid caption approach · the LLM question (Vision already ships `promptEnhance`) · the 18
 families as the style dropdown · the caption schema · the licence position · BPM as a 0-means-auto
 box capped at 250 · voice as a ROSTER plus a prose box · lyrics stay the user's job ·
