@@ -102,6 +102,25 @@ do not tick an item until its gate is green.
       half is proved to be a CROP, not a rescale, at **PSNR 44.3 dB** against ffmpeg's own
       centre crop versus **27.5 dB** against a lanczos rescale.
 - [ ] 5 — Verify in an isolated app. Gate: Fabio watches one H3 extend end to end.
+      **Part 1 done 2026-09-02 (everything that needs no GPU), and it FOUND A REAL BUG.**
+      `hiddenWhen` on a STEP field had never worked: `_buildFieldsRow` neither registered
+      its nodes in `_liveFields` nor called `_paintFieldConstraints`, and the painter
+      skips an unregistered id in silence — so the `Avoid` box stood on the H3 arm exactly
+      as before 4b, while `Input_is_Turbo` worked only because it is declared flow-level.
+      Two lines in `MpiBaseFlow.js`; **both halves mutation-killed** by the new
+      `tests/desktop/flow-step-field-hidden.spec.js`, and a third mutant survived first
+      and corrected the fixture (`kind: 'fields'` routes to the OTHER builder). Verified
+      on real pixels: `Avoid` `hidden:true, offsetHeight:0`, Turbo still h=34.
+      `npm test` 878/878, `flow-*.spec.js` 13/13, `eslint js/` clean.
+      MPI-666: checks 3, 4, 5 PASS in the app; 1 and 2 are unreachable here because H3 is
+      installed, so the flow is available and the licence chip branch never runs — covered
+      by `flow-licence-surface.test.cjs` 6/6 instead. Pick is session-only: confirmed held
+      across a reopen, gone across a reload, reads as intended.
+      **BLOCKER FOUND: LTX 2.3 is no longer on disk** (`G:/CubricModels/diffusion_models/`
+      has both H3 DiTs and no LTX transformer), so "pick LTX and run: unchanged" cannot be
+      run without a ~20GB re-download. Everything else about the LTX arm is stubbed-model
+      tested and needs no weights.
+      **Left: the two real extends (turbo + non-turbo) and Reuse Prompt — Fabio's gate.**
 - [ ] 6 — Docs: `existing-flows/ltx-extend.md` + `any-of-models.md`.
 
 ## Phase 1/2 ordering — decided 2026-08-31

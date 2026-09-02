@@ -444,3 +444,130 @@ Three mutants, all killed with real assertion failures (not load errors):
 - the `{ model }` clause made a no-op — *"the H3 arm keeps Turbo and loses the negative"*.
 - `Input_is_Turbo` renamed `Input_Not_A_Node` in the FlowDef — *"names no node in
   flow_ltx_extend.json / flow_h3_extend.json"*, so the widened guard still bites.
+
+## Phase 5 — in an isolated app (2026-09-02, part 1: everything that needs no GPU)
+
+Instance: `npm run app:isolated`, port **57506**, profile `%TEMP%\cubric-agent-profile` (fresh —
+first run). Fabio's app kept `:3000` throughout and was never driven. Driven with `playwright-cli`.
+
+### The frame never applied `hiddenWhen` to a STEP field — found, fixed, pinned
+
+**The check Phase 4b could not run turned out to fail.** With the H3 arm resolved, step 02
+*Describe* still showed the **`Avoid` box**, prefilled with the LTX negative — the exact dead
+control the model rule was added to remove, and the carried-forward item 4b recorded as closed.
+
+`Input_is_Turbo` on step 03 was correctly VISIBLE on the same arm. That asymmetry is the whole
+diagnosis: `Input_is_Turbo` is declared **flow-level**, `negative` is declared **on a step**.
+
+- `_buildFlowFields` (flow-level) calls `_liveFields.set(f.id, node)` and then
+  `_paintFieldConstraints()`.
+- `_buildFieldsRow` (a gizmo step's fields) did **neither**.
+- `_paintFieldConstraints` walks `_allDecls` — which deliberately includes step fields — but does
+  `const wrap = _liveFields.get(f.id); if (!wrap) return;`. A node that was never registered is
+  skipped **in silence**.
+
+So every `hiddenWhen` on a step field has always been a no-op. Nothing caught it because every
+other shipped clause is flow-level: the only two others are `Input_is_Turbo`
+(`{ modelNot }`) and Music Maker's `Input_Style_Custom` (`{ field, isNot }`), both in a
+flow-level `fields:` array. `negative` is the first step-level one ever shipped.
+
+Both existing tests were green and both were right about their own half — `hiddenFieldIds` is a
+pure function tested on a flat array, and the FlowDef test asserts the DECLARATION (it even
+reaches through `flow.steps.flatMap(s => s.fields)` to find it). Neither renders anything. The
+gap was the wiring between them.
+
+**Fix** (`MpiBaseFlow.js`, `_buildFieldsRow`): register each node in `_liveFields` and call
+`_paintFieldConstraints()` once the row is built — what `_buildFlowFields` already did. Two lines.
+
+**Verified in the app**, not inferred: with the H3 arm resolved, step 02 now reads
+`What happens next` → `hidden:false, offsetHeight:144` and `Avoid` → **`hidden:true,
+offsetHeight:0`**. Step 03 still shows `Seconds to add` and `Turbo` (h=34), so the flow-level path
+is untouched.
+
+**`tests/desktop/flow-step-field-hidden.spec.js`** pins it. Two mutants, both killed on real
+assertion failures:
+
+- drop `_liveFields.set` → `expect(result.onPicked.ruled).toEqual({ hidden: true, h: 0 })` fails.
+- drop `_paintFieldConstraints()` → the same assertion fails. **Both halves are load-bearing.**
+
+A THIRD mutant survived first and changed the spec: the fixture originally used
+`kind: 'fields'`, which is routed to `_buildFlowFields` — it passed with the fix fully reverted.
+The fixture is now `kind: 'preview'` with a role, mirroring Extend Video. That distinction is
+recorded in the spec's header so the next author does not re-weaken it.
+
+Suites: `npm test` **878/878**, `tests/desktop/flow-*.spec.js` **13/13** (including
+*"a blankOnly field is disabled with media and live without"* — the disable path shares the
+painter and was the regression risk), `eslint js/` clean.
+
+### MPI-666's five licence checks (message `71214c6e`)
+
+| # | check | result |
+|---|---|---|
+| 1 | tile reads LICENCE REQUIRED not GET MODELS | **not reachable on this machine** — see below |
+| 2 | drawer footer reads REVIEW LICENCE not VERIFY LICENCE | **not reachable** — same reason |
+| 3 | drawer licence block carries the three links | **PASS** — "MiniMax H3 Community License Agreement", "Powered by MiniMax H3", *Read the licence* / *Request authorization* / *Report misuse on our Discord* |
+| 4 | step 0 shows the attribution inside a project | **PASS** — the same block, same three links, on step 01 of the flow frame |
+| 5 | re-opening does not re-fire the gate but keeps the attribution | **PASS** — no gate fired on any open (H3 is installed, so no install runs), attribution present every time |
+
+**Why 1 and 2 cannot run here, and it is not a defect.** `_badgeHtml` returns the licence chip
+only when the flow is UNAVAILABLE; an available flow reads "Ready" and the licence branch is never
+evaluated. Extend Video is available because `flowModelIds` resolves its slot to
+`minimax-h3-ref2va`, which is installed. Reaching "Licence required" needs the RESOLVED candidate
+to be both gated and missing — i.e. H3 not installed. MPI-666's note says "clear the receipt or
+use an isolated profile", but the receipt is not the binding constraint: the weights are, and they
+live on the shared models root, not in the profile.
+
+Verified the wording logic instead through `tests/flow-licence-surface.test.cjs` — **6/6**,
+including *"a territory bar is an errand too — H3 must not read as ungated"*, which is exactly the
+`verify || territory` widening checks 1 and 2 are about.
+
+**One thing checks 1–2 DID surface:** picking LTX (uninstalled) in the drawer flips the flow to
+unavailable, and the drawer follows immediately — Required models reads "LTX 2.3 · Install", the
+footer becomes **"Install models"** (the correct third wording: ungated, so not "Review licence"),
+and the H3 licence block disappears. The TILE's chip stays "Ready" until the library is reopened,
+when it correctly reads "Get models". Cosmetic and low severity — the drawer is the surface under
+the cursor — but recorded rather than dropped.
+
+### The pick is session-only, and that reads as intended
+
+- Pick LTX → close the library → reopen: the pick HELD (chip "Get models"). Session state works.
+- Reload the app → reopen: the pick is GONE, back to H3 ("Ready"). `setFlowModel` writes a session
+  Map and nothing persists it. Confirmed as designed, not as a bug.
+
+### LTX 2.3 IS NO LONGER INSTALLED — the LTX arm cannot be run here
+
+`G:/CubricModels/diffusion_models/` holds `minimax_h3_ref2va_pruned_int8_convrot.safetensors` and,
+new today (2026-09-02 11:08), `minimax_h3_fl2va_pruned_int8_convrot.safetensors` — and **no LTX
+transformer at all**. Only `loras/ltx-2.3/` survives. The plan's § Disk explicitly said not to
+uninstall LTX; it is gone regardless, and getting it back is a ~20GB download.
+
+Consequences, none of which block the H3 gate:
+
+- Phase 5's "pick LTX and run: unchanged" is **not runnable** until LTX is reinstalled.
+- The in-flow model dropdown does not render (it needs >1 INSTALLED candidate), so the arm can only
+  be switched from the Library drawer.
+- The slot resolves to H3 by default, which is why the drawer opened on "MiniMax H3 Reference".
+- Field visibility on the LTX arm is still pinned by the desktop spec and the unit test, which stub
+  the installed set and need no weights.
+
+### Still open in Phase 5
+
+- The two real extends, turbo and non-turbo — Fabio's gate, needs the GPU.
+- Reuse Prompt on an H3 extend coming back on H3 — needs a completed generation first.
+- The isolated instance carries `needsRestart: true` from its own boot repair, so it must be
+  rebuilt before dispatching: `routes/comfy.js:405` delegates a restart by writing
+  `.engine-restart-request.json` into the shared engine root, and the OWNER — Fabio's app —
+  performs it. A fresh boot sees no drift now and will not re-arm the flag.
+
+### The boot repair moved a node folder in the SHARED engine
+
+First boot logged `node drift: ComfyUI-MpiNodes installed=30b8ed1f pinned=ccc25d12`, wiped the
+folder and re-extracted the pin. Not destructive — `30b8ed1` is an ancestor of `ccc25d1` (the pin
+`0448b730` landed today), so it moved FORWARD to what the repo already declares, and it is what
+Fabio's own app does at its next boot. One small GitHub zip, no weights. Reported at the time;
+Fabio restarted the engine, so disk and memory agree again.
+
+**The lesson for the next agent:** `app:isolated` with no `CUBRIC_ENGINE_ROOT` resolves
+`.engine-config.json` → the SAME engine the user's app is running, and the boot repair will act on
+it. `~/.claude/memory/tool_sandbox_isolated_app_seed_uw_deps.md` warns against pointing at the real
+engine root deliberately; it does not say that the DEFAULT is the real engine root.

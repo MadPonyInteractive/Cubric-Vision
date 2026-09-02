@@ -1637,8 +1637,21 @@ export const MpiBaseFlow = ComponentFactory.create({
                     (val) => onFieldChange(f.id, val),
                     unsubs,
                 );
-                if (node) row.appendChild(node);
+                if (!node) return;
+                // Register exactly as `_buildFlowFields` does. `_allDecls` already walks
+                // step fields, so the painter was always meant to reach them — but a node
+                // it cannot find in `_liveFields` is skipped in silence, which made every
+                // `hiddenWhen` on a STEP field a no-op. MPI-591's `negative` was the first
+                // one shipped and it stayed on screen through the whole H3 arm; the Turbo
+                // toggle worked only because it is declared flow-level.
+                _liveFields.set(f.id, node);
+                row.appendChild(node);
             });
+            // Same reason as the flow-level stack: paint on FIRST render, or a step
+            // mounted straight into a hidden state shows its field until something
+            // else happens to repaint. Registration alone is not enough — measured:
+            // dropping either half puts the `negative` box back on the H3 arm.
+            _paintFieldConstraints();
             return row;
         }
 

@@ -9,6 +9,27 @@ fails SILENTLY) and `research/minimax-h3-extend-nodepack.md` (the pack, and what
 **Phases 1, 2, 3, 3b, 4, 4b and 4c are ALL CLOSED.** The graph is 40 nodes, both arms are
 bench-proven, and the app side is wired and tested. The card is in `doing` / `in-progress`.
 
+> **PHASE 5 PART 1 IS DONE (2026-09-02) — everything that needs no GPU, and it found a real bug.**
+> `hiddenWhen` on a STEP field had never reached the DOM: `_buildFieldsRow` neither registered its
+> nodes in `_liveFields` nor painted, and `_paintFieldConstraints` skips an unregistered id in
+> silence — so the `Avoid` box stayed on the H3 arm and 4b's claim was wrong. Fixed in
+> `MpiBaseFlow.js` (two lines, both mutation-killed) and pinned by
+> `tests/desktop/flow-step-field-hidden.spec.js`. MPI-666 checks 3/4/5 pass in the app; 1/2 are
+> unreachable while H3 is installed and are covered by `flow-licence-surface.test.cjs`. Full
+> evidence in `validation.md` § Phase 5.
+>
+> **TWO THINGS THE NEXT SESSION MUST KNOW.** (1) **LTX 2.3 is no longer installed** —
+> `G:/CubricModels/diffusion_models/` now holds both H3 DiTs and no LTX transformer, so the LTX
+> arm cannot be RUN without a ~20GB download; its field behaviour is covered by stubbed tests that
+> need no weights. (2) `app:isolated` with no `CUBRIC_ENGINE_ROOT` resolves `.engine-config.json`
+> to the SAME engine the user's app runs, and its boot repair acted on it (a forward move to the
+> `ccc25d1` pin — harmless, and Fabio restarted). The instance also holds `needsRestart: true`
+> afterwards, and `routes/comfy.js:405` delegates that restart to the OWNER app — so REBUILD the
+> isolated instance before dispatching anything.
+>
+> **STILL OPEN: the two real extends, turbo and non-turbo, plus Reuse Prompt. That gate is Fabio's.**
+> Then Phase 6 docs.
+
 > **NEXT: Phase 5, and it is NO LONGER BLOCKED.** The handoff said 48188 was stale on `53c0198`;
 > Fabio has restarted his app since, and the 40-node graph — `force_rate`, `EasyCache` and
 > `ImageResizeKJv2` included — validates clean against it. Run the isolated app
