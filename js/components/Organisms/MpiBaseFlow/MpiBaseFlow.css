@@ -585,13 +585,10 @@
 .mpi-base-flow__fields--stacked .mpi-base-flow__field--inline .mpi-base-flow__field-note {
     flex: 1 0 100%;
 }
-/* …and put the control back to its OWN width, undoing the column's 100% override.
-   `sm` is 6ch and centred — the size the primitive already ships for a number
-   beside a label, so nothing here restates its chrome. */
-.mpi-base-flow__fields--stacked .mpi-base-flow__field--inline .mpi-base-flow__field-input,
-.mpi-base-flow__fields--stacked .mpi-base-flow__field--inline .mpi-base-flow__field-input .mpi-input,
-.mpi-base-flow__fields--stacked .mpi-base-flow__field--inline .mpi-base-flow__field-input .mpi-input__field {
-    width: auto;
+/* The control keeps the primitive's OWN width here — the column's 100% override is
+   scoped away from `--inline` below rather than fought with a second width. */
+.mpi-base-flow__fields--stacked .mpi-base-flow__field--inline .mpi-base-flow__field-input {
+    flex: 0 0 auto;
 }
 .mpi-base-flow__field-label {
     color: var(--ink-4);
@@ -672,10 +669,14 @@
 }
 /* MpiInput's `sm` size is deliberately narrow (6ch, centred) for a number beside a
    label on a ROW. In the stacked column the control takes the column, so the size
-   variant's width is the one thing overridden — never its chrome. */
-.mpi-base-flow__fields--stacked .mpi-base-flow__field-input,
-.mpi-base-flow__fields--stacked .mpi-base-flow__field-input .mpi-input,
-.mpi-base-flow__fields--stacked .mpi-base-flow__field-input .mpi-input__field {
+   variant's width is the one thing overridden — never its chrome.
+   `--inline` is EXEMPT (MPI-664): it puts the number back beside its label, which is
+   the layout `sm` was drawn for, so the override simply must not reach it. Excluding
+   it here rather than overriding back to `auto` — `auto` fills the flex line and
+   would have restated a width the primitive already owns. */
+.mpi-base-flow__fields--stacked .mpi-base-flow__field:not(.mpi-base-flow__field--inline) .mpi-base-flow__field-input,
+.mpi-base-flow__fields--stacked .mpi-base-flow__field:not(.mpi-base-flow__field--inline) .mpi-base-flow__field-input .mpi-input,
+.mpi-base-flow__fields--stacked .mpi-base-flow__field:not(.mpi-base-flow__field--inline) .mpi-base-flow__field-input .mpi-input__field {
     width: 100%;
 }
 /* Undo the ROW sizing a text field carries. `flex: 1 1 320px` + `max-width: 480px`
@@ -769,6 +770,15 @@
 .mpi-base-flow__field-voice-name {
     flex: 1;
     min-width: 0;
+}
+/* …and the mounted input has to TAKE that slack. Without this the primitive keeps its
+   own narrow numeric-ish width and the row renders a ~40px box that truncates "Singer
+   A" to "Sing" — invisible in the old 620px single column, obvious the moment the
+   roster moved into a 340px side column (MPI-664, 2026-09-02). Width only, as with the
+   stacked column above; the chrome stays the primitive's. */
+.mpi-base-flow__field-voice-name .mpi-input,
+.mpi-base-flow__field-voice-name .mpi-input__field {
+    width: 100%;
 }
 .mpi-base-flow__field-voice-type {
     flex: 0 0 9em;

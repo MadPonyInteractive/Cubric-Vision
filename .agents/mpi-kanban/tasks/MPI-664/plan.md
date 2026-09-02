@@ -5,19 +5,60 @@ read it first, and do not re-search it.
 
 ## Current State
 
-🔴 **THE UI IS REJECTED. 2026-09-01, Fabio, on first sight of the running flow.** *"The UI is all
-over the place. We need to change it. There are way too many steps, and it's bad. It's a bad UI…
-I have a lot of changes to the UI to be made."*
+🟢 **THE REDESIGN IS BUILT AND PUSHED — `cbe49ed0`, 2026-09-02.** Fabio gave his direction and the
+UI is now his shape, not the rejected one. 874/874, eslint clean, `flow_minimax_music.json`
+validates against the engine, `sync-raw-workflows` clean.
 
-**The five-step field surface is DEAD as designed.** Everything below in § The field surface,
-§ The steps split and § The voice roster describes the surface that was just rejected — read it as
-HISTORY, not as the spec, until Fabio's changes are written down. **Do not implement against it,
-and do not defend it.** The next session's first job is to take his UI direction; nothing in the
-plumbing below is in question — the graph, the deps, the licence, GAP 3, the enhancer recipe and
-the op are all independent of how the fields are laid out.
+**Two stages, each two columns — exact controls left, the writing right:**
 
-Also unresolved and now probably moot: the GHOST STEP (§ below). It was a defect of the five-step
-shape; a different shape may not have steps to ghost.
+| stage | left | right |
+|---|---|---|
+| **Song** | Style ▾ (18 + `Custom`) · Your own style *(only on Custom)* · Tempo *(inline, 120)* · Instrumental · Low VRAM | Your song · **Enhance** · Mood · Vocal · Arrangement |
+| **Lyrics** | Voices roster · Voice notes | Lyrics |
+
+**Stage 2 does not exist at all on an instrumental run** — a step-level skip, not three hidden
+fields. That also KILLED THE GHOST STEP: it was a defect of hiding a step's every field, and there
+is no longer a step that can be emptied.
+
+**His five notes, and what each became:**
+
+1. *"Voices and lyrics should be in the same stage… voice UI on the left and the lyrics on the right"* → the Lyrics stage.
+2. *"If in stage two the user selects Instrumental… Stage 3 should be bypassed"* → step-level `hiddenWhen`.
+3. *"The song stage should have style included with it… on the right, the prompt"* → the Song stage.
+4. *"Style should have an option named Custom"* → the reveal clause `isNot`, with `Custom`'s value being the EMPTY STRING (every other value is a genre phrase the graph concatenates, so "no preset phrase" genuinely IS the empty one).
+5. *"Tempo starts at 120… inline, not a giant input"* → `inline: true`, `default: 120`, **plus the note he asked for on the follow-up**: *"if TEMPO_0 means AUTO, then it should say that somewhere, a small note below it"*.
+
+**The Enhance button and the caption box were the real finding.** *"Mood, vocal, and arrangement:
+as much as I read it, I still don't know what it is or how to use it… there are no examples… and
+what is he now going to do? Replace my prompt?"* — and, on the button, *"no idea what that does"*
+(he confirmed the "playing house button" was a speech-to-text typo for **Enhance**). One 12-row box
+became **three labelled boxes, each carrying a worked example as its placeholder**, and Enhance
+fills all three at once — which is the only thing that shows it never touches the brief.
+
+**Five frame additions carry it, all declarative, all available to every flow:**
+`hiddenWhen: { isNot }` · a step-level `hiddenWhen` · `inline` on a field · `col: 'right'` for a
+two-column `fields` step · `to` as a marker→field map on an enhance button. Documented in
+`ui/carousel-frame/fields.md`, `steps.md` and `ui/prompt-enhance.md`.
+
+**The graph lost three nodes.** `Input_Caption` + `Prose_Mood`/`Prose_Vocal`/`Prose_Arrangement`
+(three `RegexExtract`) became `Input_Mood`/`Input_Vocal`/`Input_Arrangement` wired straight to their
+headings. The app splits the enhancer's marked answer now, so joining three boxes back into one
+marked string for the graph to re-split was a round trip for nothing.
+
+**The claim was taken from MPI-591.** `0928f1f4` held `flowsRegistry.js`, `declaredFields.js`,
+`MpiBaseFlow.js` and `tests/inject-params-titles.test.cjs`, but that session is CLOSED
+(`session_closed` 2026-09-01T20:46:42Z), its record never reached `status: "claimed"` so
+`guard-claim` never honoured it, and its work is already on origin (`1144f138`). Nothing of it was
+reverted. This card's claim is `b7f21c04`.
+
+🔴 **STILL UNPROVEN, and it is the same gap as before: NOBODY HAS LOOKED AT IT RUNNING.** No
+ComfyUI execution has touched the new caption chain, and the two-column split, the reveal, the
+inline tempo, the step skip and the three-box Enhance have never rendered. The last UI was rejected
+*on sight* — do not call this done on a green test run.
+
+**Everything below in § The field surface, § The steps split and § The voice roster describes the
+REJECTED five-step surface.** It is HISTORY. The roster's own reasoning and bench evidence still
+hold; its placement does not.
 
 **What IS settled and green — 870/870, lint clean, both workflow gates green:**
 - The FlowDef, the op in all four files, GAP 3, the enhancer recipe, the new injection guard.
