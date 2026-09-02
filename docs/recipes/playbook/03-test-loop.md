@@ -9,7 +9,9 @@ generation time and only runs on a recipe that already passes here.
 npm run recipe:test -- <recipe-id> --engine <model> --runs 3
 ```
 
-The harness is [`scripts/recipe-test.ts`](../../../scripts/recipe-test.ts). It
+The harness is [`scripts/recipe-test.mjs`](../../../scripts/recipe-test.mjs),
+with its three enhancer backends in
+[`scripts/recipe-engines.mjs`](../../../scripts/recipe-engines.mjs). It
 runs each tier, applies the deterministic checks, asks a judge model for a
 verdict, and exits non-zero if anything failed. It **reports**; the agent
 decides what to change. There is deliberately no auto-rewrite loop in code — the

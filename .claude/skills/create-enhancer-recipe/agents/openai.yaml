@@ -1,0 +1,25 @@
+# OpenAI-style agent metadata, mirroring SKILL.md so the skill is discoverable
+# by both Claude and OpenAI-compatible runners. SKILL.md is the source of truth;
+# keep this name/description in sync with it.
+name: create-enhancer-recipe
+description: >-
+  Author, test and iterate a per-target-model prompt recipe for the Cubric
+  Vision Enhancer. The repeatable research -> draft -> autonomous test loop that
+  turns a target model (Krea, Veo, Seedance, Kling, Wan, LTX, SDXL, Flux, …)
+  into a proven draft recipe plus traceable evidence. Produces draft only; the
+  draft -> validated flip is Fabio's, after real-model review.
+instructions: SKILL.md
+references:
+  - references/notebook-map.md
+  - references/source-manifest.md
+  - references/research-synthesis-worksheet.md
+  - references/validation-record.md
+  - assets/five-case-corpus.md
+depends_on_cli:
+  - notebooklm   # already installed + authenticated; agent queries notebooks via `ask -n <id> --json`
+contract:
+  schema: js/data/recipes/registry.js  # validateRecipe() + the exported unions
+  workflow: docs/recipes/playbook/README.md
+  test_harness: scripts/recipe-test.mjs   # npm run recipe:test -- <recipe-id> --judge gemma-3-12b --runs 3
+  output_recipe: js/data/recipes/{model-id}.recipe.js
+  output_evidence: docs/recipes/research/{model-id}/

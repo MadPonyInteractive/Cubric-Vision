@@ -165,7 +165,7 @@ try to tune around it, and do not raise `num_ctx` to compensate.
 
 Related harness rule: **never let a judge grade an empty output.** Asked to score
 nothing, it invents a verdict — observed returning intent=2 structure=2 format=2
-on a blank prompt. `recipe-test.ts` skips the judge when the output is empty.
+on a blank prompt. `recipe-test.mjs` skips the judge when the output is empty.
 
 ## Gotcha: Ollama's model directory is not where you think
 
