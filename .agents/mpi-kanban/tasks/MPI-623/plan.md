@@ -368,6 +368,32 @@ notes in [research/](research/).
 > the chain, the capture, the ingest. Phase 2's `user-ux` gate is still owed and CANNOT be
 > exercised until the graphs exist — there is no Flow to run.
 
+> **Session note 2026-09-02 (sixteenth). THE SPIKE IS NOT IN ANY STAGE — MEASURED, FOUR
+> WAYS, AND STAGE B IS ~18 GB NOT 43.** Amendment 55. `sphere_cubic_reprojecer` peaks at
+> **0.147 GB flat over 339 s** (it streams, and it is a subprocess that never entered
+> ComfyUI's working set). Nothing in SplatKit's python or `MpiBrushTrain` holds more than
+> one face — per-face `imread`, hardlinked staging, read from source. **Brush caches one
+> decoded u8 RGB copy per training view, lazily: 7.93 GB measured at 2000 steps / 87%
+> coverage, ~10 GB at full** — with VRAM flat at 4.7 GB, so it is host-side, not a device
+> spill. Add the node's own ~7.7 GB of proxy tensors and stage B is **~18 GB**, which a
+> 32 GB machine survives.
+>
+> **51's 42.79 GB is therefore UNRECONCILED, not retracted** — no stage reproduces it,
+> `rammon.log` is gone, and 51's reading came from the composed prompt which was never
+> re-run. Settling it needs stage B whole (`chunk8_sfm_brush_disk.json`, ~30 min GPU) with
+> a **tree-wide 1 s** sampler; the sampler is what 51 got wrong twice. **Fabio's call.**
+>
+> **The bound is a flag nobody passes:** Brush v0.3.0 has `--max-resolution` (default
+> **1920**), `--max-frames` and `--subsample-frames`; `MpiBrushTrain` passes none and
+> exposes none. 1280 puts the cache at 4.50 GB. `/mpi-nodes-sync` plus a pin bump. Also:
+> the faces are 2048² against that 1920 ceiling, so **the dual-res chain's last 6% is
+> discarded by a default nobody chose** — the one stage the whole design exists to sharpen.
+>
+> **A PROBE TRAP WORTH CARRYING:** `--total-steps 1` writes an `export_1.ply` and looks
+> like proof the dataset loaded. It is not — that ply is the SfM point cloud from
+> `sparse/0`, byte-identical (7,667,774) at 960 and at 1920. Brush loads views lazily, so
+> a probe cheap enough to be quick measures nothing.
+
 **Project mode:** `scalable-foundation`.
 
 A user bakes a Gaussian-splat scene once from a 360 equirect image, then re-enters
@@ -1731,6 +1757,89 @@ Evidence: [research/phase0-log.md](research/phase0-log.md),
     **The descriptor is STILL gated on Fabio.** `flow_3d_scene_a.json` / `_b.json` do not
     exist. Every app-side piece a bake needs — chain, capture, ingest — is now built and
     waiting for its consumer.
+
+### Amendments from the RAM-spike session (2026-09-01)
+
+55. **THE SPIKE IS NOT WHERE 51 PUT IT, AND 51's PRIME SUSPECT IS ELIMINATED BY
+    MEASUREMENT.** Amendment 51 placed the 42.79 GB "inside the SfM node — after the
+    cubic reprojection, as the COLMAP dataset is assembled", with "the float32 chain over
+    the 984 cube faces on the way to disk" as prime suspect. **Both halves are wrong.**
+
+    **(a) The reprojector is not it — measured, 333 samples at 1 s.**
+    `sphere_cubic_reprojecer` re-run standalone against the intact `mpi623_flowtest_sfm`
+    dataset held a **flat 0.147 GB peak across 339 s** while writing 164 faces. It
+    streams: one equirect in, its faces out, nothing accumulates. It is also a
+    *subprocess*, so it never entered ComfyUI's working set at all. Repro, no GPU, nothing
+    re-baked, output to a scratch dir:
+
+    ```
+    colmap_sphere.exe sphere_cubic_reprojecer \
+      --image_path <dataset>/_spheresfm_work/equirect_hires \
+      --input_path <dataset>/_spheresfm_work/sparse/0 \
+      --output_path <scratch> --image_ids 0
+    ```
+
+    **(b) Nothing in the python holds more than one face**, read from source rather than
+    inferred: `repair_seam_columns` (`core/spheresfm_colmap.py:71`) does `cv2.imread` per
+    face *inside* the loop; `_build_camera_sequences` (:116) parses basenames only; the
+    hi-res staging is `os.link` with a copy fallback (:1672); and `stage_clean_dataset`
+    (`ComfyUi-MpiNodes/splat.py:150`) hardlinks the 984 images rather than copying them.
+    There is no float32 chain over the faces anywhere in the node.
+
+    **(c) BRUSH CACHES ONE DECODED COPY OF EVERY TRAINING VIEW IN HOST RAM, LAZILY — and
+    it is ~10 GB here, not 43.** Measured at 1 s against the real `_mpi_clean` root (984
+    faces), default resolution, 2000 steps, 148.6 s: RSS climbs **monotonically** 0 → 1.75
+    → 3.04 → 4.75 → 6.09 → 7.02 GB and then flattens at **7.93 GB**, releasing to 0.89 GB
+    the instant the process exits. VRAM stayed at **4.7 GB peak** throughout, so this is a
+    host-side cache, not a device allocation spilling back.
+
+    A monotonic climb that plateaus is a per-view cache filling up. 2000 random draws over
+    984 views touches ~855 of them (87%), and one **u8 RGB** copy per view at 1920 would be
+    10.13 GB full / 8.81 GB at that coverage — against 7.93 GB measured. So the model is
+    one decoded u8 RGB copy per view, cached on first use:
+
+    RAM ≈ `N_views × min(face_size, max_resolution)² × 3 bytes` → **~10 GB full for this
+    scene**, 4.50 GB at `--max-resolution 1280`, 2.88 GB at 1024.
+
+    **TWO PROBES BEFORE THIS ONE WERE INCONCLUSIVE AND LOOKED CONCLUSIVE — the trap is
+    worth naming.** `--total-steps 1` peaks at 1.90 GB and writes an `export_1.ply`, which
+    reads as proof the dataset loaded. It is not: the step-1 ply is byte-identical
+    (7,667,774) at `--max-resolution 960` and at the 1920 default, because it is the SfM
+    point cloud from `sparse/0` and no image has been touched yet. **Brush loads views
+    lazily, so any probe short enough to be cheap is short enough to measure nothing.** The
+    tell was wall-clock: the 1920 run finished in 2.8 s against the 960 run's 25.6 s, and
+    bigger images finishing 9x faster is not a thing.
+
+    **THE BOUND IS A FLAG THE NODE ALREADY COULD PASS.** `brush_app.exe --help` on the
+    pinned v0.3.0 binary carries **`--max-resolution` [default: 1920]**, `--max-frames` and
+    `--subsample-frames`. **`MpiBrushTrain` passes none of them** — `splat.py:245-252` sends
+    only `--total-steps`, `--export-path`, `--export-every`, `--sh-degree`, `--max-splats`,
+    and `INPUT_TYPES` (:203) does not expose them. So the ceiling is Brush's own default,
+    chosen by nobody. That is `/mpi-nodes-sync` plus a pin bump, and Fabio's call.
+
+    **(d) SO THE 42.79 GB IS STILL UNEXPLAINED, AND STAGE B IS MUCH CHEAPER THAN 51 SAYS.**
+    Every stage measured in isolation on the real dataset: reprojector 0.147 GB, Brush
+    7.93 GB (~10 GB at full coverage), and the node's own proxy tensors ~7.7 GB by
+    arithmetic (164 frames at 2048x1024 float32 = 3.84 GB, doubled by the `torch.cat`).
+    **That totals ~18 GB, not 43 — and a 32 GB machine would survive it.** Nothing
+    measured this session reproduces amendment 51's figure, and `rammon.log` is gone
+    (session scratchpad, evicted), so it cannot be re-audited. Untested remainder: COLMAP's
+    `feature_extractor`, `exhaustive_matcher` and `mapper`, all subprocesses, none of them
+    plausible at this size (the match database is 143 MB and `points3D.bin` is 4.3 MB).
+
+    **DO NOT retract 51 on this.** What is established is that no single stage needs 43 GB;
+    what is not established is what the composed prompt does, and 51's own reading came
+    from the composed prompt. Settling it means re-running stage B whole
+    (`chunk8_sfm_brush_disk.json`, ~30 min of GPU) with a **tree-wide 1 s** sampler rather
+    than a 30 s one on a single process — and the sampler is the part 51 got wrong twice
+    already. **That run is Fabio's call**, and until it happens the honest number for the
+    ship risk is "~18 GB measured stage-wise, 43 GB observed once, unreconciled".
+
+    **A SECOND FINDING, NOT ABOUT RAM.** The faces are 2048² and Brush's default ceiling is
+    1920, so **the bake trains at 1920² and the last 6% of the dual-res chain is discarded
+    by a default nobody chose.** The entire point of dual-res (`upscale.py:1577` docstring)
+    is to spend the 8K precisely where the trainer looks. Whatever `max_resolution` ends up
+    being, it should be a decision.
 
 ### Verified NOT drifted from the source workflow (checked 2026-08-29)
 
