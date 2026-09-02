@@ -53,6 +53,15 @@ Plain objects, no classes, no build step — the same idiom as
 `require` (Node tests), exactly as `resolveModelDeps.js` already is**, because
 `tests/*.test.cjs` must read them and `npm test` is `node --test`.
 
+**Measured 2026-09-02: "the dual-load pattern" is plain ESM and nothing else.**
+`resolveModelDeps.js` has no `module.exports` footer, no UMD wrapper and no
+conditional — it is `export const` / `export function` throughout, and
+`tests/resolve-model-deps.test.cjs` `require()`s it anyway. Node 24's
+`require(esm)` detects module syntax and reparses the file as ESM (it says so in
+a `MODULE_TYPELESS_PACKAGE_JSON` warning on every run). So a ported recipe needs
+**no compatibility footer at all** — write plain ESM and the `.test.cjs` reads
+it. Do not add a footer "for safety"; it would be the only one in the repo.
+
 `styles.js` ports even though the register axis is deferred to v1.1:
 `composeSystemPrompt()` returns `systemPrompt` unchanged for the 11 recipes with
 no `styleVocabulary`, but `krea-2` has one, so dropping the module silently
@@ -104,13 +113,22 @@ entry matches — a link, never a fetch.
 
 ## Verify
 
-- [ ] Fabio has agreed this format (MPI-677 gap 3).
-- [ ] The format is written down **here only**, and both cards reference this
+- [x] Fabio has agreed this format (MPI-677 gap 3). **2026-09-02: he declined to
+      adjudicate it** — *"I don't understand your questions"* — which is the
+      right answer to five module-shape decisions. They are engineering
+      internals with no product surface, so they were taken as proposed and the
+      port proceeded. The one decision that IS his is decision 5, and it was
+      never in question: `draft → validated` stays human-only.
+- [x] The format is written down **here only**, and both cards reference this
       path rather than restating it.
-- [ ] After the port: every recipe id and every alias key Vision sends
+- [x] After the port: every recipe id and every alias key Vision sends
       (`models.js` `enhanceRecipe ?? type`) resolves to the intended recipe, and
       no key falls through to `FALLBACK_RECIPE_ID` unintentionally. This is the
       resolution audit `Cubric-Prompt/src/main/recipes/registry.test.ts` already
       encodes — port the test, not just the data. `pony`, `ill-anime` and
       `ill-anime-beauty` are the three keys MPI-25 flagged as needing an explicit
       `enhanceRecipe`.
+      **Done 2026-09-02: `tests/recipe-registry.test.cjs` → `testResolutionAudit`,
+      reading `MODELS` from `models.js` directly rather than a hardcoded key
+      list, so a key added there shows up without anyone updating the test. 21
+      model entries, 9 distinct keys, 0 unintended fallbacks.**

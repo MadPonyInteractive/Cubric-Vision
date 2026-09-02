@@ -266,6 +266,23 @@ raw"* — the rule Character Sheet already states in its own help text.
 
 ## Cross-references
 
+- **THE RECIPE LAYER AND THE PLAYBOOK HAVE LANDED (2026-09-02, MPI-35 phase 4).**
+  They are in this repo now, not in Cubric-Prompt:
+  - `js/data/recipes/` — the 12 recipes, `registry.js` (`resolveRecipe`,
+    `selectSystemPrompt`, `RECIPE_ALIASES`, `FALLBACK_RECIPE_ID`,
+    `validateRecipe`), `styles.js`, `brief.js`. Plain ESM, no build step, no Zod;
+    `tests/recipe-registry.test.cjs` carries the 10 contract tests that replace
+    it, including the resolution audit read from `models.js` itself.
+  - `docs/recipes/playbook/` (10 files) — **the spec for phase D's skill-heal
+    loop**, so phase D can now start.
+  - `docs/recipes/research/` (26 files) — per-model research + the `sources.md`
+    manifests behind every recipe decision.
+  - **Deliberately not exported:** `dev-docs/recipe-research/_corpus/`, the raw
+    Civitai scrape (gitignored in Prompt). The conclusions measured from it are
+    already here — `docs/recipes/research/pony/vocabulary-evidence.md`,
+    `illustrious/vocabulary-evidence.md` and `candid-vocabulary-evidence.md`,
+    648 lines carrying the per-term percentages — and both recipes are Stage 1
+    green on those numbers. An export carries the findings, not the sample.
 - **Cubric-Prompt MPI-35** — Prompt's half: export recipes, playbook, harness
   and alias map, with two button-path measurements taken on the way. Its
   `plan.md` Plan Drift section carries the cloud-default reasoning in full.
