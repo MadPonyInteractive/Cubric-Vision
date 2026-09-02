@@ -12,12 +12,10 @@
 
 ## Critical Rules Snapshot (ALL agents, always — no file read required)
 
-- **Colors:** CSS vars from `styles/01_base.css`. **Icons:** `js/utils/icons.js`, never raw SVG. **Logging:** `js/services/clientLogger.js` (front) / `routes/logger.js` (back), never bare `console.log`.
-- **DOM:** `qs`/`qsa`/`gid` from `js/utils/dom.js`. **Listeners:** `on()`/`off()` from the same, never raw `addEventListener` (exception: inside `destroy()`). **Hotkeys:** `Hotkeys.bind`/`unbind` with an id from `hotkeyRegistry.js`, never raw `keydown`.
+- **Never invent what exists:** colors = CSS vars (`styles/01_base.css`) · icons = `js/utils/icons.js` · DOM+listeners = `js/utils/dom.js` (`qs`/`on`/`off`) · hotkeys = `Hotkeys.bind` + `hotkeyRegistry.js` · logs = `clientLogger.js` / `routes/logger.js`. No hex, no raw SVG, no `document.querySelector`, no raw `addEventListener`/`keydown`, no `console.log`.
+- **EVERY UI ELEMENT IS A COMPONENT** — never a bare `<input>`/`<select>`/`<textarea>`/`<button>`; always `ComponentFactory.create()`; `factory.js` is locked. **BEM is mandatory:** `.mpi-block__element--modifier`. Flows are no exception: a Flow's `fields` NAME these components, they do not replace them.
+- UI detail — token families, registering a new component's `.css`/props: `.claude/rules/dos_and_donts.md` + `components.md`.
 - **State:** all global state in `js/state.js` — a Proxy, so mutation auto-fires `state:changed`; never emit it manually, and never mutate sub-objects: replace the top-level key.
-- **BEM is mandatory:** `.mpi-block__element--modifier`. No exceptions.
-- **EVERY UI ELEMENT IS A COMPONENT** — never a bare `<input>`/`<select>`/`<textarea>`/`<button>`. Nothing covers the use → create one. Flows are no exception: a Flow's `fields` NAME these components, they do not replace them.
-- **Components:** always `ComponentFactory.create()`; NEVER modify `js/components/factory.js` (locked); a new one registers its `.css` in `js/shell/preloadStyles.js` and its props in `js/components/types.js`.
 - **Comms:** `Events.on()`/`emit()`; store and call the returned unsubscribe on cleanup. **Teardown:** navigation MUST call `instance.destroy()` before clearing a mounted Block (never `innerHTML = ''`); any `setup` adding a listener or Observer MUST define `el.destroy()`.
 - **project.json writes:** server routes MUST use `updateProjectJson()` (`routes/projects.js`), never direct `fs.writeJson`.
 - **Mask / paint layers are UNDOABLE:** code mutating `manualCanvas`/`subtractCanvas`/a paint layer MUST record an `UndoStack` entry first (`undo.begin()`/`commit(rect)` or `mask._recordUndo()`). Unwired = a silent hole in Ctrl+Z.
