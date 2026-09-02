@@ -71,13 +71,22 @@ function stubDisk(installedIds) {
     }
 
     // (3) The guard must not over-protect: a model with NO footprint on disk defends
-    //     nothing, so uninstalling the plugin can still reclaim a weight nobody uses.
+    //     nothing. The MODEL sweep must therefore contribute no owner here.
+    //
+    //     🔴 A FLOW NOW DEFENDS IT ANYWAY, and that is deliberate (MPI-664): Music Maker
+    //     declares this weight in `requiredDeps` because its enhancer runs inside
+    //     Generate, so an install without it is a Generate that dies. `_flowRequiredDepIds`
+    //     protects a flow's declared deps UNCONDITIONALLY — a flow has no per-user
+    //     installed state to consult — so the honest assertion is about WHO is defending
+    //     it, not whether anyone is. If the model sweep ever starts contributing here
+    //     again, the circular-gate bug this file exists for is back.
     {
         const restore = stubDisk(new Set());
         try {
             const map = await dm._localSharedDepsMap(PLUGIN_ID);
-            assert.ok(!map.has(SHARED),
-                'with no model installed, the plugin uninstall must reclaim its own weight');
+            const owners = map.get(SHARED) || new Set();
+            assert.deepStrictEqual([...owners], ['(flow)'],
+                'with no model installed, only the flow declaration may defend the weight');
         } finally { restore(); }
     }
 

@@ -127,7 +127,7 @@
         0
       ],
       "lyrics": [
-        "78",
+        "77",
         0
       ],
       "seed": [
@@ -316,26 +316,6 @@
       "title": "Strip_Voice_Markers"
     }
   },
-  "78": {
-    "inputs": {
-      "true": [
-        "75",
-        0
-      ],
-      "false": [
-        "77",
-        0
-      ],
-      "boolean": [
-        "73",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Lyrics_Gate"
-    }
-  },
   "82": {
     "inputs": {
       "operator": "==",
@@ -490,7 +470,7 @@
       "string_a": "Global Metadata: ",
       "delimiter": "",
       "string_b": [
-        "90",
+        "102",
         0
       ]
     },
@@ -622,6 +602,32 @@
     "class_type": "MpiText",
     "_meta": {
       "title": "Input_Arrangement"
+    }
+  },
+  "101": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Positive"
+    }
+  },
+  "102": {
+    "inputs": {
+      "delimiter": " ",
+      "string_a": [
+        "101",
+        0
+      ],
+      "string_b": [
+        "90",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Cat_Brief"
     }
   }
 }

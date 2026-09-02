@@ -139,9 +139,10 @@ test('the stems FlowDef declares the constraints the frame paints', async () => 
 // ── MPI-664 — hiding, and a slider that reads as time ───────────────────────────
 
 test('hiddenWhen takes a field off screen, and only when the rule says so', async () => {
-    // MiniMax Music's Instrumental toggle. Hiding rather than greying, because a greyed
-    // lyrics box still reads as a box the user failed to fill in — and because greying
-    // reaches `setDisabled`, which a declared `text` field does not have.
+    // The clause itself, on a synthetic fixture. It was MiniMax Music's Instrumental
+    // toggle when it was written; that flow GREYS its voice controls now
+    // (`disabledWhen`, MPI-664) and keeps its lyrics box live on an instrumental run,
+    // so the live consumer here is Music Maker's Style/Custom reveal in the next test.
     const { hiddenFieldIds } = await esm('js/utils/declaredFields.js');
     const fields = [
         { id: 'Input_Instrumental', type: 'toggle' },
@@ -317,4 +318,63 @@ test('a new roster row is named uniquely, so a lyric reference stays unambiguous
     assert.equal(nextVoiceName([{ name: 'singer a' }]), 'Singer B', 'case-insensitive');
     assert.equal(nextVoiceName([{ name: '  Singer A  ' }]), 'Singer B', 'trimmed');
     assert.equal(nextVoiceName(undefined), 'Singer A');
+});
+
+// ── MPI-664 — greying a field, and hiding one for good ────────────────────────
+//
+// Both clauses ship for Music Maker's one-box rewrite, and both fail SILENTLY if they
+// regress: a dead `disabledWhen` lets a user cast singers for an instrumental track
+// (the graph gates the caption, so the cast is simply ignored and nothing says so),
+// and a dead `hidden` puts three enhancer-owned prose boxes back on the run slide.
+
+test('disabledWhen greys a field on another field\'s value', async () => {
+    const { disabledFieldIds } = await esm('js/utils/declaredFields.js');
+    const fields = [
+        { id: 'Input_Instrumental', type: 'toggle' },
+        { id: 'Input_Voices', type: 'voices', disabledWhen: { field: 'Input_Instrumental', is: true } },
+        { id: 'Input_Voice_Notes', type: 'text', disabledWhen: { field: 'Input_Instrumental', is: true } },
+        // 🔴 The lyrics box is NOT gated. The lyrics slot always reaches the encoder, so
+        // it is where an instrumental track's sections get described.
+        { id: 'Input_Lyrics', type: 'text' },
+    ];
+
+    assert.deepEqual([...disabledFieldIds(fields, { Input_Instrumental: true })].sort(),
+        ['Input_Voice_Notes', 'Input_Voices'], 'instrumental greys the cast, and only the cast');
+    assert.deepEqual([...disabledFieldIds(fields, { Input_Instrumental: false })], [],
+        'vocals back on: the cast is live again');
+    // Exact equality, as `hiddenWhen` does: an unset value is not `false`.
+    const onFalse = [{ id: 'x', disabledWhen: { field: 'flag', is: false } }];
+    assert.equal(disabledFieldIds(onFalse, {}).has('x'), false, 'undefined is not false');
+    assert.equal(disabledFieldIds(onFalse, { flag: false }).has('x'), true);
+    // `isNot`, the twin clause.
+    const not = [{ id: 'y', disabledWhen: { field: 'f', isNot: 'ok' } }];
+    assert.equal(disabledFieldIds(not, { f: 'ok' }).has('y'), false);
+    assert.equal(disabledFieldIds(not, { f: 'other' }).has('y'), true);
+});
+
+test('hidden: true keeps a field declared but never on screen', async () => {
+    const { hiddenFieldIds } = await esm('js/utils/declaredFields.js');
+    const fields = [
+        { id: 'positive', type: 'text' },
+        { id: 'Input_Mood', type: 'text', hidden: true },
+    ];
+    assert.deepEqual([...hiddenFieldIds(fields, {})], ['Input_Mood'],
+        'unconditional, and it needs no values to decide');
+    assert.equal(hiddenFieldIds(fields, {}, ['some-model']).has('positive'), false);
+
+    // The real thing: Music Maker's three enhancer targets are hidden AND still declared,
+    // which is what keeps their `default: ''` seeding the graph. Drop the declarations
+    // and the graph's baked bench caption runs instead of the user's song.
+    const { getFlowById } = await esm('js/data/flowsRegistry.js');
+    const flow = getFlowById('minimax-music');
+    const hidden = hiddenFieldIds(flow.fields, {});
+    for (const id of ['Input_Mood', 'Input_Vocal', 'Input_Arrangement']) {
+        const decl = flow.fields.find(f => f.id === id);
+        assert.ok(decl, `${id} must stay declared — it is an enhancer target and a graph input`);
+        assert.equal(decl.default, '', `${id} needs default '' or _seedField skips it`);
+        assert.ok(hidden.has(id), `${id} must never render — the enhancer owns it`);
+    }
+    // And the enhancer that writes them names exactly those three.
+    assert.deepEqual(Object.values(flow.enhance.to).sort(),
+        ['Input_Arrangement', 'Input_Mood', 'Input_Vocal']);
 });

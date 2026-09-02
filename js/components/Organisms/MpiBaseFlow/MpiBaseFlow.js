@@ -977,6 +977,16 @@ export const MpiBaseFlow = ComponentFactory.create({
         const _enhanceDecls = [
             ...(_fields || []),
             ...(flow.steps || []).flatMap(st => st?.fields || []),
+            // A FLOW-LEVEL enhance declaration (MPI-664), which is the same object
+            // WITHOUT a button. Music Maker enhances inside Generate and shows no
+            // control for it at all (Fabio, 2026-09-02), so there is no field to hang
+            // the declaration on — and hanging it on a hidden button would put a dead
+            // `<button>` in the DOM to carry data. The synthetic `id` is what
+            // `_enhancing` and `_paintEnhance` key on; nothing ever renders it, so
+            // `_liveFields` misses and the painter skips it, which is correct.
+            // `action` and `auto` are implicit: a declaration with no button cannot be
+            // pressed, so automatic is the only thing it can mean.
+            ...(flow.enhance ? [{ id: 'enhance:auto', action: 'enhance', auto: true, ...flow.enhance }] : []),
         ].filter(f => f?.action === 'enhance' && f.from && f.to);
 
         /**
@@ -1044,6 +1054,52 @@ export const MpiBaseFlow = ComponentFactory.create({
          * it is, and it is what makes the button's effect visible.
          */
         const _enhanceTargets = d => (typeof d.to === 'string' ? [d.to] : Object.values(d.to || {}));
+
+        /**
+         * The ids that FEED one enhance action.
+         *
+         * `from` is ONE id, or a LIST of them (MPI-664). Music Maker sends three: the
+         * brief, the style phrase and the Instrumental flag. Style has to go because
+         * the enhancer writes an arrangement and cannot write one without knowing the
+         * genre; Instrumental has to go because otherwise it writes vocal prose for a
+         * track that has been told to have no vocals — the same self-contradicting
+         * caption the graph's own Instrumental clause used to build.
+         *
+         * ONE list, not `from` plus a second `context` key, because the list is also
+         * the CACHE KEY: these are exactly the fields whose change makes the previous
+         * answer stale (see `_setFlowField`). Two keys would be two lists to keep in
+         * step, and the day they disagreed the enhancer would either re-run for
+         * nothing or serve a stale answer for a brief that had moved on.
+         */
+        const _enhanceSources = d => (Array.isArray(d.from) ? d.from : [d.from]).filter(Boolean);
+
+        /**
+         * The enhancer's INPUT TEXT, built from every source the declaration names.
+         *
+         * One source → its text verbatim, which is what every flow before Music Maker
+         * sends and what those recipes were written against. Several → one labelled
+         * line each, using the field's own on-screen label so the prose the user reads
+         * and the prose the model reads name the same things.
+         *
+         * Empty values are DROPPED rather than sent as an empty label: `Style: ` on its
+         * own line is an instruction to write nothing about style, which is the
+         * opposite of what a blank Custom box means. A `false` toggle is dropped for
+         * the same reason — "Instrumental: no" spends tokens telling a music model that
+         * a song has singing in it.
+         */
+        function _enhanceSourceText(d) {
+            const ids = _enhanceSources(d);
+            if (ids.length === 1) return String(_fieldValues[ids[0]] ?? '').trim();
+            const byId = new Map(_allDecls.map(f => [f.id, f]));
+            return ids.map((id) => {
+                const v = _fieldValues[id];
+                if (v === true) return byId.get(id)?.label || id;
+                if (v === false || v === null || v === undefined) return '';
+                const text = String(v).trim();
+                if (!text) return '';
+                return `${byId.get(id)?.label || id}: ${text}`;
+            }).filter(Boolean).join('\n');
+        }
 
         /**
          * Target ids whose current text ENHANCE wrote, rather than the user.
@@ -1148,21 +1204,33 @@ export const MpiBaseFlow = ComponentFactory.create({
             open.forEach(([id, v]) => { if (v) _setEnhanced(id, v); });
         }
 
-        function _runEnhance(d) {
-            if (_enhancing) return;
-            const source = String(_fieldValues[d.from] || '').trim();
+        /**
+         * @param {Object} d  the enhance declaration
+         * @param {boolean} [silent]  suppress the two user-facing warnings. Set by the
+         *        AUTO path, where nothing was pressed: a toast saying "write a prompt
+         *        first" is right under a button the user just clicked and wrong in the
+         *        middle of a Generate that has its own empty-run guard already.
+         * @returns {Promise<void>} resolves when the op has landed, failed or been
+         *        cancelled — never rejects. Generate awaits it (MPI-664); the button
+         *        path ignores it, exactly as it did when this returned nothing.
+         */
+        function _runEnhance(d, silent = false) {
+            if (_enhancing) return Promise.resolve();
+            const source = _enhanceSourceText(d);
             if (!source) {
-                Events.emit('ui:warning', { message: 'Write a prompt first, then Enhance.' });
-                return;
+                if (!silent) Events.emit('ui:warning', { message: 'Write a prompt first, then Enhance.' });
+                return Promise.resolve();
             }
             // The op is a separate registration from the flow's own; a flow shipped
             // ahead of it would otherwise fail deep inside the queue.
             if (!getCommand(d.op)) {
                 clientLogger.warn('MpiBaseFlow', `enhance field "${d.id}" names unregistered op "${d.op}"`);
-                Events.emit('ui:warning', { message: 'The prompt enhancer is not available in this build.' });
-                return;
+                if (!silent) Events.emit('ui:warning', { message: 'The prompt enhancer is not available in this build.' });
+                return Promise.resolve();
             }
-            const done = () => { _enhancing = null; _paintEnhance(); };
+            let _settle;
+            const settled = new Promise((res) => { _settle = res; });
+            const done = () => { _enhancing = null; _paintEnhance(); _settle(); };
             _enhancing = d.id;
             _paintEnhance();
             enqueueGeneration(
@@ -1204,6 +1272,33 @@ export const MpiBaseFlow = ComponentFactory.create({
                 },
                 { scope: 'gallery' },
             );
+            return settled;
+        }
+
+        /**
+         * Run every AUTOMATIC enhance declaration that is currently stale, and wait.
+         *
+         * THE SNAPSHOT IS `_enhanceWrote`, not a second cache (Fabio, 2026-09-02:
+         * *"we get a snapshot of what the enhancer did so that it doesn't need to run
+         * again… if the user presses Generate again without changing anything that
+         * changes the enhancer, then it shouldn't run the enhancer again"*). The
+         * machinery for that was already here and needed no cache key of its own:
+         * `_setFlowField` empties the enhancer's own targets the moment any SOURCE
+         * field changes, and leaves them alone otherwise. So a full target set means
+         * "the answer on file still matches its inputs", and an empty one means
+         * "re-run" — with the user's own hand-typed prose surviving both, because
+         * `_enhanceWrote` is what says which text belongs to whom.
+         *
+         * Sequential, not parallel: `_runEnhance` refuses while another is in flight
+         * (`_enhancing`), so two declarations firing at once would silently drop one.
+         * No flow ships two today; the loop is written to survive the day one does.
+         */
+        async function _autoEnhance() {
+            for (const d of _enhanceDecls) {
+                if (!d.auto) continue;
+                if (_enhanceTargets(d).every(id => String(_fieldValues[id] || '').trim())) continue;
+                await _runEnhance(d, true);
+            }
         }
 
         /**
@@ -1217,8 +1312,13 @@ export const MpiBaseFlow = ComponentFactory.create({
             // was written for the old wording, so keeping it would generate from a
             // description the user just changed. Visible immediately where the
             // enhanced box is shown; signalled by the button where it is not.
+            // ANY source, not just the brief (MPI-664). `from` can name several fields,
+            // and the whole list is what the answer was written against — changing the
+            // Style or flipping Instrumental invalidates it exactly as retyping the
+            // brief does. This is also what makes the auto path's cache correct without
+            // a cache: staleness is recorded here, and `_autoEnhance` only reads it.
             _enhanceDecls.forEach((d) => {
-                if (d.from !== id) return;
+                if (!_enhanceSources(d).includes(id)) return;
                 _enhanceTargets(d).forEach((t) => {
                     // ONLY the enhancer's own output. Its prose was written for the old
                     // wording and is stale; a sentence the USER typed is not, and wiping
@@ -1263,11 +1363,22 @@ export const MpiBaseFlow = ComponentFactory.create({
          * Values are never rewritten here. A disabled control keeps what it holds and
          * comes back live the moment the constraint clears.
          *
-         * MPI-664 adds HIDING on the same pass. Where disabling reaches the primitive's
-         * own `setDisabled` — and so lands on a toggle and nothing else — hiding is on
-         * the wrapper this map already holds, so it works for any field type. Same law
-         * as disabling: the VALUE survives, so the graph re-checks the condition rather
-         * than trusting what is on screen.
+         * MPI-664 adds HIDING on the same pass, on the wrapper this map already holds,
+         * so it works for any field type. Same law as disabling: the VALUE survives, so
+         * the graph re-checks the condition rather than trusting what is on screen.
+         *
+         * DISABLING NOW REACHES EVERY FIELD TYPE TOO, via `inert` on the same wrapper.
+         * It used to land on `setDisabled` and therefore on a toggle and nothing else —
+         * which is why the note above this function used to say a declared text box
+         * could not be greyed at all. `inert` is the platform's own answer: it blocks
+         * pointer events, keyboard focus, and text selection for the whole subtree, so
+         * a roster of MpiInputs and MpiDropdowns goes dead in one line without the
+         * frame reaching inside a Primitive it does not own. The `--disabled` class
+         * beside it carries the only thing `inert` does not: the grey.
+         *
+         * The toggle's own `setDisabled` STAYS. Stems (MPI-663) is painted by it, and a
+         * toggle is the one type whose Primitive draws a real disabled state rather
+         * than being merely unreachable.
          */
         function _paintFieldConstraints() {
             const disabled = disabledFieldIds(_allDecls, _fieldValues);
@@ -1278,7 +1389,10 @@ export const MpiBaseFlow = ComponentFactory.create({
             _allDecls.forEach((f) => {
                 const wrap = _liveFields.get(f.id);
                 if (!wrap) return;
-                qs('.mpi-base-flow__field-toggle-btn', wrap)?.setDisabled?.(disabled.has(f.id));
+                const off = disabled.has(f.id);
+                qs('.mpi-base-flow__field-toggle-btn', wrap)?.setDisabled?.(off);
+                wrap.inert = off;
+                wrap.classList.toggle('mpi-base-flow__field--disabled', off);
                 wrap.hidden = hidden.has(f.id);
             });
         }
@@ -2734,11 +2848,19 @@ export const MpiBaseFlow = ComponentFactory.create({
                 }
             });
 
-            // No Enhance pressed → the RAW prompt is what runs. There is no silent
-            // enhancement (plan.md § The prompt UI, rule 2), and the fallback is
-            // derived from the enhance declaration rather than declared a second
-            // time, so the pair can never be wired one-way.
+            // No Enhance pressed → the RAW prompt is what runs. The fallback is derived
+            // from the enhance declaration rather than declared a second time, so the
+            // pair can never be wired one-way.
+            //
+            // ONE-TO-ONE DECLARATIONS ONLY. A marker map (`to: {MOOD: …, VOCAL: …}`) has
+            // no single destination for the raw prompt, and copying the brief into all
+            // three would state it three times in one caption. Music Maker needs no
+            // fallback anyway: its brief reaches the graph on its own wire now
+            // (`Input_Brief`, MPI-664 decision A), and its enhancer runs inside Generate
+            // rather than waiting to be pressed, so an unenhanced run is the failure
+            // case and the right shape for it is three empty headings the graph strips.
             _enhanceDecls.forEach((d) => {
+                if (typeof d.to !== 'string' || typeof d.from !== 'string') return;
                 const bin = isInjectionParam(d.to) ? declaredParams : declared;
                 if (String(bin[d.to] || '').trim()) return;
                 const src = isInjectionParam(d.from) ? declaredParams[d.from] : declared[d.from];
@@ -2883,7 +3005,7 @@ export const MpiBaseFlow = ComponentFactory.create({
         const _run = async () => {
             if (_running) return;
 
-            const inputs = _collectInputs();
+            let inputs = _collectInputs();
             const mediaItems = inputs.mediaItems || [];
 
             // Empty-run guard: a flow that declares media slots but has NONE filled
@@ -2935,6 +3057,30 @@ export const MpiBaseFlow = ComponentFactory.create({
             _setGauge(0);
             _setStatus('Generating…');
             _myTempId = null;
+
+            // ENHANCEMENT IS STEP ONE OF GENERATE (Fabio, 2026-09-02: *"the enhancer
+            // runs silently, but it only runs if the user has changed the prompt… then
+            // the music workflow runs"*). Music Maker has no Enhance button at all now,
+            // so this is the only place its three caption blocks are ever written.
+            //
+            // AFTER the guards and INSIDE the running state: the guards ask whether
+            // there is anything to run at all, which is true or false before an LLM is
+            // involved, and the frame must be visibly busy while a 4B thinks — this is
+            // the one path where Generate does two jobs and the first one is slow.
+            //
+            // A no-op when nothing is stale, which is the common case: `_autoEnhance`
+            // walks the same `_enhanceWrote` bookkeeping the button path has always
+            // used, so pressing Generate twice on an unchanged brief runs the music
+            // graph twice and the enhancer once.
+            if (_enhanceDecls.some(d => d.auto)) {
+                _setStatus('Writing the description…');
+                await _autoEnhance();
+                // The enhancer just wrote fields; `inputs` was collected before it ran.
+                // Re-persisted too, so Reuse restores the run that actually happened.
+                inputs = _collectInputs();
+                _persistInputs(inputs);
+                _setStatus('Generating…');
+            }
 
             // A step kind may have to REDRAW the input before anything samples it
             // (the outpaint crop). Derived here, never in `inputs`: the snapshot

@@ -5,28 +5,79 @@ read it first, and do not re-search it.
 
 ## Current State
 
-🟢 **2026-09-02, second session — THE SONG STAGE IS NOW INPUT-LEFT / OUTPUT-RIGHT.** Fabio's own
-direction once he understood the data flow: *"let's place the input on the left and the output on
-the right."* Left, top to bottom: **Your song · Style · (Your own style) · Tempo · Instrumental ·
-Enhance**. Right: **Mood · Vocal · Arrangement**, `rows: 7` so they are comfortable to edit.
-Verified on real pixels in an isolated app (`:53808`, his `:3000` untouched, killed by its ROOT pid).
-Also this session: Low VRAM `default: false` + a note saying when to use it; Enhance restored to the
-run slide; the voices row's name box fixed. 35/35, eslint clean.
+🟢 **2026-09-02, third session — A, B AND C ARE ANSWERED AND THE ONE-BOX REWRITE IS BUILT.**
+Everything below in this section is Fabio's own instruction, given in two messages.
 
-🔴 **STILL BLOCKING ALL GRAPH CODE: where does the brief go in the caption?** Its own heading
-(off-schema — MiniMax's interface is exactly three), or prepended into `Global Metadata` (in-schema;
-the brief IS an `Application Scenarios & Imagery` sentence). Asked twice, recommendation is the
-second, **not answered**. No graph file was touched this session.
+**A — the brief goes into `Global Metadata`** (A1, the in-schema option). The graph now carries
+`Input_Positive` → `Cat_Brief` → `Cat_Global_Metadata`, so the user's sentence is the FIRST thing
+the caption says. The node is titled `Input_Positive` and not `Input_Brief` for one reason:
+`_buildParams` writes that title on every run, so it is the delivery mechanism — a bespoke title
+would need bespoke plumbing. `inject-params-titles.test.cjs` asserted the exact opposite until
+today; that assertion is now reversed with the reasoning attached.
 
-🟡 **AND A BIGGER DESIGN QUESTION IS OPEN — the one-box rewrite.** Fabio: *"can we not have one
-single text box where the user just expresses whatever he wants… Enhance doesn't even need to
-exist. It should probably happen in the background before the track starts… it only enhances if the
-user changes the original prompt."* He is right that this is what the web tools do, and the
-machinery already fits — `_runEnhance` is already one input → three marked outputs, and the
-no-clobber provenance Set is already the cache key. **What is unanswered: do Mood/Vocal/Arrangement
-stay visible (filled, overridable) or hide behind an Advanced disclosure?** He then spent the rest
-of the session refining the CURRENT two-column surface instead, so treat the one-box rewrite as
-proposed-and-liked, NOT approved.
+**B — the one-box rewrite, and it went further than an Advanced disclosure.** Fabio: *"if we're
+not going to show Mood, Vocal, and Arrangement to the user, then might as well change and simplify
+all this"*, then: *"the announce button, the mood, the vocal, and the arrangement all go away"*
+(*announce* = Enhance, speech-to-text). So they are not hidden behind a disclosure — they are gone
+from the surface entirely, kept only as `hidden: true` declarations because the graph still needs
+them seeded. The enhancer runs as **step one of Generate**: *"the enhancer runs silently, but it
+only runs if the user has changed the prompt… we get a snapshot of what the enhancer did so that it
+doesn't need to run again."*
+
+**THE SNAPSHOT NEEDED NO CACHE.** `_enhanceWrote` already recorded who wrote each box and
+`_setFlowField` already emptied the enhancer's own output when its source changed. Widening that
+from one `from` id to a LIST made the same bookkeeping the cache: a full target set means the
+answer still matches its inputs, an empty one means re-run. `from` is `['positive',
+'Input_Style', 'Input_Style_Custom', 'Input_Instrumental']` — Style because the enhancer writes an
+arrangement and cannot write one without the genre, Instrumental because otherwise it writes vocal
+prose for a track the caption elsewhere forbids vocals on.
+
+**D FOLLOWS FROM B AND IS DONE:** `qwen3vl-abliterated-clip` (4.88GB) is now in `requiredDeps`,
+taking the flow 13.34GB → 18.22GB. It had to: inside Generate, an undeclared enhancer is a Generate
+that dies on a clean install. 🟡 Side effect worth knowing — a flow's deps are protected
+UNCONDITIONALLY, so uninstalling the Image Describer plugin can no longer reclaim that weight;
+`shared-dep-uninstall-direction.test.cjs` case (3) now asserts the flow is its only defender.
+
+**THE NEW SURFACE — one step, then the run slide:**
+
+| surface | left | right |
+|---|---|---|
+| **Song** (step 1) | Voices roster · Voice notes · **Instrumental** | Lyrics |
+| **Generate** (run slide) | Your song · Style ▾ · (Your own style) · Tempo · Cut off at · Low VRAM | — |
+
+**Instrumental GREYS the voice controls rather than hiding them** (*"when pressed, it greys out all
+the voice controls"*), which needed a new `disabledWhen` clause AND a wider reach for disabling:
+it used to land on the primitive's `setDisabled`, so a `text` box could not be greyed at all. It is
+`inert` on the field wrapper now — the platform's own answer, one line, every field type.
+
+🔴 **AND THE LYRICS BOX IS NOW LIVE ON AN INSTRUMENTAL RUN — `Lyrics_Gate` is deleted.** Fabio
+asked whether lyrics do anything when instrumental is on; the answer is yes and the graph was
+throwing it away. `build_prompt` always wraps the lyrics slot in `<|lyrics_start|>` /
+`<|lyrics_end|>` whatever the caption says, and `normalize_lyrics` keeps `[section]` tags verbatim
+(`comfy/ldm/minimax_music/prompt.py`). Instrumental is a CAPTION clause and nothing else, so the
+box is where an instrumental track's sections get described — "[Intro] solo piano, [Chorus] full
+strings". The Vocal gate stays; only the lyrics one went.
+
+**C — "Maximum length" is now "Cut off at", default 5:00, range 30–360s.** 360 is the model's own
+ceiling (`MAX_AUDIO_FRAMES / AUDIO_FRAMES_PER_SECOND` = 9000 / 25), not a round number. No fade:
+nothing measured has ever reached the cap, so a fade would be machinery for an event that has not
+happened. Marked `ponytail:` in the FlowDef for the first time a real run is audibly truncated.
+
+**One un-asked fix, disclosed:** the `Cinematic epic` style phrase lost `with percussion and
+choir`. The graph was building a self-contradicting caption on any instrumental run — that phrase
+plus `no vocoder or choir pads` from `Instrumental_Clause`, in the same caption, with nothing to
+arbitrate. No prompt wording avoided it; the style phrase had to yield.
+
+**Verified without spending a single GPU-second.** The caption chain is pure string ops, so it was
+evaluated directly from the API graph: with vocals the caption opens `Global Metadata: Dark heavy
+soundtrack for a horror movie trailer. Cinematic orchestral epic…`; with Instrumental on the cast
+is replaced by the clause and the lyrics still pass through. Real pixels checked in an isolated app
+on `:52799` (his `:3000` untouched, killed by its ROOT pid): the greying, the three hidden fields,
+zero Enhance buttons, `Cut off at 5:00`. 876/876 unit, eslint clean.
+
+🔴 **NOT YET RUN ON A GPU.** The auto-enhance path enqueues a real `promptEnhance` op and then the
+music graph; that is Fabio's card and his call. Nothing here proves the 4B holds the marker format
+when its input is a labelled block rather than a bare sentence.
 
 🟢 **The length question is CLOSED and needs no code** — see § 3 below. Measured over 8 encode-only
 runs: the prose lever does nothing, the AR picks its own length (33.84 → 90.0+ on ONE caption across
@@ -839,22 +890,24 @@ declared wrong: hide a `fields` step whose every declared field is currently hid
 
 ## Open — needs Fabio
 
-A. 🔴 **THE BRIEF'S SHAPE IN THE CAPTION.** Own heading (off-schema) vs prepended into
-   `Global Metadata` (in-schema, recommended). One `Input_Brief` MpiText + one `StringConcatenate`
-   either way. **Asked twice, still unanswered — no graph work can start without it.**
+A. ✅ **ANSWERED 2026-09-02 — A1, into `Global Metadata`.** Shipped: `Input_Positive` + `Cat_Brief`.
 
-B. 🟡 **THE ONE-BOX REWRITE** — his idea, liked, not approved. Open sub-question: do the three
-   prose boxes stay visible or hide behind an Advanced disclosure? See § Current State.
+B. ✅ **ANSWERED 2026-09-02 — and harder than the question asked.** Not an Advanced disclosure:
+   Mood/Vocal/Arrangement are OFF the surface entirely, the Enhance button is gone, and the
+   enhancer runs inside Generate cached on its own source list. Shipped.
 
-C. 🟡 **"Maximum length" — what happens to it**, now that it is measured as a guillotine with no
-   steering (§ 3). Rename to "Cut off after" + a fade · drop it and cap high · or keep it, cap high
-   and trim+fade after decode. He said either of the first two is fine; no decision recorded.
+C. ✅ **ANSWERED 2026-09-02 — "Cut off at", default 5:00, 30–360s.** No fade (nothing has ever
+   reached the cap); the upgrade path is marked `ponytail:` on the field.
 
-D. 🟡 **The enhancer LLM is NOT a declared dependency of this flow.** `requiredDeps` names only the
-   three MiniMax weights; the enhancer runs on `qwen3vl-abliterated-clip` (4.88GB), which arrives
-   only via Krea2, Qwen, or the Image Describer plugin. Survivable today (Enhance is a button that
-   warns). **Fatal under the one-box design**, where Enhance runs inside Generate. Adding it takes
-   the flow 13.34GB → 18.22GB — a product call, and B cannot ship without it.
+D. ✅ **ANSWERED BY B — `qwen3vl-abliterated-clip` is now a `requiredDep`,** 13.34GB → 18.22GB.
+   🟡 Residual: a flow's deps are protected unconditionally, so the Image Describer plugin's
+   uninstall can no longer reclaim that weight. Making flow protection conditional on the flow
+   being installed is MPI-682's territory, not this card's.
+
+D2. 🔴 **THE GPU RUN HAS NOT HAPPENED.** Everything above is verified by pure evaluation and real
+   pixels; nothing proves the 4B still emits `[MOOD]`/`[VOCAL]`/`[ARRANGEMENT]` now that its input
+   is a labelled block rather than one sentence. If it stops marking, `_writeEnhanced`'s unmarked
+   fallback drops the whole answer into Mood and the caption loses two headings — quietly.
 
 E. 🟡 **`MpiInput` and `MpiDropdown` do not agree on control height — a PRIMITIVE-level mismatch,
    not this flow's.** Measured in the running app: input `padding: 9.6px`, `border-radius: 4px`,

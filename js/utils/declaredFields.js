@@ -230,6 +230,9 @@ export function formatDeclaredValue(f, v) {
  *   `{ enabledWhen: { group: 'stems', atLeast: 2 } }`
  *                                           — on a field OUTSIDE the group. Disabled while
  *                                             fewer than N members are on.
+ *   `{ disabledWhen: { field: 'Input_Instrumental', is: true } }`
+ *                                           — MPI-664. Plain field dependency, the same
+ *                                             `is` / `isNot` shape `hiddenWhen` takes.
  *
  * A disabled field keeps its VALUE — greying a control is not the same as deciding for
  * the user, and the value comes back the moment the constraint clears. Anything acting on
@@ -255,6 +258,21 @@ export function disabledFieldIds(fields = [], values = {}) {
         const rule = f.enabledWhen;
         if (rule?.group && Number.isFinite(rule.atLeast)) {
             if (activeIn(rule.group).length < rule.atLeast) out.add(f.id);
+        }
+        // `disabledWhen: { field, is | isNot }` — the FIELD twin of the two group
+        // clauses above, and the exact shape `hiddenWhen` already takes, so a flow
+        // author who has met one has met both (MPI-664).
+        //
+        // It exists because Music Maker's Instrumental must GREY the voice roster and
+        // the voice notes rather than hide them (Fabio, 2026-09-02). Hiding says "this
+        // does not exist"; greying says "this exists and does not apply right now",
+        // which is the true statement about a cast on an instrumental track — and it
+        // keeps the roster on screen so turning Instrumental back off is visibly
+        // reversible rather than a control reappearing from nowhere.
+        const off = f.disabledWhen;
+        if (off?.field) {
+            if ('isNot' in off) { if (values[off.field] !== off.isNot) out.add(f.id); }
+            else if (values[off.field] === off.is) out.add(f.id);
         }
     });
     return out;
@@ -310,8 +328,17 @@ export function hiddenFieldIds(fields = [], values = {}, modelIds = []) {
     const picked = modelIds || [];
     const out = new Set();
     (fields || []).forEach((f) => {
+        if (!f?.id) return;
+        // `hidden: true` — ALWAYS hidden, no condition. A field the user never sees but
+        // the GRAPH still needs (MPI-664): Music Maker's Mood / Vocal / Arrangement are
+        // written by the enhancer inside Generate and shown nowhere, and deleting the
+        // declarations instead would strand them — `_seedField` skips a field with no
+        // `default`, so the id never reaches `injectionParams` and the graph's BAKED
+        // value runs. Declared-but-hidden is the only shape that keeps the default
+        // seeding, the enhancer's write target and the injection key alive at once.
+        if (f.hidden) { out.add(f.id); return; }
         const rule = f?.hiddenWhen;
-        if (!f?.id || !rule) return;
+        if (!rule) return;
         if (rule.field) {
             // `'isNot' in rule` rather than a truthiness test: `isNot: ''` is a legal
             // clause (reveal unless the source is blank) and `isNot: 0` more so.

@@ -25,6 +25,9 @@
     "js/components/Compounds/LandingPages/MpiAbout/MpiAbout.js",
     "js/core/operationRegistry.js",
     "operation_registry.json",
-    "tests/flow-output-filename.test.cjs"
+    "tests/flow-output-filename.test.cjs",
+    "docs/playbooks/add-flow/ui/prompt-enhance.md",
+    "tests/flow-uninstall-guard.test.cjs",
+    "tests/shared-dep-uninstall-direction.test.cjs"
   ]
 }

@@ -710,14 +710,24 @@ test('the MiniMax Music Flow carries the whole caption-assembly surface (MPI-664
     }
     assert.ok(have.has('output_audio'), `${file} must carry a capture node titled "output_audio"`);
 
-    // The brief never reaches this graph — it is the enhancer's input, and the caption
-    // box holds what comes back. `_buildParams` emits `Input_Positive`/`Input_Negative`
-    // on every run whatever the flow declares, so a node carrying either title would be
-    // overwritten with the raw brief (or with '') and spliced into the caption.
-    for (const title of ['input_positive', 'input_negative', 'input_negative_audio']) {
+    // 🔴 THE BRIEF NOW REACHES THE GRAPH, and this assertion is the reverse of what it
+    // said until 2026-09-02 (decision A, Fabio). While the brief was the enhancer's
+    // input and nothing else, the user's one sentence — the thing carrying his whole
+    // intent — was paraphrased by a 4B and then thrown away, and only the paraphrase
+    // was sung. It is prepended to Global Metadata now, which is where MiniMax's own
+    // `Application Scenarios & Imagery` sub-label already lives; a FOURTH heading was
+    // the alternative and is off-schema, their caption interface being exactly three.
+    //
+    // `Input_Positive` is the title BECAUSE `_buildParams` writes it on every run —
+    // that is the whole delivery mechanism, and the reason the node is not called
+    // `Input_Brief`: a bespoke title would need bespoke plumbing to fill it.
+    assert.ok(have.has('input_positive'),
+        `${file}: the brief must reach the graph — `
+        + 'a node titled Input_Positive is how `positive` gets there at all');
+    for (const title of ['input_negative', 'input_negative_audio']) {
         assert.ok(!have.has(title),
-            `${file}: a node titled "${title}" would be written on every run — the brief `
-            + 'reaches this flow through the enhancer, not through the graph');
+            `${file}: a node titled "${title}" would be written with '' on every run — `
+            + 'this flow has no negative prompt');
     }
 
     const graph = JSON.parse(fs.readFileSync(path.join(WORKFLOWS, file), 'utf8'));
@@ -736,13 +746,22 @@ test('the MiniMax Music Flow carries the whole caption-assembly surface (MPI-664
             `${file}: MiniMaxMusic3TextEncode.${input} must come from the assembly chain`);
     }
 
-    // A hidden field KEEPS ITS VALUE, so the graph re-checks Instrumental itself rather
-    // than trusting the Voices and Lyrics steps to have been hidden. BOTH gates: losing
-    // the lyrics one ships sung lyrics on an instrumental run, losing the vocal one
-    // describes a roster that never sings.
+    // ONE gate, not two, since 2026-09-02 — and the one that went is the LYRICS gate.
+    // It used to blank the lyrics slot on an instrumental run, which was wrong at the
+    // model level: `build_prompt` sends `<|lyrics_start|>…<|lyrics_end|>` whatever the
+    // caption says and `normalize_lyrics` keeps `[section]` tags verbatim
+    // (`comfy/ldm/minimax_music/prompt.py`), so the box is how an instrumental track's
+    // sections get described — "[Intro] solo piano, [Chorus] full strings". Instrumental
+    // is a CAPTION clause; blanking the lyrics threw away a real steering surface.
+    //
+    // The VOCAL gate stays and still matters: a greyed field KEEPS ITS VALUE, so
+    // without it an instrumental run would splice in a cast that is merely greyed out.
     const instrumental = idOf('input_instrumental');
-    assert.equal(feeds(instrumental, 'MpiIfElse', 'boolean').length, 2,
-        `${file}: Input_Instrumental must gate BOTH the lyrics and the Vocal Details block`);
+    const gates = feeds(instrumental, 'MpiIfElse', 'boolean');
+    assert.equal(gates.length, 1,
+        `${file}: Input_Instrumental must gate the Vocal Details block — and ONLY that. `
+        + 'A second gate is the lyrics one coming back, which silently drops the section '
+        + 'prose an instrumental track is steered with');
 
     // Three prose blocks, THREE BOXES, each wired straight into its own heading
     // (MPI-664, 2026-09-02). This was one `Input_Caption` feeding three `RegexExtract`

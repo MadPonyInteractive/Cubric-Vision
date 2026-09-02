@@ -1,8 +1,8 @@
 {
   "id": "flow-minimax-music",
   "revision": 0,
-  "last_node_id": 100,
-  "last_link_id": 135,
+  "last_node_id": 102,
+  "last_link_id": 137,
   "nodes": [
     {
       "id": 48,
@@ -322,7 +322,7 @@
           "widget": {
             "name": "lyrics"
           },
-          "link": 134
+          "link": 133
         },
         {
           "localized_name": "seed",
@@ -1270,8 +1270,7 @@
           "name": "boolean",
           "type": "BOOLEAN",
           "links": [
-            117,
-            131
+            117
           ]
         }
       ],
@@ -1371,8 +1370,7 @@
           "name": "Text",
           "type": "STRING",
           "links": [
-            104,
-            132
+            104
           ]
         }
       ],
@@ -1713,66 +1711,6 @@
       }
     },
     {
-      "id": 78,
-      "type": "MpiIfElse",
-      "pos": [
-        -1360.0,
-        220.0
-      ],
-      "size": [
-        270,
-        78
-      ],
-      "flags": {},
-      "order": 32,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "true",
-          "name": "true",
-          "type": "*",
-          "link": 132
-        },
-        {
-          "localized_name": "false",
-          "name": "false",
-          "type": "*",
-          "link": 133
-        },
-        {
-          "localized_name": "boolean",
-          "name": "boolean",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "boolean"
-          },
-          "link": 131
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "output",
-          "name": "output",
-          "type": "*",
-          "links": [
-            134
-          ]
-        }
-      ],
-      "title": "Lyrics_Gate",
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "53c019851506df0a99895ca9db4fd09e8d2f3fc3",
-        "Node name for S&R": "MpiIfElse"
-      },
-      "widgets_values": [
-        false
-      ],
-      "widgets_values_named": {
-        "boolean": false
-      }
-    },
-    {
       "id": 85,
       "type": "MpiIfElse",
       "pos": [
@@ -2095,7 +2033,7 @@
           "widget": {
             "name": "string_b"
           },
-          "link": 108
+          "link": 137
         }
       ],
       "outputs": [
@@ -2613,6 +2551,121 @@
       },
       "color": "#432",
       "bgcolor": "#653"
+    },
+    {
+      "id": 101,
+      "type": "MpiText",
+      "pos": [
+        -1720.0,
+        -700.0
+      ],
+      "size": [
+        320,
+        100
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string",
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "STRING",
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            136
+          ]
+        }
+      ],
+      "title": "Input_Positive",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "Node name for S&R": "MpiText"
+      },
+      "widgets_values": [
+        ""
+      ],
+      "widgets_values_named": {
+        "string": ""
+      }
+    },
+    {
+      "id": 102,
+      "type": "StringConcatenate",
+      "pos": [
+        -1360.0,
+        -700.0
+      ],
+      "size": [
+        320,
+        120
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string_a",
+          "name": "string_a",
+          "type": "STRING",
+          "widget": {
+            "name": "string_a"
+          },
+          "link": 136
+        },
+        {
+          "localized_name": "string_b",
+          "name": "string_b",
+          "type": "STRING",
+          "widget": {
+            "name": "string_b"
+          },
+          "link": 108
+        },
+        {
+          "localized_name": "delimiter",
+          "name": "delimiter",
+          "type": "STRING",
+          "widget": {
+            "name": "delimiter"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "STRING",
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            137
+          ]
+        }
+      ],
+      "title": "Cat_Brief",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "Node name for S&R": "StringConcatenate"
+      },
+      "widgets_values": [
+        "",
+        "",
+        " "
+      ],
+      "widgets_values_named": {
+        "string_a": "",
+        "string_b": "",
+        "delimiter": " "
+      }
     }
   ],
   "links": [
@@ -2836,7 +2889,7 @@
       108,
       90,
       0,
-      91,
+      102,
       1,
       "STRING"
     ],
@@ -2993,36 +3046,12 @@
       "STRING"
     ],
     [
-      131,
-      73,
-      0,
-      78,
-      2,
-      "BOOLEAN"
-    ],
-    [
-      132,
-      75,
-      0,
-      78,
-      0,
-      "STRING"
-    ],
-    [
       133,
       77,
       0,
-      78,
-      1,
-      "STRING"
-    ],
-    [
-      134,
-      78,
-      0,
       54,
       2,
-      "*"
+      "STRING"
     ],
     [
       135,
@@ -3031,6 +3060,22 @@
       54,
       4,
       "FLOAT"
+    ],
+    [
+      136,
+      101,
+      0,
+      102,
+      0,
+      "STRING"
+    ],
+    [
+      137,
+      102,
+      0,
+      91,
+      1,
+      "STRING"
     ]
   ],
   "groups": [],

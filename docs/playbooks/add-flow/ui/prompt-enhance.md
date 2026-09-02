@@ -55,7 +55,40 @@ The three behaviours come off the ONE `action` declaration, so they cannot disag
 | **Enhance is the only writer of `to`** (besides the user typing in it). Generate never enhances. | `_runEnhance` is the only caller that writes `to` |
 | **Editing `from` CLEARS `to`.** The enhanced text was written for the old wording. | `_setFlowField` — visible immediately where `to` is shown |
 | **The button reports which of those is true.** Heat = the current prompt is not enhanced. | `_paintEnhance` — the only readable signal on a surface that hides `to` |
-| **No Enhance pressed → the RAW prompt runs.** There is no silent enhancement. | `_collectInputs` fills an empty `to` from `from` |
+| **No Enhance pressed → the RAW prompt runs**, on a one-to-one declaration. | `_collectInputs` fills an empty `to` from `from` — string `from`/`to` only; a marker map has no single destination for the brief |
+
+## No button: enhancing INSIDE Generate (MPI-664)
+
+Declare the same object on the **flow** as `enhance:` instead of as a `button` field, and the
+frame runs it as step one of every Generate. `action` and `auto` are implied — a declaration
+nobody can press can only be automatic — and there is no control on screen at all.
+
+```js
+enhance: {
+    op: 'promptEnhance',
+    from: ['positive', 'Input_Style', 'Input_Instrumental'],
+    to: { MOOD: 'Input_Mood', VOCAL: 'Input_Vocal', ARRANGEMENT: 'Input_Arrangement' },
+    injectionParams: MY_RECIPE,
+},
+```
+
+**`from` may be a LIST, and the list is also the cache key.** Several sources are sent as one
+`Label: value` line each, empties dropped and a `false` toggle dropped with them. They are exactly
+the fields whose change makes the previous answer stale, so `_setFlowField` empties the enhancer's
+own targets when any of them changes and leaves them alone otherwise. **There is no second cache**:
+a full target set means the answer on file still matches its inputs, an empty one means re-run.
+Press Generate twice on an unchanged brief and the music graph runs twice, the enhancer once.
+
+Two things this costs, and both are non-negotiable:
+
+- **The enhancer weight becomes a `requiredDep` of the flow.** While Enhance was a button, an
+  install without it lost a button that warned. Inside Generate it is a Generate that dies.
+- **The targets must stay declared as `hidden: true` fields.** Deleting them strands the graph —
+  see [fields.md](carousel-frame/fields.md) § the clause table.
+
+Everything else is unchanged, including the rule that matters most: `_enhanceWrote` still means
+Enhance owns only what Enhance wrote, so a box the user typed into is never overwritten and never
+cleared.
 
 ## `to` may name SEVERAL boxes (MPI-664)
 

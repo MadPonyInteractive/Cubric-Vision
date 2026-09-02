@@ -103,7 +103,7 @@ never reached the payload, defaults were never seeded, and Reuse read only `step
 
 ## Fields that constrain each other (MPI-663, MPI-664)
 
-Five DECLARATIVE clauses, evaluated in `js/utils/declaredFields.js` and painted by the frame in
+Eight DECLARATIVE clauses, evaluated in `js/utils/declaredFields.js` and painted by the frame in
 one pass (`_paintFieldConstraints`). Declarative on purpose: a predicate in a FlowDef is a thing
 only a first-party flow can ship.
 
@@ -115,10 +115,21 @@ only a first-party flow can ship.
 | `hiddenWhen: { field: '<id>', isNot: <value> }` | any field | removed **unless** that field holds exactly that value — the REVEAL case |
 | `hiddenWhen: { model: '<id>' }` | any field | removed while a Model slot is resolved to that model |
 | `hiddenWhen: { modelNot: '<id>' }` | any field | removed **unless** a Model slot is resolved to that model — the per-arm control |
+| `disabledWhen: { field: '<id>', is \| isNot: <value> }` | any field | **greyed and unreachable** on another field's value — the field twin of the two group clauses |
+| `hidden: true` | any field | never rendered, on any surface, under any condition |
 
-The first two are `disabledFieldIds`, the last four are `hiddenFieldIds`. Only one clause fires
-per field; `field` wins over `model` wins over `modelNot`, and `isNot` wins over `is` within the
-`field` clause.
+The first two and `disabledWhen` are `disabledFieldIds`; the four `hiddenWhen` shapes and `hidden`
+are `hiddenFieldIds`. Only one clause fires per field; `field` wins over `model` wins over
+`modelNot`, and `isNot` wins over `is` within the `field` clause. `hidden` short-circuits
+everything — there is nothing to evaluate.
+
+**`hidden: true` is for a field the GRAPH needs and the user must not see** (MPI-664). Music
+Maker's Mood / Vocal / Arrangement are written by the enhancer inside Generate and shown nowhere.
+Deleting the declarations instead is the trap: `_seedField` skips a field with no `default`, so the
+id would never reach `injectionParams` and **the graph's baked value would run** — in that flow,
+the authoring bench's own demo caption, silently replacing the user's song. Declared-but-hidden is
+the only shape that keeps the default seeding, the enhancer's write target and the injection key
+alive at once.
 
 **`isNot` is for a dropdown option that OPENS a box** (MPI-664). Music Maker's Style list carries a
 `Custom` entry and the free-text box under it belongs to that entry alone; saying so with `is`
@@ -148,14 +159,27 @@ and its `combine` toggle is `{ enabledWhen: { group: 'stems', atLeast: 2 } }`.
 
 ### Hiding vs disabling
 
-**Reach for `hiddenWhen` when the field has nothing to say at all**, and disabling when it has
-something to say that is currently forbidden. MiniMax Music's Instrumental toggle hides the lyrics
-box and both voice controls: with no vocals there is nothing for them to mean, and a greyed lyrics
-box still reads as a box the user failed to fill in.
+**Reach for `hiddenWhen` when the field has nothing to say at all**, and `disabledWhen` when it has
+something to say that is currently forbidden. Music Maker's Instrumental toggle **greys** the voice
+roster and the voice notes rather than hiding them: hiding says "this does not exist", greying says
+"this exists and does not apply right now", which is the true statement about a cast on an
+instrumental track — and it keeps the controls on screen, so turning Instrumental back off is
+visibly reversible rather than a surface reappearing from nowhere. A control that deletes the page
+it is on cannot show what it did.
 
-Hiding is also the **wider reach**. Disabling lands on the primitive's own `setDisabled`, so it
-works for a `toggle` and a `select` and nothing else — a declared `text` box cannot be greyed at
-all today. Hiding is on the field WRAPPER, so it works for every field type.
+That flow's lyrics box is gated by **neither**, deliberately: the encoder always receives the
+lyrics slot (`build_prompt` wraps it in `<|lyrics_start|>` / `<|lyrics_end|>` whatever the caption
+says, and `normalize_lyrics` keeps `[section]` tags verbatim), so on an instrumental run it is
+where the sections get described — "[Intro] solo piano, [Chorus] full strings". It used to be
+hidden, and that threw a real steering surface away.
+
+**Both clauses now reach every field type.** Disabling used to land on the primitive's own
+`setDisabled` and therefore on a `toggle` and a `select` and nothing else. It is `inert` on the
+field WRAPPER now — the platform's own answer, blocking pointer, focus and selection for the whole
+subtree — so a roster of MpiInputs and MpiDropdowns greys in one line without the frame reaching
+inside a Primitive it does not own. The toggle's `setDisabled` still runs alongside it, because a
+toggle is the one type whose Primitive draws a real disabled state rather than being merely
+unreachable.
 
 `hiddenWhen` compares with **exact equality**, not truthiness: an untouched field is `undefined`,
 not `false`, so a rule keyed `is: false` does not fire before the user touches the control.

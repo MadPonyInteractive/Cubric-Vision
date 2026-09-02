@@ -31,7 +31,14 @@ const imp = (p) => import(pathToFileURL(path.resolve(p)).href);
     }
 
     const minimax = ownDeps('minimax-music');
-    assert.strictEqual(minimax.length, 3, 'fixture drift: minimax-music should own 3 deps');
+    // FOUR since MPI-664: the three MiniMax weights plus `qwen3vl-abliterated-clip`, the
+    // prompt enhancer, which became required the day enhancement moved inside Generate.
+    // That fourth one is SHARED with the krea2 and qwen models, and it is safe here for
+    // a reason worth stating: the flow guard below is only one contributor to the keep
+    // set — the MODELS sweep in the same function protects it whenever either model is
+    // installed, so assertion (1) freeing it from the FLOW side deletes nothing a model
+    // still owns.
+    assert.strictEqual(minimax.length, 4, 'fixture drift: minimax-music should own 4 deps');
 
     // (1) The flow's OWN uninstall releases its own weights. The case that started the card.
     const selfUninstall = dm._flowRequiredDepIds(reg.flowDepKey('minimax-music'));

@@ -566,6 +566,12 @@
    UA stylesheet's `[hidden]` rule, so the attribute alone hides nothing — same
    override `__result-empty` and `__pending` already carry. */
 .mpi-base-flow__field[hidden] { display: none; }
+/* A declared `disabledWhen` field (MPI-664). `inert` on the wrapper already makes the
+   subtree unreachable — no pointer, no focus, no selection — so this carries only the
+   part `inert` has no opinion about: saying so on screen. Opacity ONLY: the Primitives
+   inside keep drawing their own fill, border and radius, which is the rule this block
+   works under (a consumer never restates a Primitive's treatment). */
+.mpi-base-flow__field--disabled { opacity: 0.45; }
 /* `inline: true` — caption LEFT, control RIGHT, on one line (MPI-664). Declared for
    a small number: stacked, a three-digit BPM gets a full-width box with room for
    trillions, and "does it make sense that such a small number is displayed on an
