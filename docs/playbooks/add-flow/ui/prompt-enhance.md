@@ -57,6 +57,29 @@ The three behaviours come off the ONE `action` declaration, so they cannot disag
 | **The button reports which of those is true.** Heat = the current prompt is not enhanced. | `_paintEnhance` — the only readable signal on a surface that hides `to` |
 | **No Enhance pressed → the RAW prompt runs.** There is no silent enhancement. | `_collectInputs` fills an empty `to` from `from` |
 
+## `to` may name SEVERAL boxes (MPI-664)
+
+`to` is one field id, **or a marker → id map** when the enhancer's answer is several blocks:
+
+```js
+to: { MOOD: 'Input_Mood', VOCAL: 'Input_Vocal', ARRANGEMENT: 'Input_Arrangement' },
+```
+
+The op still answers in ONE string, marked `[MOOD] … [VOCAL] … [ARRANGEMENT] …`. The frame
+splits it (`_writeEnhanced`): each box claims the run of text from its own marker to whichever
+marker comes next. Every rule above holds unchanged — editing `from` clears **all** the targets,
+and the button is stale while **any** of them is empty, because a half-filled set is not enhanced.
+
+**Reach for the map when the user cannot tell what the button did.** Music Maker shipped its three
+blocks as one 12-row box and Fabio could not read it at all — *"I still don't know what it is or
+how to use it… what is he now going to do? Replace my prompt?"* Three labelled boxes filling at
+once, above an untouched brief, answers that where no label could. One box is still right when the
+answer is genuinely one thing.
+
+⚠️ **An UNMARKED answer is not dropped.** A model that ignored the format still wrote usable prose,
+so it all lands in the FIRST box rather than being split into three empty ones. Splitting into
+nothing is the failure mode that reads as a broken enhancer.
+
 **NOT-ENHANCED is the LOUD state, deliberately.** It is the actionable one, so it takes the heat
 fill — the same pink as Generate. Enhanced goes quiet on the secondary surface. A first-open flow
 therefore starts loud, which is correct: the button is the call to action, not a warning.

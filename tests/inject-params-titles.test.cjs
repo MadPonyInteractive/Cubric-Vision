@@ -701,7 +701,8 @@ test('the MiniMax Music Flow carries the whole caption-assembly surface (MPI-664
     const file = 'flow_minimax_music.json';
     const have = titlesOf(file);
     for (const title of [
-        'input_seed', 'input_caption', 'input_lyrics', 'input_low_vram',
+        'input_seed', 'input_mood', 'input_vocal', 'input_arrangement',
+        'input_lyrics', 'input_low_vram',
         'input_instrumental', 'input_style', 'input_style_custom', 'input_bpm',
         'input_voices', 'input_voice_notes', 'input_duration',
     ]) {
@@ -743,9 +744,18 @@ test('the MiniMax Music Flow carries the whole caption-assembly surface (MPI-664
     assert.equal(feeds(instrumental, 'MpiIfElse', 'boolean').length, 2,
         `${file}: Input_Instrumental must gate BOTH the lyrics and the Vocal Details block`);
 
-    // Three prose blocks, three extractors. One lost extractor drops its whole block.
-    assert.equal(feeds(idOf('input_caption'), 'RegexExtract', 'string').length, 3,
-        `${file}: Input_Caption must feed all three [MOOD]/[VOCAL]/[ARRANGEMENT] extracts`);
+    // Three prose blocks, THREE BOXES, each wired straight into its own heading
+    // (MPI-664, 2026-09-02). This was one `Input_Caption` feeding three `RegexExtract`
+    // nodes that split it back apart on `[MOOD]`/`[VOCAL]`/`[ARRANGEMENT]`; the UI now
+    // holds the three blocks separately, so the graph takes them separately and the
+    // extractors are gone. A box wired to the wrong concatenate would put the vocal
+    // prose under the arrangement heading and still run.
+    for (const title of ['input_mood', 'input_vocal', 'input_arrangement']) {
+        assert.equal(feeds(idOf(title), 'StringConcatenate', 'string_b').length, 1,
+            `${file}: ${title} must feed exactly one caption heading`);
+    }
+    assert.ok(!Object.values(graph).some(n => n.class_type === 'RegexExtract'),
+        `${file}: the marker extractors are dead — the app splits the enhancer's answer now`);
 
     // `<Choir>` is not in MiniMax's tag set, so the roster markers are stripped before the
     // lyrics reach the model. Assert the pattern still does that rather than merely that a

@@ -170,6 +170,37 @@ test('hiddenWhen takes a field off screen, and only when the rule says so', asyn
         ['Input_Lyrics', 'Input_Voice']);
 });
 
+// ── MPI-664 — `isNot`, the REVEAL clause ──────────────────────────────────────
+//
+// Music Maker's Style list carries a `Custom` option and the free-text box under it
+// belongs to that option alone. Getting this backwards is silent both ways: inverted,
+// the box is the ONE thing hidden when it is wanted; dead, it is open under all
+// eighteen families asking for something the user already answered.
+
+test('hiddenWhen isNot reveals for one value and hides for every other', async () => {
+    const { hiddenFieldIds } = await esm('js/utils/declaredFields.js');
+    // The real shape: `Custom` is the EMPTY STRING, because every other option's value
+    // is a genre phrase the graph concatenates and "no preset phrase" is the empty one.
+    const fields = [
+        { id: 'Input_Style' },
+        { id: 'Input_Style_Custom', hiddenWhen: { field: 'Input_Style', isNot: '' } },
+    ];
+    assert.equal(hiddenFieldIds(fields, { Input_Style: '' }).has('Input_Style_Custom'), false,
+        'Custom picked — the box is the whole point of that option');
+    assert.equal(
+        hiddenFieldIds(fields, { Input_Style: 'Contemporary pop ballad, radio-ready production.' })
+            .has('Input_Style_Custom'), true,
+        'any named family — the box has nothing to add');
+
+    // `isNot` must beat `is` in the same clause rather than both firing, and an empty
+    // target value must not be read as "no clause" — `'isNot' in rule`, not truthiness.
+    const both = [{ id: 'x', hiddenWhen: { field: 'f', is: 'a', isNot: 'a' } }];
+    assert.equal(hiddenFieldIds(both, { f: 'a' }).has('x'), false, 'isNot wins');
+
+    // An UNSET source hides, and that is correct: the reveal has not been asked for.
+    assert.equal(hiddenFieldIds(fields, {}).has('Input_Style_Custom'), true);
+});
+
 // ── MPI-591 — hiding on the PICKED MODEL, not on another field ─────────────────
 
 test('hiddenWhen keys on the picked model, so a per-arm control is off screen elsewhere', async () => {

@@ -86,6 +86,54 @@ form.
 The field vocabulary itself — the types, and where each id's value lands — is
 [fields.md](fields.md). It is one vocabulary whether declared here or on the flow.
 
+## A step may declare that it does not apply — `hiddenWhen` (MPI-664)
+
+A step takes the **same `hiddenWhen` clause a field does** ([fields.md](fields.md) § Fields that
+constrain each other), and when it fires the step is not merely empty — **it is not in the flow at
+all**: the ticker never lists it, `›` never lands on it, and the numbering closes up behind it.
+
+```js
+{ kind: 'fields', tickerLabel: 'Lyrics', title: 'Write the lyrics',
+  hiddenWhen: { field: 'Input_Instrumental', is: true }, fields: [ … ] }
+```
+
+**Hiding every field on a step is NOT the same thing**, and that is why this exists. Music Maker
+hid its three lyrics fields individually and the stage still rendered its title, its hint and an
+empty body — a step that exists to say nothing, and half of why five steps read as *"way too many
+steps"* (Fabio, 2026-09-01). Reach for a field clause when the step still has something to do
+without that field, and for this one when it does not.
+
+Evaluated **live**, because the control that decides it is a field on an earlier step. The frame
+rebuilds the ticker and pulls `_current` back inside the flow (`_resyncSteps`), guarded on the step
+COUNT so a prompt box does not tear down its own slide on every keystroke.
+
+🔴 **A skipped step KEEPS ITS VALUES**, exactly as a hidden field does. So whatever consumes them
+re-checks the real condition — Music Maker's graph re-tests Instrumental itself rather than trusting
+the stage to be gone, or an instrumental run splices in lyrics and a cast that are merely out of
+sight.
+
+## Two columns on a `fields` step — `col: 'right'` (MPI-664)
+
+A canvas step splits its slide with `fieldsSide` — fields beside the picture. A `fields` step has no
+picture, and gets the same seam by tagging the fields themselves:
+
+```js
+{ kind: 'fields', tickerLabel: 'Song', title: 'Describe your song', fields: [
+    { id: 'Input_Style', type: 'select', … },                    // left
+    { id: 'Input_Bpm',   type: 'number', inline: true, … },      // left
+    { id: 'positive',    type: 'text', col: 'right', … },        // right
+] }
+```
+
+Left is a fixed readable column, right takes the slack. **The split that works is exact-vs-prose**:
+the controls whose values reach the graph verbatim on one side, the writing on the other. Music
+Maker puts style, tempo and its two toggles against the brief box, and its voice roster against the
+lyrics (Fabio, 2026-09-02). Declaring it per FIELD rather than as a step-level `columns: [[…],[…]]`
+keeps the declaration one readable list and lets a field change sides in one word.
+
+**One row is still the cap for a CANVAS step.** This is the media-less kind only — there is no
+gizmo here for a second control surface to compete with, and the two columns ARE the work.
+
 ## A step may declare WHERE ITS VALUE GOES — `param` (MPI-572)
 
 A gizmo reports a value; something has to name the graph node it feeds. That naming is flow

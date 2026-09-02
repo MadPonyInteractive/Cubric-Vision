@@ -1,11 +1,11 @@
 {
   "45": {
     "inputs": {
-      "string": "[MOOD] Laid-back and dreamy throughout, a gentle warm drift with a subtle late-night glow that deepens in the middle and dissolves softly at the end. Studying, raining-outside, headphones-on late-night listening. Bedroom production: muddy warm texture, heavy vinyl crackle, tape hiss and wow-flutter pitch wobble, low-passed dusty mix, soft-clipped drums, everything slightly detuned and cozy.\n\n[VOCAL] Soft androgynous vocal, hushed half-sung half-spoken delivery, sitting low in the mix like another instrument, lazy behind-the-beat phrasing, gentle breathy timbre. Sparse murmured double-tracked harmonies, occasional wordless \"mmm\" and \"ooh\" hums drenched in tape delay and warm spring reverb. Long stretches with no vocals at all.\n\n[ARRANGEMENT] Dusty boom-bap drums with a soft thumping kick, cracked snare with lazy swing, brushed hi-hats, low round sub bass. Warm Rhodes piano chords with slow chorus wobble as the harmonic bed, mellow jazzy guitar licks answering the vocal lines, constant vinyl crackle as texture. Intro: rain and vinyl noise, solo Rhodes chords fading in, drums slipping in halfway. Verses: minimal — drums, bass, Rhodes, soft guitar fills between lines. Instrumental sections: guitar and Rhodes trade relaxed jazzy phrases over the beat, occasional muted trumpet ghost notes far in the background. Bridge: drums drop away to rain, crackle, and floating detuned Rhodes, then the beat eases back in. Outro: elements fade one by one until only vinyl crackle and a last unresolved Rhodes chord remain."
+      "string": "Laid-back and dreamy throughout, a gentle warm drift with a subtle late-night glow that deepens in the middle and dissolves softly at the end. Studying, raining-outside, headphones-on late-night listening. Bedroom production: muddy warm texture, heavy vinyl crackle, tape hiss and wow-flutter pitch wobble, low-passed dusty mix, soft-clipped drums, everything slightly detuned and cozy."
     },
     "class_type": "MpiText",
     "_meta": {
-      "title": "Input_Caption"
+      "title": "Input_Mood"
     }
   },
   "46": {
@@ -336,60 +336,6 @@
       "title": "Lyrics_Gate"
     }
   },
-  "79": {
-    "inputs": {
-      "regex_pattern": "^\\s*(?:\\[MOOD\\])?\\s*([\\s\\S]*?)\\s*(?=\\[VOCAL\\]|\\[ARRANGEMENT\\]|$)",
-      "mode": "First Group",
-      "case_insensitive": true,
-      "multiline": false,
-      "dotall": false,
-      "group_index": 1,
-      "string": [
-        "45",
-        0
-      ]
-    },
-    "class_type": "RegexExtract",
-    "_meta": {
-      "title": "Prose_Mood"
-    }
-  },
-  "80": {
-    "inputs": {
-      "regex_pattern": "\\[VOCAL\\]\\s*([\\s\\S]*?)\\s*(?=\\[ARRANGEMENT\\]|$)",
-      "mode": "First Group",
-      "case_insensitive": true,
-      "multiline": false,
-      "dotall": false,
-      "group_index": 1,
-      "string": [
-        "45",
-        0
-      ]
-    },
-    "class_type": "RegexExtract",
-    "_meta": {
-      "title": "Prose_Vocal"
-    }
-  },
-  "81": {
-    "inputs": {
-      "regex_pattern": "\\[ARRANGEMENT\\]\\s*([\\s\\S]*?)\\s*$",
-      "mode": "First Group",
-      "case_insensitive": true,
-      "multiline": false,
-      "dotall": false,
-      "group_index": 1,
-      "string": [
-        "45",
-        0
-      ]
-    },
-    "class_type": "RegexExtract",
-    "_meta": {
-      "title": "Prose_Arrangement"
-    }
-  },
   "82": {
     "inputs": {
       "operator": "==",
@@ -476,7 +422,7 @@
         0
       ],
       "string_b": [
-        "80",
+        "99",
         0
       ]
     },
@@ -561,7 +507,7 @@
         0
       ],
       "string_b": [
-        "79",
+        "45",
         0
       ]
     },
@@ -589,7 +535,7 @@
       "string_a": "\n\nArrangement: ",
       "delimiter": "",
       "string_b": [
-        "81",
+        "100",
         0
       ]
     },
@@ -658,6 +604,24 @@
     "class_type": "RegexReplace",
     "_meta": {
       "title": "Drop_Empty_Headings"
+    }
+  },
+  "99": {
+    "inputs": {
+      "string": "Soft androgynous vocal, hushed half-sung half-spoken delivery, sitting low in the mix like another instrument, lazy behind-the-beat phrasing, gentle breathy timbre. Sparse murmured double-tracked harmonies, occasional wordless \"mmm\" and \"ooh\" hums drenched in tape delay and warm spring reverb. Long stretches with no vocals at all."
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Vocal"
+    }
+  },
+  "100": {
+    "inputs": {
+      "string": "Dusty boom-bap drums with a soft thumping kick, cracked snare with lazy swing, brushed hi-hats, low round sub bass. Warm Rhodes piano chords with slow chorus wobble as the harmonic bed, mellow jazzy guitar licks answering the vocal lines, constant vinyl crackle as texture. Intro: rain and vinyl noise, solo Rhodes chords fading in, drums slipping in halfway. Verses: minimal — drums, bass, Rhodes, soft guitar fills between lines. Instrumental sections: guitar and Rhodes trade relaxed jazzy phrases over the beat, occasional muted trumpet ghost notes far in the background. Bridge: drums drop away to rain, crackle, and floating detuned Rhodes, then the beat eases back in. Outro: elements fade one by one until only vinyl crackle and a last unresolved Rhodes chord remain."
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Arrangement"
     }
   }
 }

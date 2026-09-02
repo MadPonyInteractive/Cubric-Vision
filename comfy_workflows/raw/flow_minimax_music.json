@@ -1,7 +1,7 @@
 {
   "id": "flow-minimax-music",
   "revision": 0,
-  "last_node_id": 98,
+  "last_node_id": 100,
   "last_link_id": 135,
   "nodes": [
     {
@@ -689,7 +689,7 @@
       "type": "MpiText",
       "pos": [
         1083.0236254745728,
-        -209.70988964782586
+        -209.7
       ],
       "size": [
         591.0913516683861,
@@ -715,23 +715,21 @@
           "name": "Text",
           "type": "STRING",
           "links": [
-            109,
-            114,
-            121
+            111
           ]
         }
       ],
-      "title": "Input_Caption",
+      "title": "Input_Mood",
       "properties": {
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "5e070436fc90ab84fdd66c2fe702572d3d04f7e2",
         "Node name for S&R": "MpiText"
       },
       "widgets_values": [
-        "[MOOD] Laid-back and dreamy throughout, a gentle warm drift with a subtle late-night glow that deepens in the middle and dissolves softly at the end. Studying, raining-outside, headphones-on late-night listening. Bedroom production: muddy warm texture, heavy vinyl crackle, tape hiss and wow-flutter pitch wobble, low-passed dusty mix, soft-clipped drums, everything slightly detuned and cozy.\n\n[VOCAL] Soft androgynous vocal, hushed half-sung half-spoken delivery, sitting low in the mix like another instrument, lazy behind-the-beat phrasing, gentle breathy timbre. Sparse murmured double-tracked harmonies, occasional wordless \"mmm\" and \"ooh\" hums drenched in tape delay and warm spring reverb. Long stretches with no vocals at all.\n\n[ARRANGEMENT] Dusty boom-bap drums with a soft thumping kick, cracked snare with lazy swing, brushed hi-hats, low round sub bass. Warm Rhodes piano chords with slow chorus wobble as the harmonic bed, mellow jazzy guitar licks answering the vocal lines, constant vinyl crackle as texture. Intro: rain and vinyl noise, solo Rhodes chords fading in, drums slipping in halfway. Verses: minimal — drums, bass, Rhodes, soft guitar fills between lines. Instrumental sections: guitar and Rhodes trade relaxed jazzy phrases over the beat, occasional muted trumpet ghost notes far in the background. Bridge: drums drop away to rain, crackle, and floating detuned Rhodes, then the beat eases back in. Outro: elements fade one by one until only vinyl crackle and a last unresolved Rhodes chord remain."
+        "Laid-back and dreamy throughout, a gentle warm drift with a subtle late-night glow that deepens in the middle and dissolves softly at the end. Studying, raining-outside, headphones-on late-night listening. Bedroom production: muddy warm texture, heavy vinyl crackle, tape hiss and wow-flutter pitch wobble, low-passed dusty mix, soft-clipped drums, everything slightly detuned and cozy."
       ],
       "widgets_values_named": {
-        "string": "[MOOD] Laid-back and dreamy throughout, a gentle warm drift with a subtle late-night glow that deepens in the middle and dissolves softly at the end. Studying, raining-outside, headphones-on late-night listening. Bedroom production: muddy warm texture, heavy vinyl crackle, tape hiss and wow-flutter pitch wobble, low-passed dusty mix, soft-clipped drums, everything slightly detuned and cozy.\n\n[VOCAL] Soft androgynous vocal, hushed half-sung half-spoken delivery, sitting low in the mix like another instrument, lazy behind-the-beat phrasing, gentle breathy timbre. Sparse murmured double-tracked harmonies, occasional wordless \"mmm\" and \"ooh\" hums drenched in tape delay and warm spring reverb. Long stretches with no vocals at all.\n\n[ARRANGEMENT] Dusty boom-bap drums with a soft thumping kick, cracked snare with lazy swing, brushed hi-hats, low round sub bass. Warm Rhodes piano chords with slow chorus wobble as the harmonic bed, mellow jazzy guitar licks answering the vocal lines, constant vinyl crackle as texture. Intro: rain and vinyl noise, solo Rhodes chords fading in, drums slipping in halfway. Verses: minimal — drums, bass, Rhodes, soft guitar fills between lines. Instrumental sections: guitar and Rhodes trade relaxed jazzy phrases over the beat, occasional muted trumpet ghost notes far in the background. Bridge: drums drop away to rain, crackle, and floating detuned Rhodes, then the beat eases back in. Outro: elements fade one by one until only vinyl crackle and a last unresolved Rhodes chord remain."
+        "string": "Laid-back and dreamy throughout, a gentle warm drift with a subtle late-night glow that deepens in the middle and dissolves softly at the end. Studying, raining-outside, headphones-on late-night listening. Bedroom production: muddy warm texture, heavy vinyl crackle, tape hiss and wow-flutter pitch wobble, low-passed dusty mix, soft-clipped drums, everything slightly detuned and cozy."
       },
       "color": "#432",
       "bgcolor": "#653"
@@ -1437,348 +1435,6 @@
       ],
       "widgets_values_named": {
         "string": "Instrumental. No vocals of any kind: no singing, no humming, no wordless vocal textures, no vocoder or choir pads. An instrument carries the lead melodic role throughout."
-      }
-    },
-    {
-      "id": 79,
-      "type": "RegexExtract",
-      "pos": [
-        -1780.0,
-        -200.0
-      ],
-      "size": [
-        360,
-        250
-      ],
-      "flags": {},
-      "order": 24,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "string",
-          "name": "string",
-          "type": "STRING",
-          "widget": {
-            "name": "string"
-          },
-          "link": 109
-        },
-        {
-          "localized_name": "regex_pattern",
-          "name": "regex_pattern",
-          "type": "STRING",
-          "widget": {
-            "name": "regex_pattern"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "mode",
-          "name": "mode",
-          "type": "COMBO",
-          "widget": {
-            "name": "mode"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "case_insensitive",
-          "name": "case_insensitive",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "case_insensitive"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "multiline",
-          "name": "multiline",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "multiline"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "dotall",
-          "name": "dotall",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "dotall"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "group_index",
-          "name": "group_index",
-          "type": "INT",
-          "widget": {
-            "name": "group_index"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "STRING",
-          "name": "STRING",
-          "type": "STRING",
-          "links": [
-            111
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.34.2",
-        "Node name for S&R": "RegexExtract"
-      },
-      "widgets_values": [
-        "",
-        "^\\s*(?:\\[MOOD\\])?\\s*([\\s\\S]*?)\\s*(?=\\[VOCAL\\]|\\[ARRANGEMENT\\]|$)",
-        "First Group",
-        true,
-        false,
-        false,
-        1
-      ],
-      "title": "Prose_Mood",
-      "widgets_values_named": {
-        "string": "",
-        "regex_pattern": "^\\s*(?:\\[MOOD\\])?\\s*([\\s\\S]*?)\\s*(?=\\[VOCAL\\]|\\[ARRANGEMENT\\]|$)",
-        "mode": "First Group",
-        "case_insensitive": true,
-        "multiline": false,
-        "dotall": false,
-        "group_index": 1
-      }
-    },
-    {
-      "id": 80,
-      "type": "RegexExtract",
-      "pos": [
-        -1780.0,
-        10.0
-      ],
-      "size": [
-        360,
-        250
-      ],
-      "flags": {},
-      "order": 25,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "string",
-          "name": "string",
-          "type": "STRING",
-          "widget": {
-            "name": "string"
-          },
-          "link": 114
-        },
-        {
-          "localized_name": "regex_pattern",
-          "name": "regex_pattern",
-          "type": "STRING",
-          "widget": {
-            "name": "regex_pattern"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "mode",
-          "name": "mode",
-          "type": "COMBO",
-          "widget": {
-            "name": "mode"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "case_insensitive",
-          "name": "case_insensitive",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "case_insensitive"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "multiline",
-          "name": "multiline",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "multiline"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "dotall",
-          "name": "dotall",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "dotall"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "group_index",
-          "name": "group_index",
-          "type": "INT",
-          "widget": {
-            "name": "group_index"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "STRING",
-          "name": "STRING",
-          "type": "STRING",
-          "links": [
-            116
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.34.2",
-        "Node name for S&R": "RegexExtract"
-      },
-      "widgets_values": [
-        "",
-        "\\[VOCAL\\]\\s*([\\s\\S]*?)\\s*(?=\\[ARRANGEMENT\\]|$)",
-        "First Group",
-        true,
-        false,
-        false,
-        1
-      ],
-      "title": "Prose_Vocal",
-      "widgets_values_named": {
-        "string": "",
-        "regex_pattern": "\\[VOCAL\\]\\s*([\\s\\S]*?)\\s*(?=\\[ARRANGEMENT\\]|$)",
-        "mode": "First Group",
-        "case_insensitive": true,
-        "multiline": false,
-        "dotall": false,
-        "group_index": 1
-      }
-    },
-    {
-      "id": 81,
-      "type": "RegexExtract",
-      "pos": [
-        -1780.0,
-        220.0
-      ],
-      "size": [
-        360,
-        250
-      ],
-      "flags": {},
-      "order": 26,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "string",
-          "name": "string",
-          "type": "STRING",
-          "widget": {
-            "name": "string"
-          },
-          "link": 121
-        },
-        {
-          "localized_name": "regex_pattern",
-          "name": "regex_pattern",
-          "type": "STRING",
-          "widget": {
-            "name": "regex_pattern"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "mode",
-          "name": "mode",
-          "type": "COMBO",
-          "widget": {
-            "name": "mode"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "case_insensitive",
-          "name": "case_insensitive",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "case_insensitive"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "multiline",
-          "name": "multiline",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "multiline"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "dotall",
-          "name": "dotall",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "dotall"
-          },
-          "link": null
-        },
-        {
-          "localized_name": "group_index",
-          "name": "group_index",
-          "type": "INT",
-          "widget": {
-            "name": "group_index"
-          },
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "STRING",
-          "name": "STRING",
-          "type": "STRING",
-          "links": [
-            122
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.34.2",
-        "Node name for S&R": "RegexExtract"
-      },
-      "widgets_values": [
-        "",
-        "\\[ARRANGEMENT\\]\\s*([\\s\\S]*?)\\s*$",
-        "First Group",
-        true,
-        false,
-        false,
-        1
-      ],
-      "title": "Prose_Arrangement",
-      "widgets_values_named": {
-        "string": "",
-        "regex_pattern": "\\[ARRANGEMENT\\]\\s*([\\s\\S]*?)\\s*$",
-        "mode": "First Group",
-        "case_insensitive": true,
-        "multiline": false,
-        "dotall": false,
-        "group_index": 1
       }
     },
     {
@@ -2857,6 +2513,106 @@
         "regex_pattern": "[ \\t]{2,}",
         "replace": " "
       }
+    },
+    {
+      "id": 99,
+      "type": "MpiText",
+      "pos": [
+        1083.0236254745728,
+        170.3
+      ],
+      "size": [
+        591.0913516683861,
+        349.50088101114903
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string",
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "Text",
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            116
+          ]
+        }
+      ],
+      "title": "Input_Vocal",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "5e070436fc90ab84fdd66c2fe702572d3d04f7e2",
+        "Node name for S&R": "MpiText"
+      },
+      "widgets_values": [
+        "Soft androgynous vocal, hushed half-sung half-spoken delivery, sitting low in the mix like another instrument, lazy behind-the-beat phrasing, gentle breathy timbre. Sparse murmured double-tracked harmonies, occasional wordless \"mmm\" and \"ooh\" hums drenched in tape delay and warm spring reverb. Long stretches with no vocals at all."
+      ],
+      "widgets_values_named": {
+        "string": "Soft androgynous vocal, hushed half-sung half-spoken delivery, sitting low in the mix like another instrument, lazy behind-the-beat phrasing, gentle breathy timbre. Sparse murmured double-tracked harmonies, occasional wordless \"mmm\" and \"ooh\" hums drenched in tape delay and warm spring reverb. Long stretches with no vocals at all."
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 100,
+      "type": "MpiText",
+      "pos": [
+        1083.0236254745728,
+        550.3
+      ],
+      "size": [
+        591.0913516683861,
+        349.50088101114903
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string",
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "Text",
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            122
+          ]
+        }
+      ],
+      "title": "Input_Arrangement",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "5e070436fc90ab84fdd66c2fe702572d3d04f7e2",
+        "Node name for S&R": "MpiText"
+      },
+      "widgets_values": [
+        "Dusty boom-bap drums with a soft thumping kick, cracked snare with lazy swing, brushed hi-hats, low round sub bass. Warm Rhodes piano chords with slow chorus wobble as the harmonic bed, mellow jazzy guitar licks answering the vocal lines, constant vinyl crackle as texture. Intro: rain and vinyl noise, solo Rhodes chords fading in, drums slipping in halfway. Verses: minimal — drums, bass, Rhodes, soft guitar fills between lines. Instrumental sections: guitar and Rhodes trade relaxed jazzy phrases over the beat, occasional muted trumpet ghost notes far in the background. Bridge: drums drop away to rain, crackle, and floating detuned Rhodes, then the beat eases back in. Outro: elements fade one by one until only vinyl crackle and a last unresolved Rhodes chord remain."
+      ],
+      "widgets_values_named": {
+        "string": "Dusty boom-bap drums with a soft thumping kick, cracked snare with lazy swing, brushed hi-hats, low round sub bass. Warm Rhodes piano chords with slow chorus wobble as the harmonic bed, mellow jazzy guitar licks answering the vocal lines, constant vinyl crackle as texture. Intro: rain and vinyl noise, solo Rhodes chords fading in, drums slipping in halfway. Verses: minimal — drums, bass, Rhodes, soft guitar fills between lines. Instrumental sections: guitar and Rhodes trade relaxed jazzy phrases over the beat, occasional muted trumpet ghost notes far in the background. Bridge: drums drop away to rain, crackle, and floating detuned Rhodes, then the beat eases back in. Outro: elements fade one by one until only vinyl crackle and a last unresolved Rhodes chord remain."
+      },
+      "color": "#432",
+      "bgcolor": "#653"
     }
   ],
   "links": [
@@ -3085,14 +2841,6 @@
       "STRING"
     ],
     [
-      109,
-      45,
-      0,
-      79,
-      0,
-      "STRING"
-    ],
-    [
       110,
       91,
       0,
@@ -3102,7 +2850,7 @@
     ],
     [
       111,
-      79,
+      45,
       0,
       92,
       1,
@@ -3125,14 +2873,6 @@
       "STRING"
     ],
     [
-      114,
-      45,
-      0,
-      80,
-      0,
-      "STRING"
-    ],
-    [
       115,
       86,
       0,
@@ -3142,7 +2882,7 @@
     ],
     [
       116,
-      80,
+      99,
       0,
       87,
       1,
@@ -3181,16 +2921,8 @@
       "*"
     ],
     [
-      121,
-      45,
-      0,
-      81,
-      0,
-      "STRING"
-    ],
-    [
       122,
-      81,
+      100,
       0,
       94,
       1,

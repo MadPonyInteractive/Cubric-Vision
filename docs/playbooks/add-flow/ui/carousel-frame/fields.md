@@ -47,6 +47,13 @@ never reached the payload, defaults were never seeded, and Reuse read only `step
 `select` · `radio` · `button` · `toggle` · `number` · `slider` · `text` · `voices` (MPI-531 added
 `number`/`slider`/`text`; MPI-572 added `radio`; MPI-664 added `voices`).
 
+- `inline: true` (MPI-664) puts the caption and the control on **one row** — caption left, control
+  right — instead of stacking them, and a field-level `note` still lands underneath the pair. It is
+  for a **small number**: stacked, a three-digit BPM gets a full-width box, and *"does it make sense
+  that such a small number is displayed on an input box that has room for trillions"* (Fabio,
+  2026-09-02) is how that reads. Only meaningful inside a stacked column.
+- `col: 'right'` (MPI-664) puts the field in the **right-hand column** of a `fields` step — see
+  [steps.md](steps.md) § Two columns. Left is the default and there is deliberately no `col: 'left'`.
 - `number` / `slider` take `min` / `max` / `step`. **The bounds are ENFORCED**, not decorative —
   the value is clamped before it reaches the graph, and a typed number is written back clamped
   so the widget never shows one value while sending another. A slider always renders its live
@@ -105,11 +112,21 @@ only a first-party flow can ship.
 | `group: '<name>', minActive: N` | every member | a member that is ON and would take the group below N is **locked**. Members that are OFF stay live — turning one on can never break a floor |
 | `enabledWhen: { group: '<name>', atLeast: N }` | a field OUTSIDE the group | disabled while fewer than N members are on |
 | `hiddenWhen: { field: '<id>', is: <value> }` | any field | **removed from the slide** while that field holds exactly that value |
+| `hiddenWhen: { field: '<id>', isNot: <value> }` | any field | removed **unless** that field holds exactly that value — the REVEAL case |
 | `hiddenWhen: { model: '<id>' }` | any field | removed while a Model slot is resolved to that model |
 | `hiddenWhen: { modelNot: '<id>' }` | any field | removed **unless** a Model slot is resolved to that model — the per-arm control |
 
-The first two are `disabledFieldIds`, the last three are `hiddenFieldIds`. Only one clause fires
-per field; `field` wins over `model` wins over `modelNot`.
+The first two are `disabledFieldIds`, the last four are `hiddenFieldIds`. Only one clause fires
+per field; `field` wins over `model` wins over `modelNot`, and `isNot` wins over `is` within the
+`field` clause.
+
+**`isNot` is for a dropdown option that OPENS a box** (MPI-664). Music Maker's Style list carries a
+`Custom` entry and the free-text box under it belongs to that entry alone; saying so with `is`
+would take one clause per *other* option — seventeen of them, and an eighteenth the day the list
+grows. Its option value is the **empty string**, which is not a trick for its own sake: every other
+value is a genre phrase the graph concatenates, so "no preset phrase" genuinely *is* the empty one
+and the user's own sentence arrives alone. A sentinel word would have to be stripped somewhere, and
+that somewhere is a node that can drift.
 
 ### The model clauses (MPI-591)
 

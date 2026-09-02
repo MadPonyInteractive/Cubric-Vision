@@ -272,10 +272,17 @@ export function disabledFieldIds(fields = [], values = {}) {
  * nothing else — a declared `text` box cannot be greyed at all today. Hiding is on
  * the wrapper the painter already holds, so it works for every field type.
  *
- * Three clauses, deliberately narrow:
+ * Four clauses, deliberately narrow:
  *   `{ hiddenWhen: { field: 'Input_Instrumental', is: true } }`
+ *   `{ hiddenWhen: { field: 'Input_Style', isNot: 'Custom' } }`
  *   `{ hiddenWhen: { model: 'minimax-h3-ref2va' } }`
  *   `{ hiddenWhen: { modelNot: 'minimax-h3-ref2va' } }`
+ *
+ * `isNot` is the field twin of `modelNot`, and it exists for the REVEAL case: a
+ * dropdown option that opens a box the other options have no use for. Music Maker's
+ * Style list carries a `Custom` entry and the free-text box under it belongs to that
+ * entry alone (Fabio, 2026-09-02) — expressing that as `is` would mean one clause per
+ * other option, seventeen of them, re-listed every time the list grows.
  *
  * MPI-591 adds the two MODEL clauses. A Flow's declared fields are shared across
  * every candidate its Model slot offers, and the injector skips a title a graph does
@@ -304,7 +311,13 @@ export function hiddenFieldIds(fields = [], values = {}, modelIds = []) {
     (fields || []).forEach((f) => {
         const rule = f?.hiddenWhen;
         if (!f?.id || !rule) return;
-        if (rule.field) { if (values[rule.field] === rule.is) out.add(f.id); return; }
+        if (rule.field) {
+            // `'isNot' in rule` rather than a truthiness test: `isNot: ''` is a legal
+            // clause (reveal unless the source is blank) and `isNot: 0` more so.
+            if ('isNot' in rule) { if (values[rule.field] !== rule.isNot) out.add(f.id); }
+            else if (values[rule.field] === rule.is) out.add(f.id);
+            return;
+        }
         if (rule.model) { if (picked.includes(rule.model)) out.add(f.id); return; }
         if (rule.modelNot && !picked.includes(rule.modelNot)) out.add(f.id);
     });
@@ -406,6 +419,11 @@ export function buildField(f, cur, onChange, unsubs, opts = {}) {
     // `<button>`, and a label wrapping a button re-fires the click — the toggle would
     // flip and flip back on one press. That type gets a plain div.
     const wrap = ce(f.type === 'toggle' ? 'div' : 'label', { className: cls('field') });
+    // `inline` lays the caption and the control on ONE row — caption left, control
+    // right — instead of stacking them. A `number` is what asks for it: stacked, a
+    // three-digit BPM gets a full-width box with room for trillions (Fabio,
+    // 2026-09-02). A modifier on the wrapper, so it costs the other types nothing.
+    if (f.inline) wrap.classList.add(`${cls('field')}--inline`);
     // `button` and `toggle` CARRY their own caption — the button's face IS the label.
     // A caption above it would say the same word twice (Fabio, MPI-504).
     if (f.label && !LABEL_IN_CONTROL.has(f.type)) {

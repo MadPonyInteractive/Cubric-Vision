@@ -478,6 +478,23 @@
     flex: 1 1 auto;
     min-width: 0;
 }
+/* TWO FIELD COLUMNS on a step with no canvas (MPI-664, `col: 'right'`). Same split
+   as above, but both children are field stacks — so they align to the TOP instead of
+   to a canvas's centre line, and there is no picture to centre on. Left is the exact
+   half (a dropdown, a tempo, two toggles) at one readable width; right is the prose
+   half and takes the slack. */
+.mpi-base-flow__work-split--fields { align-items: flex-start; }
+.mpi-base-flow__work-split--fields > .mpi-base-flow__fields:first-child {
+    flex: 0 0 340px;
+    width: 340px;
+}
+/* `max-width` is `--work`'s 620px cap, written for a single centred column. In the
+   split it would strand the prose column mid-slide. */
+.mpi-base-flow__work-split--fields > .mpi-base-flow__fields:last-child {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+}
 /* SIZING a gizmo the frame hosts, which is what a consumer block is allowed to do
    to another block — no fill, border or state is restated here. The paint stage
    caps itself at `min(46vh, 500px)` for the stacked form, where the fields and hint
@@ -549,6 +566,33 @@
    UA stylesheet's `[hidden]` rule, so the attribute alone hides nothing — same
    override `__result-empty` and `__pending` already carry. */
 .mpi-base-flow__field[hidden] { display: none; }
+/* `inline: true` — caption LEFT, control RIGHT, on one line (MPI-664). Declared for
+   a small number: stacked, a three-digit BPM gets a full-width box with room for
+   trillions, and "does it make sense that such a small number is displayed on an
+   input box that has room for trillions" is exactly how it read (Fabio, 2026-09-02).
+   Written to beat the `--stacked` column rule, which is why it repeats the axis. */
+.mpi-base-flow__fields--stacked .mpi-base-flow__field--inline {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--s-2) var(--s-4);
+}
+/* The field's `note` is a THIRD child, and on a row it would sit beside the control
+   as a caption on the wrong side. It belongs under the pair, which is what an
+   inline field's note is for — "if TEMPO_0 means AUTO, then it should say that
+   somewhere, a small note below it" (Fabio, 2026-09-02). */
+.mpi-base-flow__fields--stacked .mpi-base-flow__field--inline .mpi-base-flow__field-note {
+    flex: 1 0 100%;
+}
+/* …and put the control back to its OWN width, undoing the column's 100% override.
+   `sm` is 6ch and centred — the size the primitive already ships for a number
+   beside a label, so nothing here restates its chrome. */
+.mpi-base-flow__fields--stacked .mpi-base-flow__field--inline .mpi-base-flow__field-input,
+.mpi-base-flow__fields--stacked .mpi-base-flow__field--inline .mpi-base-flow__field-input .mpi-input,
+.mpi-base-flow__fields--stacked .mpi-base-flow__field--inline .mpi-base-flow__field-input .mpi-input__field {
+    width: auto;
+}
 .mpi-base-flow__field-label {
     color: var(--ink-4);
     letter-spacing: 0.14em;

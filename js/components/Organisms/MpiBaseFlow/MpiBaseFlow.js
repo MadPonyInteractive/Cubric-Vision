@@ -274,7 +274,7 @@ export const MpiBaseFlow = ComponentFactory.create({
         qs('#flow-stage', el).prepend(prevBtn, nextBtn);
 
         const mediaGroupDefs = _getMediaGroups(flow);
-        const middleSteps = _getSteps(flow);
+        const _allSteps = _getSteps(flow);
 
         // Seed from persisted session inputs (survives reopen + navigation reset).
         const seeded = state.s_flowInputs?.[flow.id] || props.initialInputs || {};
@@ -538,8 +538,33 @@ export const MpiBaseFlow = ComponentFactory.create({
             }
         }
 
-        /** Total steps = implicit inputs + declared middle steps + implicit run. */
-        const _stepCount = () => middleSteps.length + 2;
+        /**
+         * The middle steps that CURRENTLY apply.
+         *
+         * A STEP may carry the same `hiddenWhen` clause a field does (MPI-664). When it
+         * fires the step is not merely empty — it is not in the flow at all: the ticker
+         * never lists it, `›` never lands on it, and the numbering closes up behind it.
+         * Music Maker's Instrumental toggle takes the whole Lyrics stage off the flow
+         * (Fabio, 2026-09-02), because a stage whose every field is hidden still renders
+         * its title, its hint and an empty body — a step that exists to say nothing.
+         *
+         * Evaluated LIVE rather than captured, because the toggle that decides it is a
+         * field on an earlier step. `hiddenFieldIds` is reused verbatim on a synthetic
+         * one-field list so a step clause and a field clause can never drift into two
+         * dialects of the same word.
+         *
+         * A skipped step KEEPS ITS VALUES, exactly as a hidden field does — so the graph
+         * re-checks the real condition rather than trusting the step to be gone.
+         */
+        function _visibleSteps() {
+            return _allSteps.filter(s => !s.hiddenWhen || !hiddenFieldIds(
+                [{ id: s.tickerLabel || 'step', hiddenWhen: s.hiddenWhen }],
+                _fieldValues, flowModelIds(flow),
+            ).size);
+        }
+
+        /** Total steps = implicit inputs + the middle steps in play + implicit run. */
+        const _stepCount = () => _visibleSteps().length + 2;
         const _lastIndex = () => _stepCount() - 1;
 
         /**
@@ -573,7 +598,7 @@ export const MpiBaseFlow = ComponentFactory.create({
         function _tickerLabels() {
             return [
                 'Inputs',
-                ...middleSteps.map((s, i) => s.tickerLabel || s.title || `Step ${i + 1}`),
+                ..._visibleSteps().map((s, i) => s.tickerLabel || s.title || `Step ${i + 1}`),
                 'Generate',
             ];
         }
@@ -607,6 +632,25 @@ export const MpiBaseFlow = ComponentFactory.create({
                 tick.setAttribute('data-state', st);
                 tick.setAttribute('aria-current', i === _current ? 'step' : 'false');
             });
+        }
+
+        /**
+         * Re-fit the flow to its CURRENT step set (MPI-664).
+         *
+         * A step-level `hiddenWhen` can take a whole stage out of the flow while the
+         * user is standing in it, so the ticker has to be rebuilt and `_current` pulled
+         * back inside — otherwise the numbering keeps counting a stage that is gone and
+         * the last one becomes unreachable.
+         *
+         * Guarded on the COUNT because this runs on every field write: rebuilding the
+         * ticker on each keystroke of a prompt box would tear down the live slide and
+         * drop focus mid-word.
+         */
+        function _resyncSteps() {
+            if (tickerEl.children.length === _stepCount()) return;
+            _buildTicker();
+            _current = Math.min(_current, _lastIndex());
+            _renderSlide();
         }
 
         // ── Slot rendering ──────────────────────────────────────────────────────
@@ -989,6 +1033,18 @@ export const MpiBaseFlow = ComponentFactory.create({
          * The button is an MpiButton, so its state is the primitive's own API and
          * its own variants — no bespoke `--stale` class, no restated colours.
          */
+        /**
+         * Every field an enhance declaration writes into.
+         *
+         * `to` is ONE id, or a MARKER → id map when the enhancer's answer is several
+         * blocks (MPI-664). Music Maker asks for three — mood, vocal and arrangement —
+         * because one 12-row box holding all three read as nothing at all: *"as much as
+         * I read it, I still don't know what it is or how to use it"* (Fabio,
+         * 2026-09-02). Three labelled boxes filling at once is the same text saying what
+         * it is, and it is what makes the button's effect visible.
+         */
+        const _enhanceTargets = d => (typeof d.to === 'string' ? [d.to] : Object.values(d.to || {}));
+
         function _paintEnhance() {
             _enhanceDecls.forEach((d) => {
                 const wrap = _liveFields.get(d.id);
@@ -996,7 +1052,10 @@ export const MpiBaseFlow = ComponentFactory.create({
                 const btn = qs('.mpi-base-flow__field-button', wrap);
                 if (!btn) return;
                 const busy = _enhancing === d.id;
-                const stale = !String(_fieldValues[d.to] || '').trim();
+                // ANY empty target is stale: a half-filled set is not enhanced, and the
+                // button is the only place that can say so on a surface (the run slide)
+                // where none of the boxes are shown.
+                const stale = _enhanceTargets(d).some(id => !String(_fieldValues[id] || '').trim());
                 // Heat while the prompt is NOT enhanced: that is the actionable
                 // state, so it is the loud one, and it is the same pink as Generate.
                 // Surface once it is enhanced — the work is done, the button is no
@@ -1020,6 +1079,40 @@ export const MpiBaseFlow = ComponentFactory.create({
          *
          * @param {Object} d  the enhance field declaration
          */
+        /** Write one enhanced value into the store AND every live copy of its box. */
+        function _setEnhanced(id, v) {
+            _fieldValues[id] = v;
+            _writeFieldValue(id, v);
+        }
+
+        /**
+         * Land the enhancer's answer in the declaration's target(s).
+         *
+         * ONE target takes the whole string. SEVERAL take one MARKED BLOCK each: the
+         * recipe answers `[MOOD] … [VOCAL] … [ARRANGEMENT] …` on a single line — the
+         * graph's `StringReplace` flattens it and that is deliberate, the blocks are
+         * delimited by their markers and never by newlines — so each box claims the run
+         * of text from its own marker to whichever marker comes next.
+         *
+         * An UNMARKED answer is NOT an error, and must not land as three empty boxes. A
+         * model that ignored the format still wrote usable prose, so it all goes into
+         * the first box where the user can see it and move it. That is also the shape
+         * the graph already tolerates on the caption side.
+         *
+         * @param {Object} d     the enhance field declaration
+         * @param {string} text  the op's answer, trimmed
+         */
+        function _writeEnhanced(d, text) {
+            if (typeof d.to === 'string') { _setEnhanced(d.to, text); return; }
+            const blocks = Object.entries(d.to || {}).map(([marker, id]) => [
+                id,
+                (text.match(new RegExp(`\\[${marker}\\]([\\s\\S]*?)(?=\\[[A-Z_]+\\]|$)`, 'i'))?.[1] || '').trim(),
+            ]);
+            if (!blocks.length) return;
+            if (blocks.every(([, v]) => !v)) { _setEnhanced(blocks[0][0], text); return; }
+            blocks.forEach(([id, v]) => _setEnhanced(id, v));
+        }
+
         function _runEnhance(d) {
             if (_enhancing) return;
             const source = String(_fieldValues[d.from] || '').trim();
@@ -1065,10 +1158,7 @@ export const MpiBaseFlow = ComponentFactory.create({
                     // A text op never fires onComplete — GenerationCallbacks.onText.
                     onText: (text) => {
                         const out = String(text || '').trim();
-                        if (out) {
-                            _fieldValues[d.to] = out;
-                            _writeFieldValue(d.to, out);
-                        }
+                        if (out) _writeEnhanced(d, out);
                         done();
                     },
                     onError: (err) => {
@@ -1093,9 +1183,11 @@ export const MpiBaseFlow = ComponentFactory.create({
             // description the user just changed. Visible immediately where the
             // enhanced box is shown; signalled by the button where it is not.
             _enhanceDecls.forEach((d) => {
-                if (d.from !== id || !_fieldValues[d.to]) return;
-                _fieldValues[d.to] = '';
-                _writeFieldValue(d.to, '');
+                if (d.from !== id) return;
+                _enhanceTargets(d).forEach((t) => {
+                    if (!_fieldValues[t]) return;
+                    _setEnhanced(t, '');
+                });
             });
             _paintEnhance();
         }
@@ -1156,6 +1248,8 @@ export const MpiBaseFlow = ComponentFactory.create({
             if (f.action === 'enhance') { _runEnhance(f); return; }
             _writeDeclaredField(f.id, val);
             _paintFieldConstraints();
+            // A field may gate a whole STEP, not just its neighbours (MPI-664).
+            _resyncSteps();
         }
 
         // The `settings` action and its `_openSettings()` lived here (MPI-504) and were
@@ -1560,11 +1654,36 @@ export const MpiBaseFlow = ComponentFactory.create({
             // canvas would be. Returning early keeps the media guard below from
             // demanding an image a prompt-only flow never had a slot for.
             if (isFrameKind(step.kind)) {
-                const stack = _buildFlowFields(
-                    Array.isArray(step.fields) ? step.fields : [], unsubs,
-                );
-                stack.classList.add('mpi-base-flow__fields--work');
-                work.appendChild(stack);
+                const declared = Array.isArray(step.fields) ? step.fields : [];
+                const build = (list) => {
+                    const s = _buildFlowFields(list, unsubs);
+                    s.classList.add('mpi-base-flow__fields--work');
+                    return s;
+                };
+                // TWO COLUMNS, opt-in per FIELD (MPI-664). A canvas step already splits
+                // its slide with `fieldsSide` — fields beside the picture — and this is
+                // the same seam for a step that has no picture: the exact controls on the
+                // left, the prose on the right. Music Maker's song stage puts style,
+                // tempo and the toggles against the brief box, and its lyrics stage puts
+                // the voice roster against the lyrics (Fabio, 2026-09-02).
+                //
+                // Declared on the FIELD rather than as a step-level `columns: [[…],[…]]`
+                // so the order stays one readable list and a field can move sides with
+                // one word. No `col: 'left'` — left is what a field is unless it says
+                // otherwise, and an explicit default would just be a second way to
+                // spell nothing.
+                const right = declared.filter(f => f?.col === 'right');
+                if (right.length) {
+                    work.classList.add('mpi-base-flow__work--split');
+                    const split = ce('div', {
+                        className: 'mpi-base-flow__work-split mpi-base-flow__work-split--fields',
+                    });
+                    split.appendChild(build(declared.filter(f => f?.col !== 'right')));
+                    split.appendChild(build(right));
+                    work.appendChild(split);
+                } else {
+                    work.appendChild(build(declared));
+                }
                 if (step.hint) {
                     const hint = ce('div', { className: 'mpi-base-flow__work-hint' });
                     _paintHint(hint, step, _stepValues[step.role]);
@@ -1829,7 +1948,7 @@ export const MpiBaseFlow = ComponentFactory.create({
                 slide.appendChild(_buildRunSlide(unsubs));
             } else {
                 const idx = _current - 1;
-                slide.appendChild(_buildStepSlide(middleSteps[idx], idx, unsubs));
+                slide.appendChild(_buildStepSlide(_visibleSteps()[idx], idx, unsubs));
             }
 
             slidesEl.innerHTML = '';

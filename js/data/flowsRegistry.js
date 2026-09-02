@@ -2105,19 +2105,32 @@ export const FLOWS = [
     // side-channel (MPI-573).
     //
     // THE CAPTION IS BUILT BY THE GRAPH, not by the model (GAP 4 option B, Fabio
-    // 2026-08-31). The enhancer writes only three PROSE blocks — marked `[MOOD]`,
-    // `[VOCAL]`, `[ARRANGEMENT]` — into `Input_Caption`; the graph writes the three
-    // headings, Basic Attributes, the instrumental clause and the serialised roster
-    // around them. So the style phrase, the BPM and the cast reach the encoder EXACTLY
-    // as chosen: a 4B asked to hold "78 BPM" in prose rounds it to "around 80".
-    // An UNMARKED caption is not an error — the graph falls the whole string through
-    // into Global Metadata and drops the two headings left empty, so a hand-typed brief
-    // still runs.
+    // 2026-08-31). The enhancer writes only three PROSE blocks — mood, vocal and
+    // arrangement; the graph writes the three headings, Basic Attributes, the
+    // instrumental clause and the serialised roster around them. So the style phrase,
+    // the BPM and the cast reach the encoder EXACTLY as chosen: a 4B asked to hold
+    // "78 BPM" in prose rounds it to "around 80".
     //
-    // FIVE STEPS, and the ORDER IS FORCED: the roster must exist before the lyrics box
-    // or `@` has nothing to offer. Every middle step is `kind: 'fields'` (FRAME_KINDS) —
-    // no canvas, no `role`, values in the FLOW store — which is also what lets the brief
-    // be ONE value edited on step 1 and on the run slide.
+    // 🔴 TWO STEPS, REDESIGNED 2026-09-02. The first shape had five and Fabio rejected
+    // it on sight — *"The UI is all over the place… there are way too many steps, and
+    // it's bad."* What replaced it is his: the song and its style are ONE stage with the
+    // exact controls on the left and the prose on the right, and voices and lyrics are
+    // ONE stage laid out the same way. The old order was forced by the roster having to
+    // exist before the lyrics box could offer it; side by side, that constraint is
+    // simply gone.
+    //
+    // Both middle steps are `kind: 'fields'` (FRAME_KINDS) — no canvas, no `role`,
+    // values in the FLOW store — which is also what lets the brief be ONE value edited
+    // on the song step and on the run slide.
+    //
+    // The three prose blocks are THREE BOXES, not one (MPI-664, 2026-09-02). They were a
+    // single 12-row `Input_Caption` labelled "Mood, vocal and arrangement" and it read as
+    // nothing: *"as much as I read it, I still don't know what it is or how to use it…
+    // there are no examples… and what is he now going to do? Replace my prompt?"* Three
+    // labelled boxes with a real example in each answer all three questions at once, and
+    // watching Enhance fill them is what shows the button does not touch the brief. The
+    // enhancer still answers in ONE marked string; `to` names which marker lands where,
+    // and the frame splits it (MpiBaseFlow § _writeEnhanced).
     //
     // ⚠️ NO PREVIEW ASSETS YET. `preview`/`video` are deliberately absent until
     // `/mpi-flow-graphics` cuts them from a real run; both render sites guard on the key,
@@ -2151,90 +2164,17 @@ export const FLOWS = [
         // No `inputSchema` at all, and no `result.compare` — there is no BEFORE.
         steps: [
             {
+                // THE SONG STAGE — the exact half on the LEFT, the prose half on the
+                // RIGHT (Fabio, 2026-09-02: "the song stage should have style included
+                // with it… by the way, on the right, it should have the prompt to
+                // describe the song"). Style, tempo and the two machine facts are things
+                // that reach the caption verbatim; the brief and what Enhance makes of it
+                // are the writing. Splitting them that way is what let five steps
+                // become two.
                 kind: 'fields',
                 tickerLabel: 'Song',
                 title: 'Describe your song',
-                hint: 'What it should feel like, where it would be heard, how it moves. The style and tempo are set two steps on — this is the feeling.',
-                fields: [
-                    {
-                        id: 'positive', type: 'text', rows: 4, label: 'Your song',
-                        placeholder: 'A late-night drive through empty streets, warm and unhurried, headlights on wet tarmac…',
-                    },
-                    {
-                        // Hides the whole Voices step, the lyrics box and the voice
-                        // notes. The GRAPH re-checks this flag itself rather than
-                        // trusting the fields to be hidden — a hidden field KEEPS ITS
-                        // VALUE, so an instrumental run would otherwise splice in lyrics
-                        // and a cast that are merely invisible.
-                        id: 'Input_Instrumental', type: 'toggle', label: 'Instrumental',
-                        icon: 'audio', default: false,
-                    },
-                ],
-            },
-            {
-                kind: 'fields',
-                tickerLabel: 'Voices',
-                title: 'Cast the voices',
-                hint: 'Add a voice for each part you want sung differently, then reference them in your lyrics. This STEERS who sings what — the model honours it, but it blends rather than switching cleanly.',
-                fields: [
-                    {
-                        // The roster (MPI-664 tier 2). Its `v` values are the CAPTION
-                        // WORDS, not indices: `serialiseVoices` writes `Name (Type)`
-                        // straight into the caption's Vocal Details, so there is no
-                        // switch bank and no lookup table to drift.
-                        //
-                        // `Any` is the catch-all and emits the bare NAME — writing
-                        // "Ana (Any)" would state a vocal quality the user never chose.
-                        id: 'Input_Voices', type: 'voices', label: 'Voices',
-                        namePlaceholder: 'Singer A',
-                        default: [{ name: 'Singer A', type: 'Any' }],
-                        options: [
-                            { v: 'Any', label: 'Any' },
-                            { v: 'Female', label: 'Female' },
-                            { v: 'Male', label: 'Male' },
-                            { v: 'Child', label: 'Child' },
-                            { v: 'Duet', label: 'Duet' },
-                            { v: 'Choir', label: 'Choir' },
-                        ],
-                        hiddenWhen: { field: 'Input_Instrumental', is: true },
-                    },
-                ],
-            },
-            {
-                kind: 'fields',
-                tickerLabel: 'Lyrics',
-                title: 'Write the lyrics',
-                // The official tag set, verbatim — and the caveat, because a user who
-                // does not know these are generative CONTROL rather than a guarantee
-                // reads a loose section as a bug.
-                hint: 'Mark sections with [Intro] [Verse] [Pre-Chorus] [Chorus] [Post-Chorus] [Bridge] [Instrumental] [Solo] [Outro]. These steer the arrangement rather than guarantee it. To hand a line to one of your voices, put its name in angle brackets on its own line — <Singer A>.',
-                fields: [
-                    {
-                        // The markers are STRIPPED IN THE GRAPH before the encoder sees
-                        // this (`Strip_Voice_Markers`), because `<Name>` is not in
-                        // MiniMax's tag set and the lyrics reach the model verbatim.
-                        //
-                        // 🔴 `default: ''` IS LOAD-BEARING, not tidiness. `_seedField`
-                        // returns undefined for a field with no `default`, and the
-                        // seeding loops skip an undefined — so the id never reaches
-                        // `injectionParams` and the GRAPH'S BAKED VALUE RUNS. This node
-                        // is baked with the bench's own demo song, so without this line
-                        // a user who leaves the lyrics empty hears that song's words.
-                        // Same for `Input_Caption` below, where the baked value is a
-                        // full lo-fi caption that would override the user's brief
-                        // outright. Every empty-able text field here declares one.
-                        id: 'Input_Lyrics', type: 'text', rows: 10, label: 'Lyrics',
-                        placeholder: '[Verse]\nMidnight and the canvas glows…',
-                        default: '',
-                        hiddenWhen: { field: 'Input_Instrumental', is: true },
-                    },
-                ],
-            },
-            {
-                kind: 'fields',
-                tickerLabel: 'Style',
-                title: 'Style and sound',
-                hint: 'Enhance writes the mood, vocal and arrangement prose from your brief. Everything else on this step is written into the caption exactly as you set it.',
+                hint: 'Everything on the left is written into the caption exactly as you set it. On the right, say what the song should feel like — then press Enhance and it fills the three boxes underneath. It never touches your description.',
                 fields: [
                     {
                         // 18 families, and the option's `v` IS THE GENRE PHRASE — the
@@ -2287,6 +2227,20 @@ export const FLOWS = [
                               info: 'Mandopop, C-pop, K-pop and J-pop production values.' },
                             { v: 'East Asian ballad in the heritage style, traditional instrumentation and phrasing.', label: 'East Asian heritage',
                               info: 'Traditional instruments and phrasing rather than modern pop arrangement.' },
+                            // CUSTOM — the option that REVEALS the box below (Fabio,
+                            // 2026-09-02: "Style should have an option named Custom,
+                            // when selected is when it shows the Your own style text
+                            // box"). Before this the box sat open under every choice,
+                            // asking for something most users had already answered.
+                            //
+                            // Its `v` is the EMPTY STRING, and that is the whole trick:
+                            // every other `v` is a genre phrase `Cat_Style` joins to the
+                            // custom box, so "no preset phrase" IS the empty one and the
+                            // user's own sentence arrives alone. A sentinel word would
+                            // have to be stripped somewhere, and that somewhere is a
+                            // node that can drift.
+                            { v: '', label: 'Custom',
+                              info: 'Describe the style yourself instead of picking a family.' },
                         ],
                     },
                     {
@@ -2294,9 +2248,13 @@ export const FLOWS = [
                         // Renamed from `style_custom` under GAP 4 option B: a lowercase
                         // id reaches NOTHING now that the graph builds the caption, so
                         // it must be `Input_*` or the control is inert.
-                        id: 'Input_Style_Custom', type: 'text', rows: 2, label: 'Your own style',
-                        placeholder: 'Anything the list above does not cover — an era, an instrument, a reference sound…',
+                        id: 'Input_Style_Custom', type: 'text', rows: 3, label: 'Your own style',
+                        placeholder: 'An era, an instrument, a reference sound — "late-70s Laurel Canyon, twelve-string and pedal steel".',
                         default: '',
+                        // Belongs to the `Custom` option alone, so it is hidden unless
+                        // that option is picked. `isNot` rather than seventeen `is`
+                        // clauses that would need an eighteenth the day the list grows.
+                        hiddenWhen: { field: 'Input_Style', isNot: '' },
                     },
                     {
                         // 0 = AUTO, and it has to have an unset state: MiniMax's own
@@ -2305,17 +2263,34 @@ export const FLOWS = [
                         // graph OMITS the tempo clause entirely and the rewriter infers
                         // it. Ceiling is 250, not a textbook 220 — Fabio has mastered
                         // tracks at that tempo and a 220 cap would clip real material.
+                        //
+                        // DEFAULT 120, not 0 (Fabio, 2026-09-02). Auto is still one
+                        // keystroke away and the `note` is what makes it reachable —
+                        // *"if TEMPO_0 means AUTO, then it should say that somewhere, a
+                        // small note below it"*. A zero default was the more correct
+                        // machine answer and the worse control: it opens on a number
+                        // that does not read as a tempo, and nothing on screen said why.
+                        //
+                        // `inline` because it is three digits. Stacked, it got a
+                        // full-width box — *"does it make sense that such a small number
+                        // is displayed on an input box that has room for trillions"*.
                         id: 'Input_Bpm', type: 'number', label: 'Tempo (BPM)',
-                        min: 0, max: 250, step: 1, default: 0,
+                        min: 0, max: 250, step: 1, default: 120, inline: true,
+                        note: 'Set it to 0 and the model picks the tempo to suit the song.',
                     },
                     {
-                        // Timbre, delivery and backing vocals — the three Vocal Details
-                        // sub-labels a roster slot cannot express. Renamed from
-                        // `voice_notes` for the same reason as the style box above.
-                        id: 'Input_Voice_Notes', type: 'text', rows: 2, label: 'Voice notes',
-                        placeholder: 'Raspy and close-miked, conversational in the verses, layered harmonies on the chorus…',
-                        default: '',
-                        hiddenWhen: { field: 'Input_Instrumental', is: true },
+                        // THE FLAG THAT SKIPS A WHOLE STAGE (Fabio, 2026-09-02: "if in
+                        // stage two the user selects Instrumental… Stage 3 should be
+                        // bypassed"). It sits with the other exact facts because that is
+                        // what it is — a switch the caption states outright, not a
+                        // creative choice.
+                        //
+                        // The GRAPH re-checks this flag itself rather than trusting the
+                        // stage to be gone: a SKIPPED STEP KEEPS ITS VALUES, exactly as a
+                        // hidden field does, so an instrumental run would otherwise splice
+                        // in lyrics and a cast that are merely out of sight.
+                        id: 'Input_Instrumental', type: 'toggle', label: 'Instrumental',
+                        icon: 'audio', default: false,
                     },
                     {
                         // Set-once machine fact, so it sits HERE rather than on the run
@@ -2324,26 +2299,134 @@ export const FLOWS = [
                         id: 'Input_Low_Vram', type: 'toggle', label: 'Low VRAM',
                         icon: 'gpu', default: true,
                     },
+                    // ── the RIGHT column: the writing ───────────────────────
+                    {
+                        // The brief. ONE value, edited here and on the run slide —
+                        // `col` changes where it sits, never which store it lives in.
+                        id: 'positive', type: 'text', rows: 6, label: 'Your song',
+                        col: 'right',
+                        placeholder: 'A late-night drive through empty streets, warm and unhurried, headlights on wet tarmac…',
+                    },
                     {
                         // GAP 3 CLOSED (MPI-664): the action carries its OWN recipe now.
                         // Until this shipped, `_runEnhance` sent only the driven seed, so
                         // the enhancer's BAKED recipe ran — and that recipe is Character
                         // Sheet's, which would answer a song brief with a wardrobe noun
                         // phrase. See `injectionParams` on FlowStepField.
+                        //
+                        // `to` is a MARKER → FIELD MAP, not one id (2026-09-02). The
+                        // enhancer still answers in one string marked `[MOOD]`,
+                        // `[VOCAL]`, `[ARRANGEMENT]`; the frame splits it and each block
+                        // lands in its own box. That is the answer to *"what is he now
+                        // going to do? Replace my prompt?"* — three boxes visibly filling
+                        // while the brief sits untouched above them says what no label
+                        // could. An unmarked answer is not lost: it all goes to the first
+                        // box (MpiBaseFlow § _writeEnhanced).
                         id: 'enhance', type: 'button', label: 'Enhance', icon: 'enhance',
                         action: 'enhance', op: 'promptEnhance',
-                        from: 'positive', to: 'Input_Caption',
+                        col: 'right',
+                        from: 'positive',
+                        to: {
+                            MOOD: 'Input_Mood',
+                            VOCAL: 'Input_Vocal',
+                            ARRANGEMENT: 'Input_Arrangement',
+                        },
                         injectionParams: MINIMAX_MUSIC_ENHANCE_PARAMS,
                     },
+                    // THE THREE PROSE BLOCKS, one box each. They were a single 12-row
+                    // `Input_Caption` and it read as nothing at all: *"I don't know what
+                    // to do in moods, what to do in vocal, or what to do in arrangement.
+                    // There are no examples."* So each carries a WORKED EXAMPLE as its
+                    // placeholder rather than an instruction — the fastest way to say
+                    // what belongs in a box is to show one filled in.
+                    //
+                    // 🔴 `default: ''` IS LOAD-BEARING on all three, not tidiness.
+                    // `_seedField` returns undefined for a field with no `default` and
+                    // the seeding loops skip an undefined, so the id never reaches
+                    // `injectionParams` and THE GRAPH'S BAKED VALUE RUNS — here, the
+                    // bench's own lo-fi caption, overriding the user's brief outright.
                     {
-                        // The enhancer's PROSE, not a finished caption — the graph writes
-                        // the headings and the exact values around it. Shown here and
-                        // nowhere else: a phrase the user cannot see is a phrase they
-                        // cannot repair. Leave it empty and the brief runs raw, which the
-                        // graph handles (an unmarked caption falls through to one block).
-                        id: 'Input_Caption', type: 'text', rows: 12,
-                        label: 'Mood, vocal and arrangement',
-                        placeholder: 'Press Enhance, or write the three blocks yourself using [MOOD], [VOCAL] and [ARRANGEMENT].',
+                        id: 'Input_Mood', type: 'text', rows: 4, label: 'Mood',
+                        col: 'right', default: '',
+                        placeholder: 'Wistful and held back to start, opening out at the chorus into something hopeful, then settling again for the last verse.',
+                        info: 'How the song FEELS, and how that feeling moves from start to end.',
+                    },
+                    {
+                        id: 'Input_Vocal', type: 'text', rows: 4, label: 'Vocal',
+                        col: 'right', default: '',
+                        placeholder: 'Warm female alto, close-miked and breathy through the verses, belting with a little rasp on the chorus.',
+                        info: 'How the singing SOUNDS — timbre, delivery, how it changes between sections.',
+                    },
+                    {
+                        id: 'Input_Arrangement', type: 'text', rows: 4, label: 'Arrangement',
+                        col: 'right', default: '',
+                        placeholder: 'Rhodes and a soft kick alone at the top, bass and brushed drums from the first verse, strings joining the final chorus.',
+                        info: 'Which instruments play, and WHEN each one comes in or drops out.',
+                    },
+                ],
+            },
+            {
+                // THE LYRICS STAGE — voices left, lyrics right, and the stage does not
+                // exist at all on an instrumental run (Fabio, 2026-09-02: "Voices and
+                // lyrics should be in the same stage, stage three, which could be called
+                // just lyrics. The voice UI on the left and the lyrics on the right").
+                //
+                // A STEP-LEVEL `hiddenWhen`, which is new (MPI-664). Hiding the three
+                // fields individually left the stage rendering its title, its hint and an
+                // empty body — a step that exists to say nothing, and half of why five
+                // steps read as too many.
+                kind: 'fields',
+                tickerLabel: 'Lyrics',
+                title: 'Write the lyrics',
+                hint: 'Mark sections with [Intro] [Verse] [Pre-Chorus] [Chorus] [Post-Chorus] [Bridge] [Instrumental] [Solo] [Outro]. These steer the arrangement rather than guarantee it. To hand a line to one of your voices, put its name in angle brackets on its own line — <Singer A>.',
+                hiddenWhen: { field: 'Input_Instrumental', is: true },
+                fields: [
+                    {
+                        // The roster (MPI-664 tier 2). Its `v` values are the CAPTION
+                        // WORDS, not indices: `serialiseVoices` writes `Name (Type)`
+                        // straight into the caption's Vocal Details, so there is no
+                        // switch bank and no lookup table to drift.
+                        //
+                        // `Any` is the catch-all and emits the bare NAME — writing
+                        // "Ana (Any)" would state a vocal quality the user never chose.
+                        id: 'Input_Voices', type: 'voices', label: 'Voices',
+                        namePlaceholder: 'Singer A',
+                        default: [{ name: 'Singer A', type: 'Any' }],
+                        options: [
+                            { v: 'Any', label: 'Any' },
+                            { v: 'Female', label: 'Female' },
+                            { v: 'Male', label: 'Male' },
+                            { v: 'Child', label: 'Child' },
+                            { v: 'Duet', label: 'Duet' },
+                            { v: 'Choir', label: 'Choir' },
+                        ],
+                    },
+                    {
+                        // Timbre, delivery and backing vocals — the three Vocal Details
+                        // sub-labels a roster slot cannot express. MOVED HERE from the
+                        // style step (Fabio, 2026-09-02: "Voice notes should move to
+                        // lyrics"): it is a note about the CAST, so it belongs beside
+                        // the cast and not among the machine facts.
+                        //
+                        // No `hiddenWhen` any more — the whole stage is gone on an
+                        // instrumental run, so a field-level clause would be a second
+                        // spelling of the same rule.
+                        id: 'Input_Voice_Notes', type: 'text', rows: 4, label: 'Voice notes',
+                        placeholder: 'Raspy and close-miked, conversational in the verses, layered harmonies on the chorus…',
+                        default: '',
+                    },
+                    {
+                        // The markers are STRIPPED IN THE GRAPH before the encoder sees
+                        // this (`Strip_Voice_Markers`), because `<Name>` is not in
+                        // MiniMax's tag set and the lyrics reach the model verbatim.
+                        //
+                        // 🔴 `default: ''` IS LOAD-BEARING — see the three prose boxes
+                        // above. This node is baked with the bench's own demo song, so
+                        // without it a user who leaves the lyrics empty hears that
+                        // song's words.
+                        id: 'Input_Lyrics', type: 'text', rows: 16, label: 'Lyrics',
+                        col: 'right',
+                        placeholder: '[Verse]\nMidnight and the canvas glows…',
                         default: '',
                     },
                 ],
@@ -2361,7 +2444,16 @@ export const FLOWS = [
             {
                 id: 'enhance', type: 'button', label: 'Enhance', icon: 'enhance',
                 action: 'enhance', op: 'promptEnhance',
-                from: 'positive', to: 'Input_Caption',
+                from: 'positive',
+                // The SAME three targets as the song stage. None of the three boxes is
+                // shown here — the run slide generates, it does not read — so the
+                // button's heat is the only signal that the current brief is
+                // un-enhanced, and it goes cold only once all three are filled.
+                to: {
+                    MOOD: 'Input_Mood',
+                    VOCAL: 'Input_Vocal',
+                    ARRANGEMENT: 'Input_Arrangement',
+                },
                 // Declared on BOTH surfaces to get the run slide's condensed form; the
                 // same object, because the declaration IS the carrier and two copies
                 // would drift into two different recipes.
