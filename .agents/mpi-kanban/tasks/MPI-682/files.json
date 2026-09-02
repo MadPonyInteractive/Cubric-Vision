@@ -8,6 +8,7 @@
     "tests/desktop/flow-uninstall-button.spec.js",
     "docs/download-manager.md",
     "docs/playbooks/add-flow/05-verify.md",
+    ".husky/pre-push",
     ".agents/mpi-kanban/tasks/MPI-682/"
   ]
 }

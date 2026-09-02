@@ -23,13 +23,33 @@ set -e
 # ponytail: master only. Release branches run the same CI but push rarely and are cut
 # from an already-green master; guard them too if that stops being true.
 pushing_master=false
-while read -r _local_ref _local_sha remote_ref _remote_sha; do
+push_local_sha=''
+push_remote_sha=''
+while read -r _local_ref local_sha remote_ref remote_sha; do
     if [ "$remote_ref" = "refs/heads/master" ]; then
         pushing_master=true
+        push_local_sha="$local_sha"
+        push_remote_sha="$remote_sha"
     fi
 done
 
 [ "$pushing_master" = true ] || exit 0
+
+# A push carrying no code can neither break CI nor fix it, so blocking it only freezes
+# agents who had nothing to do with the red. 2026-09-02: a CLAUDE.md edit was refused
+# while master sat red for four hours on an unrelated flow spec, and a docs commit was
+# refused again while the fix for that red was already pushed and building.
+#
+# ponytail: docs/, .agents/ and any .md. Anything else -- including a range we cannot
+# resolve (new branch, zero sha, git error) -- falls through to the CI gate below.
+zero='0000000000000000000000000000000000000000'
+if [ -n "$push_remote_sha" ] && [ "$push_remote_sha" != "$zero" ]; then
+    changed=$(git diff --name-only "$push_remote_sha" "$push_local_sha" 2>/dev/null) || changed=''
+    if [ -n "$changed" ] && ! printf '%s\n' "$changed" | grep -qvE '^(docs/|\.agents/)|\.md$'; then
+        echo "[pre-push] docs/board-only push - CI gate skipped."
+        exit 0
+    fi
+fi
 
 command -v gh >/dev/null 2>&1 || exit 0
 
