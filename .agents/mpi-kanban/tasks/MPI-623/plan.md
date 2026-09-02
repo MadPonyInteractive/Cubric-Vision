@@ -394,6 +394,25 @@ notes in [research/](research/).
 > `sparse/0`, byte-identical (7,667,774) at 960 and at 1920. Brush loads views lazily, so
 > a probe cheap enough to be quick measures nothing.
 
+> **Session note 2026-09-02 (seventeenth). THE TWO PACKS ARE DECLARED — `eb8efab0`.**
+> `ComfyUI-SplatKit` (`f59de252`) and `ComfyUI-Mickmumpitz-Nodes` (`4d5ff7c4`) are in
+> `dev_configs/node_lock.json` and `nodesDeps.js`, both MIT, both `installRequirements:
+> true`, 0.55 MB and 0.18 MB. Both SHAs verified reachable upstream through the API, and
+> `lockUrl()` resolves each to its commit archive. **No R2 upload was involved**, which is
+> what made this half separable from the parked weights.
+>
+> **The curated python set needed ONE line and it costs a user nothing:** `click`, which
+> `--check` reported as the only uncovered requirement across both packs. It was already
+> in `python_deps.txt` transitively via `huggingface-hub`, so the regenerated lock moves
+> four lines and adds no package. It is needed because `core/matrix3d_pipeline.py:243`
+> `importlib`-execs the vendored `scripts/infer_panorama.py`, whose `@click` decorators
+> run at module level. 875/875 on `npm test`, lint clean, pushed on a green master.
+>
+> **STILL OWED on the dependency task:** MoGe as a real pre-staged dep (the node fetches
+> it uncontrolled today) and the Wan 2.1 / Matrix-3D weights — that half is the R2 upload
+> and stays parked. And `max_resolution` on `MpiBrushTrain` is still unwritten: the value
+> is a decision, not a default to inherit.
+
 **Project mode:** `scalable-foundation`.
 
 A user bakes a Gaussian-splat scene once from a 360 equirect image, then re-enters
