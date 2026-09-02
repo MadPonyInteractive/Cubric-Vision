@@ -11,6 +11,17 @@ A flow is done when ALL of these pass. Read [README](README.md) first.
   Run: `node --test tests/inject-params-titles.test.cjs` → all green.
 - **`node --check`** every touched JS file.
 - **`operation_registry.json` valid JSON** and carries the new op with `"universal": true`.
+- **🔴 Touched `js/data/flowsRegistry.js`? Run the flow desktop specs BEFORE pushing:**
+  ```bash
+  npx playwright test --config=playwright.desktop.config.js tests/desktop/flow-*.spec.js
+  ```
+  `npm test` does NOT cover these — Playwright desktop runs in CI ONLY, so a collision here
+  surfaces as a red master on somebody else's card, minutes after you pushed. ~10s each
+  locally, on their own port; a dev app on `:3000` is left alone. **A flow's `requiredDeps`
+  are read by OTHER flows' specs**: on 2026-09-02 MPI-664 declared the 4.88GB enhancer dep
+  on `minimax-music`, the uninstall dialog's derived total moved 13.4GB → 18.2GB, and
+  MPI-682's spec — which had the figure typed in — reddened master for four hours. The
+  literal is gone, but the coupling is not.
 
 ## Live (user-driven — a real gen mutates the project + spins the GPU)
 
