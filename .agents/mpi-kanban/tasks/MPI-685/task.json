@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-685",
+  "title": "A damaged user pip cache breaks the engine install, and Repair engine is unreachable without a live engine",
+  "description": "Give pip its own cache dir inside the engine, and record a failed curated-deps pass on disk so Settings can offer Repair before the engine starts.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "created_at": "2026-09-03T21:30:00+01:00",
+  "updated_at": "2026-09-03T21:30:00+01:00",
+  "links": {
+    "brief": "brief.md",
+    "checklist": "checklist.md",
+    "files": "files.json",
+    "events": "events.jsonl"
+  }
+}
