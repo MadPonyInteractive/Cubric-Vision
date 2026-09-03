@@ -851,3 +851,240 @@ overlap": `MpiH3EncodeAV` over source+extension with a mask covering only the ex
 `MpiH3DecodeAV` compositing back through that mask with `feather` - which is the crossfade LTX has
 and H3 does not. That is the one mechanism the four arms above have never tested, and it is the one
 LTX's seamlessness actually comes from.
+
+
+## Phase 5c - ROUTE B RUN, AND THE BENCH IS NOT STOCK COMFYUI (2026-09-03)
+
+Route B is what Fabio approved after four arms killed "more context": stop feeding the model more
+of the previous clip and instead generate ACROSS the seam, the way LTX does. Built on the bench
+(8188) off the SHIPPED graph, same source (`cowboys/Media/ref2v_ms_004.mp4`), same seed
+`591000591`, same continuation-shaped prompt, turbo.
+
+### The build, and why every number in it was forced
+
+`MpiH3EncodeAV(source tail + filler)` -> AV latent carrying a nested noise mask over the extension
+only -> `SamplerCustomAdvanced` -> `MpiH3DecodeAV` compositing the original pixels back outside the
+mask. The composite IS the stitch, so `#902/#903/#904/#907` and both VAE decodes leave the graph.
+
+Three grids have to agree at once, and between them they fix N and S completely:
+
+| constraint | source | consequence |
+|---|---|---|
+| `images.shape[0] % 17 == 5` | `MpiH3EncodeAV`'s inpaint guard (`h3.py:858`) | N on H3's video grid |
+| audio's 40 Hz clock lands on a whole step every 3 frames | `audio_start` snapping | N % 3 == 0 |
+| a latent step straddling the split unions into the mask | `FRAME_PER_TOKEN = (1,4,4,4,4)`, 17 frames per 5 steps | S % 17 == 0 |
+
+=> N in {39, 90, 141, 192}, S a multiple of **51**. Built at **N = 141 (5.875 s), S = 51
+(2.125 s of latent context), E = 90** - and E = 90 is exactly what `F5a_control` generated
+(`MpiH3Length(4)` nearest-snaps 96 to 90), so the generated length is matched and the join index is
+known rather than inferred.
+
+The white filler doubles as the mask: the masked region is noised to sigma_max before the first
+step, so what sits under it cannot matter, and `ImageToMask` on the same white batch is a 90-frame
+all-ones mask for free.
+
+**`feather` is NOT the crossfade the handoff called it.** `MpiH3DecodeAV`'s feather is
+`max_pool2d` + `conv2d` over H,W only (`h3.py:986-1010`) - a SPATIAL edge softener. On a full-frame
+mask it is a no-op and it can never soften a TEMPORAL seam. A temporal crossfade would need
+fractional per-frame mask values. Left at 1 deliberately.
+
+### The result: Route B's join is 15x LOOSER than the shipped one-frame pin
+
+| arm | mechanism | join diff | vs source-half mean | wall clock |
+|---|---|---|---|---|
+| **F5a control** | shipped: ONE pinned frame | **2.02** | **0.36x** | 110.2 s |
+| **F7 Route B** | source inside the sampled latent, mask over the extension | **30.18** | **5.56x** | 210.4 s |
+| F8 = F7 with the composite OFF | same sample, decode returned whole | 30.38 | 5.97x | 25.1 s (cached) |
+
+Luma steps `105.4 -> 117.4` in one frame at the seam, and the driver changes clothes across it: a
+woman in a blue top and white trousers at frame 50, a man in a black hat at frame 51.
+
+### THE MECHANISM WORKS - the model just ignores it. F8 is the proof.
+
+F7's composite replaces frames 0..50 with the original pixels, so the saved file says nothing about
+what the sampler did to that region. F8 re-runs it with `MpiH3DecodeAV`'s mask disconnected, which
+returns the decode whole. Because ComfyUI caches node outputs, the sampler did not re-run - F8's
+tail is bit-identical to F7's (verified per-frame) and the arm cost 25 s.
+
+**F8's decoded head IS the source** - same woman, same wardrobe, same framing, at frames 0, 25 and
+50. So the noise mask reached the sampler, the preserved region survived every step, and it decodes
+back to what went in. H3 simply does not take identity from unmasked latent tokens.
+
+Two candidate causes are eliminated with it:
+
+- **the composite is not the seam.** F8 (no composite at all) measures 30.38 against F7's 30.18 -
+  the seam is in the SAMPLE, not in the hand-off between original and decoded pixels.
+- **the VAE round trip is not the seam.** F8's head (decoded) against F7's head (original) is
+  **-0.83 luma** over 51 frames, against a +12 step at the join.
+
+This is the same verdict Phase 1 reached on `MpiH3MaskedPrefix`, reached again through a different
+node pair. **The two routes are one mechanism** - source latent in the head, noise mask over the
+tail - and the difference the handoff drew between them (different nodes, no sparkle defect) is not
+a difference in what the model is asked to do. Route B is dead for the same reason Route A was:
+identity in H3 travels through the GUIDE, which is why the one-frame pin keeps winning.
+
+### THE BENCH IS RUNNING PATCHED CORE, AND THAT BLOCKED THE TWO ARMS THAT WOULD HAVE FOLLOWED
+
+`MiniMaxH3AddGuide` anchors a CLIP, not just a frame - core crops `image` batches to 17k+5 and
+anchors them from `frame_idx`, a PIXEL index (`comfy_extras/nodes_minimax_h3.py:196-214`). That is
+LTX's whole shape reachable through the path H3 actually listens to: generate with the source's
+last G frames as the guide, discard the model's regenerated copy (LTX #44), keep only the new tail
+(#45), crossfade the original back over the overlap (#43). Two arms were built for it (F10a with
+`overlap 1` so the join lands on the same instrument as the control, F10b with a 39-frame
+`linear_blend`) and a third, F9, put a one-frame anchor at the seam of Route B's latent.
+
+**All three died inside the sampler, and none of them died because of our graph:**
+
+| probe | result |
+|---|---|
+| F10a, guide clip 39 frames | `value tensor of shape [4860, 96] cannot be broadcast to indexing result of shape [405, 96]` |
+| F11, the CONTROL with only `#902 num_frames` 1 -> 39 | identical failure - so it is not our graph |
+| F11 at 22 frames | `[2835, 96]` into `[405, 96]` - the destination is ALWAYS 405 |
+| `probe_layout.py`, stock `PackedLayout` called directly on CPU | 1 / 7 / 12 steps -> 405 / 2835 / 4860 rows, all correct |
+| F9, one-frame anchor at `frame_idx 51` | `ValueError: only first/last keyframe anchors are supported` |
+
+405 rows is exactly one frame's worth. Stock sizes it right; the runtime does not. The last probe
+names the culprit outright - that string is not in ComfyUI at all:
+
+**`custom_nodes/ComfyUI-MiniMax-H3-Extend/patch.py:141`.** The kat3ri pack replaces
+`PackedLayout.__init__` and `MiniMaxH3.extra_conds` at import (`patch.py:283-284`), unconditionally
+for EVERY graph on the bench - its only skip is "a ComfyUI that already has native
+`MiniMaxH3VideoExtend`", and 0.34.2 does not. Its keyframe branch allocates a flat `frame_rows` per
+image keyframe with no `vt` term at all (`patch.py:143-149`), and rejects any anchor that is not
+frame 0 or the last frame (`patch.py:141`).
+
+So on this bench **an H3 clip guide cannot run and a mid-clip anchor cannot run**, and neither
+limitation is real - both are the pack's. The plan already said the pack must never be a
+dependency; what was not known is that installing it silently makes the bench a different engine
+from the one Vision ships. The clip-guide arms are BLOCKED on the bench, not on the card.
+
+F7/F8 are believed unaffected: they carry no keyframes at all, so the patched keyframe branch never
+runs, and the noise mask is handled outside `PackedLayout`. That is reasoning, not a measurement -
+it should be confirmed by re-running F7 once the pack is out of the way.
+
+
+## Phase 5d - THE CLIP GUIDE RUNS, AND THE SEAM METRIC WAS REWARDING THE ARTEFACT (2026-09-03)
+
+`custom_nodes/ComfyUI-MiniMax-H3-Extend` renamed to `.disabled` and the bench restarted by Fabio.
+`MiniMaxH3VideoExtendPatched` is gone from `/object_info`; `MiniMaxH3AddGuide` and both `MpiH3*`
+nodes are still there. **Both arms that had been impossible then ran first time, unchanged** - so
+the `[4860, 96]` into `[405, 96]` failure and "only first/last keyframe anchors are supported" were
+the pack's patch and nothing else. ComfyUI-Manager on this build has no reboot endpoint (both
+`/api/manager/reboot` and `/manager/reboot` 404), so the restart has to be done by hand.
+
+### The two arms
+
+Same source, seed `591000591`, continuation-shaped prompt, turbo. `#902 num_frames` 1 -> **39**, so
+`MiniMaxH3AddGuide` anchors the source's last **1.625 s** as a clip at `frame_idx 0`, with the
+matching audio tail on the guide's own `audio` input and `ref_audio_1` dropped. N = 141, of which
+39 are the model's re-take of the guide and 102 are new.
+
+- **F10a** - LTX #44/#45 only: the re-take is discarded, only the new tail is concatenated, stitch
+  `overlap 1`. 225 frames, hard join at 124. **205.5 s.**
+- **F10b** - LTX #43 as well: the re-take is KEPT and `linear_blend` crossfades the original back
+  over all 39 frames. 226 frames, fade across 85..123. **5.0 s** - ComfyUI cached the sample, so
+  only the stitch re-ran.
+
+**A build bug was caught before the numbers were read, not after.** F10b was first wired with the
+TRIMMED tail as `new_images`, which would have blended source 85..123 against generated 39..77 - a
+1.6 s time offset at full opacity, with every tensor valid and the file playable. The crossfade arm
+has to keep the re-take, because the re-take is what it crossfades against.
+
+### The numbers, and why the ranking they imply is wrong
+
+| arm | join frame diff | vs source-half mean |
+|---|---|---|
+| F5a control (one-frame pin) | **2.02** | 0.36x |
+| F10a (clip guide, hard join) | 7.50 | 1.33x |
+| F10b (clip guide + 39-frame crossfade) | 5.94 | 1.06x |
+
+On that table the control wins again. **It does not, and the table is the problem.** Read the
+diffs either side of the join instead of the single number:
+
+| arm | diffs 118..126 |
+|---|---|
+| pure source, frames 0..79 | mean **5.68** |
+| F5a control | 6.6, 6.1, 5.6, 4.6, 5.1, **2.0**, 5.2, 5.3, 4.5 |
+| F10a | 6.6, 6.1, 5.6, 4.6, 6.7, **7.5**, 5.4, 4.7, 5.4 |
+| F10b | 7.5, 6.6, 7.2, 4.7, 4.6, **5.9**, 6.7, 5.4, 4.7 |
+
+The control's join is a **DIP**, not a tight join: 2.0 where its own neighbours run 4.6-6.6 and the
+footage's ordinary motion is 5.68. The picture nearly STOPS for one frame and then starts again.
+That is not seamlessness - it is precisely the artefact Fabio described, *"it almost looks like this
+was done with a start frame from the last frame of the previous one"*. A pinned still is a stall,
+and a stall scores near zero on a frame-to-frame difference.
+
+**So `join / source-half mean` never measured smoothness. It measured stillness, and it ranked the
+stall first.** The target is not 0; the target is **1.0x** - a join that moves exactly as much as
+the footage around it. F10b's whole crossfade region measures min **3.90**, max **7.47**, mean
+**5.59** across frames 84..124, against the pure-source **5.68**: statistically indistinguishable
+from ordinary motion, with no spike anywhere in it.
+
+**This retro-actively reframes Phase 5b's four-arm table.** Its ranking (control 0.36x best, pack
+1.39x worst) mixed two different failures under one number - the control was stalling and the pack
+arms were genuinely stepping - and it is why "more context makes it worse" looked so decisive. The
+context conclusion still stands on its own evidence (the pack arms visibly step), but the control's
+0.36x was never the bar to beat.
+
+### Identity holds, which no previous arm managed
+
+Frames 84 / 95 / 105 / 115 / 124 / 180 of F10b: the same woman, blue top, white trousers, no hat,
+consistent framing, through the crossfade and 2.3 s past it. Against F7, where the driver changed
+into a man in a black hat in a single frame, and against the app runs where the camera re-invented
+itself. The guide clip is the first arm where the model carries the subject across the seam.
+
+Secondary: the guide clip also CALMS the continuation - generated-half motion 4.51 (F10a) and 4.51
+(F10b) against the control's 5.37 - and the wall clock is unchanged at 205.5 s against 110.2 s for
+a shorter generation.
+
+**Fabio's eyes are the gate and both clips are with him.** The metric can say the join is no longer
+a stall and no longer a step; it cannot say the shot reads as one continuous take.
+
+
+### FABIO'S VERDICT ON F10a / F10b (2026-09-03) - the continuation PASSES, one defect left
+
+*"Their continuation is really good. The woman keeps looking to our right. The sound is good,
+flawless."* Both arms pass on continuation, on identity and on AUDIO - the re-sung-music problem
+that ran through Phase 5 is gone, and the guide's own `audio` input is what fixed it.
+
+**The one remaining defect: a short COLOUR flicker at the transition, 1-5 frames, worse on F10b.**
+Measured, and it is not colour - chroma is flat across the join on both arms (U +0.84 / V -0.2
+over 20-frame windows either side). It is LUMA, and the profile names the cause exactly:
+
+| frames | F10a (Y) | F10b (Y) | F10b - F10a |
+|---|---|---|---|
+| 85 (fade start) | 103.8 | 103.8 | 0.0 |
+| 100 | 104.0 | 105.1 | +1.1 |
+| 110 | 104.5 | 108.4 | +3.9 |
+| 117 | 105.2 | 110.1 | **+4.9** |
+| 119..124 | 104.9 -> 105.9 | **105.6, 107.0, 109.2, 108.9, 108.7, 106.6** | swinging |
+| 125 (first pure new frame) | 103.4 | 103.6 | - |
+
+**The model's re-take of the guide is exposure-drifted, and `linear_blend` ramps it in.** The
+difference between the two arms rises monotonically from 0.0 to +4.9 across the overlap - that is
+the crossfade weighting in a re-take that is up to 5 luma brighter than the original it is being
+blended with. Then frames 119-124 swing 3-6 luma and drop back to 103.6 at the first pure new
+frame. That excursion IS the flicker, it is 6 frames long, and it is confined to the overlap.
+
+Note what that means: **the model's CONTINUATION (frame 125 on, 103.4/103.6) sits at the source's
+own level. Only its RE-TAKE of the guide drifts.** So the defect is not a general exposure mismatch
+between original and decoded pixels - it is specific to the frames the model was asked to
+regenerate, which is exactly the material `linear_blend` mixes.
+
+F10a's version of the same defect is a single **-2.4** step (105.9 at 123 -> 103.5 at 124), and it
+has a second cause: the SOURCE is brightening on its own through the overlap (103.8 at 85 to 105.9
+at 123) and the continuation does not follow that trend.
+
+### Three leads for the fix, cheapest first
+
+1. **Level-match the re-take before blending.** Per-frame gain (or mean-match over the overlap)
+   against the original frames it is being crossfaded with. Image-domain, no re-sample, and it
+   attacks the measured cause directly.
+2. **`overlap_mode`.** `ImageBatchExtendWithOverlap` also offers `filmic_crossfade` and
+   `perceptual_crossfade`; both were untested here and `linear_blend` was chosen only because it is
+   what `flow_ltx_extend.json` uses.
+3. **Guide length.** 39 frames is the shortest legal clip; 56 or 73 (LTX's 3 s cap) may give the
+   model less room to drift, and is the next arm on the list anyway.
+
+Do NOT reach for a wider crossfade: the excursion grows with overlap length, so a longer fade makes
+this defect worse, not better.

@@ -75,6 +75,69 @@ bench-proven, and the app side is wired and tested. The card is in `doing` / `in
 > re-describe the source (proved — it stopped the camera re-invention on both arms), and SOURCE
 > LENGTH dominates (on 5 s even the one-frame control continued plausibly; on 1.6 s nothing did).
 
+> **PHASE 5c RAN (2026-09-03): ROUTE B IS DEAD, AND THE BENCH IS NOT STOCK COMFYUI.**
+> Route B built and run as approved - `MpiH3EncodeAV` over source+extension, mask over the
+> extension only, `MpiH3DecodeAV` compositing back. **Join 30.18 (5.56x) against the shipped
+> control's 2.02 (0.36x): 15x LOOSER**, and the driver changes clothes across the seam.
+> **The mechanism is not what failed.** F8 re-ran the same sample with the composite off (25 s,
+> ComfyUI cached the sampler) and its decoded head IS the source - so the noise mask reached the
+> sampler and the preserved region survived. The composite is not the seam either (30.38 without
+> it) and neither is the VAE round trip (-0.83 luma over the head against +12 at the join).
+> H3 does not take identity from unmasked latent tokens. **That makes Route B and Phase 1's
+> `MpiH3MaskedPrefix` ONE mechanism, not two** - the handoff's distinction between them was a
+> difference of nodes, not of what the model is asked to do. Identity in H3 travels through the
+> GUIDE, which is why the one-frame pin has now beaten five context arms.
+> **Correction to the handoff:** `feather` is a SPATIAL softener (`max_pool2d`+`conv2d` over H,W,
+> `h3.py:986-1010`). It is a no-op on a full-frame mask and can never crossfade a temporal seam.
+>
+> **NEXT, AND IT NEEDS A DECISION FROM FABIO FIRST.** `MiniMaxH3AddGuide` anchors a CLIP, not just
+> a frame (17k+5, `frame_idx` in pixel frames) - LTX's whole shape through the path H3 listens to.
+> Three arms were built for it and all three died in the sampler, and a minimal-diff probe (the
+> CONTROL with only `#902 num_frames` 1 -> 39) died identically, so it is not our graph.
+> **`custom_nodes/ComfyUI-MiniMax-H3-Extend/patch.py` monkey-patches `PackedLayout.__init__` and
+> `MiniMaxH3.extra_conds` at import for EVERY graph on 8188.** It allocates one frame's rows for
+> any image keyframe (hence `[4860, 96]` into `[405, 96]`) and raises "only first/last keyframe
+> anchors are supported". Stock `PackedLayout` called directly on CPU sizes all three lengths
+> correctly. The pack has no env switch: disabling it means renaming the folder and restarting the
+> bench, which also removes the Phase 5b oracle. **Fabio's call.** Full evidence and the probe
+> table: `validation.md` § Phase 5c.
+
+> **PHASE 5d (2026-09-03): THE CLIP GUIDE RUNS, AND THE SEAM METRIC WAS MEASURING THE WRONG THING.**
+> Pack disabled (renamed `.disabled`, Fabio restarted the bench) and both blocked arms ran first
+> time unchanged - so the layout failure and the anchor restriction were the pack's patch, proven.
+> `MiniMaxH3AddGuide` now anchors the source's last **39 frames** as a clip at `frame_idx 0` with
+> its matching audio, `ref_audio_1` dropped: **F10a** discards the model's re-take and joins hard
+> (LTX #44/#45), **F10b** keeps it and crossfades the original back over all 39 (LTX #43).
+> **THE HEADLINE IS THE METRIC.** `join / source-half mean` never measured smoothness - it measured
+> STILLNESS. The control's 2.02 is a DIP (2.0 where its neighbours run 4.6-6.6 and the footage's own
+> motion is 5.68): the picture nearly stops for one frame, which IS the "start frame from the last
+> frame" artefact Fabio described. The target is **1.0x**, not 0. F10b's whole crossfade region
+> measures mean **5.59** against pure-source **5.68**, no spike - indistinguishable from ordinary
+> motion. **And identity holds** through the fade and 2.3 s past it, which no arm before this
+> managed. This reframes Phase 5b's table: the control's 0.36x was never the bar.
+> **NEXT: Fabio's eyes on F10b vs F10a.** The metric cannot say whether it reads as one take.
+> Then, if it holds: guide length (39 -> 56 -> 73, matching LTX's 3 s cap) and the audio, which is
+> untested on these arms.
+
+> **FABIO'S GATE ON 5d: CONTINUATION PASSES, ONE DEFECT LEFT (2026-09-03).** *"Their continuation
+> is really good... The sound is good, flawless."* Identity, motion and AUDIO all pass on both
+> arms - the guide's own `audio` input killed the re-sung-music problem. What remains is a short
+> **luma** flicker at the transition, 1-5 frames, worse on F10b. **Measured and diagnosed: chroma
+> is flat (U +0.84, V -0.2); the model's RE-TAKE of the guide is up to +4.9 luma brighter than the
+> original, `linear_blend` ramps that in monotonically across the overlap, then frames 119-124 swing
+> 3-6 luma and drop back.** Crucially the model's CONTINUATION (frame 125 on) sits at the source's
+> own level - only the re-take drifts, and the re-take is exactly what the crossfade mixes. F10a's
+> version is a single -2.4 step, compounded by the source brightening 103.8 -> 105.9 through the
+> overlap on its own while the continuation does not follow.
+> **NEXT, cheapest first: (1) level-match the re-take to the original before blending (per-frame
+> gain or mean-match over the overlap) - it attacks the measured cause directly; (2) try
+> `filmic_crossfade` / `perceptual_crossfade`, both untested, `linear_blend` was chosen only
+> because flow_ltx_extend.json uses it; (3) guide length 39 -> 56 -> 73.** Do NOT widen the
+> crossfade - the excursion grows with overlap length.
+> **BENCH STATE: `custom_nodes/ComfyUI-MiniMax-H3-Extend` is renamed `.disabled` and must stay that
+> way for this work** (it patches core for every graph). Restore it only when the Phase 5b oracle
+> is needed again, and restart the bench by hand - Manager has no reboot endpoint on this build.
+
 > **STILL OPEN after 5b: Reuse Prompt coming back on H3, then Phase 6 docs.**
 
 > **NEXT: Phase 5, and it is NO LONGER BLOCKED.** The handoff said 48188 was stale on `53c0198`;

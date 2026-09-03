@@ -156,3 +156,42 @@ also what moved this card into `doing` at Phase 1 rather than Phase 2.
 
 Bench = `G:\ComfyUi\ComfyUI` on `:8188` (PID confirmed by CommandLine, not by
 port alone). Bench writes to `D:\WORK\Images\Outputs`, never `<ComfyUI>\output`.
+
+## Phase 5c - Route B (2026-09-03)
+
+- [x] Build Route B on the bench: `MpiH3EncodeAV` over source+extension, mask over the extension
+      only, `MpiH3DecodeAV` compositing back. N=141 / S=51 / E=90, every number forced by the
+      17k+5 video grid, the 3-frame audio step and the 17-frame latent step.
+- [x] Compare against `F5a_control` on the same source, seed and prompt. **Join 30.18 (5.56x) vs
+      2.02 (0.36x) - 15x looser.** Route B is dead.
+- [x] Prove the mechanism itself worked rather than assuming it: F8 re-ran the same sample with the
+      composite off and its decoded head IS the source. Composite and VAE round trip both
+      eliminated as causes.
+- [ ] BLOCKED, needs Fabio: the clip-guide arms (`MiniMaxH3AddGuide` anchoring 39 frames, then
+      LTX's 39-frame `linear_blend` stitch) cannot run while
+      `custom_nodes/ComfyUI-MiniMax-H3-Extend` is installed - it monkey-patches core at import for
+      every graph on 8188. Disabling it means renaming the folder and restarting the bench, which
+      also removes the Phase 5b oracle.
+- [ ] Re-run F7 once with the pack disabled, to confirm it was unaffected (it carries no keyframes,
+      so the patched branch should never run - reasoning, not a measurement).
+
+## Phase 5d - the clip guide (2026-09-03)
+
+- [x] Disable `ComfyUI-MiniMax-H3-Extend` (renamed `.disabled`, Fabio restarted). Both previously
+      impossible arms then ran unchanged - the patch was the blocker, proven not assumed.
+- [x] F10a: `MiniMaxH3AddGuide` anchoring 39 source frames + matching audio, re-take discarded,
+      hard join. 205.5 s.
+- [x] F10b: same sample, 39-frame `linear_blend` crossfade. 5.0 s cached. Build bug caught first -
+      the crossfade must keep the re-take, not the trimmed tail.
+- [x] Found that `join / source-half mean` measures STILLNESS, not smoothness: the control's 2.02
+      is a dip below the footage's own motion. Target is 1.0x. F10b sits at 5.59 vs 5.68.
+- [ ] GATE: Fabio's eyes on F10b vs F10a vs the control. The metric cannot judge "one take".
+- [ ] If it holds: guide length 39 -> 56 -> 73 (LTX's 3 s cap), and measure the AUDIO - the guide
+      now carries the source tail, so `audio_repeat.py` should be re-run against these arms.
+- [ ] Restore the pack (`mv ...disabled ...`) when the oracle is next needed.
+
+- [x] GATE: Fabio's eyes on F10a/F10b. Continuation, identity and audio all PASS. One defect left.
+- [ ] The transition flicker: LUMA, not colour. The model's re-take of the guide runs up to +4.9
+      brighter than the original and `linear_blend` ramps it in. Fix order: level-match the re-take
+      before blending, then `filmic_crossfade`/`perceptual_crossfade`, then guide length 56/73.
+      Do NOT widen the overlap - the excursion scales with it.
