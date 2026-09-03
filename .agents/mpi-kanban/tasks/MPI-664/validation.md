@@ -105,3 +105,77 @@ ComfyUI has still never EXECUTED the caption chain end to end.
   on a flow that declares no `inputSchema`. Pre-existing, not introduced here.
 - No preview graphics yet (`/mpi-flow-graphics`), and no `existing-flows/minimax-music.md` — held
   deliberately until the live run, so the page documents what actually happened.
+
+## 2026-09-03, fourth session — THE FLOW RAN ON THE GPU. Two runs, both on Fabio's own card.
+
+### What the runs closed 🟢
+
+| Question | Answer | Evidence |
+|---|---|---|
+| Does the 4B still emit `[MOOD]`/`[VOCAL]`/`[ARRANGEMENT]` from a labelled block? | **Yes** | engine `/history`, run 1: all three markers, each landing in its own node |
+| Does the status go "Writing the description…" → "Generating…"? | **Yes** | 1400-token pass, then `AR sampling 7501` |
+| Does the brief reach the model? | **Yes** | `Input_Positive` = the typed sentence |
+| Does a second Generate skip the enhancer? | **Yes** | `09:10:39.230 got prompt` → `09:10:39.260 Requested to load MiniMaxMusic3TEModel`, 30ms, no token pass |
+| Is VRAM released after the enhance stage? | **Yes, already** | `MpiClearVram` after `TextGenerate` calls `unload_all_models()`; the music TE loaded 1s later evicting nothing |
+
+Items 1–4 of "STILL UNPROVEN" above are all closed. ComfyUI has now EXECUTED the caption chain.
+
+> 🟡 **`unload_all_models()` logs nothing.** The `"N models unloaded."` line is in `load_models_gpu`
+> (`model_management.py:981`) and only fires when it must EVICT. Absence of that line is not
+> evidence the clear did not run — read the next load's eviction count instead.
+
+### What the runs BROKE OPEN 🔴 — the instrumental path was wrong
+
+**Run 1** — Instrumental on, section tags with prose beneath them. A man sang the stage
+directions. **Run 2** — every direction folded INSIDE the brackets, Suno-style. `_LYRIC_TAG_RE` is
+`\[[^\]]+\]`, so the shape is legal and the normalizer accepted it — **the model sang those too**
+from the verse onward.
+
+**And the deeper cause, which is not the lyrics slot at all.** The enhancer had written a fully
+timed rival plan into `[ARRANGEMENT]`:
+
+| Fabio wrote (lyrics slot) | the 4B wrote (caption `Arrangement`) | what played |
+|---|---|---|
+| intro: single orchestral drum, large reverb tail | *"opens with a single, pulsing sub-bass drone, followed by… muted brass"* | drone + brass |
+| verse: drum loses reverb, viola section enters | *"At 1:20, the strings enter in a slow, descending chromatic line"* | strings |
+| outro: choir and piano, fading out | *"the strings dissolve… the brass retreats"* | no choir |
+
+**The model was not ignoring instructions — it was obeying the other plan in the same caption**,
+and the caption outranks the lyrics slot. `[MOOD]` carried a third timeline of its own. Separately,
+`Instrumental_Clause` banned "choir pads" outright while the user asked for a choir.
+
+### The rebuild, and how it was checked
+
+| Check | Result |
+|---|---|
+| `npm test` | **878/878** |
+| `npx playwright test --config=playwright.desktop.config.js tests/desktop/flow-*.spec.js` | **13/13** (runner: *"a dev app on 3000 is left alone"*) |
+| `eslint` on `flowsRegistry.js` + `inject-params-titles.test.cjs` | clean, `--max-warnings=0` |
+| `verify-workflow.mjs` against the engine (48188) | ✓ 47 nodes |
+| `validate-injection-rules.mjs` | ✓ |
+| `bench/sim_caption.py` | 4/4 cases **asserting**: instrumental → lyrics slot `''`; vocal → tags kept, `<Singer A>` stripped |
+| `hiddenFieldIds` off the real `FLOWS` export | exactly one box visible per mode, both directions |
+
+**The guard was reversed, not deleted.** `inject-params-titles.test.cjs` asserted `gates.length === 1`
+with the message *"a second gate is the lyrics one coming back, which silently drops the section
+prose an instrumental track is steered with"*. That reasoning is what the two runs disproved, so it
+now asserts `=== 2` with the disproof written into it. It failed first, on the real change, before
+being touched.
+
+🟡 **`bench/sim_caption.py` had been broken since 2026-09-02.** It walked hardcoded node `"78"` —
+which WAS the first `Lyrics_Gate` — so it raised `KeyError` on every run after that gate was
+deleted. **The "lyrics come through empty" line in the 2026-09-01 section above was therefore never
+re-measured after the deletion; it described the pre-deletion graph.** The bench now derives both
+the caption and lyrics node ids off the encoder and asserts rather than printing, so it fails loudly
+instead of going stale.
+
+### STILL UNPROVEN — the instrumental run
+
+One press answers it, and nothing here can: Instrumental ON, a section plan in the **Song structure**
+box. Nothing may be sung or hummed, and the arrangement must follow the user's order rather than
+inventing one. The enhancer WILL re-run this time — `Input_Structure` is a cache source — so expect
+the 1400-token pass before `AR sampling`.
+
+Read back from engine `/history`: `Input_Arrangement` must contain the user's sections in the user's
+order, with **no clock times**, and the music prompt's `lyrics` input must resolve through node 103
+to the empty string.

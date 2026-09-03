@@ -127,7 +127,7 @@
         0
       ],
       "lyrics": [
-        "77",
+        "103",
         0
       ],
       "seed": [
@@ -295,7 +295,7 @@
   },
   "76": {
     "inputs": {
-      "string": "Instrumental. No vocals of any kind: no singing, no humming, no wordless vocal textures, no vocoder or choir pads. An instrument carries the lead melodic role throughout."
+      "string": "Instrumental. No sung or spoken words, and no vocal carrying the melody: no lead vocal, no humming or wordless vocal line standing in for one, no vocoder. A choir may appear only as an orchestral texture within the arrangement, never as the lead. An instrument carries the lead melodic role throughout."
     },
     "class_type": "MpiText",
     "_meta": {
@@ -628,6 +628,26 @@
     "class_type": "StringConcatenate",
     "_meta": {
       "title": "Cat_Brief"
+    }
+  },
+  "103": {
+    "inputs": {
+      "true": [
+        "75",
+        0
+      ],
+      "false": [
+        "77",
+        0
+      ],
+      "boolean": [
+        "73",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Lyrics_Gate"
     }
   }
 }

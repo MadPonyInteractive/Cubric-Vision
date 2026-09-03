@@ -746,22 +746,32 @@ test('the MiniMax Music Flow carries the whole caption-assembly surface (MPI-664
             `${file}: MiniMaxMusic3TextEncode.${input} must come from the assembly chain`);
     }
 
-    // ONE gate, not two, since 2026-09-02 — and the one that went is the LYRICS gate.
-    // It used to blank the lyrics slot on an instrumental run, which was wrong at the
-    // model level: `build_prompt` sends `<|lyrics_start|>…<|lyrics_end|>` whatever the
-    // caption says and `normalize_lyrics` keeps `[section]` tags verbatim
-    // (`comfy/ldm/minimax_music/prompt.py`), so the box is how an instrumental track's
-    // sections get described — "[Intro] solo piano, [Chorus] full strings". Instrumental
-    // is a CAPTION clause; blanking the lyrics threw away a real steering surface.
+    // TWO gates — and this assertion demanded exactly ONE until 2026-09-03, on the
+    // reasoning that the lyrics gate "silently drops the section prose an instrumental
+    // track is steered with". TWO LIVE RUNS ON THE GPU DISPROVED THAT, so it is reversed
+    // here rather than deleted, because the old reasoning is the trap.
     //
-    // The VOCAL gate stays and still matters: a greyed field KEEPS ITS VALUE, so
-    // without it an instrumental run would splice in a cast that is merely greyed out.
+    // What was true: `build_prompt` always sends `<|lyrics_start|>…<|lyrics_end|>` and
+    // `normalize_lyrics` keeps `[section]` tags verbatim. What did NOT follow: that the
+    // box therefore steers an instrumental arrangement. The tags survive; the prose
+    // between them is a LYRIC LINE and the model sings it. Run 1 (tags with prose under
+    // them) sang the stage directions. Run 2 folded every direction inside the brackets
+    // — legal, `_LYRIC_TAG_RE` is `\[[^\]]+\]` — and it sang those too from the verse on.
+    //
+    // MiniMax's own local guidance, in `research/minimax-music-3.md` the whole time:
+    // empty Lyrics AND an instrumental caption clause, or the model sneaks in humming
+    // and vocoder pads. The steering surface for an instrumental track is
+    // `Input_Structure`, which reaches the caption through the enhancer's [ARRANGEMENT]
+    // block — not the lyrics slot.
+    //
+    // Both gates matter for the same reason: a hidden or greyed field KEEPS ITS VALUE,
+    // so the GRAPH re-checks the flag rather than trusting the UI to have blanked it.
     const instrumental = idOf('input_instrumental');
     const gates = feeds(instrumental, 'MpiIfElse', 'boolean');
-    assert.equal(gates.length, 1,
-        `${file}: Input_Instrumental must gate the Vocal Details block — and ONLY that. `
-        + 'A second gate is the lyrics one coming back, which silently drops the section '
-        + 'prose an instrumental track is steered with');
+    assert.equal(gates.length, 2,
+        `${file}: Input_Instrumental must gate BOTH the Vocal Details block and the `
+        + 'lyrics slot. Dropping the lyrics gate lets the caption say "no vocals" while '
+        + 'the encoder is handed words to sing, and the model sings them');
 
     // Three prose blocks, THREE BOXES, each wired straight into its own heading
     // (MPI-664, 2026-09-02). This was one `Input_Caption` feeding three `RegexExtract`
@@ -927,12 +937,25 @@ test('every FlowDef field and enhance recipe addresses a real node (MPI-664)', a
     const nodeByTitle = (graph, title) => Object.values(graph)
         .find(n => (n?._meta?.title || '').toLowerCase() === title.toLowerCase());
 
-    // A declared `Input_*` that a JS INJECTOR consumes instead of the graph. The only
-    // one: LTX upscale's `Input_Denoise` is read by `ltxSigmasInjector`, which derives a
+    // A declared `Input_*` that something other than the graph consumes.
+    //
+    // `ltx-upscale:Input_Denoise` is read by `ltxSigmasInjector`, which derives a
     // four-value schedule from it and injects THAT into `Input_Sigmas` — so a node named
-    // for the dial would be a node nothing writes. Keep this list at one entry if you
-    // can: every addition is a control whose wiring this guard stops checking.
-    const INJECTOR_DERIVED = new Set(['ltx-upscale:Input_Denoise']);
+    // for the dial would be a node nothing writes.
+    //
+    // `minimax-music:Input_Structure` is consumed by the ENHANCER, not the music graph:
+    // it sits in `flow.enhance.from`, so the frame sends it as a `Song structure:` line
+    // and the 4B expands it into the `[ARRANGEMENT]` block, which IS how it reaches the
+    // caption. Wiring it into the graph as well would put the user's 40 words beside a
+    // rewrite of the same 40 words in one caption — the rival-plan defect this card
+    // spent two GPU runs diagnosing (MPI-664, 2026-09-03).
+    //
+    // Keep this list short: every addition is a control whose wiring this guard stops
+    // checking.
+    const INJECTOR_DERIVED = new Set([
+        'ltx-upscale:Input_Denoise',
+        'minimax-music:Input_Structure',
+    ]);
 
     const problems = [];
     for (const flow of FLOWS) {

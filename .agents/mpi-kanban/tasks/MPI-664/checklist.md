@@ -169,8 +169,17 @@ Design settled 2026-08-30 (hybrid). See `plan.md` for the full field surface and
 - [x] The three weights installed and verified on disk at their declared byte sizes (4,914,197,682 /
       9,196,611,886 / 216,696,128). The stuck-at-100% drawer that hid this is **MPI-681**, a
       pre-existing hole, not this flow's
-- [ ] 🔴 **THE UI IS REJECTED — Fabio, 2026-09-01, on first sight.** *"way too many steps… it's a
-      bad UI."* The five-step field surface is dead as designed; his changes are not yet written
-      down. **Take his direction before touching anything.** The plumbing is unaffected
-- [ ] THE LIVE RUN — still never done. Blocked behind the redesign. ComfyUI has never executed the
-      caption chain, and `hiddenWhen` / `format: 'duration'` / the `voices` roster are still unproven
+- [x] 🔴 **THE UI IS REJECTED — Fabio, 2026-09-01, on first sight.** *"way too many steps… it's a
+      bad UI."* Closed by the one-box rewrite of 2026-09-02 (`43b4a104`) and signed off on real
+      pixels: one Song step plus the run slide, no Enhance button, Mood/Vocal/Arrangement hidden
+- [x] THE LIVE RUN — **DONE 2026-09-03, twice.** ComfyUI has executed the caption chain. Closed
+      with it: the 4B holds the three-marker format from a labelled block, the enhancer cache skips
+      a re-run correctly, `hiddenWhen`, `format: 'duration'` and the `voices` roster all painted,
+      and VRAM is already released after the enhance stage
+- [ ] 🔴 **THE INSTRUMENTAL RUN — the one press still owed.** Both GPU runs sang the lyrics box on
+      an instrumental track, and the enhancer was writing a rival timed arrangement that outranked
+      the user's. Rebuilt 2026-09-03: `Lyrics_Gate` restored (node 103), the box split into
+      `Input_Lyrics` / `Input_Structure` on `hiddenWhen`, the structure feeding the ENHANCER rather
+      than the graph, the recipe forbidden from inventing a running order, and the choir un-banned
+      as an instrument. 878/878 + 13/13 desktop + sim asserts green. **Needs one Generate with
+      Instrumental ON: nothing sung or hummed, and the arrangement follows HIS order**

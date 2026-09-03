@@ -1,8 +1,8 @@
 {
   "id": "flow-minimax-music",
   "revision": 0,
-  "last_node_id": 102,
-  "last_link_id": 137,
+  "last_node_id": 103,
+  "last_link_id": 141,
   "nodes": [
     {
       "id": 48,
@@ -322,7 +322,7 @@
           "widget": {
             "name": "lyrics"
           },
-          "link": 133
+          "link": 141
         },
         {
           "localized_name": "seed",
@@ -1270,7 +1270,8 @@
           "name": "boolean",
           "type": "BOOLEAN",
           "links": [
-            117
+            117,
+            140
           ]
         }
       ],
@@ -1370,7 +1371,8 @@
           "name": "Text",
           "type": "STRING",
           "links": [
-            104
+            104,
+            138
           ]
         }
       ],
@@ -1429,7 +1431,7 @@
         "Node name for S&R": "MpiText"
       },
       "widgets_values": [
-        "Instrumental. No vocals of any kind: no singing, no humming, no wordless vocal textures, no vocoder or choir pads. An instrument carries the lead melodic role throughout."
+        "Instrumental. No sung or spoken words, and no vocal carrying the melody: no lead vocal, no humming or wordless vocal line standing in for one, no vocoder. A choir may appear only as an orchestral texture within the arrangement, never as the lead. An instrument carries the lead melodic role throughout."
       ],
       "widgets_values_named": {
         "string": "Instrumental. No vocals of any kind: no singing, no humming, no wordless vocal textures, no vocoder or choir pads. An instrument carries the lead melodic role throughout."
@@ -1573,7 +1575,7 @@
           "name": "STRING",
           "type": "STRING",
           "links": [
-            133
+            139
           ]
         }
       ],
@@ -2666,6 +2668,66 @@
         "string_b": "",
         "delimiter": " "
       }
+    },
+    {
+      "id": 103,
+      "type": "MpiIfElse",
+      "pos": [
+        -520.0,
+        120.0
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {},
+      "order": 37,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "true",
+          "name": "true",
+          "type": "*",
+          "link": 138
+        },
+        {
+          "localized_name": "false",
+          "name": "false",
+          "type": "*",
+          "link": 139
+        },
+        {
+          "localized_name": "boolean",
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "boolean"
+          },
+          "link": 140
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "output",
+          "name": "output",
+          "type": "*",
+          "links": [
+            141
+          ]
+        }
+      ],
+      "title": "Lyrics_Gate",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "53c019851506df0a99895ca9db4fd09e8d2f3fc3",
+        "Node name for S&R": "MpiIfElse"
+      },
+      "widgets_values": [
+        false
+      ],
+      "widgets_values_named": {
+        "boolean": false
+      }
     }
   ],
   "links": [
@@ -3046,14 +3108,6 @@
       "STRING"
     ],
     [
-      133,
-      77,
-      0,
-      54,
-      2,
-      "STRING"
-    ],
-    [
       135,
       74,
       0,
@@ -3075,6 +3129,38 @@
       0,
       91,
       1,
+      "STRING"
+    ],
+    [
+      138,
+      75,
+      0,
+      103,
+      0,
+      "STRING"
+    ],
+    [
+      139,
+      77,
+      0,
+      103,
+      1,
+      "STRING"
+    ],
+    [
+      140,
+      73,
+      0,
+      103,
+      2,
+      "BOOLEAN"
+    ],
+    [
+      141,
+      103,
+      0,
+      54,
+      2,
       "STRING"
     ]
   ],

@@ -316,10 +316,10 @@ const MINIMAX_MUSIC_ENHANCE_PARAMS = {
         '<|im_start|>system',
         'You are a music producer writing three prose blocks for a song caption, and nothing else.',
         '',
-        'The user message is a short brief, optionally followed by a "Style:" line and the word "Instrumental" on its own line. Treat all of it as the description of one song.',
+        'The user message is a short brief, optionally followed by a "Style:" line, the word "Instrumental" on its own line, and a "Song structure:" section. Treat all of it as the description of one song.',
         '',
         'Output EXACTLY three blocks, in this order, each opening with its marker on the same line:',
-        '[MOOD] The emotional arc from first bar to last, and where the song would be heard. Name how the energy moves — where it lifts, where it falls away.',
+        '[MOOD] How the song feels and where it would be heard — its atmosphere, its weight, the scene it belongs to. Do not describe the running order here.',
         '[VOCAL] Timbre, delivery and backing vocals. Describe how the voice sounds and how it is sung.',
         '[ARRANGEMENT] The instrumentation and how it enters and leaves across the song, section by section.',
         '',
@@ -329,6 +329,8 @@ const MINIMAX_MUSIC_ENHANCE_PARAMS = {
         '- Do not invent a key, a BPM, a time signature or a named artist. Do not name the genre — it is written for you.',
         '- Do not write headings, section tags, lyrics, or any text outside the three blocks.',
         '- If the brief is marked Instrumental, the track has NO singing at all: write [VOCAL] as a single sentence naming which instrument carries the lead melodic line, mention no voices of any kind, and give that instrument its own entrances in [ARRANGEMENT].',
+        '- NEVER invent a running order, a section list or a timing of your own. No clock times such as "at 1:20" or "by 2:15", in any block.',
+        '- If a "Song structure:" section is given it is the user\'s own plan and it is final. Keep its sections in the order written, keep every instrument in the section it was named in, and add only texture, register and detail. Do not add, remove, reorder or re-time a section, and do not move an instrument to a different one. Where it is absent, describe the instrumentation without committing to a running order.',
         '<|im_end|>',
         '<|im_start|>user',
     ].join('\n'),
@@ -2205,9 +2207,22 @@ export const FLOWS = [
         // 🔴 THIS IS WHY `qwen3vl-abliterated-clip` IS IN `requiredDeps` (see above).
         // While Enhance was a button, an install without the enhancer lost a button
         // that warned; now it would lose Generate.
+        // 🔴 `Input_Structure` JOINED `from` ON 2026-09-03, and it is the fix for the
+        // defect the first two live runs exposed. The enhancer was writing a complete
+        // TIMED plan nobody asked it for — *"opens with a single, pulsing sub-bass
+        // drone… At 1:20, the strings enter… By 2:15, the full orchestra erupts"* —
+        // while the user's own section plan sat in the lyrics slot. The caption outranks
+        // the lyrics slot, so the model played the 4B's song: Fabio asked for a single
+        // orchestral drum in the intro and got a drone and muted brass. The model was
+        // not disobeying, it was obeying the other plan in the same caption.
+        //
+        // So the structure is now an INPUT to the enhancer rather than a rival to it,
+        // and the recipe forbids inventing a sequence. Being in `from` also makes it
+        // part of the cache key, which is correct and has a cost: editing the structure
+        // invalidates the answer and the next Generate re-runs the 4B (~40s).
         enhance: {
             op: 'promptEnhance',
-            from: ['positive', 'Input_Style', 'Input_Style_Custom', 'Input_Instrumental'],
+            from: ['positive', 'Input_Style', 'Input_Style_Custom', 'Input_Instrumental', 'Input_Structure'],
             to: {
                 MOOD: 'Input_Mood',
                 VOCAL: 'Input_Vocal',
@@ -2229,8 +2244,12 @@ export const FLOWS = [
                 // THE SONG STAGE — cast on the LEFT, words on the RIGHT.
                 kind: 'fields',
                 tickerLabel: 'Song',
-                title: 'Write the lyrics',
-                hint: 'Mark sections with [Intro] [Verse] [Pre-Chorus] [Chorus] [Post-Chorus] [Bridge] [Instrumental] [Solo] [Outro]. These steer the arrangement rather than guarantee it. To hand a line to one of your voices, put its name in angle brackets on its own line — <Singer A>.',
+                // Title and hint are MODE-NEUTRAL because the right-hand box is not:
+                // Lyrics with Instrumental off, Song structure with it on. The hint has
+                // to state the thing that cost two GPU runs to learn — text outside a
+                // tag is SUNG — because nothing on screen implies it.
+                title: 'Write the song',
+                hint: 'Mark sections with [Intro] [Verse] [Pre-Chorus] [Chorus] [Post-Chorus] [Bridge] [Instrumental] [Solo] [Outro] — they steer the arrangement rather than guarantee it. Writing lyrics: every line outside a tag is sung, and to hand one to a voice put its name in angle brackets on its own line — <Singer A>. With Instrumental on: describe what each section should play. Nothing you write there is sung — it is rewritten into the arrangement.',
                 fields: [
                     {
                         // The roster (MPI-664 tier 2). Its `v` values are the CAPTION
@@ -2281,16 +2300,30 @@ export const FLOWS = [
                         icon: 'audio', default: false,
                     },
                     {
-                        // 🔴 LIVE ON AN INSTRUMENTAL RUN, and that is the point of the
-                        // whole rearrangement. The lyrics slot is ALWAYS sent to the
-                        // encoder — `build_prompt` wraps it in `<|lyrics_start|>` /
-                        // `<|lyrics_end|>` whatever the caption says, and
-                        // `normalize_lyrics` keeps `[section]` tags verbatim
-                        // (`comfy/ldm/minimax_music/prompt.py`). Instrumental is a
-                        // CAPTION clause and nothing more, so this box is where an
-                        // instrumental track's sections get described: "[Intro] solo
-                        // piano, [Chorus] full strings". Fabio asked exactly that
-                        // (2026-09-02) and the answer is yes.
+                        // 🔴 HIDDEN ON AN INSTRUMENTAL RUN, and the box that replaces it
+                        // is `Input_Structure` below. This reverses what this card
+                        // believed until 2026-09-03, and it was disproved by two live
+                        // runs on Fabio's own GPU.
+                        //
+                        // THE BELIEF: the lyrics slot always reaches the encoder, and
+                        // `normalize_lyrics` keeps `[section]` tags verbatim, so this box
+                        // was read as the place to describe an instrumental track's
+                        // sections. THE FIRST HALF IS TRUE AND THE CONCLUSION IS NOT: the
+                        // tags survive, but the prose BETWEEN them is a lyric line, and
+                        // the model sings it. Run 1 (bare tags, prose underneath) put a
+                        // man singing the stage directions. Run 2 folded every direction
+                        // INSIDE the brackets, Suno-style — `_LYRIC_TAG_RE` is
+                        // `\[[^\]]+\]` so any bracketed run is a legal tag — and the
+                        // model sang those too from the verse on.
+                        //
+                        // MiniMax's own local guidance was in `research/` the whole time:
+                        // *"empty Lyrics AND an explicit 'instrumental, no vocals' in the
+                        // caption, or the model sneaks in humming and vocoder pads."*
+                        // `Lyrics_Gate` did exactly that and deleting it was the defect.
+                        // It is back (graph node 103), so the encoder now receives an
+                        // empty lyrics slot whenever Instrumental is on — this field's
+                        // value still injects (hiding is visual only) and the GRAPH is
+                        // what blanks it, the same belt-and-braces as the voice roster.
                         //
                         // The markers are STRIPPED IN THE GRAPH before the encoder sees
                         // this (`Strip_Voice_Markers`), because `<Name>` is not in
@@ -2304,7 +2337,42 @@ export const FLOWS = [
                         // lyrics empty hears that song's words.
                         id: 'Input_Lyrics', type: 'text', rows: 16, label: 'Lyrics',
                         col: 'right',
+                        hiddenWhen: { field: 'Input_Instrumental', is: true },
                         placeholder: '[Verse]\nMidnight and the canvas glows…',
+                        default: '',
+                    },
+                    {
+                        // THE INSTRUMENTAL TWIN of the box above — same corner, same
+                        // size, different destination. Fabio, 2026-09-03: *"for
+                        // instrumentals, we need to provide whatever the user adds in
+                        // lyrics into the Enhancer so that they land in the correct
+                        // place, and lyrics probably need to go empty. So perhaps when we
+                        // press Instrumental, the UI lyrics label becomes a song
+                        // structure."*
+                        //
+                        // 🔴 IT REACHES NO GRAPH NODE, DELIBERATELY. Its only consumer is
+                        // the enhancer: it is in `flow.enhance.from`, so the frame sends
+                        // it as a `Song structure:` line in the labelled block and the
+                        // recipe expands it into `[ARRANGEMENT]`, which is the heading
+                        // MiniMax document for instrumentation. That is why
+                        // `inject-params-titles.test.cjs` allow-lists it — the guard is
+                        // right that it addresses no node, and here that is the design.
+                        //
+                        // WHY NOT WIRE IT STRAIGHT INTO THE CAPTION: the user writes ~40
+                        // words and MiniMax ask for 250-450, weighted to Arrangement. A
+                        // verbatim splice is thin where the model is most responsive, so
+                        // the 4B expands it — under a recipe rule that forbids reordering
+                        // or re-timing what the user wrote.
+                        //
+                        // TWO FIELDS RATHER THAN ONE RELABELLED: a `labelWhen` clause
+                        // would be new frame work in `MpiBaseFlow.js`, and `hiddenWhen`
+                        // already does this with no new machinery. It also means each
+                        // mode keeps its own text across a toggle, instead of one box
+                        // holding lyrics that read as an arrangement or vice versa.
+                        id: 'Input_Structure', type: 'text', rows: 16, label: 'Song structure',
+                        col: 'right',
+                        hiddenWhen: { field: 'Input_Instrumental', isNot: true },
+                        placeholder: '[Intro] single orchestral drum on the beat, long reverb tail\n[Verse] the drum loses its reverb, a viola section enters…',
                         default: '',
                     },
                 ],

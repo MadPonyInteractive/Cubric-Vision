@@ -5,6 +5,69 @@ read it first, and do not re-search it.
 
 ## Current State
 
+🔴 **2026-09-03, fourth session — THE FLOW RAN TWICE ON THE GPU AND THE INSTRUMENTAL PATH WAS
+WRONG. It is rebuilt and needs one more press to confirm.**
+
+**What the two runs proved, in the order it was learned:**
+
+1. 🟢 **The 4B holds the three-marker format** under a labelled block. `[MOOD]` / `[VOCAL]` /
+   `[ARRANGEMENT]` all present, each landing in its own box. The silent-fallback failure did not
+   happen. Item 4 of validation.md's "STILL UNPROVEN" list is CLOSED.
+2. 🟢 **The enhancer cache works.** Second Generate with only the Lyrics changed produced ONE
+   prompt — `got prompt` → `Requested to load MiniMaxMusic3TEModel` 30ms later, no token pass.
+3. 🟢 **VRAM is already released after the enhance stage** — `MpiClearVram` sits after
+   `TextGenerate` and calls `unload_all_models()`. Asked and answered; no work needed. Note for
+   next time: `unload_all_models()` LOGS NOTHING (the `"N models unloaded."` line lives in
+   `load_models_gpu`, `model_management.py:981`), so silence is not evidence it did not run.
+4. 🔴 **A man sang Fabio's stage directions.** Instrumental on, and the model sang the lyrics box.
+5. 🔴 **Suno-style bracketing did NOT fix it.** `_LYRIC_TAG_RE` is `\[[^\]]+\]`, so any bracketed
+   run is a legal tag and the shape was accepted — the model sang them anyway from the verse on.
+6. 🔴 **THE HEADLINE: the enhancer was writing a rival song.** Its `[ARRANGEMENT]` was a fully
+   timed plan nobody asked for — *"opens with a single, pulsing sub-bass drone… At 1:20, the
+   strings enter… By 2:15, the full orchestra erupts"* — while Fabio's own plan sat in the lyrics
+   slot. The caption outranks the lyrics slot, so the model played the 4B's song: he asked for a
+   single orchestral drum in the intro and got a drone and muted brass. **It was not disobeying.
+   It was obeying the other plan in the same caption.** `[MOOD]` carried a third timeline.
+7. 🔴 **The choir was banned outright.** `Instrumental_Clause` said "no vocoder or choir pads"
+   while he asked for a choir in the outro.
+
+**What was built in response (all green, unpushed at the time of writing):**
+
+- **`Lyrics_Gate` IS BACK** — graph node 103, `MpiIfElse(Input_Instrumental, true: Empty_String,
+  false: Strip_Voice_Markers)` into the encoder. Deleting it on 2026-09-02 was the defect, and it
+  was deleted against this card's OWN research file, which said all along: *"empty Lyrics AND an
+  explicit 'instrumental, no vocals' in the caption, or the model sneaks in humming and vocoder
+  pads."* `inject-params-titles.test.cjs` asserted ONE gate and demanded the lyrics one stay
+  deleted; that assertion is reversed with the two runs written into it.
+- **The box splits in two.** `Input_Lyrics` (`hiddenWhen` Instrumental `is: true`) and
+  **`Input_Structure`** — label "Song structure" — (`hiddenWhen` Instrumental `isNot: true`). Two
+  fields rather than a `labelWhen` clause, because that would be new frame work in
+  `MpiBaseFlow.js`, which MPI-666 holds. Each mode keeps its own text across a toggle.
+- **`Input_Structure` REACHES NO GRAPH NODE, deliberately.** It is in `flow.enhance.from`, so the
+  frame sends it as a `Song structure:` line and the recipe expands it into `[ARRANGEMENT]`.
+  Allow-listed in the injection guard with the reason. A verbatim splice was rejected: the user
+  writes ~40 words, MiniMax ask for 250–450 weighted to Arrangement.
+- **The recipe stops sequencing.** New rules: never invent a running order or a clock time in any
+  block; where a `Song structure:` section is given it is FINAL — keep its order, keep each
+  instrument in its own section, add only texture. `[MOOD]` no longer describes the running order.
+- **`Instrumental_Clause` narrowed** — a choir is allowed as an orchestral texture, still banned
+  as a lead or a wordless stand-in.
+
+**Verified:** 878/878 unit, 13/13 desktop flow specs, eslint clean, `verify-workflow` +
+`validate-injection-rules` ✓ against the engine at 48188, and `bench/sim_caption.py` asserting
+that an instrumental run's lyrics slot comes through EMPTY while a vocal run keeps its tags.
+
+🟡 **`bench/sim_caption.py` had been broken since 2026-09-02** — it walked hardcoded node `"78"`,
+which WAS the old `Lyrics_Gate`, so it raised `KeyError` on every run after the deletion. The
+lyrics half of validation.md's evidence was therefore carried forward, not re-measured. It now
+derives both node ids off the encoder and asserts instead of only printing.
+
+**NEXT ACTION: one Generate in Fabio's app with Instrumental ON and a section plan in the Song
+structure box.** Nothing may be sung or hummed, and the arrangement must follow HIS order. The
+enhancer WILL re-run (the structure is a cache source) — expect the 1400-token pass first.
+
+---
+
 🟢 **2026-09-02, third session — A, B AND C ARE ANSWERED AND THE ONE-BOX REWRITE IS BUILT.**
 Everything below in this section is Fabio's own instruction, given in two messages.
 

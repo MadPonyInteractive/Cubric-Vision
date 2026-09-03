@@ -88,11 +88,34 @@ CASES = {
     "D — the baked defaults, untouched": {},
 }
 
+# DERIVED, never hardcoded (MPI-664, 2026-09-03). These were the literals "97" and
+# "78"; "78" was the FIRST `Lyrics_Gate`, so deleting that gate on 2026-09-02 left this
+# bench raising KeyError on every run — and the lyrics half of the evidence in
+# validation.md was carried forward from before the change rather than re-measured.
+# Reading both ids off the encoder means the bench follows the graph instead of a
+# snapshot of it.
+ENC = next(k for k, n in G.items() if n["class_type"] == "MiniMaxMusic3TextEncode")
+CAPTION_SRC, LYRICS_SRC = (G[ENC]["inputs"][k][0] for k in ("caption", "lyrics"))
+
 for name, over in CASES.items():
     memo = {}
+    caption = run(CAPTION_SRC, over, memo)
+    lyrics = run(LYRICS_SRC, over, memo)
     print("=" * 78)
     print("###", name)
     print("--- caption ---")
-    print(run("97", over, memo))
+    print(caption)
     print("--- lyrics ---")
-    print(repr(run("78", over, memo)))
+    print(repr(lyrics))
+
+    # The contradiction that cost two GPU runs: the caption forbids vocals while the
+    # encoder is handed words to sing. Assert both halves agree, per case.
+    if over.get("73", {}).get("boolean"):
+        assert lyrics.strip() in ("", "[start]"), f"{name}: instrumental run must send NO lyrics"
+        assert "Instrumental." in caption, f"{name}: instrumental clause missing from caption"
+    elif over.get("46"):
+        assert "[Verse]" in lyrics, f"{name}: vocal run must keep its section tags"
+        assert "<Singer A>" not in lyrics, f"{name}: voice markers must be stripped"
+
+print("=" * 78)
+print("OK — every case's caption and lyrics slot agree.")
