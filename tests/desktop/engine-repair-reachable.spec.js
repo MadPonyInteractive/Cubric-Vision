@@ -61,7 +61,13 @@ test('a degraded engine gets a Repair engine control in Settings, and it calls t
         inst.el.onOpen();
         await sleep(300);
         const healthySection = inst.el.querySelector('#mpiSettingsEngineHealthSection');
-        const whenHealthy = { present: Boolean(healthySection), hidden: healthySection?.hidden };
+        const whenHealthy = {
+          present: Boolean(healthySection),
+          hidden: healthySection?.hidden,
+          // The PROPERTY is not the question — `hidden` is a UA rule and the section
+          // carries an author `display:flex`, which beat it silently. Ask the pixels.
+          display: healthySection ? getComputedStyle(healthySection).display : null,
+        };
 
         // ── A degraded engine gets the section, the reason, and the button ───
         state.comfyDepsWarning = REASON;
@@ -101,6 +107,13 @@ test('a degraded engine gets a Repair engine control in Settings, and it calls t
     // Healthy: the row exists in the template but must never be shown.
     expect(result.whenHealthy.present).toBe(true);
     expect(result.whenHealthy.hidden).toBe(true);
+    // MPI-685: the assertion that was missing. In 1.4.3 `hidden` was true the whole time
+    // while the section sat on screen, because `.mpi-settings__section` sets
+    // `display:flex` and an author rule beats the UA `[hidden]` one. Every healthy
+    // install was told "Part of the engine did not install" over an empty row, and this
+    // suite was green. Master's guard arrived in 0b8fbd33; the test that should have
+    // caught it did not, so assert what the user sees, not what the DOM claims.
+    expect(result.whenHealthy.display).toBe('none');
 
     // Degraded: shown, with the control.
     expect(result.whenDegraded.hidden).toBe(false);
