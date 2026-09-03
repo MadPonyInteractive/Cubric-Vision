@@ -5,7 +5,7 @@
   "platform": "linux",
   "arch": "x64",
   "fromVersion": null,
-  "toVersion": "1.4.3",
+  "toVersion": "1.4.4",
   "protocolVersion": "0.1.0",
   "connectorManifestPath": "resources/cubric/connector-manifest.json",
   "connectorManifestHash": "818c998eed049e4f28c3220f257c364480f9e77abc5bfd6ae8ef5e49f46c8efb",
@@ -3971,6 +3971,11 @@
       "sha256": "441aae3650e43dd065d1edc62934e600a8a63e55ad7c90d7d3c9f19722e84e36"
     },
     {
+      "path": "app/docs/releases/.approved-1.4.4.json",
+      "size": 147,
+      "sha256": "a3457b9b47a521c03c432b374f7c65ebbf43fd2cc986c8a2789d8c6c3f0e2464"
+    },
+    {
       "path": "app/docs/releases/2026-06-08-v0.0.1.md",
       "size": 1325,
       "sha256": "5000bd888713bdd6743fef9d06bd88b5cabf3e966db6bbe4c627b00f6006326b"
@@ -4074,6 +4079,11 @@
       "path": "app/docs/releases/2026-09-01-v1.4.3.md",
       "size": 2074,
       "sha256": "6f9088dc9d8fd1686203d2ffea3c576d5f89a35ac808eb9168737549b8a75baf"
+    },
+    {
+      "path": "app/docs/releases/2026-09-03-v1.4.4.md",
+      "size": 3022,
+      "sha256": "f0bf09eaaf93039917251e242270f079c2e7c4601e16d888485efb9e6bc4aade"
     },
     {
       "path": "app/docs/releases/build-experience-log.md",
@@ -4297,8 +4307,8 @@
     },
     {
       "path": "app/js/components/Compounds/LandingPages/MpiSettings/MpiSettings.css",
-      "size": 5446,
-      "sha256": "3f4714849d519e225af74dce6a9da90893878212fa4cd1f36c77f72b22441364"
+      "size": 6108,
+      "sha256": "11c9c849935ea06aa81ece7149c333ce20b12bb197dd37866de167f945642c5a"
     },
     {
       "path": "app/js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js",
@@ -5198,12 +5208,12 @@
     {
       "path": "app/js/core/appVersion.js",
       "size": 786,
-      "sha256": "fd0a51b4807dd18c3a9562a72271cf960f62e3067daa3a57a7361b7215493b31"
+      "sha256": "0709f18627d9da9583f38dc52567f0a0664bafbf45c2be39e4564e50ce211e6d"
     },
     {
       "path": "app/js/core/buildInfo.js",
       "size": 176,
-      "sha256": "e162e21fa81e3491406866af476c485b0a32a5e9dc55790879a0298b2ab8c3cf"
+      "sha256": "2b68946d121c9fa54392b3b294e781de72dc54c9de9bad47af3c9bf07b015725"
     },
     {
       "path": "app/js/core/operationRegistry.js",
@@ -5317,8 +5327,8 @@
     },
     {
       "path": "app/js/data/releaseNotes.js",
-      "size": 97356,
-      "sha256": "1dab4d577247f5bdac3848f36c4fcfe0ed9b17f050dce40c51aba522b953ae00"
+      "size": 98807,
+      "sha256": "22c289c51c704fa360b1e4bfb59e036ba50bdde4bf5d26d9a81a8e40f732f834"
     },
     {
       "path": "app/js/events.js",
@@ -5763,7 +5773,7 @@
     {
       "path": "app/node_modules/.package-lock.json",
       "size": 162194,
-      "sha256": "f47761e1d6af0d9453b31ea47bd1647f50a011dec933c63c09d63da8c30d0c06"
+      "sha256": "d9305b6bf767b041b16b3d9db3fd73b05d851c1da2b82d711f984a11be261120"
     },
     {
       "path": "app/node_modules/@derhuerst/http-basic/lib/cache-control-utils.d.ts",
@@ -31958,12 +31968,12 @@
     {
       "path": "app/package-lock.json",
       "size": 176722,
-      "sha256": "d66897d754283b89cc31399d06667d1798aba4370e5492b06278011670c169df"
+      "sha256": "897bf5a1c2ad44c80131099f97c6a3811ba115ea82ad8c98c5b7eb39d48cf7a2"
     },
     {
       "path": "app/package.json",
       "size": 2553,
-      "sha256": "5eefb9e0ae79b633b85be232c0be5a31082cde6abc2684f1baa930f92476b198"
+      "sha256": "43a105db779cbb36b1b9e5bd428043c8c02b73aa415e295ec2377b3eaac0882c"
     },
     {
       "path": "app/PRODUCT.md",
@@ -31977,23 +31987,23 @@
     },
     {
       "path": "app/release-baselines/darwin-arm64.json",
-      "size": 1243576,
-      "sha256": "9c29387d6d61411b62579f5a6c7aa607fef80b82197b5e8d754b78ea723245bc"
+      "size": 1243920,
+      "sha256": "ab5baf68c81c69ed567f0021e11669af6f18d68487b45a64040fbdef9f8f7cb2"
     },
     {
       "path": "app/release-baselines/linux-x64.json",
-      "size": 1188417,
-      "sha256": "57fbb3e30f041cc47455677adbd78f4866eebfd50c8df82d20de34635aeb364c"
+      "size": 1188761,
+      "sha256": "187d161b056fe702bb57a5ab7059ea5deb9ebd35ba8ff23e0bc095e0ebb82718"
     },
     {
       "path": "app/release-baselines/README.md",
-      "size": 7935,
-      "sha256": "0d41325fd6fedd8a48fd48dbc02af61bf3bcd78ebe51ef202721a5ffc92493f2"
+      "size": 8203,
+      "sha256": "583601c358334a2ebb2982fbfc2022b02c0d7fdd30f2b7c098fa7c72982a3d05"
     },
     {
       "path": "app/release-baselines/win32-x64.json",
-      "size": 1256326,
-      "sha256": "cd2dc66156a2b499d607c1661915d60203b1e0c2191a1f27f22240f292c71f2d"
+      "size": 1256690,
+      "sha256": "49a72c1e388e9e1c477c16d7d36a8f8254ee6a6351de4c62ed8db60232603369"
     },
     {
       "path": "app/resources/cubric/connector-manifest.json",
@@ -32012,8 +32022,8 @@
     },
     {
       "path": "app/routes/comfy.js",
-      "size": 56751,
-      "sha256": "3dc5746161ae561d54eddf75d7d4bbdf3887524c8c69aadc668b1595d4894e42"
+      "size": 57386,
+      "sha256": "fa272c61da86940fbcbd4daf7350ff5b335aae07faa0356d6c0f277cab358e40"
     },
     {
       "path": "app/routes/connector.js",
@@ -32122,8 +32132,8 @@
     },
     {
       "path": "app/routes/shared.js",
-      "size": 39681,
-      "sha256": "a4a566c03f34524a3e52a855d8a399d1f2c747db4ca8518e9010b5ff3a6df5e9"
+      "size": 43081,
+      "sha256": "cc105057971a300728a93b83168941c328e45f1a7cbb20a2f252bbfaab670b24"
     },
     {
       "path": "app/routes/system.js",
@@ -32367,8 +32377,8 @@
     },
     {
       "path": "uv/uv",
-      "size": 49523616,
-      "sha256": "fe60af3d6b1771ecea15fdfd3821959912009e1612b3767a4988f135bc3cdd9d"
+      "size": 49313824,
+      "sha256": "671793498fe0a545432e2524b6691ffb9eea4540d9fda43ca2f978df2dbf8426"
     }
   ],
   "preserve": [
@@ -32379,16 +32389,16 @@
     "<documents>/Cubric Vision/project-paths.json"
   ],
   "delete": [],
-  "createdAt": "2026-09-01T14:31:17.365Z",
+  "createdAt": "2026-09-03T21:15:28.544Z",
   "artifact": {
     "kind": "portable-stage",
-    "rootName": "CubricVision-linux-x64-v1.4.3",
+    "rootName": "CubricVision-linux-x64-v1.4.4",
     "launchers": [
       "start.sh",
       "start-with-terminal.sh",
       "update.sh",
       "update-from-zip.sh"
     ],
-    "buildHash": "f79393373fe1"
+    "buildHash": "8b28b230783e"
   }
 }
