@@ -191,7 +191,43 @@ port alone). Bench writes to `D:\WORK\Images\Outputs`, never `<ComfyUI>\output`.
 - [ ] Restore the pack (`mv ...disabled ...`) when the oracle is next needed.
 
 - [x] GATE: Fabio's eyes on F10a/F10b. Continuation, identity and audio all PASS. One defect left.
-- [ ] The transition flicker: LUMA, not colour. The model's re-take of the guide runs up to +4.9
-      brighter than the original and `linear_blend` ramps it in. Fix order: level-match the re-take
-      before blending, then `filmic_crossfade`/`perceptual_crossfade`, then guide length 56/73.
-      Do NOT widen the overlap - the excursion scales with it.
+- [~] The transition flicker: REDUCED, not fixed. Two contributors were found and killed on arm
+      F12k - the drifted re-take (`ColorMatch`/`reinhard` per-frame against `#902`, which already
+      IS source 85..123) and a one-frame flash at generated frame 39 that sits outside the
+      crossfade (level-matched against its own successor). Frame-mean luma span 6.68 -> 1.33,
+      worst 1-frame step 4.23 -> 1.10, join motion 0.94x. **Fabio still sees a colour flicker on
+      F12k**, so a frame MEAN was never sufficient - it cannot see a regional or chromatic swing.
+- [x] `filmic_crossfade` / `perceptual_crossfade` are DEAD: 6.95/4.33 (worse than linear_blend) and
+      6.68/4.21 (identical to it). They reshape the weighting curve, not the level being weighted.
+- [x] Dropping the flash frame is a TRAP the luma metric rewards: join motion 6.98 -> 8.75 -> 10.84
+      for 0/1/2 frames dropped. Keep the frame, match it.
+- [x] GATE: Fabio's eyes on F12k - "still a colour flicker, just not as much as before", plus a
+      sound artefact "like a light switch" that turned out to predate 5e entirely.
+- [x] The sound artefact: a 17 ms DROPOUT (-47 -> -64 dB), root-caused to AAC decoder padding in
+      `MpiLoadVideo._load_audio` - the loader returns a soundtrack 555 samples longer than its own
+      picture, ending in silence, and this Flow concatenates onto that tail. Fixed in the Flow with
+      `#950 MpiAudioRange(#906, fps #331, 0, -1)`; verified on F15a/F15b.
+- [ ] ROOT CAUSE STILL OPEN: `MpiLoadVideo` hands every caller a picture and soundtrack of
+      different lengths. Belongs in ComfyUi-MpiNodes via `/mpi-nodes-sync` + a pin bump - Fabio's
+      call, not taken unilaterally.
+- [x] GATE: F15a vs F15b. **The picture crossfade is CONVICTED** - F15a (fade) is worse, F15b
+      (hard join) is "barely noticeable". The 39-frame blend came from flow_ltx_extend.json and is
+      the wrong mechanism for H3. The hard join is the base from here; the level-match stays.
+- [x] The chroma lead is RETIRED: on F15b, dU at the join is -0.08 and dV -0.03 (flat). The -0.97
+      was a property of the fading arm.
+- [x] The AAC hole is fixed and was NOT what Fabio heard - the artefact survives both F15 arms, and
+      a whole-file scan finds no dropout in F15b at all.
+- [x] The audio splice: crossfaded over the model's own re-take via `#951 MpiAudioRange` +
+      `#952 MpiAudioSplice`. **F16b (24-frame pre-roll, 800 ms) PASSES: "perfect, both sound and
+      image, no flicker at all."**
+- [x] Residual two-frame luma decline: RETIRED, not fixed. F16a and F16b have bit-identical video
+      (md5 `e56a0cd6...`) and differ only in the audio fade length, so the "little flicker" on F16a
+      was never in the pixels - the audio splice was being perceived as a visual event.
+- [ ] PORT F16b into `comfy_workflows/flow_h3_extend.json` + its `raw/` twin: guide clip 39 with its
+      own audio and `ref_audio_1` dropped, hard join, the flash-frame level match, the AAC-padding
+      trim and the 800 ms audio crossfade. Round trip + both validators.
+- [ ] ROOT CAUSE STILL OPEN (carried): `MpiLoadVideo` hands every caller a picture and soundtrack of
+      different lengths. `/mpi-nodes-sync` + a pin bump - Fabio's call.
+- [ ] DO NOT CHASE the 4.7553 s sample step - the SOURCE clip has it too (1.8x its own 99.99pct).
+- [ ] Then port F12k into `comfy_workflows/flow_h3_extend.json` + its `raw/` twin (round trip +
+      both validators). Guide length 56/73 was never run and is now a knob, not a pending fix.

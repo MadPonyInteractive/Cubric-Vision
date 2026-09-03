@@ -1088,3 +1088,283 @@ at 123) and the continuation does not follow that trend.
 
 Do NOT reach for a wider crossfade: the excursion grows with overlap length, so a longer fade makes
 this defect worse, not better.
+
+## Phase 5e - THE FLICKER IS DEAD, AND IT WAS TWO DEFECTS WEARING ONE NAME (2026-09-03)
+
+Eight arms off ONE cached sample. Every arm changes only nodes downstream of `#409`, so ComfyUI
+re-ran the stitch alone: **5-10 s each against the 205.5 s sample**, eight arms for one dispatch.
+
+### The instrument first
+
+`flash.py`'s single join number cannot see this defect at all - a smooth +5 luma ramp has small
+frame-to-frame differences the whole way up. `luma.py` reads **absolute** `signalstats YAVG` per
+frame (no `tblend`) and prints the window around the join, with the motion series alongside so a
+"fix" that flattens the exposure by freezing the picture cannot pass unnoticed. It reproduces the
+Phase 5d flicker table exactly: F10b span 6.68 / worst 1-frame step 4.23, F10a span 2.57 / 2.41.
+
+### There were TWO defects, not one
+
+1. **The re-take is exposure-drifted** (diagnosed in 5d) - `linear_blend` ramps it in across the
+   overlap.
+2. **The model's FIRST GENUINELY NEW frame is a one-frame flash.** Generated frame 39 - the first
+   one drawn with nothing to copy - comes out at **106.6** against 103.5 for generated 40 onward
+   and 104.5 for the source beside it. It sits at output frame 124, entirely OUTSIDE the crossfade
+   (`overlap_side: source` blends source 85..123 against generated 0..38), so no `overlap_mode` and
+   no level match of the re-take can reach it. This is why fixing (1) alone left a 3.07 step.
+
+### The eight arms
+
+| arm | re-take match | overlap_mode | flash frame | luma span | worst 1-frame step | motion at join |
+|---|---|---|---|---|---|---|
+| F10a (5d baseline) | - | linear_blend, overlap 1 | kept | 2.57 | 2.41 | 7.50 |
+| F10b (5d baseline) | - | linear_blend | kept | 6.68 | **4.23** | 5.94 |
+| F12a | reinhard | linear_blend | kept | 3.25 | 3.07 | 6.98 |
+| F12b | - | `filmic_crossfade` | kept | 6.95 | 4.33 | 5.95 |
+| F12c | - | `perceptual_crossfade` | kept | 6.68 | 4.21 | 5.93 |
+| F12g | reinhard | linear_blend | **dropped** | 1.28 | 0.95 | **8.75** |
+| F12i | reinhard | linear_blend | 2 dropped | 1.27 | 1.12 | **10.84** |
+| **F12k** | **reinhard** | **linear_blend** | **level-matched** | **1.33** | **1.10** | **5.34** |
+| F12l | mkl | linear_blend | level-matched | 2.40 | 1.99 | 5.76 |
+
+Source's own baseline over frames 0..79: luma mean **103.71** (drifting +1.58 across the 80),
+motion mean **5.69**.
+
+**LEAD 2 IS DEAD, and it is dead on both modes.** `filmic_crossfade` measures 6.95/4.33 - *worse*
+than `linear_blend` - and `perceptual_crossfade` measures 6.68/4.21, which is `linear_blend` to two
+decimal places. Both only reshape the weighting curve; neither touches the level mismatch being
+weighted. `linear_blend` was never the problem and the untested modes were never the fix.
+
+**LEAD 1 WORKS AND COSTS NO REFERENCE NODE.** `#902` is `GetImageRangeFromBatch(start_index -1,
+num_frames 39)` over the cropped source, and KJNodes resolves `start_index -1` to "the last
+`num_frames`" - so `#902` already IS source frames 85..123, the exact originals the crossfade mixes
+the re-take against. `ColorMatch` is per-frame when both batches are the same length. `reinhard`
+(mean/std matching - literally the "mean-match over the overlap" the diagnosis called for) flattens
+the overlap to 103.66-104.64, tracking the source's own drift. **`mkl` is measurably worse** on
+both arms it ran (3-channel transport where only luma was wrong).
+
+**DROPPING THE FLASH FRAME TRADES ONE ARTEFACT FOR ANOTHER, and the metric says so.** Join motion
+runs **6.98 -> 8.75 -> 10.84** for 0/1/2 frames dropped: each dropped frame is a 42 ms skip. This
+is the Phase 5d lesson in the other direction - a metric that only watched luma would have called
+F12g the winner at 0.95.
+
+**F12k keeps the frame and level-matches it against its OWN SUCCESSOR** (generated 40, which
+already sits at the source's level), so no outside reference is needed for a frame that has none.
+Result: luma span **1.33** with a worst 1-frame step of **1.10** - against the source's own ±0.4
+wobble - and join motion **5.34 against the footage's 5.69, or 0.94x**. No stall, no step, no skip.
+The excursion is gone from the whole 84..126 window, not pushed out of the measured one.
+
+A/V length is unchanged from F10b (226 frames / 9.4167 s video, 9.417 s audio). **The audio drop
+index must NOT follow the picture's** - `fixflash` puts the dropped frame back, so `#942` starts at
+`G`, not `G+1`. Nothing fails if this is wrong; the sound just slides by a frame.
+
+### The graph F12k adds (six nodes on top of F10b)
+
+    #409 (141 generated)
+      |- #943 range 0..38    the re-take   -> #944 ColorMatch(ref #902, reinhard)  --.
+      |- #946 range 39..39   the flash     -> #948 ColorMatch(ref #947, reinhard) --.  |
+      |- #947 range 40..40   its successor                                        |  |
+      |- #941 range 40..140  the rest      ---------------> #949 ImageBatch(948, 941)  |
+                                                                    #945 ImageBatch(944, 949)
+                                                                              -> #904 overlap 39
+
+### Not yet done on this arm
+
+- **Fabio's eyes.** The metric can say the excursion is gone; it cannot say the shot reads as one
+  take, and that has been this card's real gate all through Phase 5.
+- **Guide length 39 -> 56 -> 73 (lead 3) was NOT run.** It costs a fresh 205 s sample and the
+  defect it was meant to attack is already fixed at 1.10. Left as a knob, not a pending fix.
+- `audio_repeat.py` is still unrun against these arms (carried over from 5d).
+
+## Phase 5f - THE SOUNDTRACK HOLE IS ROOT-CAUSED, AND THE FLICKER IS RE-OPENED (2026-09-03)
+
+Fabio on F12k and F10b: **"Both videos still have a colour flicker, just not as much as before,
+and there is also a sound artefact. Sounds like a light switch."**
+
+So Phase 5e's claim was too strong. The metric it passed - frame-MEAN luma, span 1.33 - is real and
+reproducible, but a frame mean cannot see a regional or chromatic swing, and the eye can. The
+excursion Phase 5e killed was one contributor, not the whole defect.
+
+### The sound artefact: a 17 ms hole, and it is OUR bug, not the model's
+
+Not a click - a **dropout**. The soundtrack falls to -47 dB and on to -64 dB for 555 samples
+(17.3 ms) starting exactly where the source ends, then resumes at -30 dB. Identical in F10a, F10b
+and F12k, so it has been there since Phase 5d and is not caused by anything 5e changed.
+
+Eliminated one at a time, each by measurement rather than by reading:
+
+| suspect | probe | result |
+|---|---|---|
+| the model's own audio | **F13_raw** - `#442` fed `#409`/`#404`, no stitch | runs -19..-28 dB straight through its frame 39. **No hole.** |
+| `MpiAudioRange`'s slice | **F14_tail** - `#442 audio = #942`, AudioConcat bypassed | starts at -24.4 dB. **Clean.** |
+| `AudioConcat` | read `comfy_extras/nodes_audio.py:616-638` | a plain `torch.cat` after rate matching. Inserts nothing. |
+| the source file | ffmpeg decode of `ref2v_ms_004.mp4` | 165333 samples, loud (-19.9 dB) to its very last sample |
+
+Then the measurement that named it: cross-correlating the sliced tail against the finished file puts
+**`tail[0]` at output sample 165888, not 165333** - 555 samples late, exactly the length of the hole.
+
+**165888 = 162 x 1024 - a whole number of AAC frames.** `MpiLoadVideo._load_audio`
+(`video.py:156-189`) decodes the mp4's AAC to WAV and the decoder emits its final padded frame, so
+**the loader hands back a soundtrack 555 samples LONGER than the picture it came with, ending in the
+encoder's zero padding.** At the end of a clip that is silent and harmless, which is why nothing has
+ever caught it. This Flow CONCATENATES onto that tail, so the padding lands in the middle of the
+music. The source here is itself an H3 render saved as AAC by `MpiSaveVideo`, so it compounds on
+every extend of an extend.
+
+**Fix, in the Flow, with an existing node and no code change:** `#950 MpiAudioRange(audio #906,
+fps #331, start 0, end -1)` feeding `#907 audio1`. It counts in FRAMES, so it re-derives
+`round(124/24 * 32000) = 165333` and drops the padding with nothing hard-coded. Verified on
+**F15a/F15b**: the 4 ms envelope across the join goes from `-19 / -48 / -56 / -60 / -59 dB` to
+`-19 / -24 / -27 / -28 / -28 dB`, and the worst sample step within +-30 ms of the join is 0.052,
+**below** the file's own 99.99th percentile of 0.081 - so no dropout and no click.
+
+**THE ROOT CAUSE IS STILL IN THE NODE.** `MpiLoadVideo` hands every other caller a picture and a
+soundtrack of different lengths, silently. That fix belongs in `ComfyUi-MpiNodes` under
+`/mpi-nodes-sync` and means a pin bump, so it is Fabio's call - but any Flow that concatenates onto
+a loaded soundtrack has this bug today.
+
+### Measurement gotchas found while doing this
+
+- **The bench arms are 864x480, not 1280x704.** `ref2v_ms_004.mp4` is an 864x480 H3 render, and
+  `#916` sizes off the loader. Phase 5 part 2 already found one metric that **inverted** between
+  bench resolution and real resolution ("2x luma energy"), so no number in Phase 5b-5f should be
+  quoted at app resolution without re-running it there.
+- `MpiSaveVideo` truncates the audio to the PICTURE length (`-t vid_dur`), which is why F14's tail
+  measured 134667 samples rather than the 136000 `MpiAudioRange` actually returned. The node is
+  fine; the probe was reading a truncated copy.
+- `select=gte(n\,N)` returned an empty stream from these files; an accurate `-ss` after `-i` does
+  not. `flickermap.py` and `sharpness.py` use the latter.
+
+### The flicker: what the three new instruments say, and what they do not
+
+`flickermap.py` (per-frame full-frame U/V + a 4x4 grid of per-cell luma) and `sharpness.py`
+(Laplacian variance per frame), both against an untouched stretch of the same source:
+
+| measurement | at/near the join | untouched source baseline |
+|---|---|---|
+| worst per-cell luma step, frames 112..129 | 4.64 (frame 124) | up to 4.60 |
+| frame-mean chroma step dU at frame 124 | **-0.97** | +-0.19 |
+| detail (Laplacian variance) frames 84 -> 105 -> 127 | 1.04x -> **0.54x** -> 0.59x | spread 37% frame to frame |
+
+So: **regional luma at the join is inside the source's own range** and does not convict; **chroma
+does step at frame 124, about 5x the source's own frame-to-frame chroma variation**, though it is
+small in absolute terms; and **detail falls to roughly 0.6x through the overlap and STAYS there
+afterwards** - which is the model's continuation simply being softer than the source, not an
+oscillation. A crossfade between two different renderings of the same moment does soften the middle
+of the fade, and that reads as a breath rather than a flash.
+
+None of these is nailed as "the flicker Fabio sees", and saying otherwise would repeat 5e's mistake.
+
+### The arm that settles it
+
+**F15b joins hard - no crossfade anywhere in the graph** - and carries the same audio fix. F15a is
+F12k's picture with the audio fix. Both are with Fabio.
+
+- flicker still present on **F15b** -> the crossfade is exonerated, and the defect is in the model's
+  continuation or at the single join frame; chroma at frame 124 becomes the lead.
+- flicker gone on **F15b** -> the crossfade causes it, and the fade itself has to change (shorter
+  overlap, or none, given a hard join now measures span 2.21 / worst step 1.14).
+
+F15b's luma profile for the record: span 2.21, worst 1-frame step 1.14, join motion 6.79 against the
+footage's 5.69.
+
+### FABIO'S VERDICT ON F15 - THE PICTURE CROSSFADE IS CONVICTED (2026-09-03)
+
+*"On F15B, it's barely noticeable, but the audio artefact is still there."* and *"I never mentioned
+it, but F-15A, the colour flicker is more apparent. And it also has the audio artefact."*
+
+Two independent findings from one pair, which is what the arm was built to separate:
+
+**1. The 39-frame picture crossfade CAUSES most of the flicker.** F15a (fade) is worse than F15b
+(hard join, no crossfade anywhere), and on F15b the flicker drops to "barely noticeable". So the
+whole LTX-shaped crossfade - carried over because `flow_ltx_extend.json` uses it - is the wrong
+mechanism here, not merely a mechanism that needed level-matching. **The hard join is the base from
+here.** Phase 5e's `filmic`/`perceptual` sweep and the level-match work were all inside a fade that
+should not be there; the level-match still earns its place (it fixes the flash frame the hard join
+also carries), but the 39-frame blend does not.
+
+Measured on F15b for the record: chroma at the join is FLAT (dU -0.08, dV -0.03 at frame 124,
+against F12k's fading arm at -0.97), which retires the chroma lead. What is left is a two-frame luma
+decline, -1.33 at 123 and -1.02 at 124, totalling -2.35: the source brightens through its last 40
+frames (103.8 -> 105.5) and the model's continuation does not follow that trend, so the join steps
+down to the continuation's own level. That is the residual "barely noticeable", and it is a
+different defect from the one Phase 5e fixed.
+
+**2. The audio artefact is NOT the picture stitch and NOT the AAC hole.** It survives both arms,
+and F15b provably has no dropout anywhere in the file (a whole-file scan finds nothing below -12 dB
+of its local median except the AAC priming at 0.000-0.025 s, which the source has too). So the
+17 ms hole was real and is fixed - and it was not what Fabio was hearing.
+
+What is left is the splice itself. `#907 AudioConcat` butt-joins two different recordings at one
+sample with no fade, while the picture faded over 39 frames. **MpiNodes already knows this** -
+`MpiAudioSplice`'s own tooltip reads *"A hard splice clicks, and a click is the one artefact an
+audio edit cannot hide."* The Flow simply never used that node. F16 fades the sound over the model's
+own re-take of the same moment, which is real matching material rather than an invention:
+
+    #907 AudioConcat(source, tail)                    the full-length hard track
+    #951 MpiAudioRange(gen, tail_start - F, -1)       tail + F frames of the re-take
+    #952 MpiAudioSplice(#907, patch #951, start -(TAIL + F), crossfade C ms)
+
+`start` is negative, so it counts from the end and carries no hard-coded source length, and the
+patch lands flush with the end - `i1 == total` - which is the condition `MpiAudioSplice` raises on,
+so a mis-wired arm fails loudly instead of sliding the sound.
+
+**A note on the whole-file scan.** The biggest single-sample step in every arm sits at 4.7553 s
+(frame 114), at about 2x the file's 99.99th percentile - but the SOURCE clip has it too, at 1.8x.
+It is the source's own content, not something the Flow introduced, and it must not be chased.
+
+### F16 - the audio crossfade is BUILT, and the metric says it changes almost nothing
+
+`#951 MpiAudioRange` + `#952 MpiAudioSplice` on the hard-joined picture, at 300 ms (12-frame
+pre-roll) and 800 ms (24-frame). Both run; F16a cost a full 205.3 s because another job on the
+bench had evicted the sample from ComfyUI's cache, F16b then cached at 5.0 s.
+
+| arm | worst sample step within +-40 ms of the join |
+|---|---|
+| F15b, hard splice | 0.04872 (0.60x the file's own 99.99th pct) |
+| F16a, 300 ms fade | 0.04181 (0.65x) |
+| F16b, 800 ms fade | 0.04057 (0.65x) |
+
+**The splice was never a large step to begin with** - 0.6x of the file's own 99.99th percentile,
+i.e. quieter than the music's ordinary transients - so crossfading it can only move the number a
+little, and it does. That cuts both ways and it is worth being explicit about which:
+
+- if F16 fixes what Fabio hears, then the step metric is the wrong instrument for it (a
+  content discontinuity between two recordings is not a large sample step), and the fade stays;
+- if it does not, the splice is exonerated and the remaining candidate is that the sound is in the
+  SOURCE clip already. The source's own biggest step sits at **4.7553 s (frame 114), 1.8x its own
+  99.99th percentile** - about 0.4 s before the transition, which is close enough to read as "at
+  the transition". The source clip was sent to Fabio on its own to settle exactly that, because no
+  measurement here can distinguish "a percussive transient in the music" from "an artefact".
+
+### FABIO'S GATE ON F16 - F16b PASSES CLEAN (2026-09-03)
+
+*"F-16A still has a little flicker, almost imperceptible, and the sound is good. F-16B is perfect,
+both sound and image, no flicker at all."*
+
+**THE TWO ARMS HAVE BIT-IDENTICAL VIDEO.** `ffmpeg -map 0:v -f md5` returns
+`e56a0cd65c540e57bf2bd3fac81b67cf` for both - F16a and F16b differ ONLY in the audio crossfade
+(300 ms over a 12-frame pre-roll vs 800 ms over 24). So the "little flicker" seen on F16a and not on
+F16b was **not in the pixels**: the same frames read as flickering with the shorter audio fade and
+clean with the longer one. The audio splice was being perceived as a VISUAL event at the transition,
+which is why every picture-side instrument kept coming back flat while the eye kept objecting.
+
+That also retires the residual two-frame luma decline as a thing to chase: it is present in both
+arms, byte for byte, and it is invisible once the sound is right.
+
+**THE WINNING CONFIGURATION - all four changes are needed, and each has its own evidence:**
+
+| # | change | fixes |
+|---|---|---|
+| 1 | `MiniMaxH3AddGuide` anchors the source's last 39 frames as a CLIP with its own audio, `ref_audio_1` dropped | continuation, identity, the re-sung music (Phase 5d) |
+| 2 | **Hard join** - `#904 overlap 1`, the model's re-take discarded. NO 39-frame crossfade | most of the flicker (Phase 5f) |
+| 3 | `ColorMatch`/`reinhard` on the flash frame against its own successor | the model's first free frame, +3 luma (Phase 5e) |
+| 4 | `#950 MpiAudioRange(#906, 0, -1)` trims the AAC padding; `#951`/`#952 MpiAudioSplice` crossfades the splice over 24 frames / 800 ms | the 17 ms dropout, and the artefact that was reading as flicker |
+
+### A reproducibility gotcha, found by the same md5
+
+`F15b` and `F16a` share the same seed, the same prompt and the same upstream graph, yet their video
+md5s differ (`8d4baf30...` vs `e56a0cd6...`). F16a re-sampled from scratch because another job on the
+bench had evicted ComfyUI's cache; F16b then reused F16a's sample. **So the bench is not bit-
+reproducible across a cache eviction, and any A/B that spans one is comparing two different samples,
+not two different stitches.** Build variant arms back to back, and check the video md5 before
+attributing a difference to the change under test.

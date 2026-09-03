@@ -138,6 +138,84 @@ bench-proven, and the app side is wired and tested. The card is in `doing` / `in
 > way for this work** (it patches core for every graph). Restore it only when the Phase 5b oracle
 > is needed again, and restart the bench by hand - Manager has no reboot endpoint on this build.
 
+> **PHASE 5e (2026-09-03): THE FLICKER IS FIXED, ON THE METRIC. Fabio's eyes are the gate.**
+> Eight arms off ONE cached sample (5-10 s each, everything downstream of `#409`). **The defect was
+> TWO defects:** the drifted re-take AND a one-frame flash at generated frame 39 - the model's first
+> frame with nothing to copy, 106.6 against 103.5 either side - which sits OUTSIDE the crossfade and
+> which no `overlap_mode` could ever have reached. **Lead 2 is dead:** `filmic_crossfade` measures
+> *worse* than `linear_blend` (6.95 vs 6.68) and `perceptual_crossfade` is identical to it; both
+> reshape the weighting curve, neither touches the level being weighted. **Lead 1 works and needs no
+> new reference node** - `#902` already IS source frames 85..123, and `ColorMatch`/`reinhard` is
+> per-frame across equal batches (`mkl` is measurably worse). **Dropping the flash frame is a trap**
+> the luma metric would have rewarded: join motion goes 6.98 -> 8.75 -> 10.84 for 0/1/2 frames
+> dropped, one artefact traded for a 42 ms skip. **F12k keeps it and level-matches it against its own
+> successor: luma span 1.33 / worst step 1.10 (source wobble ±0.4), join motion 5.34 against the
+> footage's 5.69 = 0.94x.** Six nodes on top of F10b. Full table: `validation.md` § Phase 5e.
+> **NEXT: Fabio watches F12k. If it passes, port F12k into `comfy_workflows/flow_h3_extend.json` and
+> its `raw/` twin** - the shipped graph still has the one-frame pin (`#902 num_frames 1`, no guide
+> audio, `ref_audio_1` wired, `#904 overlap 1`). Guide length 56/73 was NOT run and is now a knob,
+> not a pending fix.
+
+> **PHASE 5f (2026-09-03): 5e's CLAIM WAS TOO STRONG, AND THE SOUND ARTEFACT IS OURS.**
+> Fabio on F12k/F10b: *"Both videos still have a colour flicker, just not as much as before, and
+> there is also a sound artefact. Sounds like a light switch."* Frame-MEAN luma is flat on F12k and
+> the eye still sees it - a frame mean cannot see a regional or chromatic swing, so 5e killed one
+> contributor, not the defect. **THE SOUND IS A 17 ms DROPOUT AND IT IS ROOT-CAUSED:** the tail's
+> content lands at output sample 165888, not 165333, and 165888 = 162 x 1024, a whole number of AAC
+> frames. `MpiLoadVideo._load_audio` (`video.py:156-189`) decodes the mp4's AAC to WAV and the
+> decoder emits its final PADDED frame, so the loader returns a soundtrack 555 samples LONGER than
+> its own picture, ending in silence. Harmless at the end of a clip; this Flow concatenates onto it.
+> Eliminated by probe, not by reading: the model's raw audio (F13) has no hole, the slice (F14) is
+> clean, `AudioConcat` is a plain `torch.cat`, and the source file is loud to its last sample.
+> **Fixed in the Flow with an existing node** - `#950 MpiAudioRange(#906, fps #331, 0, -1)` into
+> `#907 audio1`, which counts in FRAMES and so re-derives 165333 with nothing hard-coded. Verified:
+> the join envelope goes `-19/-48/-56/-60/-59 dB` to `-19/-24/-27/-28/-28 dB`. **THE NODE IS STILL
+> WRONG for every other caller** - that fix is `/mpi-nodes-sync` + a pin bump, and it is Fabio's
+> call. **BENCH RESOLUTION IS 864x480, not 1280x704** (the source is an 864x480 H3 render), and
+> Phase 5 part 2 already had a metric INVERT between bench and app resolution - re-run before
+> quoting. **NEXT: F15a (fade) vs F15b (HARD JOIN, no crossfade anywhere), both with the audio fix,
+> are with Fabio** - F15b exonerates or convicts the crossfade in one watch. Full evidence, the
+> elimination table and the three new instruments: `validation.md` § Phase 5f.
+
+> **FABIO ON F15 (2026-09-03): THE PICTURE CROSSFADE IS CONVICTED, AND THE AUDIO IS THE SPLICE.**
+> *"On F15B, it's barely noticeable, but the audio artefact is still there."* / *"F-15A, the colour
+> flicker is more apparent."* **The 39-frame crossfade CAUSES most of the flicker** - F15a (fade) is
+> worse than F15b (hard join, no crossfade anywhere), where it drops to barely noticeable. The fade
+> was carried over from `flow_ltx_extend.json` and is the wrong mechanism for H3; **the hard join is
+> the base from here.** The level-match still earns its place (the flash frame is on the hard arm
+> too), but the 39-frame blend does not. On F15b chroma at the join is FLAT (dU -0.08 vs the fading
+> arm's -0.97), which retires the chroma lead; the residual is a two-frame luma decline of -2.35
+> (source brightens 103.8 -> 105.5 through its last 40 frames, the continuation does not follow).
+> **The audio artefact is neither the picture stitch nor the AAC hole** - it survives both arms and
+> F15b has no dropout anywhere in the file. It is the SPLICE: `#907 AudioConcat` butt-joins two
+> recordings at one sample with no fade. MpiNodes already knew - `MpiAudioSplice`'s tooltip reads
+> *"A hard splice clicks, and a click is the one artefact an audio edit cannot hide"* - the Flow just
+> never used it. **F16 fades the sound over the model's own re-take of the same moment** (#951
+> MpiAudioRange + #952 MpiAudioSplice, negative `start` so no source length is hard-coded).
+> DO NOT CHASE the 4.7553 s step: the SOURCE clip has it too.
+
+> **PHASE 5g (2026-09-03): F16b PASSES CLEAN. The bench arm is settled; the PORT is what is left.**
+> *"F-16A still has a little flicker, almost imperceptible, and the sound is good. F-16B is perfect,
+> both sound and image, no flicker at all."* **F16a and F16b have BIT-IDENTICAL VIDEO** (md5
+> `e56a0cd65c540e57bf2bd3fac81b67cf` on both) and differ only in the audio crossfade - 300 ms over a
+> 12-frame pre-roll vs 800 ms over 24. So the flicker seen on F16a was **not in the pixels**: the
+> audio splice was being perceived as a VISUAL event, which is why every picture instrument came back
+> flat while the eye kept objecting. That also retires the residual two-frame luma decline - it is in
+> both arms byte for byte and invisible once the sound is right.
+> **THE WINNING CONFIG, four changes, each with its own evidence:** (1) `MiniMaxH3AddGuide` anchors
+> the source's last 39 frames as a CLIP with its own audio, `ref_audio_1` dropped; (2) **hard join,
+> `#904 overlap 1`, re-take discarded - NO 39-frame crossfade**; (3) `ColorMatch`/`reinhard` on the
+> model's first free frame against its own successor; (4) `#950 MpiAudioRange(#906, 0, -1)` to trim
+> the AAC padding plus `#951`/`#952 MpiAudioSplice` crossfading the splice over 24 frames / 800 ms.
+> **GOTCHA: the bench is NOT bit-reproducible across a ComfyUI cache eviction** - F15b and F16a share
+> a seed and an upstream graph and have different video md5s, because F16a re-sampled. Any A/B that
+> spans an eviction compares two samples, not two stitches; check the video md5 first.
+> **NEXT: PORT F16b into `comfy_workflows/flow_h3_extend.json` and its `raw/` twin.** The shipped
+> graph still carries the one-frame pin (`#902 num_frames 1`, no guide audio, `ref_audio_1` wired,
+> `#904 overlap 1` with no level match and no audio work). Round trip + both validators, per the
+> workflow-authoring rules. Build script: scratchpad `build_F16.py` (imports `build_F15` ->
+> `build_F12`); the exact node set is in `validation.md` § Phase 5f/5g.
+
 > **STILL OPEN after 5b: Reuse Prompt coming back on H3, then Phase 6 docs.**
 
 > **NEXT: Phase 5, and it is NO LONGER BLOCKED.** The handoff said 48188 was stale on `53c0198`;
