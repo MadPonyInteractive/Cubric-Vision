@@ -63,6 +63,12 @@ def run(nid, over, memo):
 
 
 LYRICS = "[Verse]\n<Singer A> walking home alone\n[Chorus]\n<The Choir> carry it together"
+# What the user types in the Song structure box on an instrumental run: one official tag,
+# one that is not in MiniMax's set, and prose under both. Only bare `[Intro]` / `[Chorus]`
+# may survive into the lyrics slot.
+STRUCTURE = ("[Intro] single orchestral drum on the beat, long reverb tail\n"
+             "[Drop] the 808 hits\n"
+             "[Chorus] the full string section, brass underneath")
 MARKED = ("[MOOD] Wistful and slowly lifting, a late-night walk that ends in daylight.\n\n"
           "[VOCAL] Close, breathy delivery with doubled harmonies on the last chorus.\n\n"
           "[ARRANGEMENT] Rhodes and brushed drums, a sub bass entering at the bridge.")
@@ -78,6 +84,7 @@ CASES = {
         "71": {"string": "Singer A (Male)"}, "72": {"string": "gospel harmonies"},
         "69": {"string": ""}, "73": {"boolean": True},
         "70": {"int": 0}, "45": {"string": MARKED}, "46": {"string": LYRICS},
+        "104": {"string": STRUCTURE},
     },
     "C — BPM auto, caption typed by hand with no markers": {
         "71": {"string": ""}, "72": {"string": ""}, "69": {"string": ""},
@@ -111,7 +118,14 @@ for name, over in CASES.items():
     # The contradiction that cost two GPU runs: the caption forbids vocals while the
     # encoder is handed words to sing. Assert both halves agree, per case.
     if over.get("73", {}).get("boolean"):
-        assert lyrics.strip() in ("", "[start]"), f"{name}: instrumental run must send NO lyrics"
+        # BARE TAGS, not an empty slot (MPI-664, 2026-09-03). The rule was never "no
+        # lyrics" — it is NO WORDS. Run 1 sang the prose under the tags and run 2 sang it
+        # from inside the brackets, so what has to hold is that nothing singable is left.
+        assert not re.sub(r"\[[^\]]*\]|\s", "", lyrics), \
+            f"{name}: instrumental run must send no word outside a section tag — {lyrics!r}"
+        if over.get("104"):
+            assert re.findall(r"\[[^\]]*\]", lyrics) == ["[Intro]", "[Chorus]"], \
+                f"{name}: only MiniMax's own tags may survive, in order — {lyrics!r}"
         assert "Instrumental." in caption, f"{name}: instrumental clause missing from caption"
     elif over.get("46"):
         assert "[Verse]" in lyrics, f"{name}: vocal run must keep its section tags"

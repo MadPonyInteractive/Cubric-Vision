@@ -702,7 +702,7 @@ test('the MiniMax Music Flow carries the whole caption-assembly surface (MPI-664
     const have = titlesOf(file);
     for (const title of [
         'input_seed', 'input_mood', 'input_vocal', 'input_arrangement',
-        'input_lyrics', 'input_low_vram',
+        'input_lyrics', 'input_structure', 'input_low_vram',
         'input_instrumental', 'input_style', 'input_style_custom', 'input_bpm',
         'input_voices', 'input_voice_notes', 'input_duration',
     ]) {
@@ -760,9 +760,12 @@ test('the MiniMax Music Flow carries the whole caption-assembly surface (MPI-664
     //
     // MiniMax's own local guidance, in `research/minimax-music-3.md` the whole time:
     // empty Lyrics AND an instrumental caption clause, or the model sneaks in humming
-    // and vocoder pads. The steering surface for an instrumental track is
-    // `Input_Structure`, which reaches the caption through the enhancer's [ARRANGEMENT]
-    // block — not the lyrics slot.
+    // and vocoder pads. `Input_Structure` is the steering surface, and it now reaches
+    // the model TWICE: as prose through the enhancer's [ARRANGEMENT] block, and as
+    // WORDLESS SECTION TAGS through this gate's true arm (`Bare_Tags`, below). What run
+    // 1 and run 2 actually proved is narrower than "no lyrics on an instrumental run" —
+    // it is that WORDS in the lyrics slot get sung, brackets or no brackets. A bare
+    // `[intro]` has none.
     //
     // Both gates matter for the same reason: a hidden or greyed field KEEPS ITS VALUE,
     // so the GRAPH re-checks the flag rather than trusting the UI to have blanked it.
@@ -796,6 +799,44 @@ test('the MiniMax Music Flow carries the whole caption-assembly surface (MPI-664
         '[Chorus]\n<The Choir> carry it together'.replace(new RegExp(strip.inputs.regex_pattern, 'g'), ''),
         '[Chorus]\ncarry it together',
         `${file}: Strip_Voice_Markers must remove <Name> markers and leave the [Section] tags`);
+
+    // BARE TAGS ON THE INSTRUMENTAL ARM (MPI-664, 2026-09-03). The gate's true arm was
+    // `Empty_String`, which left the STRONGEST input channel blank: measured across
+    // seven live runs, MiniMax honours Lyrics >> Global Metadata ~= Vocal Details >
+    // Arrangement, so an instrumental run posted 100% of the user's intent through the
+    // weakest channel and the model filled the blank lyrics slot from its prior — an
+    // orchestral bed and a singer. The true arm now carries the user's section names
+    // with every word stripped out.
+    //
+    // THE WHITELIST IS THE SAFETY PROPERTY, not the brackets. Run 2 put every stage
+    // direction INSIDE brackets, Suno-style, and the model sang those too — a bracketed
+    // run is a legal tag but it is not automatically wordless. So the pattern keeps only
+    // MiniMax's own nine tags (`research/minimax-music-3.md`), with an optional trailing
+    // number for `[Verse 2]`, and collapses everything else — prose, `[Drop]`, a
+    // dangling bracket — to whitespace that `normalize_lyrics` then discards.
+    const bare = Object.values(graph).find(n => (n._meta?.title || '') === 'Bare_Tags');
+    assert.ok(bare, `${file} must carry the Bare_Tags node`);
+    const barred = ('[Intro] a single orchestral drum, long reverb tail\n'
+        + '[Drop] the 808 hits\n'
+        + '[the drum loses its reverb, a viola enters]\n'
+        + '[Chorus] big strings')
+        .replace(new RegExp(bare.inputs.regex_pattern, 'gi'), '$1\n');
+    assert.equal(barred.replace(/\s+/g, ' ').trim(), '[Intro] [Chorus]',
+        `${file}: Bare_Tags must keep MiniMax's own section tags and drop everything else`);
+    assert.equal(barred.replace(/\[[^\]]*\]|\s/g, ''), '',
+        `${file}: Bare_Tags must leave NO word outside a tag — a word in the lyrics slot `
+        + 'gets sung, which is the defect this card spent three sessions on');
+
+    // A correct pattern wired nowhere is the silent version of this bug.
+    const structure = idOf('input_structure');
+    assert.ok(Array.isArray(bare.inputs.string) && bare.inputs.string[0] === structure,
+        `${file}: Bare_Tags must read Input_Structure`);
+    const bareId = Object.keys(graph).find(k => graph[k] === bare);
+    const lyricsGate = Object.values(graph)
+        .find(n => (n._meta?.title || '') === 'Lyrics_Gate');
+    assert.equal(lyricsGate?.inputs?.true?.[0], bareId,
+        `${file}: Lyrics_Gate's true arm must carry the bare tags — back on Empty_String `
+        + 'it leaves the model\'s strongest input channel blank on every instrumental run');
 });
 
 test('the prompt enhancer graph carries the seed node its caller drives (MPI-504)', () => {
@@ -943,18 +984,19 @@ test('every FlowDef field and enhance recipe addresses a real node (MPI-664)', a
     // four-value schedule from it and injects THAT into `Input_Sigmas` — so a node named
     // for the dial would be a node nothing writes.
     //
-    // `minimax-music:Input_Structure` is consumed by the ENHANCER, not the music graph:
-    // it sits in `flow.enhance.from`, so the frame sends it as a `Song structure:` line
-    // and the 4B expands it into the `[ARRANGEMENT]` block, which IS how it reaches the
-    // caption. Wiring it into the graph as well would put the user's 40 words beside a
-    // rewrite of the same 40 words in one caption — the rival-plan defect this card
-    // spent two GPU runs diagnosing (MPI-664, 2026-09-03).
+    // `minimax-music:Input_Structure` WAS listed here and is not any more (MPI-664,
+    // 2026-09-03). It was allow-listed on the reasoning that wiring it into the graph
+    // would put the user's 40 words beside a rewrite of the same 40 words in one
+    // caption — the rival-plan defect this card spent two GPU runs diagnosing. That
+    // reasoning holds for the CAPTION and only the caption: the node it feeds now is
+    // `Bare_Tags`, which strips every word and sends the section tags alone into the
+    // lyrics slot. Two destinations, no rivalry — the prose still reaches [ARRANGEMENT]
+    // through the enhancer, and nothing wordy reaches the encoder.
     //
     // Keep this list short: every addition is a control whose wiring this guard stops
     // checking.
     const INJECTOR_DERIVED = new Set([
         'ltx-upscale:Input_Denoise',
-        'minimax-music:Input_Structure',
     ]);
 
     const problems = [];

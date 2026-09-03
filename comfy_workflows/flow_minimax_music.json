@@ -633,7 +633,7 @@
   "103": {
     "inputs": {
       "true": [
-        "75",
+        "105",
         0
       ],
       "false": [
@@ -648,6 +648,29 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "Lyrics_Gate"
+    }
+  },
+  "104": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Structure"
+    }
+  },
+  "105": {
+    "inputs": {
+      "regex_pattern": "(\\[(?:intro|verse|pre-chorus|chorus|post-chorus|bridge|instrumental|solo|outro)(?: *\\d+)?\\])|[^\\[]+|\\[",
+      "replace": "\\1\n",
+      "string": [
+        "104",
+        0
+      ]
+    },
+    "class_type": "RegexReplace",
+    "_meta": {
+      "title": "Bare_Tags"
     }
   }
 }

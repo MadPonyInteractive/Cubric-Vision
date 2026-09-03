@@ -2373,13 +2373,29 @@ export const FLOWS = [
                         // press Instrumental, the UI lyrics label becomes a song
                         // structure."*
                         //
-                        // 🔴 IT REACHES NO GRAPH NODE, DELIBERATELY. Its only consumer is
-                        // the enhancer: it is in `flow.enhance.from`, so the frame sends
-                        // it as a `Song structure:` line in the labelled block and the
-                        // recipe expands it into `[ARRANGEMENT]`, which is the heading
-                        // MiniMax document for instrumentation. That is why
-                        // `inject-params-titles.test.cjs` allow-lists it — the guard is
-                        // right that it addresses no node, and here that is the design.
+                        // 🔴 IT REACHES THE MODEL TWICE, AND THAT IS THE POINT (MPI-664,
+                        // 2026-09-03). Its prose goes to the enhancer — it is in
+                        // `flow.enhance.from`, so the frame sends it as a `Song
+                        // structure:` line and the recipe expands it into
+                        // `[ARRANGEMENT]`, the heading MiniMax document for
+                        // instrumentation. Its SECTION NAMES also go, wordless, into the
+                        // lyrics slot: graph node `Input_Structure` feeds `Bare_Tags`,
+                        // one regex that keeps MiniMax's own nine tags and deletes
+                        // everything else, and that is what `Lyrics_Gate`'s true arm
+                        // carries instead of the empty string.
+                        //
+                        // WHY, measured across seven live runs: MiniMax honours its
+                        // inputs UNEQUALLY — Lyrics >> Global Metadata ~= Vocal Details >
+                        // Arrangement. An instrumental run used to leave the strongest
+                        // channel blank while posting 100% of the user's intent through
+                        // the weakest, so the model filled the blank from its prior: an
+                        // orchestral bed and a singer. Bare tags put the user's own
+                        // running order in the channel the model actually follows, and
+                        // nothing there can be sung because there are no words.
+                        //
+                        // This is why the field is no longer allow-listed in
+                        // `inject-params-titles.test.cjs` — it addresses a node now, and
+                        // the guard checks the wiring.
                         //
                         // WHY NOT WIRE IT STRAIGHT INTO THE CAPTION: the user writes ~40
                         // words and MiniMax ask for 250-450, weighted to Arrangement. A

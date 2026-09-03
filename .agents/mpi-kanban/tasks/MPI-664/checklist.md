@@ -176,10 +176,20 @@ Design settled 2026-08-30 (hybrid). See `plan.md` for the full field surface and
       with it: the 4B holds the three-marker format from a labelled block, the enhancer cache skips
       a re-run correctly, `hiddenWhen`, `format: 'duration'` and the `voices` roster all painted,
       and VRAM is already released after the enhance stage
-- [ ] 🔴 **THE INSTRUMENTAL RUN — the one press still owed.** Both GPU runs sang the lyrics box on
+- [x] 🔴 **THE INSTRUMENTAL RUN — CLOSED 2026-09-03 on run 4.** Both GPU runs sang the lyrics box on
       an instrumental track, and the enhancer was writing a rival timed arrangement that outranked
       the user's. Rebuilt 2026-09-03: `Lyrics_Gate` restored (node 103), the box split into
       `Input_Lyrics` / `Input_Structure` on `hiddenWhen`, the structure feeding the ENHANCER rather
       than the graph, the recipe forbidden from inventing a running order, and the choir un-banned
-      as an instrument. 878/878 + 13/13 desktop + sim asserts green. **Needs one Generate with
-      Instrumental ON: nothing sung or hummed, and the arrangement follows HIS order**
+      as an instrument. 878/878 + 13/13 desktop + sim asserts green. Fabio's ears on run 4:
+      nothing sung or hummed, choir present as an orchestral texture, arrangement in his order
+
+- [ ] 🔴 **BARE TAGS INTO THE LYRICS SLOT — BUILT 2026-09-03, needs one Generate to judge.**
+      `Lyrics_Gate`'s true arm stopped carrying `Empty_String`: graph nodes `Input_Structure`
+      (104) → `Bare_Tags` (105) → gate `true`. One regex keeps MiniMax's own nine section tags
+      (optional trailing number for `[Verse 2]`) and deletes every other character, so the user's
+      running order reaches the model's STRONGEST channel with nothing in it that can be sung.
+      882/882 unit, 23/23 injection guard (4 new asserts), 13/13 desktop, eslint clean,
+      `bench/sim_caption.py` case B now `'[Intro]\n\n\n\n[Chorus]\n\n'` with `[Drop]` and all
+      prose gone. **Needs one Generate with Instrumental ON: still nothing sung, and the
+      sections now land where he put them**

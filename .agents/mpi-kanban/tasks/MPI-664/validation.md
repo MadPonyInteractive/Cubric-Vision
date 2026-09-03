@@ -364,3 +364,81 @@ names tends to appear — the piano did, and the strings were *"so sub I barely 
 caption that said `barely audible` — but the model adds freely: a drum kit arrived that appears
 nowhere in the caption. So the ranking is Lyrics ≫ Global Metadata ≈ Vocal Details > Arrangement,
 and an instrumental run still puts all its intent in the weakest of the four.
+
+---
+
+## 2026-09-03, sixth session — BARE TAGS INTO THE LYRICS SLOT
+
+**Verify mode:** `auto` for everything below. The audio judgement is Fabio's and is still owed —
+one Generate with Instrumental ON.
+
+### What changed
+
+`Lyrics_Gate`'s true arm was `Empty_String`. It is now the output of two new graph nodes:
+
+| Node | Class | Role |
+|---|---|---|
+| `Input_Structure` (104) | `MpiText` | the Song structure box, now reaching the graph as well as the enhancer |
+| `Bare_Tags` (105) | `RegexReplace` | keeps MiniMax's nine section tags, deletes every other character |
+
+Pattern, with `\1\n` as the replacement:
+
+```
+(\[(?:intro|verse|pre-chorus|chorus|post-chorus|bridge|instrumental|solo|outro)(?: *\d+)?\])|[^\[]+|\[
+```
+
+### Automated — PASSED
+
+| Check | Result |
+|---|---|
+| `npm test` | **882/882**, 0 fail |
+| `node --test tests/inject-params-titles.test.cjs` | 23/23, incl. 4 new asserts |
+| `npx playwright test --config=playwright.desktop.config.js tests/desktop/flow-*.spec.js` | **13/13** |
+| `npm run lint` | clean, `--max-warnings=0` |
+| `bench/sim_caption.py` | 4/4 cases; B now yields `'[Intro]\n\n\n\n[Chorus]\n\n'` |
+| converter diff | `COMFY_URL=…:48188 node scripts/workflow-to-api.mjs raw/flow_minimax_music.json` — the ONLY delta against the installed file is `Lyrics_Gate.true` moving `"75"` → `"105"` plus the two new nodes. Nothing else moved |
+
+### Read out of the engine's own source, not assumed
+
+- `comfy_extras/nodes_string.py` — `RegexReplace` is a plain `re.sub` with `case_insensitive=True`
+  by default. So `\1` is a real backreference, an unmatched group substitutes empty (Python ≥3.5),
+  and the tag list matches any casing without a flag being set in the graph.
+- `comfy/ldm/minimax_music/prompt.py:49` — `normalize_lyrics` splits on `\s*(\[[^\]]+\])\s*`,
+  drops empty parts, lowercases tags, joins with `\n`. **The blank lines between the bare tags
+  never reach the model**, and an input with no brackets at all degrades to `"[start]\n"` — byte
+  for byte what `Empty_String` produced.
+
+### The whitelist is the safety property, and it was proven case by case
+
+Bench over nine inputs, each asserting no character survives outside a `[tag]`:
+
+| Input | Bare tags out | Model sees |
+|---|---|---|
+| `[Intro] drum…\n[Verse] viola…` | `[Intro]\n\n[Verse]\n\n` | `[start]\n[intro]\n[verse]` |
+| `[Intro] pads\n[Drop] 808\n[Outro] fade` | `[Intro]\n\n\n\n[Outro]\n\n` | `[start]\n[intro]\n[outro]` |
+| `[the drum loses its reverb]\n[Chorus] big` | `\n\n[Chorus]\n\n` | `[start]\n[chorus]` |
+| `a slow build with strings` (no tags) | `\n` | `[start]\n\n` |
+| `[Verse 1] a\n[Pre-Chorus] b\n[Verse 2] d` | tags only, in order | `[start]\n[verse 1]\n[pre-chorus]\n[verse 2]` |
+
+Row 3 is the one that matters: **run 2's Suno-style bracketed stage directions are DELETED**, not
+passed through. A bracketed run is a legal tag to `_LYRIC_TAG_RE` but it is not automatically
+wordless, which is why the whitelist exists rather than a "keep anything in brackets" rule.
+
+`[Drop]` is dropped on purpose — it still reaches `[ARRANGEMENT]` as prose through the enhancer.
+The tag channel is MiniMax's closed set or nothing.
+
+### One flake, not this change
+
+`tests/desktop/flow-slide-scroll-reaches-top.spec.js` failed once in the parallel run on
+`noSlide: true`, then passed alone and passed again in a second full run (13/13). It walks two
+`next()` clicks behind fixed 300/400 ms sleeps, so it loses the race under load. Unrelated to this
+card — worth its own note if it recurs.
+
+### STILL OWED — Fabio's ears
+
+One Generate, Instrumental ON, with a Song structure typed. Two things to judge:
+
+1. Still nothing sung or hummed (unchanged from run 4 — the caption clause and the word-stripping
+   both hold).
+2. **The sections land where he put them.** This is the actual bet: the running order is now in the
+   channel the model follows precisely, instead of only in the one it treats as a suggestion.

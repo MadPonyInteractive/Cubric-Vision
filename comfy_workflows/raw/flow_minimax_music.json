@@ -1,8 +1,8 @@
 {
   "id": "flow-minimax-music",
   "revision": 0,
-  "last_node_id": 103,
-  "last_link_id": 141,
+  "last_node_id": 105,
+  "last_link_id": 143,
   "nodes": [
     {
       "id": 48,
@@ -1371,8 +1371,7 @@
           "name": "Text",
           "type": "STRING",
           "links": [
-            104,
-            138
+            104
           ]
         }
       ],
@@ -2688,7 +2687,7 @@
           "localized_name": "true",
           "name": "true",
           "type": "*",
-          "link": 138
+          "link": 143
         },
         {
           "localized_name": "false",
@@ -2727,6 +2726,104 @@
       ],
       "widgets_values_named": {
         "boolean": false
+      }
+    },
+    {
+      "id": 104,
+      "type": "MpiText",
+      "pos": [
+        -2200.0,
+        1690.0
+      ],
+      "size": [
+        320,
+        130
+      ],
+      "flags": {},
+      "order": 23,
+      "mode": 0,
+      "inputs": [
+        {
+          "localized_name": "string",
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "localized_name": "Text",
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            142
+          ]
+        }
+      ],
+      "title": "Input_Structure",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "53c019851506df0a99895ca9db4fd09e8d2f3fc3",
+        "Node name for S&R": "MpiText"
+      },
+      "widgets_values": [
+        ""
+      ],
+      "widgets_values_named": {
+        "string": ""
+      }
+    },
+    {
+      "id": 105,
+      "type": "RegexReplace",
+      "pos": [
+        -1780.0,
+        1690.0
+      ],
+      "size": [
+        360,
+        200
+      ],
+      "flags": {},
+      "order": 30,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "string",
+          "type": "STRING",
+          "widget": {
+            "name": "string"
+          },
+          "link": 142
+        }
+      ],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            143
+          ]
+        }
+      ],
+      "title": "Bare_Tags",
+      "properties": {
+        "Node name for S&R": "RegexReplace",
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2"
+      },
+      "widgets_values": [
+        "",
+        "(\\[(?:intro|verse|pre-chorus|chorus|post-chorus|bridge|instrumental|solo|outro)(?: *\\d+)?\\])|[^\\[]+|\\[",
+        "\\1\n"
+      ],
+      "widgets_values_named": {
+        "string": "",
+        "regex_pattern": "(\\[(?:intro|verse|pre-chorus|chorus|post-chorus|bridge|instrumental|solo|outro)(?: *\\d+)?\\])|[^\\[]+|\\[",
+        "replace": "\\1\n"
       }
     }
   ],
@@ -3132,14 +3229,6 @@
       "STRING"
     ],
     [
-      138,
-      75,
-      0,
-      103,
-      0,
-      "STRING"
-    ],
-    [
       139,
       77,
       0,
@@ -3161,6 +3250,22 @@
       0,
       54,
       2,
+      "STRING"
+    ],
+    [
+      142,
+      104,
+      0,
+      105,
+      0,
+      "STRING"
+    ],
+    [
+      143,
+      105,
+      0,
+      103,
+      0,
       "STRING"
     ]
   ],

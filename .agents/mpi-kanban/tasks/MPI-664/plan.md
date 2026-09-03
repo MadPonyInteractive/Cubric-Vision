@@ -79,9 +79,52 @@ into the user's intro; and hidden fields leaking into the enhancer's input (a hi
 `Input_Structure` put a horror-trailer arrangement into a ballad, with no way to clear it from the
 UI). Both graph-visible fixes verified in the app on real runs.
 
-**NEXT: bare tags into the LYRICS slot on an instrumental run** — the load-bearing change, and the
-only lever that reaches this model. Then bench Stable Audio 3 (SFX and one-shots are a capability
-Vision lacks entirely; MiniMax's own docs say it cannot do them).
+---
+
+🟢 **2026-09-03, sixth session — BARE TAGS ARE BUILT. Code green, one Generate owed.**
+
+`Lyrics_Gate`'s true arm no longer carries `Empty_String`. New graph nodes **`Input_Structure`
+(104)** and **`Bare_Tags` (105)**: the Song structure box now reaches the graph, and one
+`RegexReplace` strips it down to section tags alone before the gate's true arm hands them to the
+encoder.
+
+```
+Input_Structure ──▶ Bare_Tags ──▶ Lyrics_Gate.true ──▶ encoder.lyrics
+                                  Lyrics_Gate.false ◀── Strip_Voice_Markers
+```
+
+**The pattern, and why it is a WHITELIST:**
+
+```
+(\[(?:intro|verse|pre-chorus|chorus|post-chorus|bridge|instrumental|solo|outro)(?: *\d+)?\])|[^\[]+|\[
+```
+replaced with `\1\n` (`case_insensitive` is the node's default, so it matches any casing).
+
+🔴 **"Bracketed" was never the safety property — WORDLESS is.** Run 2 folded every stage direction
+INSIDE brackets, Suno-style, and the model sang those too. So the pattern keeps only MiniMax's own
+nine tags and collapses everything else — prose, `[Drop]`, a dangling `[` — to whitespace, which
+`normalize_lyrics` then discards when it splits on `\s*(\[[^\]]+\])\s*`. A structure with no
+brackets at all degrades to exactly today's behaviour (`"[start]\n"`).
+
+**Verified against the engine's own source**, not assumed: `comfy/ldm/minimax_music/prompt.py:49`
+lowercases tags, drops empty parts and joins with `\n`, so the blank lines between the bare tags
+never reach the model. `RegexReplace` is a plain `re.sub` with `case_insensitive=True` by default
+(`comfy_extras/nodes_string.py`), so `\1` is a real backreference and an unmatched group
+substitutes empty.
+
+**Green:** 882/882 unit · 23/23 injection guard (4 new asserts pinning the pattern's BEHAVIOUR,
+the wiring of both ends, and the no-word-outside-a-tag invariant) · 13/13 desktop flow specs ·
+eslint clean · `bench/sim_caption.py` case B now yields `'[Intro]\n\n\n\n[Chorus]\n\n'` from a
+structure containing `[Drop]` and three lines of prose.
+
+`minimax-music:Input_Structure` is **out of `INJECTOR_DERIVED`** — it addresses a node now, so the
+guard checks its wiring instead of skipping it. The old allow-list reason (a rival plan in the
+caption) still holds for the CAPTION and only the caption: the prose still reaches `[ARRANGEMENT]`
+through the enhancer, and only wordless tags reach the encoder. Two destinations, no rivalry.
+
+**NEXT: one Generate with Instrumental ON, on Fabio's GPU.** Nothing sung (unchanged from run 4),
+and the sections should now land where he put them. Then bench Stable Audio 3 (SFX and one-shots
+are a capability Vision lacks entirely; MiniMax's own docs say it cannot do them).
 
 ---
 
@@ -127,6 +170,10 @@ WRONG. It is rebuilt and needs one more press to confirm.**
   frame sends it as a `Song structure:` line and the recipe expands it into `[ARRANGEMENT]`.
   Allow-listed in the injection guard with the reason. A verbatim splice was rejected: the user
   writes ~40 words, MiniMax ask for 250–450 weighted to Arrangement.
+  — **SUPERSEDED 2026-09-03 (sixth session), and only halfway.** It reaches a node now, but not
+  with its words: `Input_Structure` → `Bare_Tags` → `Lyrics_Gate.true`. The rejection of a
+  verbatim splice still stands for the CAPTION; what changed is that the tags alone go somewhere
+  the caption never did.
 - **The recipe stops sequencing.** New rules: never invent a running order or a clock time in any
   block; where a `Song structure:` section is given it is FINAL — keep its order, keep each
   instrument in its own section, add only texture. `[MOOD]` no longer describes the running order.
@@ -1108,6 +1155,15 @@ E. 🟡 **`MpiInput` and `MpiDropdown` do not agree on control height — a PRIM
 so a 220 cap would clip real material. Do not "tidy" it down to a textbook range.
 
 ## Plan Drift
+
+**2026-09-03 — "an instrumental run must send NO lyrics" was one word too strong, and that word
+cost the model's strongest channel.** The plan, the injection guard and `sim_caption.py` all
+encoded the rule as an EMPTY lyrics slot, because that is how MiniMax's own guidance reads and
+because two runs of prose-in-the-lyrics-box had just been sung. What runs 1 and 2 actually proved
+is narrower: WORDS get sung, brackets or no brackets. A bare `[intro]` has none. So the true arm
+carries wordless tags now, the guard asserts *no word outside a tag* rather than *no lyrics*, and
+the bench asserts the same. The old rule is kept in the guard's comment, because reading it as "no
+lyrics" is the trap.
 
 **2026-09-02 — this plan's account of how the length is decided was WRONG, and the fix it pointed
 at does not exist.** It said `MiniMaxMusic3TextEncode` "derives the real `seconds` from the LYRICS"
