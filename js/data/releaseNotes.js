@@ -38,6 +38,19 @@
  * @type {Record<string, ReleaseNotes>}
  */
 export const RELEASE_NOTES = {
+  '1.4.4': {
+    version: '1.4.4',
+    whatIsNew: [],
+    fixes: [
+      'The engine can now finish installing even when a shared Windows folder outside Cubric is damaged. The step that installs the rest of the engine used a working folder in your Windows user profile that every Python program on the machine shares, and if a single file in there had become unreadable the install stopped at that point — on every launch, indefinitely, with nothing you could do about it from inside the app. Cubric now keeps that working folder inside its own engine folder, where Repair engine can reach it.',
+      'Engine health no longer appears when nothing is wrong. In 1.4.3 the section was meant to show only on a broken install, but a display rule overrode that and showed "Part of the engine did not install" to everyone — with no button beneath it, because on a healthy engine there was nothing to repair. It now appears only when there is genuinely something to fix.',
+      'Repair engine is now offered without starting the engine first. The app only knew the engine was broken if it had tried to start it since you last opened Cubric, so going straight to Settings after launching showed nothing to repair on an install that was definitely broken. A failed install is now remembered between launches, and clears itself the moment the engine installs properly.',
+    ],
+    breakingChanges: [],
+    importantChanges: [],
+    engineNotes: [],
+  },
+
   '1.4.3': {
     version: '1.4.3',
     whatIsNew: [],
