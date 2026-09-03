@@ -22,6 +22,17 @@
     gap: var(--s-2);
 }
 
+/* A section that hides itself must actually hide. `display:flex` above is an author
+   rule and `hidden` is a UA one, so the attribute lost and every `section.hidden = true`
+   in MpiSettings.js was decorative. Engine health (MPI-674) shipped in 1.4.3 behind
+   exactly that: the section rendered for everyone, healthy engine or not, and since its
+   Repair button only mounts on a real warning, an install with nothing wrong showed the
+   words "Part of the engine did not install" over an empty row. That is what the
+   reporter on GitHub issue #2 photographed and read as a missing button. (MPI-685) */
+.mpi-settings__section[hidden] {
+    display: none;
+}
+
 .mpi-settings__section-title {
     display: flex;
     align-items: center;
