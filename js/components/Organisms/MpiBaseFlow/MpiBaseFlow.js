@@ -1004,6 +1004,11 @@ export const MpiBaseFlow = ComponentFactory.create({
             ...(flow.steps || []).flatMap(st => st?.fields || []),
         ].filter(f => f?.id);
 
+        /** Ids `hiddenWhen` is hiding RIGHT NOW, as a Set. Derived, never cached — the
+         *  clauses read `_fieldValues`, so any answer older than the last keystroke is
+         *  wrong. `_paintFieldConstraints` computes the same thing for the DOM. */
+        const _hiddenNow = () => new Set(hiddenFieldIds(_allDecls, _fieldValues, flowModelIds(flow)));
+
         /**
          * Field wrappers currently in the DOM, keyed by field id. Cleared on every
          * slide rebuild. A field declared on two surfaces (the prompt step AND the
@@ -1086,9 +1091,21 @@ export const MpiBaseFlow = ComponentFactory.create({
          * opposite of what a blank Custom box means. A `false` toggle is dropped for
          * the same reason — "Instrumental: no" spends tokens telling a music model that
          * a song has singing in it.
+         *
+         * 🔴 A HIDDEN SOURCE IS DROPPED TOO (MPI-664, 2026-09-03). A field hidden by
+         * `hiddenWhen` keeps its value on purpose — the graph re-checks the flag itself
+         * rather than trusting the UI — but that value is no longer part of what the
+         * user is ASKING FOR, and the enhancer's input is exactly that. Music Maker
+         * proved it on the first vocal run ever attempted: `Input_Structure` is
+         * instrumental-only on screen, and switching Instrumental OFF left the previous
+         * instrumental plan sitting in it. The enhancer still received
+         * `Song structure: Intro: single orchestral drum...`, so a ballad brief came
+         * back with a horror trailer's arrangement — orchestral drum, viola section,
+         * the lot — and the box that would have let the user clear it was hidden.
+         * What the user cannot see is not what they are asking for.
          */
         function _enhanceSourceText(d) {
-            const ids = _enhanceSources(d);
+            const ids = _enhanceSources(d).filter(id => !_hiddenNow().has(id));
             if (ids.length === 1) return String(_fieldValues[ids[0]] ?? '').trim();
             const byId = new Map(_allDecls.map(f => [f.id, f]));
             return ids.map((id) => {
@@ -1118,8 +1135,24 @@ export const MpiBaseFlow = ComponentFactory.create({
          * A Set of ids rather than a flag per field, because the provenance is a property
          * of the CURRENT TEXT and dies with it: typing in a box removes it here, and that
          * is the only place ownership changes hands.
+         *
+         * 🔴 IT RIDES THE SNAPSHOT, because the text does (MPI-664, 2026-09-03). Reuse
+         * seeds `_fieldValues` from the sidecar but this Set was rebuilt EMPTY, so three
+         * restored enhancer blocks came back looking hand-typed — and the rule above
+         * then protected them from the enhancer that wrote them. Editing a source
+         * cleared nothing (`_setFlowField` skips text it does not own), `_autoEnhance`
+         * saw a full target set and skipped, and `_mayEnhanceWrite` refused the button
+         * too: after one Reuse the flow could never enhance again. Fabio hit it on a
+         * Music Maker card — he changed the Song structure, pressed Generate, and the
+         * GPU went straight to the music model on YESTERDAY'S caption.
+         *
+         * An older sidecar has no `enhanceWrote` and seeds empty, which is exactly the
+         * old behaviour: ownership cannot be inferred after the fact, and guessing it
+         * would wipe prose the user really did type.
          */
-        const _enhanceWrote = new Set();
+        const _enhanceWrote = new Set(
+            Array.isArray(seeded.enhanceWrote) ? seeded.enhanceWrote : [],
+        );
 
         function _paintEnhance() {
             _enhanceDecls.forEach((d) => {
@@ -2907,9 +2940,15 @@ export const MpiBaseFlow = ComponentFactory.create({
             // would reopen a card and find Emotion back at None. They are plain run
             // inputs the op has no mapping for, which costs nothing.
 
+            // `enhanceWrote` is FRAME BOOKKEEPING, not a run input — it sits beside
+            // `stepValues` for the same reason: the op has no mapping for either, and
+            // Reuse cannot restore what the snapshot does not carry. Without it the
+            // enhancer's own prose comes back indistinguishable from the user's and
+            // welds itself in place (see `_enhanceWrote`).
             return {
                 ...(mediaItems.length ? { mediaItems } : {}),
                 ...(Object.keys(_stepValues).length ? { stepValues: { ..._stepValues } } : {}),
+                ...(_enhanceWrote.size ? { enhanceWrote: [..._enhanceWrote] } : {}),
                 ...declared,
                 ...(Object.keys(declaredParams).length
                     ? { injectionParams: { ...declaredParams } }

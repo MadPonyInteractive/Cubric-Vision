@@ -5,6 +5,86 @@ read it first, and do not re-search it.
 
 ## Current State
 
+🟢 **2026-09-03, fifth session — THE LYRICS GATE IS PROVEN ON THE LIVE GPU, AND REUSE WAS WELDING
+THE ENHANCER SHUT.**
+
+**Run 3 (Fabio, Instrumental ON) read off the live graph via `GET :48188/queue`:**
+
+- 🟢 **CHECK 1 PASSES — `Lyrics_Gate` holds.** Node 103's `boolean` ← node 73 `Input_Instrumental`
+  = `true` → takes the `true` arm → node 75 `Empty_String` = `""`, and encoder node 54's `lyrics`
+  ← 103. His section plan sat in `Input_Lyrics` (node 46) and never reached the model. The
+  instrumental path's lyrics half is CLOSED.
+- 🔴 **CHECK 2 COULD NOT RUN — the enhancer never fired.** `Input_Arrangement` came back carrying
+  yesterday's rival plan verbatim, clock times and all (*"At 1:20, the strings enter… By 2:15"*).
+  GPU went straight to 12.1/16GB with no ~4GB stage, `/history` was empty after the restart, and
+  only one prompt was queued. The caption was the PRE-FIX recipe's output, restored, not written.
+
+**🔴 THE DEFECT — REUSE RESTORES THE TEXT BUT NOT ITS OWNERSHIP.** Fabio opened the card with
+Reuse. `seeded` refills `_fieldValues` from the sidecar, but `_enhanceWrote` was rebuilt EMPTY at
+mount, so the three restored blocks looked hand-typed — and the 🔴 "Enhance must never destroy the
+user's writing" rule then defended them from the enhancer that wrote them:
+
+1. He edited the Song structure (a real source). `_setFlowField`'s loop hit
+   `if (!_fieldValues[t] || !_enhanceWrote.has(t)) return;` and cleared nothing.
+2. `_autoEnhance` saw a full target set → `continue` → no pass.
+3. `_mayEnhanceWrite` would have refused the button too.
+
+**After one Reuse, that flow instance could never enhance again.** Not a cache miss — a weld.
+Fabio called it: *"I changed the instructions… it shouldn't have used it. It should have enhanced
+again."* He was right, and he found it.
+
+**FIXED — ownership rides the snapshot.** `_collectInputs` emits `enhanceWrote: [...]` beside
+`stepValues` (frame bookkeeping, no op mapping), and `_enhanceWrote` seeds from
+`seeded.enhanceWrote`. One read covers both restore paths, because `seeded` is
+`s_flowInputs || props.initialInputs`. An older sidecar has no key, seeds empty, and behaves
+exactly as before — ownership cannot be inferred after the fact, and guessing it would wipe prose
+the user really did type.
+
+**Verified:** 881/881 unit (3 new in `tests/flow-enhance-ownership.test.cjs`), 13/13 desktop flow
+specs, eslint clean.
+
+🟡 **A WRONG STEER THIS SESSION, recorded so it is not repeated: "type into Song structure and the
+cache busts" is FALSE on a reused card.** A source edit only clears text the enhancer owns, so on
+a Reuse it clears nothing. Before the fix the only escape was opening the flow fresh (no Reuse),
+where every field falls to `f.default` and the boxes come up empty.
+
+🟢 **RUN 4 CLOSED THE CARD'S HEADLINE DEFECT.** Fresh open, Instrumental ON, structure typed:
+**nothing was sung or hummed** (Fabio's ears), choir present as an orchestral texture, arrangement
+in his order with no clock times, caption 329 words, `lyrics` `''`. Three sessions of singing
+stage directions — done.
+
+🔴 **WHAT REPLACED IT IS A QUALITY PROBLEM: instrument adherence.** Flutes, a distant drum, no
+violas. **The recipe asked for the wrong REGISTER** — MiniMax's own template caption is an
+equipment list in fragments with literal section labels, and ours said "three prose blocks" plus
+*"never an equipment list"*. Rewritten: caption register, no metaphor, instruments named literally
+and repeated per section, `[ARRANGEMENT]` leads with the bed then one labelled line per section,
+key/scale allowed. eslint + 881/881 + 13/13 green; **audio effect UNMEASURED**.
+
+🟢 **THE VOCAL PATH IS STRONG AND FABIO LIKES THE OUTPUT.** First vocal run ever attempted:
+every lyric line delivered, sections right, mood and voice right, 1:55, ended on its own.
+*"Catchy tune."* Lyrics reach the encoder intact, `<Singer A>` markers stripped, roster in Vocal
+Details — all first-time verifications.
+
+🔴 **AND IT REWRITES WHY THE INSTRUMENTAL RUNS FAILED.** Channel strength measured across seven
+runs: **Lyrics ≫ Global Metadata ≈ Vocal Details > Arrangement**. An instrumental run puts 100% of
+the user's intent into `Arrangement`, the weakest, while the strong channel sits EMPTY — so the
+model fills it from its prior, which is an orchestral bed and a singer. That is the flute, the
+missing 808 and the unrequested vocalising, all of it. Not a bad model, and not the caption
+register. Fabio's own raw-ComfyUI control run (hand-written template caption, none of our code)
+failed the same way, which is what exonerated the pipeline.
+
+**FOUR FIXES SHIPPED TODAY**, all green (eslint · 881/881 · 13/13 desktop): the Reuse ownership
+weld; the recipe's register (caption not prose); the few-shot example that leaked a hip-hop kit
+into the user's intro; and hidden fields leaking into the enhancer's input (a hidden
+`Input_Structure` put a horror-trailer arrangement into a ballad, with no way to clear it from the
+UI). Both graph-visible fixes verified in the app on real runs.
+
+**NEXT: bare tags into the LYRICS slot on an instrumental run** — the load-bearing change, and the
+only lever that reaches this model. Then bench Stable Audio 3 (SFX and one-shots are a capability
+Vision lacks entirely; MiniMax's own docs say it cannot do them).
+
+---
+
 🔴 **2026-09-03, fourth session — THE FLOW RAN TWICE ON THE GPU AND THE INSTRUMENTAL PATH WAS
 WRONG. It is rebuilt and needs one more press to confirm.**
 

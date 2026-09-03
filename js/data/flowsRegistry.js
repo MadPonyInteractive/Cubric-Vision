@@ -288,9 +288,28 @@ export function flowDepKey(flowId) {
  *
  * `Input_System_Prompt` — the graph parses `[MOOD]` / `[VOCAL]` / `[ARRANGEMENT]`
  * with three `RegexExtract` nodes, so emitting those three markers IS the contract.
- * The recipe never names the genre, the BPM or the key: the graph writes those from
- * the controls, and a 4B asked to carry "78 BPM" through prose rounds it to "around
- * 80". Short and single-task is what a 4B holds.
+ * The recipe never names the genre or the BPM: the graph writes those from the
+ * controls, and a 4B asked to carry "78 BPM" through prose rounds it to "around 80".
+ * Short and single-task is what a 4B holds. The KEY is the exception — no control
+ * sets one, MiniMax's own template carries "D flat major, major scale with jazzy
+ * extensions", so letting the model name one is additive rather than a fabrication
+ * of the user's intent.
+ *
+ * 🔴 IT ASKS FOR A CAPTION, NOT PROSE (MPI-664, 2026-09-03), and the first version
+ * got this backwards in two rules at once: it opened with "three prose blocks" and
+ * then said *"write musical changes, never an equipment list"*. **MiniMax's own
+ * shipped template IS an equipment list** — *"dusty boom-bap drums with a soft
+ * thumping kick, cracked snare with lazy swing, brushed hi-hats, low round sub
+ * bass"*, with `Intro:` / `Verses:` / `Bridge:` / `Outro:` as literal labels and
+ * "Rhodes" named in five separate sections. So the recipe was forbidding exactly the
+ * register the model was trained on. The 4B obliged with literary prose, and a live
+ * run proved the cost: Fabio asked for a viola section, an orchestral drum, a piano
+ * and a choir, and the caption delivered them as ~3 literal tokens each wrapped in
+ * twenty of metaphor ("their strings vibrating with a cold, metallic resonance that
+ * feels like the earth groaning beneath a collapsing sky"). The model fell back on
+ * its orchestral prior and played flutes. Repeating each instrument name per section
+ * is part of the same fix — the old caption wrote "the percussion becomes a ghost, a
+ * memory", at which point the drum has stopped being called a drum.
  *
  * `Input_Scrub_Negation` is DISABLED with `(?!)`, a pattern that can never match. Its
  * baked value strips negation clauses out of a Character Sheet noun phrase, and on a
@@ -314,23 +333,27 @@ export function flowDepKey(flowId) {
 const MINIMAX_MUSIC_ENHANCE_PARAMS = {
     Input_System_Prompt: [
         '<|im_start|>system',
-        'You are a music producer writing three prose blocks for a song caption, and nothing else.',
+        'You are a music producer writing three caption blocks for a text-to-music model, and nothing else.',
         '',
         'The user message is a short brief, optionally followed by a "Style:" line, the word "Instrumental" on its own line, and a "Song structure:" section. Treat all of it as the description of one song.',
         '',
+        'REGISTER — this is a caption, not prose. Write comma-separated noun phrases and fragments, the way a producer labels a track: the instrument, then its qualities — register, articulation, tone, room. Name every instrument literally, and name it again in each section it plays. No similes, no metaphors, no "like a...", no scene-setting sentences, no sentences about what the music resembles or where it would be heard.',
+        '',
+        'EVERY INSTRUMENT MUST COME FROM THE USER. Never take one from these instructions. Where the user names instruments — in the brief, or in a Song structure — THAT LIST IS CLOSED: name no others in any block, and add nothing "to fill it out". Where they name none, choose instruments that suit the brief and keep the set small.',
+        '',
         'Output EXACTLY three blocks, in this order, each opening with its marker on the same line:',
-        '[MOOD] How the song feels and where it would be heard — its atmosphere, its weight, the scene it belongs to. Do not describe the running order here.',
-        '[VOCAL] Timbre, delivery and backing vocals. Describe how the voice sounds and how it is sung.',
-        '[ARRANGEMENT] The instrumentation and how it enters and leaves across the song, section by section.',
+        '[MOOD] Feel and listening occasion in a few phrases, then the production texture: mix, room, grain. Name no instruments here and do not describe the running order.',
+        '[VOCAL] Timbre, delivery and backing vocals, as phrases.',
+        '[ARRANGEMENT] Open with the core instrument bed as one list. Then, ONLY when the user gave a Song structure, one line per section using that section\'s own name, naming just the instruments that play in it and what they do there — never the whole bed again, and never the same line twice. With no Song structure given, write no section lines at all: describe how the bed develops and what carries each part, in phrases, without naming or inventing sections.',
         '',
         'Rules:',
         '- 250 to 450 words in total, weighted towards [ARRANGEMENT].',
-        '- Write musical changes, never an equipment list.',
-        '- Do not invent a key, a BPM, a time signature or a named artist. Do not name the genre — it is written for you.',
-        '- Do not write headings, section tags, lyrics, or any text outside the three blocks.',
-        '- If the brief is marked Instrumental, the track has NO singing at all: write [VOCAL] as a single sentence naming which instrument carries the lead melodic line, mention no voices of any kind, and give that instrument its own entrances in [ARRANGEMENT].',
+        '- Do not invent a BPM, a time signature or a named artist. Do not name the genre — it is written for you. You MAY name a key and scale.',
+        '- Do not write lyrics, bracketed tags such as [Verse], or any text outside the three blocks. The section labels inside [ARRANGEMENT] are required and are written as plain "Name:" labels.',
+        '- If the brief is marked Instrumental, the track has NO singing at all: write [VOCAL] as one line naming which instrument carries the lead melodic line, mention no voices of any kind, and give that instrument its own entrances in [ARRANGEMENT].',
+        '- On an Instrumental brief a choir is an ENSEMBLE TEXTURE and nothing else. Describe it by register and blend — massed, sustained, wordless pad, back of the room. Never with soloist qualities: no lead, no solo voice, no operatic, no high-pitched or out-of-tune or exposed line, and no descriptor that would suit one singer.',
         '- NEVER invent a running order, a section list or a timing of your own. No clock times such as "at 1:20" or "by 2:15", in any block.',
-        '- If a "Song structure:" section is given it is the user\'s own plan and it is final. Keep its sections in the order written, keep every instrument in the section it was named in, and add only texture, register and detail. Do not add, remove, reorder or re-time a section, and do not move an instrument to a different one. Where it is absent, describe the instrumentation without committing to a running order.',
+        '- If a "Song structure:" section is given it is the user\'s own plan and it is final. Use its section names as the labels in [ARRANGEMENT], in the order written, and keep every instrument in the section it was named in — repeat its name there rather than referring back to it. Add only texture, register and detail. Do not add, remove, reorder or re-time a section, and do not move an instrument to a different one. THE INSTRUMENT LIST IS CLOSED: name no instrument the structure does not name, in any block — no flutes, no brass, no guitars, nothing "to fill it out". Where a structure is absent, describe the instrumentation without committing to a running order.',
         '<|im_end|>',
         '<|im_start|>user',
     ].join('\n'),
