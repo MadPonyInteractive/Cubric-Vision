@@ -304,6 +304,30 @@ function _formatSpeed(bytesPerSec) {
 // ── ComfyUI Helpers ───────────────────────────────────────────────────────────
 
 /**
+ * Where pip keeps its download/wheel cache: INSIDE THE ENGINE, never the user profile.
+ *
+ * Left to itself pip caches in `%LOCALAPPDATA%\pip\cache` (`~/.cache/pip` elsewhere) —
+ * a directory we do not own, shared with every other Python on the machine, and outside
+ * everything `/engine/repair-python-deps` can reset. One unreadable file in there aborts
+ * the whole curated pass, and no amount of repairing on our side can fix it:
+ *
+ *   ERROR: Could not install packages due to an OSError: [Errno 13] Permission denied:
+ *   'C:\users\<u>\appdata\local\pip\cache\wheels\...\antlr4_python3_runtime-4.9.3-...whl'
+ *
+ * Measured on a user's 1.4.3 install (GitHub issue #2, log of 2026-09-01): identical
+ * failure five packages in on two consecutive engine starts, and since the marker is
+ * stamped only on success, EVERY start re-ran the pass and died on the same cached wheel.
+ * Six node packs IMPORT FAILED behind it and the gen gate blocked.
+ *
+ * `--no-cache-dir` would also have dodged it, at the price of re-downloading the full set
+ * on every reinstall. Our own directory keeps the cache and puts it where a repair can
+ * reach it. (MPI-685)
+ */
+function pipCacheDir() {
+    return path.join(ENGINE_ROOT, 'pip-cache');
+}
+
+/**
  * Executes a pip command using the embedded Python environment.
  */
 async function runPipCommand(args) {
@@ -313,7 +337,9 @@ async function runPipCommand(args) {
     }
     logger.info('system', `Running: python -m pip ${args.join(' ')}`);
     return new Promise((resolve, reject) => {
-        const pip = spawn(pythonPath, ['-m', 'pip', ...args]);
+        const pip = spawn(pythonPath, ['-m', 'pip', ...args], {
+            env: { ...process.env, PIP_CACHE_DIR: pipCacheDir() },
+        });
         pip.stdout.on('data', (data) => logger.info('system', `[pip] ${data.toString().trim()}`));
         pip.stderr.on('data', (data) => logger.warn('system', `[pip-err] ${data.toString().trim()}`));
         pip.on('close', (code) => {
@@ -386,6 +412,38 @@ function curatedDepsMarkerPath() {
     return path.join(path.dirname(getPythonBin(ENGINE_ROOT)), '.cubric_python_deps');
 }
 
+/**
+ * The FAILURE twin of the success marker, and the reason it exists (MPI-685).
+ *
+ * `processState.lastDepsWarning` is process memory, and `_importFailureWarning()` returns
+ * null without a live child. So a user who launches the app and opens Settings before
+ * starting the engine gets no Engine health row and no Repair button — on an install that
+ * is provably broken, because the failure happened on a previous run. The breakage is on
+ * disk; nothing was reading disk.
+ *
+ * Why this and not `curatedDepsPending()`: pending is ALSO true on a healthy fresh install
+ * that has simply never started the engine (the pass runs at first `/comfy/start`), so
+ * reading it would put "Part of the engine did not install" in front of every new user.
+ * A recorded failure is the only thing that means what the row says.
+ * @returns {string}
+ */
+function curatedDepsFailurePath() {
+    return path.join(path.dirname(getPythonBin(ENGINE_ROOT)), '.cubric_python_deps_failed');
+}
+
+/**
+ * The reason the last curated pass failed, or null if the engine's packages are fine.
+ * Survives an app restart, which is the whole point.
+ * @returns {Promise<string|null>}
+ */
+async function curatedDepsFailure() {
+    try {
+        return (await fs.readFile(curatedDepsFailurePath(), 'utf8')).trim() || null;
+    } catch {
+        return null;                 // no marker — nothing failed
+    }
+}
+
 async function ensureCuratedPythonDeps() {
     if (!(await fs.pathExists(PYTHON_DEPS_PATH))) {
         throw new Error(`curated python deps missing at ${PYTHON_DEPS_PATH} — the build is incomplete`);
@@ -393,6 +451,11 @@ async function ensureCuratedPythonDeps() {
     const contents = await fs.readFile(PYTHON_DEPS_PATH);
     const hash = crypto.createHash('sha256').update(contents).digest('hex').slice(0, 16);
     const markerPath = curatedDepsMarkerPath();
+
+    // Clear the failure record on the way IN, so it is owned by this attempt alone: the
+    // skip branch below clears it too (a matching marker means the packages are there,
+    // whatever failed on some earlier lock), and only the catch puts it back.
+    await fs.remove(curatedDepsFailurePath());
 
     try {
         if ((await fs.readFile(markerPath, 'utf8')).trim() === hash) {
@@ -402,7 +465,14 @@ async function ensureCuratedPythonDeps() {
     } catch { /* no marker, or unreadable — install */ }
 
     logger.info('download', `installing curated python deps (${hash}) in one pass`);
-    await runPipCommand(['install', '-r', PYTHON_DEPS_PATH, '--no-deps', '--no-warn-script-location']);
+    try {
+        await runPipCommand(['install', '-r', PYTHON_DEPS_PATH, '--no-deps', '--no-warn-script-location']);
+    } catch (err) {
+        // Record it before rethrowing: the caller turns this into `lastDepsWarning`, which
+        // dies with the process, and the next launch has to be able to offer the repair.
+        await fs.writeFile(curatedDepsFailurePath(), `${err.message}\n`).catch(() => {});
+        throw err;
+    }
     await fs.writeFile(markerPath, `${hash}\n`);
     logger.info('download', `curated python deps installed, marker stamped (${hash})`);
 }
@@ -857,6 +927,8 @@ module.exports = {
     runPipCommand,
     ensureCuratedPythonDeps,
     curatedDepsMarkerPath,
+    curatedDepsFailure,
+    curatedDepsFailurePath,
     runCustomCommand,
     findFileRecursive,
     resolveComfyPath,

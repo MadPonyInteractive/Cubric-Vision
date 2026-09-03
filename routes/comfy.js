@@ -37,6 +37,7 @@ const {
     setExtraModelFolders,
     writeExtraModelPathsYaml,
     ensureCuratedPythonDeps,
+    curatedDepsFailure,
 } = require('./shared');
 const { getPythonBin, getComfyPath, getEngineRoot, resolveDownloadConfig } = require('./platformEngine');
 const remoteModels = require('./remoteModels');
@@ -257,9 +258,17 @@ router.get('/comfy/status', async (req, res) => {
     // failed install to report at all: a marker stamped by an earlier successful pass
     // makes `ensureCuratedPythonDeps` skip, so the packages can go missing afterwards
     // and every start reports a clean install over an engine that imports nothing.
+    //
+    // MPI-685: and a third, on disk, LAST — because the two above are live readings and
+    // this one is a record. It is what a cold app has: both memory sources are empty until
+    // the engine has been started in THIS process (`_importFailureWarning` returns null
+    // without a child at all), so a user who opened Settings before pressing anything saw
+    // no Engine health row on a provably broken install and reported the Repair button
+    // missing (GitHub issue #2, 1.4.3). A successful pass removes the marker, so this
+    // cannot outlive the breakage.
     const flags = {
         needsRestart,
-        depsWarning: processState.lastDepsWarning || _importFailureWarning(),
+        depsWarning: processState.lastDepsWarning || _importFailureWarning() || await curatedDepsFailure(),
     };
     try {
         const ax = getAxios();
