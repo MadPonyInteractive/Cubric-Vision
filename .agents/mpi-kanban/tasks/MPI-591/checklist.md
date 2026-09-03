@@ -121,6 +121,21 @@ do not tick an item until its gate is green.
       run without a ~20GB re-download. Everything else about the LTX arm is stubbed-model
       tested and needs no weights.
       **Left: the two real extends (turbo + non-turbo) and Reuse Prompt — Fabio's gate.**
+      **PART 2 RAN 2026-09-03 AND THE GATE FAILED.** Both extends completed and were clean of
+      flicker and artefacts, but Fabio can always tell where the source ends — against an LTX
+      extend he calls seamless. Not tuning: `#330 MpiH3References` gets NO `ref_video_*`, so the
+      model's whole view of the source is ONE pinned frame (`#903` off `#902 Last Frame`). H3
+      extend is image-to-video off the last frame, and the standalone `ref_audio_1` is why the
+      music re-sings. Two 4b carry-forwards died here too: the "2x luma energy" INVERTED at real
+      resolution (it measures how much the continuation MOVES) and "+47%" became **+154%**.
+      Evidence: `validation.md` § Phase 5 part 2.
+- [ ] 5b — GIVE THE MODEL THE PREVIOUS SECONDS. Match LTX: last **3 s** (`MpiClamp` 1..72 frames),
+      everything when the source is shorter, nothing invented. **Route A** — wire `ref_video_1` +
+      `ref_video_audio_1` off a `GetImageRangeFromBatch(start -1)` tail of the CROPPED `#916` plus
+      `MpiAudioRange` for the matching audio tail, and drop `ref_audio_1`. **Route B** if A is too
+      weak — `MpiH3EncodeAV`/`MpiH3DecodeAV`, which now carry video AND audio masking; that is
+      LTX's own mechanism and we already own it. Gate: bench first (control vs treatment, one seed,
+      one continuation-shaped prompt), then Fabio watches it in the app.
 - [ ] 6 — Docs: `existing-flows/ltx-extend.md` + `any-of-models.md`.
 
 ## Phase 1/2 ordering — decided 2026-08-31

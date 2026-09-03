@@ -27,8 +27,55 @@ bench-proven, and the app side is wired and tested. The card is in `doing` / `in
 > afterwards, and `routes/comfy.js:405` delegates that restart to the OWNER app — so REBUILD the
 > isolated instance before dispatching anything.
 >
-> **STILL OPEN: the two real extends, turbo and non-turbo, plus Reuse Prompt. That gate is Fabio's.**
-> Then Phase 6 docs.
+> **PHASE 5 PART 2 RAN 2026-09-03 AND THE GATE FAILED — PHASE 5b IS NOW THE CARD.** Both real
+> extends completed (turbo 213.5 s, non-turbo 543.5 s, both 1280x704 / 128 frames / 5.334 s, both
+> carrying `flowModelIds` on the sidecar). No flicker, no artefacts. What failed is CONTINUITY:
+> Fabio can always tell where the source ends, against an LTX extend he calls seamless. Root cause
+> is in the graph, not in tuning — `#330 MpiH3References` gets **no `ref_video_*` and no
+> `ref_image_*`**, so the model's entire view of the source is `#903 MiniMaxH3AddGuide` pinning ONE
+> frame. The H3 arm is image-to-video off the last frame. Same cause re-sings the music: the track
+> goes into the STANDALONE `ref_audio_1` ("make audio like this"), not paired to a reference video.
+> Two 4b carry-forwards died with it — the "2x luma energy" INVERTED at real resolution (it was
+> measuring how much the continuation moves, not flicker) and "+47%" became +154%. Full evidence,
+> the LTX mechanism table and the node inventory: `validation.md` § Phase 5 part 2.
+
+> **NEXT: PHASE 5b — give the model the previous seconds.** Decided with Fabio 2026-09-03: match
+> LTX's window exactly — **last 3 s, capped, take everything when the source is shorter, invent
+> nothing**. Route A (attempt first, wiring only): wire `ref_video_1` + `ref_video_audio_1` on
+> `#330` off a `MpiClamp(1, 72)` / `GetImageRangeFromBatch(start -1)` tail of the CROPPED `#916`,
+> with `MpiAudioRange` cutting the matching audio tail, and DROP `ref_audio_1`. Route B (escalation
+> if A is too weak): `MpiH3EncodeAV`/`MpiH3DecodeAV`, which have grown real video AND audio masking
+> since Phase 1 — that is LTX's actual mechanism, and we own it. `MiniMaxH3VideoExtendPatched`
+> (`context_latent` + `context_frames`) is a bench ORACLE for B's shape, never a dependency.
+> The prompt is part of the fix: it must describe the CONTINUATION, never re-describe the source.
+> Multi-reference extends (a new character entering mid-extend via `ref_image_1..9`) are DEFERRED.
+
+> **5b's FIRST THREE PAIRS ARE RUN (2026-09-03) AND "MORE OF THE PREVIOUS VIDEO" IS A DEAD END.**
+> Four arms, one source (`cowboys/Media/ref2v_ms_004.mp4`, 5.167 s), one seed, one prompt, the
+> shipped downstream on every arm — so context is the only variable. **The shipped ONE-FRAME pin
+> has the tightest join of the four, by 3-4x:** control 2.02 (0.36x) / Route A at 3.00 s 2.07
+> (0.37x, +64% for nothing) / the pack at 1.75 s 6.86 (1.20x) / the pack at 3.00 s 7.98 (1.39x).
+> Scaling context UP made it worse in BOTH mechanisms. **Route A is dead** — and 5b's first pair,
+> which said it made the seam *worse*, was RETRACTED: that window was 1.625 s, below the node's
+> 2 s floor, so it was out of range, not informative. **The pack oracle was rebuilt and validated**
+> — ctx21 measures 1.39x against Phase 1 arm A's recorded 1.40x, and Phase 1's finding that the
+> shipped route beats the oracle (0.94x vs 1.40x) reproduces independently on a longer source.
+> `context_frames` counts LATENT TOKENS (`FRAME_PER_TOKEN = (1,4,4,4,4)` indexed `k%5`): the
+> author's default 2 = 0.33 s, Phase 1's 12 = 1.75 s, and 21 = exactly 3.00 s.
+
+> **NEXT: ROUTE B, AND IT IS NOT "MORE CONTEXT" — IT IS GENERATE ACROSS THE SEAM AND BLEND.**
+> At 0.36x the join is already TIGHTER than the footage's own frame-to-frame motion, so there is no
+> pixel step to see; what Fabio sees is a CONTENT discontinuity. Every H3 arm — ours and the
+> pack's — emits only the new frames and butt-joins in pixel space (`#904` blends **1 frame**). LTX
+> masks the source into the latent, generates THROUGH the boundary, discards its regenerated copy
+> of the reference and crossfades the original back over the full 3 s. So build:
+> `MpiH3EncodeAV` over source+extension with the mask covering ONLY the extension →
+> `MpiH3DecodeAV` compositing back through that mask with `feather` (the crossfade H3 lacks).
+> Two other causes now have evidence and are cheap: the PROMPT must describe the continuation, not
+> re-describe the source (proved — it stopped the camera re-invention on both arms), and SOURCE
+> LENGTH dominates (on 5 s even the one-frame control continued plausibly; on 1.6 s nothing did).
+
+> **STILL OPEN after 5b: Reuse Prompt coming back on H3, then Phase 6 docs.**
 
 > **NEXT: Phase 5, and it is NO LONGER BLOCKED.** The handoff said 48188 was stale on `53c0198`;
 > Fabio has restarted his app since, and the 40-node graph — `force_rate`, `EasyCache` and

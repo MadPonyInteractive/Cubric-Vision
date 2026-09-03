@@ -571,3 +571,283 @@ Fabio restarted the engine, so disk and memory agree again.
 `.engine-config.json` → the SAME engine the user's app is running, and the boot repair will act on
 it. `~/.claude/memory/tool_sandbox_isolated_app_seed_uw_deps.md` warns against pointing at the real
 engine root deliberately; it does not say that the DEFAULT is the real engine root.
+
+
+## Phase 5 part 2 — the real extends ran, and the GATE FAILED (2026-09-03)
+
+Isolated app rebuilt on **:64964**, fresh boot, no drift repair, `needsRestart` false throughout
+and no `.engine-restart-request.json` written — the handoff's warning was heeded and the shared
+engine was never asked to restart. Project `MPI-591 Phase 5`, source `mpi591_src720p.mp4`
+(1280x720, 24 fps, 39 frames, 1.625 s). Both runs dispatched through `/connector/generate`.
+
+**A trap found on the way in, worth one line:** `POST /comfy/needs-restart` is a **SETTER whose
+body defaults to `true`** (`routes/comfy.js:652`, `req.body.value ?? true`). A bare `POST {}` sent
+to "query" the flag ARMS it. Cleared with `{"value": false}` and confirmed against `/comfy/status`.
+Read it from `/comfy/status`, never by POSTing the setter.
+
+### Both arms ran and both delivered
+
+| | turbo `flowExtendVideo_001` | non-turbo `flowExtendVideo_002` |
+|---|---|---|
+| dimensions | 1280x704 | 1280x704 |
+| frames / fps / duration | 128 @ 24 fps, 5.334 s | identical |
+| wall clock | **213.5 s** | **543.5 s** |
+| source-half luma energy | 4.81 | 4.80 |
+| join diff | 1.18 (**0.24x** the source-half mean) | 1.39 (**0.29x**) |
+| generated-half mean / worst | 10.63 / 13.94 | 4.67 / 6.49 |
+
+`flowModelIds: ['minimax-h3-ref2va']` is on both sidecars, so the MPI-620 hook Reuse Prompt needs
+is present. `injectionParams` carried `Input_is_Turbo` correctly on each.
+
+### TWO 4b CARRY-FORWARDS ARE NOW WRONG, and both were measurement artefacts
+
+**1. "Non-turbo carries ~2x turbo's frame-to-frame luma energy" does not survive contact with a
+real resolution — it INVERTS.** Here turbo measured 2.3x non-turbo. The frames say why and it is
+not quality: turbo invented a hard camera move (swung to a side profile, subject filling frame),
+non-turbo held the shot and kept walking toward the lens. The metric tracks **how much the
+continuation moves**, nothing else. The flicker-vs-detail question 4b carried forward is retired:
+neither arm's energy figure is a quality signal, in either direction.
+
+**2. "Non-turbo costs +47%" does not generalise either.** It cost **+154%** here. At 4b's
+640x352 the fixed overhead (load, encode, VAE) dominated and hid the sampler ratio; at 1280x704 the
+25-vs-6 step count dominates, so the cost approaches the step ratio. Quote +47% only for the arm
+and resolution it was measured on.
+
+### FABIO'S VERDICT — the gate FAILS, and on something neither metric could see
+
+No flicker and no artefacts on either arm; that half is clean. What fails is **continuity**:
+
+> "the change between the previous clip and the new clip is pretty obvious. It almost looks like
+> this was done with a start frame from the last frame of the previous one, which kind of raises
+> the suspicion that the model is not seeing enough of the previous video." … "The non-turbo kinda
+> repeated the track in the continuation … In the turbo one, it kept repeating it like crazy."
+
+He also set the bar with the sibling: **"the LTX tests that I've done were seamless. I couldn't
+even tell when one stopped and when the other started. This I can always tell."**
+
+**The suspicion is exactly right, and it is the shipped architecture, not a tuning miss.** Read off
+`comfy_workflows/flow_h3_extend.json`:
+
+- `#330 MpiH3References` receives `prompt`, `ref_audio_1` and the size/length — and **no
+  `ref_image_*` and no `ref_video_*` at all**.
+- The only picture the model gets is `#903 MiniMaxH3AddGuide` pinning `#902 Last Frame`
+  (`GetImageRangeFromBatch`, `start_index: -1`, `num_frames: 1`) at `frame_idx 0`.
+
+So the H3 arm is **literally image-to-video off the last frame**. Nothing carries the camera's
+motion, so the camera is re-invented on every run — which is why BOTH arms did it, and why the two
+did it differently. And the audio has the same root cause: the source track goes into the
+**standalone** `ref_audio_1` slot, whose own tooltip reads *"Standalone reference audio"* — i.e.
+"make audio like this", not "continue after this" — and then `#907 AudioConcat` glues source and
+generated end to end. That is the re-sung, looping music.
+
+### What LTX actually does, measured — this is the spec for the fix
+
+`flow_ltx_extend.json`, the arm Fabio calls seamless. Four mechanisms, and the H3 graph has none:
+
+| node | behaviour |
+|---|---|
+| `#23 MpiMath` | `floor((a-1)/8)*8+1` on the source FRAME COUNT — snaps to LTX's 8n+1 latent grid |
+| `#24 MpiClamp Ref_Frames` | **min 1, max 73** → 73 @ 24 fps = **3.042 s**. `min 1` is why a short clip is never padded |
+| `#29 GetImageRangeFromBatch` | `start_index: -1` — the **last N frames**, taken off the CROPPED `#28`, not the raw loader |
+| `#31 TrimAudioDuration` | start `duration − ref_seconds`, length `ref_seconds` — **the matching audio tail** |
+| `#33 LTXVAudioVideoMask` | masks BOTH streams: `video_start_time`/`video_end_time` and `audio_start_time`/`audio_end_time`. The reference window is KNOWN, the extension is generated |
+| `#44 TrimAudioDuration "New Audio"` | **discards the regenerated reference audio**, keeps only the new tail; `#45` concats it onto the ORIGINAL track — which is why the music does not restart |
+| `#43 ImageBatchExtendWithOverlap` | `overlap = ref_frames`, `linear_blend`, `overlap_side: source` — **crossfades across the whole 3 s** back into the original. Never a hard cut |
+
+So the answer to "how much does LTX look back" is **3.042 s, capped, with the audio tail pinned to
+the same window** — and the reference is regenerated then thrown away, not merely conditioned on.
+
+### Decisions taken (Fabio, 2026-09-03)
+
+- **Match LTX: a 3-second cap, and take everything when the source is shorter.** No invented floor
+  — "we can't invent another second or another four seconds to get to a five-second floor".
+  `MpiH3References`' tooltip says "2-15 s", but that is a training guideline, not a gate, and our
+  node enforces nothing (`collect_refs` only drops blank slots).
+- **Pair the audio to the video** (`ref_video_audio_1`) rather than leaving it standalone.
+- **The prompt must describe the CONTINUATION, not the source.** This session's prompt re-described
+  it ("she keeps walking toward the camera"), which with her already at the lens leaves the model
+  no move except to re-invent the camera. Fabio's framing: "she stops and says something to the
+  camera". Recorded as a real authoring rule, not a one-off.
+- **Multi-reference extends are DEFERRED** — introducing a new character mid-extend via
+  `ref_image_1..9` is the obvious next capability, but only once the plain extend is proven.
+- The MiniMax latent upscaler seen in a third-party workflow is noted and **out of scope here**.
+
+### The node inventory says we already own the fix — TWO routes, cheapest first
+
+Probed live off the bench `/object_info` (8188), so this is what is installed, not what is
+documented:
+
+- `MpiH3References` exposes `ref_video_1..3` **and** `ref_video_audio_1..3` as flat slots. The
+  shipped graph simply never wired them. → **Route A**, a wiring change.
+- `MpiH3EncodeAV` / `MpiH3DecodeAV` — OUR pair, and they have grown real masking since Phase 1:
+  `mask`/`mask_start`/`mask_end`, `audio_start`/`audio_end`/`audio_ranges`, `mask_mode`
+  (`per-frame` | `as sampled`), `audio_mode` (`replace` | `mix`), `audio_crossfade`, `audio_gain`.
+  That is structurally LTX's mechanism — encode the source AV, mask what to regenerate, composite
+  back. → **Route B**, the escalation. (Unreleased in MpiNodes; commits `58e9879`, `931b634`,
+  `e64c516`, `ec82d9a`, currently bench-only for video inpainting.)
+- `MpiAudioRange` / `MpiAudioSplice` — frame-indexed audio cut and write-back, negatives counting
+  from the end. `MpiAudioRange` is an exact fit for "the audio tail matching the video tail".
+- `MiniMaxH3VideoExtendPatched` — the kat3ri fork's own extend node, taking `context_latent` +
+  `context_frames` ("trailing latent frames carried over as context"). **Not shippable** (the pack
+  monkey-patches core at import, and was rejected as a dependency in
+  `research/minimax-h3-extend-nodepack.md`) but it is a legitimate ORACLE for Route B's shape.
+
+Route A is attempted first: it is the arm this card already held in reserve, it is a wiring change
+rather than latent surgery, and it does not go near the sparkle defect that killed the
+masked-prefix route in Phase 1.
+
+
+## Phase 5b, first bench pair — ROUTE A DID NOT WORK (2026-09-03)
+
+Two arms on the bench (8188), built from the SHIPPED graph so the result transfers directly.
+Same seed (`591000591`), same `Input_Duration` 4, turbo on both, same prompt. The reference window
+is the ONLY variable. Source `mpi591_src720p.mp4` (39 frames, 1.625 s).
+
+- `F4a_control` — shipped wiring: one pinned frame + standalone `ref_audio_1`. **210.3 s**
+- `F4b_refwindow` — `ref_video_1` + paired `ref_video_audio_1` off `MpiClamp(1,72)` →
+  `GetImageRangeFromBatch(start -1)` on the CROPPED `#916`, `MpiAudioRange` for the audio tail,
+  `ref_audio_1` dropped. **346.6 s (+65%)**
+
+Both validated and ran first time; the wiring itself is correct.
+
+### The prompt was a real and separable cause — and this half DID work
+
+**Both** arms held the camera: she slows, stops, looks into the lens, camera steady. Neither
+re-invented the move. The only change from the app runs is that the prompt describes the
+CONTINUATION instead of re-describing the source. So the camera re-invention Fabio saw has two
+causes, and this is one of them, fixable in words. Recorded as an authoring rule.
+
+### The seam: Route A made it WORSE, on two independent instruments
+
+| | control (one frame) | refwindow (3 s window) |
+|---|---|---|
+| within-file join diff (`tblend` YAVG) | **1.23** = 0.26x the source-half mean | **7.27** = **1.51x** |
+| PSNR vs the source crop, frame after the join | 41.85 → 38.78 → 30.31 | 40.95 → **26.23** → 23.49 |
+
+Both agree: the refwindow arm leaves the pinned frame **one frame earlier and far harder**. It did
+not soften the join, it sharpened it.
+
+**Two measurement notes, so these numbers are not over-read.** (1) PSNR beyond the source's 39
+frames compares against the source's LAST frame held, because ffmpeg's framesync holds the shorter
+input — so the tail of that curve measures how fast the continuation moves away from the final
+frame, not seam quality. Only the frames either side of the join are seam evidence. (2) A PSNR
+comparison BETWEEN the two arms is useless: they diverge at frame 10 at ~51 dB, which is h.264
+rate allocation, not content. Both files must be compared to a third fixed reference instead.
+
+### The audio: also not fixed, and slightly worse
+
+`audio_repeat.py` — normalised peak cross-correlation of the GENERATED half against the source
+track. The instrument is validated by the source half of every clip scoring **peak 0.998 /
+band-cos 0.9998** against the original.
+
+| clip | generated-half peak vs source | reading |
+|---|---|---|
+| `flowExtendVideo_001` (today's app turbo run) | **0.801** | Fabio's ear was right — it is replaying the source track |
+| `F4a_control` | **0.384** | much less repetition |
+| `F4b_refwindow` | **0.493** | pairing the audio to the video made it MORE repetitive, not less |
+
+Note the app→bench drop (0.801 → 0.384) is NOT attributable to the wiring: prompt, seed and arm all
+changed between them. It is a hint that the prompt drives this too, not a proven cause.
+
+### Why Route A probably cannot work, structurally
+
+Reference conditioning and latent masking are not the same instruction. `ref_video_1` says *"make
+something like this clip"*; it never says *"these exact frames immediately precede yours"*. LTX is
+seamless because it does the second thing — `LTXVAudioVideoMask` writes the source into the latent
+as KNOWN and generates only the masked region, then discards its regenerated copy of the reference
+and crossfades the original back over it. That is a different mechanism, not a stronger version of
+the same one.
+
+### THE ONE CONFOUND, and it must be cleared before Route A is buried
+
+**The reference window fed here was 1.625 s — the whole source — and `MpiH3References`' own tooltip
+says "Reference video frames at 24 fps (2-15 s)".** So this run tested Route A BELOW the model's
+documented input range. Our node enforces no floor (`collect_refs` only drops blank slots), so it
+ran anyway and produced a result that may simply be out of range.
+
+Next test, cheap and decisive: re-run the pair on a source longer than 3 s so the window is a full
+3 s and inside the stated range. `Projects/cowboys/Media/ref2v_ms_004.mp4` (5.167 s, 864x480, has
+audio) is a fit and is H3-native content. Only if Route A still fails there is it dead.
+
+**Route B remains the escalation** — `MpiH3EncodeAV` / `MpiH3DecodeAV` with a mask over the
+extension region, which is LTX's actual mechanism and which we own. Note it is NOT the Phase 1
+sparkle route: that defect is on `MpiH3MaskedPrefix`, a different node.
+
+
+## Phase 5b, second and third bench pairs — "MORE OF THE PREVIOUS VIDEO" DOES NOT HELP (2026-09-03)
+
+Four arms, one source (`Projects/cowboys/Media/ref2v_ms_004.mp4`, 124 frames / 5.167 s / 864x480,
+32-divisible so no crop), one seed (`591000591`), one continuation-shaped prompt, turbo throughout,
+and the SHIPPED downstream (decode, `#904` pixel stitch, `#907 AudioConcat`) on every arm. So the
+only variable across all four is **how much of the source the model is given, and by what
+mechanism**.
+
+| arm | mechanism | context given | join diff | vs source-half mean | wall clock |
+|---|---|---|---|---|---|
+| **F5a control** | shipped: ONE pinned frame | 1 frame (0.04 s) | **2.02** | **0.36x** | **110.2 s** |
+| F5b refwindow | `ref_video_1` + paired audio | 3.00 s | 2.07 | 0.37x | 180.4 s (+64%) |
+| F6 ctx12 | the pack's `context_latent` | 1.75 s | 6.86 | 1.20x | 135.3 s |
+| F6 ctx21 | the pack's `context_latent` | 3.00 s | **7.98** | **1.39x** | 210.4 s |
+
+**The shipped one-frame pin has the tightest join of the four, by 3-4x.** Every attempt to give the
+model more of the previous video either changed nothing (Route A) or made the join measurably
+worse (the pack), and in both mechanisms scaling the context UP made it worse, not better.
+
+### Route A is now properly dead — and the first pair's verdict was wrong, not just noisy
+
+Phase 5b's first pair fed a 1.625 s window, below `MpiH3References`' documented 2 s floor, and
+measured a catastrophic 1.51x join. On an in-range 3.00 s window that collapses to **0.37x against
+the control's 0.36x** — identical. So the earlier "Route A makes the seam worse" reading was an
+out-of-range artefact and is retracted. The correct verdict is duller and firmer: **Route A changes
+nothing at the join and costs +64%.** PSNR across the join agrees (38.75/33.88/26.57 control vs
+37.56/33.03/25.91 refwindow) and the frames show no quality difference.
+
+### The pack oracle, run for the first time off an ENCODED FILE
+
+`MpiH3EncodeAV(source) -> context_latent -> MiniMaxH3VideoExtendPatched`. The author's own graph
+never does this — his `context_latent` is `GetNode(latent_1)`, his stage-1 SAMPLER output — so this
+is the first time the pack's mechanism has been asked to continue a clip that came off disk, which
+is Vision's entire case.
+
+**`context_frames` counts LATENT TOKENS, not frames**, and the tokens are not uniform:
+`FRAME_PER_TOKEN = (1, 4, 4, 4, 4)` indexed `k % 5` (`comfy/ldm/minimax/model.py:30`). So:
+
+| `context_frames` | pixel frames | seconds | used by |
+|---|---|---|---|
+| 2 | 8 | 0.33 s | the pack author's default |
+| 12 | 42 | 1.75 s | Phase 1's arms — the most this card had ever tried |
+| 21 | 72 | **3.00 s** | this run; matches LTX's window exactly |
+
+**F6 ctx21 measures 1.39x, which reproduces Phase 1's arm A "oracle bar" of 1.40x almost exactly.**
+That is a strong check that this build is a faithful rebuild of the original oracle, on a different
+and longer source. And Phase 1 had already recorded that the shipped route BEATS that oracle
+(0.94x vs 1.40x); this reproduces the same ordering independently.
+
+**So the answer to "have we tried the downloaded workflow with more context" is: yes, and now
+properly.** Arm A tried it at 1.75 s. This ran it at 3.00 s. The join got WORSE (6.86 -> 7.98), and
+both are ~3.5x looser than the one-frame pin. The encode is not obviously the culprit either — the
+oracle behaves the same off an encoded file as Phase 1 recorded it behaving natively.
+
+### What this redirects the card toward
+
+The join is not a pixel discontinuity — at 0.36x of ordinary source motion it is tighter than the
+footage's own frame-to-frame movement. What Fabio sees is a CONTENT discontinuity: the camera and
+the action change direction across the cut. Three things now have evidence behind them:
+
+1. **The prompt is a first-class cause and it is fixable in words.** Both F4 arms held the camera
+   once the prompt described the CONTINUATION instead of re-describing the source. The app runs
+   that failed had a source-re-describing prompt.
+2. **Source length matters more than context mechanism.** On the 5 s source even the ONE-FRAME
+   control produced a plausible continuation. On the 1.6 s source nothing did.
+3. **None of these routes generates across the seam.** Every H3 arm - ours and the pack's - emits
+   only the new frames and joins in pixel space. LTX is seamless because it does the opposite: it
+   masks the source into the latent, generates THROUGH the boundary, discards its regenerated copy
+   of the reference and crossfades the original back over 3 s (`#43
+   ImageBatchExtendWithOverlap`, `overlap = ref_frames`, `linear_blend`). Our `#904` uses
+   `overlap: 1` - a single frame.
+
+**Route B is therefore NOT "more context".** It is "generate across the seam and blend the
+overlap": `MpiH3EncodeAV` over source+extension with a mask covering only the extension, then
+`MpiH3DecodeAV` compositing back through that mask with `feather` - which is the crossfade LTX has
+and H3 does not. That is the one mechanism the four arms above have never tested, and it is the one
+LTX's seamlessness actually comes from.
