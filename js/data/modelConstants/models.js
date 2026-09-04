@@ -1547,15 +1547,21 @@ export const MODELS = [
             // int8_convrot, NOT the fp16 build — REQUIRES core >= v0.31.0 (MPI-517).
             'vae-minimax-h3-video-int8',
             'vae-minimax-h3-audio',
-            // 0.41GB turbo distill (MPI-505; weight swapped to lightx2v in MPI-508, then
-            // to lightx2v v1.0 in MPI-662). NO LONGER shared with ref2va — that card took
-            // its own ref2v-trained distill in MPI-662, so installing both models now
-            // downloads two turbo LoRAs. A flat dep like
-            // krea2's accelerator rather than an opt-in extra: turbo is a per-run toggle,
-            // so the weight has to be on disk before the user can flip it. With turbo OFF
-            // both strengths gate to 0 and MpiLoraModelClip short-circuits the file load
-            // entirely, so it costs nothing on the default path.
-            'minimax-h3-turbo-lora',
+            // 1.82GB turbo distill (MPI-505; lightx2v in MPI-508, v1.0 resized in MPI-662,
+            // the full 8-step v1.0 in MPI-687). NOT shared with ref2va — that card takes
+            // its own ref2v-trained distill, so installing both models downloads two turbo
+            // LoRAs. A flat dep like krea2's accelerator rather than an opt-in extra: turbo
+            // is a per-run toggle, so the weight has to be on disk before the user can flip
+            // it. Since MPI-687 the arm is an MpiIfElse switch, so with turbo OFF the LoRA
+            // node is bypassed outright and the file is never read.
+            // The 0.41GB 4-step 'minimax-h3-turbo-lora' it replaces stays defined in
+            // loraDeps.js so the orphan sweep can still reclaim it — just not listed here.
+            'minimax-h3-fl2va-turbo-8step',
+            // The two-pass shape's upscaler — node + weight, both hard deps since MPI-687.
+            // Stage 1 samples at half-res, the weight lifts the video half of the packed AV
+            // latent, a 3-step refine rebuilds detail. Shared with ref2va, one download.
+            'Comfyui_Minimax_h3_latent_Upscaler',
+            'minimax-h3-latent-upscaler',
             // 22MB tiny TAE, live previews only (MPI-508). H3 has NO core previewer path
             // at all — its latent format names no decoder — so without this every H3
             // preview is a latent2rgb colour blob. Read by KJNodes' ModelPreviewOverrideKJ,
@@ -1635,14 +1641,18 @@ export const MODELS = [
             // int8_convrot, NOT the fp16 build — REQUIRES core >= v0.31.0 (MPI-517).
             'vae-minimax-h3-video-int8',
             'vae-minimax-h3-audio',
-            // Its OWN turbo distill since MPI-662 — NOT the fl2va weight. Until 2026-08-30
-            // both DiTs shared the fl2v LoRA (upstream's own usage); this card now takes
-            // lightx2v's ref2v-trained one, which bench-tested more cinematic and better at
-            // following the audio description. It also runs at strength 1.0 against fl2va's
-            // 0.75, baked in this graph's own `MpiMath` #453 — see the dep for why the two
-            // numbers must not be harmonised. Installing both models now downloads two turbo
-            // LoRAs (0.41GB + 0.29GB) instead of one.
-            'minimax-h3-ref2va-turbo-lora',
+            // Its OWN turbo distill since MPI-662 — NOT the fl2va weight, and MPI-687
+            // re-proved that by measurement: the fl2v weight bound cleanly on this graph
+            // but lost on grain and background detail at matched motion. MPI-687 moved it
+            // from the 4-step v0.1 to the full 8-step v1.0, which is what lifted the
+            // "shiny and plasticky" 4-step signature the refine could not recover from.
+            // Both strength gates are gone — the arm is an MpiIfElse switch at strength 1.0
+            // — so the old 1.0-vs-0.75 harmonisation warning no longer applies.
+            // Installing both models downloads two turbo LoRAs (1.82GB each).
+            'minimax-h3-ref2va-turbo-8step',
+            // Same upscaler node + weight as fl2va (MPI-687) — shared, one download.
+            'Comfyui_Minimax_h3_latent_Upscaler',
+            'minimax-h3-latent-upscaler',
             // Same preview decoder as fl2va (MPI-508) — shared, one download.
             'taeh3-decoder',
             'ComfyUI-MpiNodes',

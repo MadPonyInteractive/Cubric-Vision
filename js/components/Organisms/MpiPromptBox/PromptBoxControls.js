@@ -935,76 +935,14 @@ export const PROMPT_BOX_CONTROLS = {
         },
     },
 
-    /**
-     * refImageSize — how MiniMax H3 ref2va scales each reference (the `ref2v_ms` op only).
-     *
-     * `ref_image_size` is a COMBO widget on MpiH3References, and the plain title spray
-     * cannot address it — a title maps to a NODE, and this node also owns the prompt,
-     * width, height and length widgets. So it injects through the dotted `Title.widget`
-     * form (MPI-359): `Input_Refs.ref_image_size`. The widget must also stay UNLINKED in
-     * the graph; injection does `if (_isLink(cur)) continue`, so wiring a Primitive into
-     * it would make it silently uninjectable.
-     *
-     * The value is the literal string the combo expects, not an index.
-     * Persists per-op — there is only one op, but 'max' is a deliberate per-job choice
-     * (character sheet vs a quick iterate), not a model-wide mode.
-     */
-    refImageSize: {
-        nodeTitle: 'Input_Refs',
-        scope: 'perOp',
-        defaultValue: PROMPT_CONTROL_DEFAULTS.refImageSize,
-        mount(hostEl, opts = {}) {
-            const saved = _readSaved(this, opts);
-            const fallback = _resolveDefault(this, 'refImageSize', opts);
-            const allowed = ['match', 'max'];
-            const savedVal = saved.refImageSize ?? fallback;
-            const initial = allowed.includes(savedVal) ? savedVal : fallback;
-            this.value = initial;
-
-            hostEl.className = 'mpi-prompt-box__slider-control';
-            hostEl.style.display = 'flex';
-
-            const lblRow = document.createElement('div');
-            lblRow.className = 'mpi-prompt-box__slider-lbl';
-            const nameEl = document.createElement('span');
-            nameEl.className = 'mpi-prompt-box__slider-name';
-            nameEl.textContent = 'Reference detail';
-            lblRow.appendChild(nameEl);
-            hostEl.appendChild(lblRow);
-
-            const radioHost = document.createElement('div');
-            hostEl.appendChild(radioHost);
-
-            this._instance = MpiRadioGroup.mount(radioHost, {
-                options: [
-                    { label: 'Match', value: 'match' },
-                    { label: 'Max',   value: 'max' },
-                ],
-                value: initial,
-                name: 'refImageSize',
-                size: 'sm',
-                columns: 2,
-                // Status-bar width is the constraint: every other control's info sits at
-                // 57-108 chars and the first draft ran to 249, which the bar truncated
-                // mid-sentence. The dropped half (use Max for a character sheet; cost is
-                // steeper the more references you stage) lives in docs/models/h3/ref2va.md.
-                info: 'Match fits each reference to the output size (faster). Max keeps a 2048px edge, better identity but slower.',
-            });
-
-            this._instance.on('select', ({ value }) => {
-                if (!allowed.includes(value)) return;
-                this.value = value;
-                _emitUpdate(this, opts, 'refImageSize', value);
-            });
-        },
-        getValue() {
-            return this.value ?? this.defaultValue;
-        },
-        getInjectionParams() {
-            const v = this.value ?? this.defaultValue;
-            return { 'Input_Refs.ref_image_size': v === 'max' ? 'max' : 'match' };
-        },
-    },
+    // refImageSize ("Reference detail", match | max) was REMOVED in MPI-687. The two-pass
+    // shape settled the question the radio existed to ask: stage 1 keeps its baked 'match'
+    // and the refine encoder bakes 'max', which is where the setting actually pays — it
+    // fixes reference colour and identity (green eyes stay green; 'match' turns them blue)
+    // for +13% time, and measurably does NOT buy detail. There is no per-job tradeoff left
+    // to expose, so the control went rather than shipping a knob whose good answer is
+    // always the same. The refine encoder must NOT be titled `Input_Refs` or title
+    // injection would overwrite its baked value.
 
     /**
      * pidResolution — NVIDIA PiD output-size selector (used by the `pid` op only).

@@ -392,4 +392,21 @@ export const nodesDeps = {
         installRequirements: true,
         size: '0.18MB',
     },
+    // Supplies `MinimaxH3LatentUpscaler3D`, the node the H3 two-pass shape is built on:
+    // stage 1 samples at half-res, this upscales the VIDEO half of the latent, and a
+    // 3-step refine rebuilds detail at full res. Both H3 models route through it, so it
+    // is a hard dep of fl2va AND r2va — not an optional extra.
+    //
+    // No requirements.txt at all (pure torch + safetensors), so VOLUME, not baked.
+    // Its weight is a SEPARATE dep (`minimax-h3-latent-upscaler`, assetDeps.js) — the
+    // node ships 8.9MB of code and examples and would fail at run time without it.
+    'Comfyui_Minimax_h3_latent_Upscaler': {
+        id: 'Comfyui_Minimax_h3_latent_Upscaler',
+        name: 'MiniMax H3 Latent Upscaler',
+        type: 'custom_nodes',
+        filename: 'Comfyui_Minimax_h3_latent_Upscaler',
+        url: lockUrl('Comfyui_Minimax_h3_latent_Upscaler'),
+        installRequirements: false,
+        size: '8.9MB',
+    },
 };

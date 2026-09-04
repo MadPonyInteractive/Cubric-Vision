@@ -325,6 +325,30 @@ export const assetDeps = {
         bytes: 995743560,
         sha256: '5f416311fa8172b65af67530758964708d29a317b830d689a51143b7f91913ed',
     },
+    // The H3 two-pass shape's upscaler: stage 1 samples at half-res, this lifts the VIDEO
+    // half of the packed AV latent (LTXVSeparateAVLatent -> here -> LTXVConcatAVLatent),
+    // then a 3-step refine rebuilds detail at full res. Dep of BOTH H3 models.
+    //
+    // Why it matters beyond speed: 2K (1472x2560) completed in 14:01 on a 16GB card
+    // through this path — a canvas that OOMs single-pass on a 5090. That is the argument
+    // for two-pass being the default rather than an option.
+    //
+    // bf16, NOT the fp16 sibling in the same repo — the bench graph loads bf16 and the two
+    // are near-identical in size, so a swap would be silent. Apache-2.0 (stated in the model
+    // card body, absent from the HF metadata), so no licences.js record. The card credits
+    // the LTX 2.3 Spatial Upscaler above and Ttl/ComfyUi_NNLatentUpscale as architectural
+    // references; the weights are the author's own.
+    'minimax-h3-latent-upscaler': {
+        id: 'minimax-h3-latent-upscaler',
+        name: 'MiniMax H3 Latent Upscaler 3D',
+        origin: 'LBH-123-AI/Minimax_h3_latent_Upscaler (Apache-2.0)',
+        filename: 'latent_upscale_models/minimax_h3_latent_upscaler_3d_bf16.safetensors',
+        url: 'https://models.cubric.studio/vision/models/latent_upscale_models/minimax_h3_latent_upscaler_3d_bf16.safetensors',
+        mirrorUrl: 'https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler/resolve/main/minimax_h3_latent_upscaler_3d_bf16.safetensors',
+        size: '658.61MB',
+        bytes: 690592992,
+        sha256: '4f57821f5837f32f7142b67d815606dbd7550f194e5c769f7d6c3f83b146a5e6',
+    },
     // Upscale Models (engine assets) ---------------------------------------
     '4x-NMKD-Siax': {
         id: '4x-NMKD-Siax',

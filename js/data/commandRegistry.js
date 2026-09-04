@@ -824,9 +824,11 @@ export const commands = {
         promptRequired: true,
         // No motionIntensity (no Input_Motion_Intensity node) and no audioMode/useAudio:
         // this graph takes audio IN as a reference, it does not offer the LTX-style audio
-        // conditioning switch. refImageSize is the one control unique to this op.
-        // h3Turbo: the SAME distill LoRA serves both DiTs, so ref2va gets the toggle too.
-        components: ['qualityTier', 'duration', 'ratio', 'refImageSize', 'h3Turbo', 'previewStage'],
+        // conditioning switch. refImageSize ("Reference detail") was dropped in MPI-687 —
+        // the two-pass shape bakes 'match' on stage 1 and 'max' on the refine encoder, so
+        // the choice it offered no longer has two good answers. See PromptBoxControls.js.
+        // h3Turbo: each DiT now has its OWN 8-step distill, but the toggle is still shared.
+        components: ['qualityTier', 'duration', 'ratio', 'h3Turbo', 'previewStage'],
         isMultiStage: true,
         // Finish-only, same call as the fl2va half: stage 2 resumes from the stage-1
         // latent, so a re-prompted branch could not honour the new prompt anyway.

@@ -22,7 +22,7 @@
     "ComfyUI-MpiNodes": {
       "source": "git-commit",
       "repo": "MadPonyInteractive/ComfyUi-MpiNodes",
-      "commit": "ccc25d12b8f8ef19c991a2ac407d77cb3ef08a61",
+      "commit": "e00086a92720cc5e7bbc70cac371ae7325b8b086",
       "filename": "ComfyUI-MpiNodes",
       "installRequirements": false
     },
@@ -151,6 +151,13 @@
       "commit": "4d5ff7c433884631599c3b2d82011a2cbbeea37e",
       "filename": "ComfyUI-Mickmumpitz-Nodes",
       "installRequirements": true
+    },
+    "Comfyui_Minimax_h3_latent_Upscaler": {
+      "source": "git-commit",
+      "repo": "LBH-123-AI/Comfyui_Minimax_h3_latent_Upscaler",
+      "commit": "d7c01b9011f2e8439493f6c02c29995a27df276f",
+      "filename": "Comfyui_Minimax_h3_latent_Upscaler",
+      "installRequirements": false
     }
   }
 }

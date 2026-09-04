@@ -108,6 +108,60 @@ export const loraDeps = {
         bytes: 306731560,
         sha256: '9ea3bd3a6aac22994153e294cf1ecab0a8766fc0f8d056ace645a01d1a6a4daf',
     },
+    // ── The 8-step pair (adopted 2026-09-04, MPI-687) ─────────────────────────
+    // These REPLACE the two 4-step weights above on both turbo arms. The 4-step entries
+    // stay in this file deliberately: the orphan sweep reads DEPS, so deleting an entry
+    // strands the weight on the disks of everyone who already downloaded it. They are
+    // simply no longer listed by any model.
+    //
+    // **The 2026-08-30 rejection of the 8-step is REVERSED, and the comment above saying
+    // "same quality, more time" is stale.** That judgement was made on the SINGLE-PASS
+    // graph. On the two-pass shape (half-res stage 1 -> latent upscale -> 3-step refine)
+    // the 4-step distillation signature is what the refine cannot recover from: the user's
+    // read on the swap was "not as shiny and plasticky". Re-judge distills on the shape
+    // they will actually ship in, never on the previous one.
+    //
+    // These are the FULL lightx2v ComfyUI conversions (1.82GB each), not the
+    // `resized_avg_rank` reductions the 4-step entries use — so the turbo download grows
+    // from ~0.3GB to ~1.8GB per model. That cost was accepted for the quality.
+    //
+    // Strength is 1.0 flat on both, and the arm is chosen by an MpiIfElse switch rather
+    // than the old MpiMath value-gate (`0.75 if a else 0.2`). So the long strength-porting
+    // essay above no longer applies to these two: there is no non-turbo strength to carry,
+    // because the non-turbo arm now bypasses the LoRA node entirely.
+    //
+    // **Keep them model-matched.** The fl2v weight was tested ON ref2va on 2026-09-04 and
+    // rejected on measurement, not taste: it bound cleanly (208 patches, same as the ref2v
+    // weight) but at matched camera motion scored HF corr 0.191 vs 0.294 and bg/centre 0.78
+    // vs 0.85. Its extra "motion prior" only fires when the prompt leaves room for it and
+    // cannot be steered, so it buys nothing a prompt cannot ask for.
+    //
+    // Both hashes below were verified against the HF LFS oid before upload, so the R2 copy,
+    // the mirror and the local bench file are provably the same bytes. Apache-2.0 upstream,
+    // so no licences.js record. NOTE the origin: these are lightx2v's OWN ComfyUI
+    // conversions (`_comfyui_bf16`), not Kijai's — unlike the 4-step pair above.
+    'minimax-h3-fl2va-turbo-8step': {
+        id: 'minimax-h3-fl2va-turbo-8step',
+        name: 'MiniMax H3 Turbo LoRA (8-step v1.0)',
+        origin: 'lightx2v/Minimax-h3-Turbo (Apache-2.0)',
+        filename: 'loras/minimax-h3/minimax_h3_fl2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/minimax-h3/minimax_h3_fl2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors',
+        mirrorUrl: 'https://huggingface.co/lightx2v/Minimax-h3-Turbo/resolve/main/minimax_h3_fl2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors',
+        size: '1.82GB',
+        bytes: 1956193000,
+        sha256: '08cfe946033af7d27719b964b6e0a0e50c32138daabbd6ce4137e23df6bf9980',
+    },
+    'minimax-h3-ref2va-turbo-8step': {
+        id: 'minimax-h3-ref2va-turbo-8step',
+        name: 'MiniMax H3 Reference Turbo LoRA (8-step v1.0)',
+        origin: 'lightx2v/Minimax-h3-Turbo (Apache-2.0)',
+        filename: 'loras/minimax-h3/minimax_h3_ref2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/minimax-h3/minimax_h3_ref2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors',
+        mirrorUrl: 'https://huggingface.co/lightx2v/Minimax-h3-Turbo/resolve/main/minimax_h3_ref2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors',
+        size: '1.82GB',
+        bytes: 1956193000,
+        sha256: '6a56f41ab4229c9dd845b9501bbd475ee57e112d846cf2e819d534a1ae928c5a',
+    },
     // Content-filter-bypass LoRA (always-on Input_Bypass_Filter_Lora node). A tiny
     // 12-float projector nudge. Dep of BOTH models (it's negligible); the generator bakes
     // strength 1.0 on SFW (the fp8_scaled weight is filtered) and 0.0 on NSFW (self-unfiltered).

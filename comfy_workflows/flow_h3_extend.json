@@ -62,7 +62,7 @@
   },
   "457": {
     "inputs": {
-      "lora_name": "minimax-h3\\minimax_h3_ref2v_lightx2v_turbo_4step_v0.1_resized_avg_rank_20_bf16.safetensors",
+      "lora_name": "minimax-h3\\minimax_h3_ref2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors",
       "model": [
         "910",
         0
@@ -159,8 +159,8 @@
   "213": {
     "inputs": {
       "seconds": [
-        "214",
-        2
+        "954",
+        0
       ]
     },
     "class_type": "MpiH3Length",
@@ -182,7 +182,7 @@
   "902": {
     "inputs": {
       "start_index": -1,
-      "num_frames": 1,
+      "num_frames": 39,
       "images": [
         "916",
         0
@@ -190,7 +190,7 @@
     },
     "class_type": "GetImageRangeFromBatch",
     "_meta": {
-      "title": "Last Frame"
+      "title": "Guide Clip (last 39 frames)"
     }
   },
   "330": {
@@ -223,10 +223,6 @@
       "length": [
         "213",
         0
-      ],
-      "ref_audio_1": [
-        "331",
-        1
       ]
     },
     "class_type": "MpiH3References",
@@ -252,11 +248,19 @@
       "image": [
         "902",
         0
+      ],
+      "audio_vae": [
+        "387",
+        0
+      ],
+      "audio": [
+        "940",
+        0
       ]
     },
     "class_type": "MiniMaxH3AddGuide",
     "_meta": {
-      "title": "Pin Last Frame"
+      "title": "Anchor Guide Clip"
     }
   },
   "405": {
@@ -393,13 +397,13 @@
         0
       ],
       "new_images": [
-        "409",
+        "949",
         0
       ]
     },
     "class_type": "ImageBatchExtendWithOverlap",
     "_meta": {
-      "title": "Stitch (crossfade the pinned frame)"
+      "title": "Stitch (hard join)"
     }
   },
   "905": {
@@ -440,11 +444,11 @@
     "inputs": {
       "direction": "after",
       "audio1": [
-        "906",
+        "950",
         0
       ],
       "audio2": [
-        "404",
+        "942",
         0
       ]
     },
@@ -463,7 +467,7 @@
         2
       ],
       "audio": [
-        "907",
+        "952",
         0
       ],
       "fps": 24
@@ -619,6 +623,197 @@
     "class_type": "ImageResizeKJv2",
     "_meta": {
       "title": "Resize To Target (32-divisible)"
+    }
+  },
+  "940": {
+    "inputs": {
+      "audio": [
+        "906",
+        0
+      ],
+      "fps": [
+        "331",
+        2
+      ],
+      "start": -39,
+      "end": -1
+    },
+    "class_type": "MpiAudioRange",
+    "_meta": {
+      "title": "Guide Audio (last 39 frames)"
+    }
+  },
+  "941": {
+    "inputs": {
+      "start_index": 40,
+      "num_frames": 4096,
+      "images": [
+        "409",
+        0
+      ]
+    },
+    "class_type": "GetImageRangeFromBatch",
+    "_meta": {
+      "title": "New Frames (after the flash)"
+    }
+  },
+  "942": {
+    "inputs": {
+      "audio": [
+        "404",
+        0
+      ],
+      "fps": 24.0,
+      "start": 40,
+      "end": -1
+    },
+    "class_type": "MpiAudioRange",
+    "_meta": {
+      "title": "Generated Audio Tail"
+    }
+  },
+  "946": {
+    "inputs": {
+      "start_index": 39,
+      "num_frames": 1,
+      "images": [
+        "409",
+        0
+      ]
+    },
+    "class_type": "GetImageRangeFromBatch",
+    "_meta": {
+      "title": "Flash Frame (first free frame)"
+    }
+  },
+  "947": {
+    "inputs": {
+      "start_index": 40,
+      "num_frames": 1,
+      "images": [
+        "409",
+        0
+      ]
+    },
+    "class_type": "GetImageRangeFromBatch",
+    "_meta": {
+      "title": "Its Successor"
+    }
+  },
+  "948": {
+    "inputs": {
+      "image_ref": [
+        "947",
+        0
+      ],
+      "image_target": [
+        "946",
+        0
+      ],
+      "method": "reinhard",
+      "strength": 1.0,
+      "multithread": true
+    },
+    "class_type": "ColorMatch",
+    "_meta": {
+      "title": "Level-match Flash Frame"
+    }
+  },
+  "949": {
+    "inputs": {
+      "image1": [
+        "948",
+        0
+      ],
+      "image2": [
+        "941",
+        0
+      ]
+    },
+    "class_type": "ImageBatch",
+    "_meta": {
+      "title": "Matched Flash + New Frames"
+    }
+  },
+  "950": {
+    "inputs": {
+      "audio": [
+        "906",
+        0
+      ],
+      "fps": [
+        "331",
+        2
+      ],
+      "start": 0,
+      "end": -1
+    },
+    "class_type": "MpiAudioRange",
+    "_meta": {
+      "title": "Trim AAC Padding"
+    }
+  },
+  "951": {
+    "inputs": {
+      "audio": [
+        "404",
+        0
+      ],
+      "fps": 24.0,
+      "start": 16,
+      "end": -1
+    },
+    "class_type": "MpiAudioRange",
+    "_meta": {
+      "title": "Tail + 24 Frames of Re-take"
+    }
+  },
+  "952": {
+    "inputs": {
+      "audio": [
+        "907",
+        0
+      ],
+      "patch": [
+        "951",
+        0
+      ],
+      "fps": 24.0,
+      "start": [
+        "953",
+        0
+      ],
+      "crossfade": 800
+    },
+    "class_type": "MpiAudioSplice",
+    "_meta": {
+      "title": "Crossfade the Splice"
+    }
+  },
+  "953": {
+    "inputs": {
+      "a": [
+        "213",
+        0
+      ],
+      "math_expression": "16 - a"
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Splice Start (16 - frames)"
+    }
+  },
+  "954": {
+    "inputs": {
+      "a": [
+        "214",
+        2
+      ],
+      "math_expression": "a + 40/24"
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Add Guide Frames to Duration"
     }
   }
 }
