@@ -55,12 +55,36 @@ has re-declared what it cannot load`.
 **The dep union is unchanged at 38** (measured against HEAD side by side): Voice Changer
 still declares both ids, so nothing left the registry — only the false claim on them did.
 
-## Not verified here
+## Live — 2026-09-04, the user's own app. Closes the card.
 
-The end-to-end effect: that Voice Changer's Uninstall now actually removes
-`chatterbox_vc/` from disk. The uninstall path itself was live-proven under MPI-682 on
-2026-09-04; what is untested is this card's declaration change reaching it. One live run
-settles it, and re-installing is 1.0GB.
+```
+[09:11:34] [download] uninstall flow:voice-changer: removed 2, kept 1 universal,
+                      0 shared, 0 model files, 0 pip-installs, swept 0 orphaned
+```
+
+Every field is the fix:
+
+- **`removed 2`** — the VC weight pair left disk. Before this card the same line read
+  `removed 0`, because `chatter-box` declared them.
+- **`0 shared`** — nothing claims them any more. This is the assertion the card exists
+  for; it was `kept 3 shared` before.
+- **`kept 1 universal`** — `ComfyUI_Fill-ChatterBox` survived, correctly: Text to Speech
+  really does run the node pack.
+- **`0 model files`** — the containment rail refused nothing, so MPI-682's fix is still
+  holding on the engine-anchored path.
+
+Re-installed straight after: `chatterbox_vc/` back at 2 files / 1008.29MB, and **Text to
+Speech stayed Ready the whole time** — it never needed those weights, which is the
+premise of the card, now observed rather than argued.
+
+## Found while verifying — filed, not fixed here
+
+The install toast read **`flow:voice-changer installed.`** — the raw dep key in
+user-facing copy. `js/shell/notificationService.js:213` resolves MODELS, then PLUGINS,
+then falls back to `data.modelId`; flows were never added, so a flow install leaks its
+key. It reaches the OS notification body too, not only the toast. Same defect class as
+MPI-682's uninstall-toast half, in the install direction and a third file. Out of scope
+for this card, which owns the dep declaration.
 
 ## Coordination
 

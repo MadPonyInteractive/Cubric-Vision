@@ -13,4 +13,7 @@
 - [x] `npm test` green — 882/882
 - [x] Dep union unchanged at 38, measured against HEAD side by side (Voice Changer still
       declares both ids; only the false claim on them is gone)
-- [ ] Live: Voice Changer's Uninstall now frees its 1.0GB instead of no-opping
+- [x] Live 2026-09-04, the user's own app: `uninstall flow:voice-changer: removed 2,
+      kept 1 universal, 0 shared, 0 model files, swept 0`. Before this card that line
+      read `removed 0` with the pair held as shared. Re-installed: `chatterbox_vc/` back
+      at 2 files / 1008.29MB, Text to Speech stayed Ready throughout.
