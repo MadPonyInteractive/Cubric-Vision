@@ -2,7 +2,7 @@
   "id": "b7203ad8-1d79-4f1b-9c51-5818c6501c66",
   "revision": 0,
   "last_node_id": 705,
-  "last_link_id": 982,
+  "last_link_id": 983,
   "nodes": [
     {
       "id": 196,
@@ -2589,54 +2589,6 @@
       }
     },
     {
-      "id": 571,
-      "type": "VAEDecodeAudio",
-      "pos": [
-        -78.64977002816428,
-        6890.0154811705615
-      ],
-      "size": [
-        164.2388671875,
-        46
-      ],
-      "flags": {
-        "collapsed": false
-      },
-      "order": 159,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "samples",
-          "type": "LATENT",
-          "link": 832
-        },
-        {
-          "name": "vae",
-          "type": "VAE",
-          "link": 833
-        }
-      ],
-      "outputs": [
-        {
-          "name": "AUDIO",
-          "type": "AUDIO",
-          "links": [
-            836
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.33.2",
-        "Node name for S&R": "VAEDecodeAudio",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "version": "7.8",
-          "input_ue_unconnectable": {}
-        }
-      }
-    },
-    {
       "id": 572,
       "type": "MpiClearVram",
       "pos": [
@@ -2698,7 +2650,7 @@
           "name": "audio",
           "shape": 7,
           "type": "AUDIO",
-          "link": null
+          "link": 983
         }
       ],
       "outputs": [],
@@ -8948,6 +8900,109 @@
       }
     },
     {
+      "id": 537,
+      "type": "MpiLoraModel",
+      "pos": [
+        101.00804289117329,
+        4246.75507285272
+      ],
+      "size": [
+        576.2058737297355,
+        122
+      ],
+      "flags": {},
+      "order": 175,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 795
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            798
+          ]
+        },
+        {
+          "name": "lora_name",
+          "type": "*",
+          "links": null
+        },
+        {
+          "name": "strength",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "ec82d9a4ff650beabfb508412efd03e989ebb92c",
+        "Node name for S&R": "MpiLoraModel"
+      },
+      "widgets_values": [
+        "minimax-h3\\minimax_h3_ref2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors",
+        1
+      ],
+      "widgets_values_named": {
+        "lora_name": "minimax-h3\\minimax_h3_ref2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors",
+        "strength_model": 1
+      }
+    },
+    {
+      "id": 571,
+      "type": "VAEDecodeAudio",
+      "pos": [
+        -78.64977002816428,
+        6890.0154811705615
+      ],
+      "size": [
+        164.2388671875,
+        46
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 159,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 832
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 833
+        }
+      ],
+      "outputs": [
+        {
+          "name": "AUDIO",
+          "type": "AUDIO",
+          "links": [
+            836,
+            983
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.33.2",
+        "Node name for S&R": "VAEDecodeAudio",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.8",
+          "input_ue_unconnectable": {}
+        }
+      }
+    },
+    {
       "id": 573,
       "type": "VHS_VideoCombine",
       "pos": [
@@ -9048,60 +9103,6 @@
             "fullpath": "G:\\ComfyUi\\ComfyUI\\temp\\AnimateDiff_00036-audio.mp4"
           }
         }
-      }
-    },
-    {
-      "id": 537,
-      "type": "MpiLoraModel",
-      "pos": [
-        101.00804289117329,
-        4246.75507285272
-      ],
-      "size": [
-        576.2058737297355,
-        122
-      ],
-      "flags": {},
-      "order": 175,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 795
-        }
-      ],
-      "outputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "links": [
-            798
-          ]
-        },
-        {
-          "name": "lora_name",
-          "type": "*",
-          "links": null
-        },
-        {
-          "name": "strength",
-          "type": "FLOAT",
-          "links": null
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "ec82d9a4ff650beabfb508412efd03e989ebb92c",
-        "Node name for S&R": "MpiLoraModel"
-      },
-      "widgets_values": [
-        "minimax-h3\\minimax_h3_ref2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors",
-        1
-      ],
-      "widgets_values_named": {
-        "lora_name": "minimax-h3\\minimax_h3_ref2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors",
-        "strength_model": 1
       }
     }
   ],
@@ -10545,6 +10546,14 @@
       587,
       0,
       "MODEL"
+    ],
+    [
+      983,
+      571,
+      0,
+      574,
+      1,
+      "AUDIO"
     ]
   ],
   "groups": [
@@ -10617,10 +10626,10 @@
     "VHS_MetadataImage": true,
     "VHS_KeepIntermediate": true,
     "ds": {
-      "scale": 0.25937424601000564,
+      "scale": 0.8140274938684168,
       "offset": [
-        3905.587759651676,
-        -3532.621793225158
+        1036.953470043169,
+        -6298.924479596173
       ]
     },
     "reroutes": [

@@ -2,7 +2,7 @@
   "id": "e3f2b845-8f2c-4b5a-9caf-eac1029d3e7e",
   "revision": 0,
   "last_node_id": 522,
-  "last_link_id": 742,
+  "last_link_id": 743,
   "nodes": [
     {
       "id": 122,
@@ -1282,7 +1282,7 @@
           "name": "audio",
           "shape": 7,
           "type": "AUDIO",
-          "link": null
+          "link": 743
         }
       ],
       "outputs": [],
@@ -4550,54 +4550,6 @@
       "bgcolor": "#3f5159"
     },
     {
-      "id": 505,
-      "type": "VAEDecodeAudio",
-      "pos": [
-        2052.400508840538,
-        5365.535655083754
-      ],
-      "size": [
-        164.2388671875,
-        46
-      ],
-      "flags": {
-        "collapsed": false
-      },
-      "order": 102,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "samples",
-          "type": "LATENT",
-          "link": 722
-        },
-        {
-          "name": "vae",
-          "type": "VAE",
-          "link": 723
-        }
-      ],
-      "outputs": [
-        {
-          "name": "AUDIO",
-          "type": "AUDIO",
-          "links": [
-            724
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "ver": "0.33.2",
-        "Node name for S&R": "VAEDecodeAudio",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "version": "7.8",
-          "input_ue_unconnectable": {}
-        }
-      }
-    },
-    {
       "id": 188,
       "type": "GetNode",
       "pos": [
@@ -6019,6 +5971,55 @@
           }
         }
       }
+    },
+    {
+      "id": 505,
+      "type": "VAEDecodeAudio",
+      "pos": [
+        2052.400508840538,
+        5365.535655083754
+      ],
+      "size": [
+        164.2388671875,
+        46
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 102,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 722
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 723
+        }
+      ],
+      "outputs": [
+        {
+          "name": "AUDIO",
+          "type": "AUDIO",
+          "links": [
+            724,
+            743
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.33.2",
+        "Node name for S&R": "VAEDecodeAudio",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "version": "7.8",
+          "input_ue_unconnectable": {}
+        }
+      }
     }
   ],
   "links": [
@@ -7021,6 +7022,14 @@
       429,
       0,
       "MODEL"
+    ],
+    [
+      743,
+      505,
+      0,
+      207,
+      1,
+      "AUDIO"
     ]
   ],
   "groups": [
@@ -7093,10 +7102,10 @@
     "VHS_MetadataImage": true,
     "VHS_KeepIntermediate": true,
     "ds": {
-      "scale": 0.31384283767210125,
+      "scale": 1.0834705943388423,
       "offset": [
-        3650.393927081481,
-        -3460.4317364296503
+        -1168.9519369835493,
+        -5006.314179633845
       ]
     },
     "reroutes": [
