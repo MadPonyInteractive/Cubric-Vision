@@ -38,45 +38,13 @@
       "title": "Load CLIP"
     }
   },
-  "133": {
-    "inputs": {
-      "clip": [
-        "252",
-        1
-      ],
-      "vae": [
-        "121",
-        0
-      ],
-      "prompt": [
-        "232",
-        0
-      ],
-      "width": [
-        "167",
-        0
-      ],
-      "height": [
-        "168",
-        0
-      ],
-      "length": [
-        "213",
-        0
-      ]
-    },
-    "class_type": "MiniMaxH3ImageToVideo",
-    "_meta": {
-      "title": "MiniMax H3 Image to Video"
-    }
-  },
   "140": {
     "inputs": {
       "scheduler": "beta",
-      "steps": 6,
+      "steps": 8,
       "denoise": 1,
       "model": [
-        "381",
+        "457",
         0
       ]
     },
@@ -85,30 +53,14 @@
       "title": "BasicScheduler"
     }
   },
-  "141": {
-    "inputs": {
-      "sigmas": [
-        "337",
-        0
-      ],
-      "step": [
-        "340",
-        0
-      ]
-    },
-    "class_type": "SplitSigmas",
-    "_meta": {
-      "title": "SplitSigmas"
-    }
-  },
   "150": {
     "inputs": {
       "model": [
-        "381",
+        "457",
         0
       ],
       "conditioning": [
-        "264",
+        "472",
         0
       ]
     },
@@ -153,12 +105,12 @@
         0
       ],
       "sigmas": [
-        "141",
+        "337",
         0
       ],
       "latent_image": [
-        "363",
-        0
+        "472",
+        1
       ]
     },
     "class_type": "SamplerCustomAdvanced",
@@ -166,60 +118,9 @@
       "title": "Stage1_Bypass"
     }
   },
-  "156": {
-    "inputs": {
-      "noise": [
-        "159",
-        0
-      ],
-      "guider": [
-        "150",
-        0
-      ],
-      "sampler": [
-        "345",
-        0
-      ],
-      "sigmas": [
-        "141",
-        1
-      ],
-      "latent_image": [
-        "320",
-        0
-      ]
-    },
-    "class_type": "SamplerCustomAdvanced",
-    "_meta": {
-      "title": "SamplerCustomAdvanced"
-    }
-  },
-  "159": {
-    "inputs": {},
-    "class_type": "DisableNoise",
-    "_meta": {
-      "title": "DisableNoise"
-    }
-  },
-  "160": {
-    "inputs": {
-      "samples": [
-        "359",
-        0
-      ],
-      "vae": [
-        "122",
-        0
-      ]
-    },
-    "class_type": "VAEDecodeAudio",
-    "_meta": {
-      "title": "VAE Decode Audio"
-    }
-  },
   "167": {
     "inputs": {
-      "int": 864
+      "int": 768
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -228,7 +129,7 @@
   },
   "168": {
     "inputs": {
-      "int": 480
+      "int": 1344
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -253,7 +154,7 @@
   },
   "195": {
     "inputs": {
-      "int": 354681357
+      "int": 354681360
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -283,11 +184,11 @@
       "use_audio": true,
       "truncate_to_audio": false,
       "images": [
-        "290",
+        "442",
         0
       ],
       "audio": [
-        "160",
+        "425",
         0
       ]
     },
@@ -344,32 +245,6 @@
       "title": "start"
     }
   },
-  "218": {
-    "inputs": {
-      "upscale_method": "lanczos",
-      "keep_proportion": "crop",
-      "pad_color": "0, 0, 0",
-      "crop_position": "center",
-      "divisible_by": 32,
-      "device": "cpu",
-      "image": [
-        "217",
-        0
-      ],
-      "width": [
-        "167",
-        0
-      ],
-      "height": [
-        "168",
-        0
-      ]
-    },
-    "class_type": "ImageResizeKJv2",
-    "_meta": {
-      "title": "Resize Image v2"
-    }
-  },
   "219": {
     "inputs": {
       "channel": "alpha",
@@ -384,35 +259,9 @@
       "title": "end"
     }
   },
-  "220": {
-    "inputs": {
-      "upscale_method": "lanczos",
-      "keep_proportion": "crop",
-      "pad_color": "0, 0, 0",
-      "crop_position": "center",
-      "divisible_by": 32,
-      "device": "cpu",
-      "image": [
-        "219",
-        0
-      ],
-      "width": [
-        "167",
-        0
-      ],
-      "height": [
-        "168",
-        0
-      ]
-    },
-    "class_type": "ImageResizeKJv2",
-    "_meta": {
-      "title": "Resize Image v2"
-    }
-  },
   "232": {
     "inputs": {
-      "string": "medium rear shot of a knight holding a sword on his shoulder, the camera orbits around into a close-up of his face as he says, \"I had enough\". He looks determined and has a little bit of blood coming out of his mouth. The location is a mediaeval battlefield. The style is cinematic and dark.  Background sound is a huge battle happening: clinking swords, man screaming, the sound of the wind and thunder.  "
+      "string": "She walks towards the camera until her face fills the frame. Then she says, \"Cubric Vision rocks.\" Sound of birds outside and her Naked feet walking on a porcelain floor. "
     },
     "class_type": "MpiText",
     "_meta": {
@@ -425,12 +274,12 @@
       "strength_model": 1,
       "strength_clip": 1,
       "model": [
-        "323",
+        "369",
         0
       ],
       "clip": [
-        "323",
-        1
+        "130",
+        0
       ]
     },
     "class_type": "MpiLoraModelClip",
@@ -535,7 +384,7 @@
   },
   "253": {
     "inputs": {
-      "string": ""
+      "string": "D:\\WORK\\Models\\Liora Vale\\POSTS\\10_2025\\27\\WF\\photo_00003_.png"
     },
     "class_type": "MpiString",
     "_meta": {
@@ -575,142 +424,6 @@
       "title": "Mpi Any Checker"
     }
   },
-  "263": {
-    "inputs": {
-      "any_1": [
-        "133",
-        0
-      ],
-      "any_2": [
-        "133",
-        1
-      ]
-    },
-    "class_type": "MpiPacker",
-    "_meta": {
-      "title": "Mpi Packer"
-    }
-  },
-  "264": {
-    "inputs": {
-      "pack": [
-        "292",
-        0
-      ]
-    },
-    "class_type": "MpiUnpacker",
-    "_meta": {
-      "title": "Mpi Unpacker"
-    }
-  },
-  "275": {
-    "inputs": {
-      "clip": [
-        "252",
-        1
-      ],
-      "vae": [
-        "121",
-        0
-      ],
-      "first_frame": [
-        "218",
-        0
-      ],
-      "prompt": [
-        "232",
-        0
-      ],
-      "width": [
-        "167",
-        0
-      ],
-      "height": [
-        "168",
-        0
-      ],
-      "length": [
-        "213",
-        0
-      ]
-    },
-    "class_type": "MiniMaxH3ImageToVideo",
-    "_meta": {
-      "title": "MiniMax H3 Image to Video"
-    }
-  },
-  "276": {
-    "inputs": {
-      "any_1": [
-        "275",
-        0
-      ],
-      "any_2": [
-        "275",
-        1
-      ]
-    },
-    "class_type": "MpiPacker",
-    "_meta": {
-      "title": "Mpi Packer"
-    }
-  },
-  "285": {
-    "inputs": {
-      "clip": [
-        "252",
-        1
-      ],
-      "vae": [
-        "121",
-        0
-      ],
-      "first_frame": [
-        "218",
-        0
-      ],
-      "last_frame": [
-        "220",
-        0
-      ],
-      "prompt": [
-        "232",
-        0
-      ],
-      "width": [
-        "167",
-        0
-      ],
-      "height": [
-        "168",
-        0
-      ],
-      "length": [
-        "213",
-        0
-      ]
-    },
-    "class_type": "MiniMaxH3ImageToVideo",
-    "_meta": {
-      "title": "MiniMax H3 Image to Video"
-    }
-  },
-  "286": {
-    "inputs": {
-      "any_1": [
-        "285",
-        0
-      ],
-      "any_2": [
-        "285",
-        1
-      ]
-    },
-    "class_type": "MpiPacker",
-    "_meta": {
-      "title": "Mpi Packer"
-    }
-  },
   "289": {
     "inputs": {
       "passthrough": [
@@ -723,168 +436,10 @@
       "title": "Mpi Clear Vram"
     }
   },
-  "290": {
-    "inputs": {
-      "passthrough": [
-        "387",
-        0
-      ]
-    },
-    "class_type": "MpiClearVram",
-    "_meta": {
-      "title": "Mpi Clear Vram"
-    }
-  },
-  "291": {
-    "inputs": {
-      "mode": "both_false",
-      "a": [
-        "254",
-        1
-      ],
-      "b": [
-        "258",
-        1
-      ]
-    },
-    "class_type": "MpiBooleanCompare",
-    "_meta": {
-      "title": "Mpi Boolean Compare"
-    }
-  },
-  "292": {
-    "inputs": {
-      "true": [
-        "263",
-        0
-      ],
-      "false": [
-        "305",
-        0
-      ],
-      "boolean": [
-        "291",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "is t2v"
-    }
-  },
-  "293": {
-    "inputs": {
-      "true": [
-        "276",
-        0
-      ],
-      "false": [
-        "286",
-        0
-      ],
-      "boolean": [
-        "294",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "is i2v"
-    }
-  },
-  "294": {
-    "inputs": {
-      "mode": "a_true_b_false",
-      "a": [
-        "254",
-        1
-      ],
-      "b": [
-        "258",
-        1
-      ]
-    },
-    "class_type": "MpiBooleanCompare",
-    "_meta": {
-      "title": "Mpi Boolean Compare"
-    }
-  },
-  "303": {
-    "inputs": {
-      "any_1": [
-        "304",
-        0
-      ],
-      "any_2": [
-        "304",
-        1
-      ]
-    },
-    "class_type": "MpiPacker",
-    "_meta": {
-      "title": "Mpi Packer"
-    }
-  },
-  "304": {
-    "inputs": {
-      "clip": [
-        "252",
-        1
-      ],
-      "vae": [
-        "121",
-        0
-      ],
-      "last_frame": [
-        "220",
-        0
-      ],
-      "prompt": [
-        "232",
-        0
-      ],
-      "width": [
-        "167",
-        0
-      ],
-      "height": [
-        "168",
-        0
-      ],
-      "length": [
-        "213",
-        0
-      ]
-    },
-    "class_type": "MiniMaxH3ImageToVideo",
-    "_meta": {
-      "title": "MiniMax H3 Image to Video"
-    }
-  },
-  "305": {
-    "inputs": {
-      "true": [
-        "293",
-        0
-      ],
-      "false": [
-        "303",
-        0
-      ],
-      "boolean": [
-        "254",
-        1
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "has img1"
-    }
-  },
   "320": {
     "inputs": {
       "is_continue": false,
-      "is_preview": true,
+      "is_preview": false,
       "save_path": "mpi_stage1",
       "load_path": "mpi_stage1",
       "latent": [
@@ -908,7 +463,7 @@
       "end_percent": 0.95,
       "verbose": true,
       "model": [
-        "129",
+        "393",
         0
       ]
     },
@@ -920,7 +475,7 @@
   "322": {
     "inputs": {
       "shift_video": 12,
-      "shift_audio": 5,
+      "shift_audio": 4,
       "model": [
         "393",
         0
@@ -931,51 +486,13 @@
       "title": "ModelSamplingMiniMaxH3"
     }
   },
-  "323": {
-    "inputs": {
-      "lora_name": "minimax-h3\\minimax_h3_fl2v_lightx2v_turbo_4step_v1.0_768p_resized_avg_rank_31_bf16.safetensors",
-      "model": [
-        "369",
-        0
-      ],
-      "clip": [
-        "130",
-        0
-      ],
-      "strength_model": [
-        "343",
-        0
-      ],
-      "strength_clip": [
-        "343",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModelClip",
-    "_meta": {
-      "title": "Mpi Lora Model Clip"
-    }
-  },
   "324": {
     "inputs": {
-      "boolean": false
+      "boolean": true
     },
     "class_type": "MpiSimpleBoolean",
     "_meta": {
       "title": "Input_is_Turbo"
-    }
-  },
-  "328": {
-    "inputs": {
-      "math_expression": "10 if a else 5",
-      "a": [
-        "291",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
     }
   },
   "337": {
@@ -1004,55 +521,13 @@
       "steps": 25,
       "denoise": 1,
       "model": [
-        "381",
+        "457",
         0
       ]
     },
     "class_type": "BasicScheduler",
     "_meta": {
       "title": "BasicScheduler"
-    }
-  },
-  "340": {
-    "inputs": {
-      "true": [
-        "341",
-        0
-      ],
-      "false": [
-        "328",
-        0
-      ],
-      "boolean": [
-        "324",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Mpi If Else"
-    }
-  },
-  "341": {
-    "inputs": {
-      "int": 3
-    },
-    "class_type": "MpiInt",
-    "_meta": {
-      "title": "Mpi Int"
-    }
-  },
-  "343": {
-    "inputs": {
-      "math_expression": "0.75 if a else 0.2",
-      "a": [
-        "324",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Mpi Math"
     }
   },
   "345": {
@@ -1084,79 +559,6 @@
       "title": "KSamplerSelect"
     }
   },
-  "348": {
-    "inputs": {
-      "noise": [
-        "151",
-        0
-      ],
-      "guider": [
-        "150",
-        0
-      ],
-      "sampler": [
-        "345",
-        0
-      ],
-      "sigmas": [
-        "337",
-        0
-      ],
-      "latent_image": [
-        "363",
-        1
-      ]
-    },
-    "class_type": "SamplerCustomAdvanced",
-    "_meta": {
-      "title": "Single"
-    }
-  },
-  "357": {
-    "inputs": {
-      "boolean": true
-    },
-    "class_type": "MpiSimpleBoolean",
-    "_meta": {
-      "title": "Input_Single_Pass"
-    }
-  },
-  "359": {
-    "inputs": {
-      "true": [
-        "348",
-        0
-      ],
-      "false": [
-        "156",
-        0
-      ],
-      "boolean": [
-        "357",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Mpi If Else"
-    }
-  },
-  "363": {
-    "inputs": {
-      "input": [
-        "264",
-        1
-      ],
-      "boolean": [
-        "357",
-        0
-      ]
-    },
-    "class_type": "MpiIfElseInverted",
-    "_meta": {
-      "title": "Mpi If Else Inverted"
-    }
-  },
   "369": {
     "inputs": {
       "true": [
@@ -1164,7 +566,7 @@
         0
       ],
       "false": [
-        "321",
+        "516",
         0
       ],
       "boolean": [
@@ -1203,10 +605,87 @@
       "title": "Mpi Tiny Vae Loader"
     }
   },
-  "387": {
+  "393": {
+    "inputs": {
+      "attention": "comfy kitchen attention",
+      "model": [
+        "129",
+        0
+      ]
+    },
+    "class_type": "ModelAttentionBackend",
+    "_meta": {
+      "title": "ModelAttentionBackend"
+    }
+  },
+  "419": {
+    "inputs": {
+      "model_name": "minimax_h3_latent_upscaler_3d_bf16.safetensors",
+      "mode": "target dimensions",
+      "align": 32,
+      "enable_temporal_chunking": true,
+      "force_unload": true,
+      "device": "cuda",
+      "precision": "bf16",
+      "latent": [
+        "420",
+        0
+      ],
+      "mode.width": [
+        "493",
+        0
+      ],
+      "mode.height": [
+        "497",
+        0
+      ]
+    },
+    "class_type": "MinimaxH3LatentUpscaler3D",
+    "_meta": {
+      "title": "Minimax H3 Latent Upscaler (3D)"
+    }
+  },
+  "420": {
+    "inputs": {
+      "av_latent": [
+        "320",
+        0
+      ]
+    },
+    "class_type": "LTXVSeparateAVLatent",
+    "_meta": {
+      "title": "Separate AV Latent"
+    }
+  },
+  "421": {
+    "inputs": {
+      "video_latent": [
+        "419",
+        0
+      ],
+      "audio_latent": [
+        "420",
+        1
+      ]
+    },
+    "class_type": "LTXVConcatAVLatent",
+    "_meta": {
+      "title": "Concat AV Latent"
+    }
+  },
+  "423": {
+    "inputs": {
+      "sigmas": "0.9231, 0.8780, 0.8000, 0.6316, 0.3158, 0.0000"
+    },
+    "class_type": "ManualSigmas",
+    "_meta": {
+      "title": "5 step Sigmas"
+    }
+  },
+  "424": {
     "inputs": {
       "samples": [
-        "359",
+        "427",
         0
       ],
       "vae": [
@@ -1219,17 +698,377 @@
       "title": "VAE Decode"
     }
   },
-  "393": {
+  "425": {
     "inputs": {
-      "attention": "comfy kitchen attention",
-      "model": [
-        "129",
+      "samples": [
+        "427",
+        0
+      ],
+      "vae": [
+        "122",
         0
       ]
     },
-    "class_type": "ModelAttentionBackend",
+    "class_type": "VAEDecodeAudio",
     "_meta": {
-      "title": "ModelAttentionBackend"
+      "title": "VAE Decode Audio"
+    }
+  },
+  "426": {
+    "inputs": {
+      "sigmas": "0.9035, 0.8000, 0.6316, 0.3158, 0.0000"
+    },
+    "class_type": "ManualSigmas",
+    "_meta": {
+      "title": "4 step Sigmas"
+    }
+  },
+  "427": {
+    "inputs": {
+      "noise": [
+        "435",
+        0
+      ],
+      "guider": [
+        "429",
+        0
+      ],
+      "sampler": [
+        "345",
+        0
+      ],
+      "sigmas": [
+        "428",
+        0
+      ],
+      "latent_image": [
+        "421",
+        0
+      ]
+    },
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "SamplerCustomAdvanced"
+    }
+  },
+  "428": {
+    "inputs": {
+      "sigmas": "0.9035, 0.6316, 0.3158, 0.0000"
+    },
+    "class_type": "ManualSigmas",
+    "_meta": {
+      "title": "3 step Sigmas"
+    }
+  },
+  "429": {
+    "inputs": {
+      "model": [
+        "518",
+        0
+      ],
+      "conditioning": [
+        "485",
+        0
+      ]
+    },
+    "class_type": "BasicGuider",
+    "_meta": {
+      "title": "Basic Guider"
+    }
+  },
+  "435": {
+    "inputs": {
+      "noise_seed": [
+        "195",
+        0
+      ]
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RandomNoise"
+    }
+  },
+  "442": {
+    "inputs": {
+      "passthrough": [
+        "424",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "455": {
+    "inputs": {
+      "lora_name": "minimax-h3\\minimax_h3_fl2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors",
+      "strength_model": 1,
+      "model": [
+        "381",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Mpi Lora Model"
+    }
+  },
+  "457": {
+    "inputs": {
+      "true": [
+        "455",
+        0
+      ],
+      "false": [
+        "381",
+        0
+      ],
+      "boolean": [
+        "324",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "460": {
+    "inputs": {
+      "true": [
+        "381",
+        0
+      ],
+      "false": [
+        "455",
+        0
+      ],
+      "boolean": [
+        "324",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "472": {
+    "inputs": {
+      "clip": [
+        "252",
+        1
+      ],
+      "vae": [
+        "121",
+        0
+      ],
+      "first_frame": [
+        "217",
+        0
+      ],
+      "last_frame": [
+        "219",
+        0
+      ],
+      "prompt": [
+        "232",
+        0
+      ],
+      "width": [
+        "509",
+        0
+      ],
+      "height": [
+        "510",
+        0
+      ],
+      "length": [
+        "213",
+        0
+      ]
+    },
+    "class_type": "MpiH3ImageToVideo",
+    "_meta": {
+      "title": "Mpi H3 Image To Video"
+    }
+  },
+  "485": {
+    "inputs": {
+      "clip": [
+        "252",
+        1
+      ],
+      "vae": [
+        "121",
+        0
+      ],
+      "first_frame": [
+        "217",
+        0
+      ],
+      "last_frame": [
+        "219",
+        0
+      ],
+      "prompt": [
+        "232",
+        0
+      ],
+      "width": [
+        "493",
+        0
+      ],
+      "height": [
+        "497",
+        0
+      ],
+      "length": [
+        "213",
+        0
+      ]
+    },
+    "class_type": "MpiH3ImageToVideo",
+    "_meta": {
+      "title": "Mpi H3 Image To Video"
+    }
+  },
+  "493": {
+    "inputs": {
+      "math_expression": "floor(floor(a / 16) * 16 * b / 32 + 0.5) * 32",
+      "a": [
+        "509",
+        0
+      ],
+      "b": [
+        "494",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "494": {
+    "inputs": {
+      "float": 2
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Upscale Factor"
+    }
+  },
+  "497": {
+    "inputs": {
+      "math_expression": "floor(floor(a / 16) * 16 * b / 32 + 0.5) * 32",
+      "a": [
+        "510",
+        0
+      ],
+      "b": [
+        "494",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "505": {
+    "inputs": {
+      "samples": [
+        "320",
+        1
+      ],
+      "vae": [
+        "122",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeAudio",
+    "_meta": {
+      "title": "VAE Decode Audio"
+    }
+  },
+  "509": {
+    "inputs": {
+      "math_expression": "floor(a / 64) * 32",
+      "a": [
+        "167",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "floor(a/2)"
+    }
+  },
+  "510": {
+    "inputs": {
+      "math_expression": "floor(a / 64) * 32",
+      "a": [
+        "168",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "floor(a/2)"
+    }
+  },
+  "511": {
+    "inputs": {
+      "source": [
+        "509",
+        0
+      ]
+    },
+    "class_type": "PreviewAny",
+    "_meta": {
+      "title": "Preview as Text"
+    }
+  },
+  "512": {
+    "inputs": {
+      "source": [
+        "510",
+        0
+      ]
+    },
+    "class_type": "PreviewAny",
+    "_meta": {
+      "title": "Preview as Text"
+    }
+  },
+  "516": {
+    "inputs": {
+      "shift_video": 12,
+      "shift_audio": 2,
+      "model": [
+        "321",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3SigmaShift",
+    "_meta": {
+      "title": "ModelSamplingMiniMaxH3"
+    }
+  },
+  "518": {
+    "inputs": {
+      "shift_video": 12,
+      "shift_audio": 0.5,
+      "model": [
+        "460",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3SigmaShift",
+    "_meta": {
+      "title": "ModelSamplingMiniMaxH3"
     }
   }
 }
