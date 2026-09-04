@@ -10,4 +10,6 @@
       registries export and fails when one appears without a clause
 - [x] Mutation-checked both ways
 - [x] `npm test` green
-- [ ] Live: a flow install toasts its title, not `flow:<id>`
+- [x] Closed on unit evidence, on the user's call 2026-09-04 — `voice-changer` is
+      asserted BY NAME against the live registry, so a live install would re-observe what
+      the test already pins. No live run performed; see validation.md.

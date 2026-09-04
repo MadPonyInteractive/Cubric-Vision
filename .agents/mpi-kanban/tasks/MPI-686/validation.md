@@ -53,7 +53,20 @@ Both declaration forms are covered by the scan — `export function flowDepKey(`
 identifier goes to `app.log`, never into UI copy. This is that rule's third recorded
 violation, and the first one to ship a guard rather than only a fix.
 
-## Not verified here
+## Closed on unit evidence — no live run
 
-A live install in the app showing the title. The string is unit-proven against the real
-registry, and `voice-changer` — the exact flow that reported it — is asserted by name.
+Fabio's call, 2026-09-04. Stated plainly so nobody later reads this card as live-verified:
+**no flow was installed to watch the toast after the fix.**
+
+What stands behind the close is that the test asserts the reported case by name, against
+the live registry — `jobDisplayName(flowDepKey('voice-changer')) === 'Voice Changer'` —
+plus the same assertion for every other flow, plugin and model, and the rule that nothing
+announced may carry the `<namespace>:<id>` shape. The leak was a pure string-resolution
+miss with no state, no timing and no engine involvement, so a live install would
+re-observe exactly what the unit test pins. That is not true of MPI-682 or MPI-684, whose
+closes both rested on real log lines and real files leaving disk.
+
+The next flow install anyone happens to do is a free confirmation. If it ever shows
+`flow:<id>` again, assertion 1 of `tests/job-display-name.test.cjs` is the first thing to
+run — a green test there would mean the toast is coming from somewhere other than
+`jobDisplayName`, which would be a different bug in a different file.
