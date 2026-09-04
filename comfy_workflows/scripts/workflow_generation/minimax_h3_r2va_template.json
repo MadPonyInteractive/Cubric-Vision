@@ -1154,7 +1154,7 @@
   },
   "620": {
     "inputs": {
-      "math_expression": "floor(a / 64) * 32",
+      "math_expression": "floor(a / 32) * 16",
       "a": [
         "622",
         0
@@ -1167,7 +1167,7 @@
   },
   "621": {
     "inputs": {
-      "math_expression": "floor(a / 64) * 32",
+      "math_expression": "floor(a / 32) * 16",
       "a": [
         "623",
         0

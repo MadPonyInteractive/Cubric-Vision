@@ -315,12 +315,26 @@ export const MINIMAX_H3_RATIOS = {
     // 1376 was tried here and REVERTED (MPI-687). The comment that justified it said
     // "1344x768 is /16-clean but not /32-clean" — that is arithmetically false: 1344/32
     // = 42 exactly. It also claimed the pipeline "silently pads up to 1376x768", which is
-    // backwards. H3's own MAX_PIXELS is 768*1344 = 1,032,192 (comfy_extras/
-    // nodes_minimax_h3.py:28), and 768x1376 = 1,056,768 sits ABOVE it — so 1376 is the
-    // one number in this tier the model cannot honour, and the label promised a size the
-    // user never got (reported 2026-09-04: status bar said 768x1376, the card said
-    // 768x1344). The other three entries are all under the cap and unaffected, which is
-    // why only 9:16 and 16:9 ever disagreed with their own output.
+    // backwards: the user asked for 768x1376 and the card came back 768x1344.
+    //
+    // THAT SHRINK WAS NOT THIS FILE'S FAULT AND NOT A MODEL CAP — the numbers here were
+    // being mangled downstream, by the TWO-PASS graph. Both H3 runtimes render stage 1 at
+    // half the canvas and let the latent upscaler double it back, and the halving node was
+    // spelled `floor(a / 64) * 32`, which floors stage 1 onto a /32 grid. Doubling that
+    // gives `floor(target / 64) * 64`, so every dimension not divisible by 64 lost 32px on
+    // the way through. 1376 -> 1344, and 480 -> 448, which is the 448x448 square a 1:1
+    // request came back as the same day. Six of the 21 dimensions in this table were
+    // affected, including all of `low`. Fixed in the raw templates (MPI-687) by halving as
+    // `floor(a / 32) * 16`: a /32-clean canvas halves to a /16-clean one, /16 is all the
+    // latent grid (height // 16) needs, and every /64-clean canvas keeps the identical
+    // stage-1 value — so nothing that already worked moved.
+    //
+    // 1376 stays out regardless, on its own merits: 768 is the native SHORT EDGE and
+    // 768x1344 is the canvas adapt_canvas itself produces, so 1376 was an invented number
+    // in the one tier whose whole job is to be in-distribution. It is also above H3's
+    // MAX_PIXELS of 768*1344 (comfy_extras/nodes_minimax_h3.py:28) — which is a reason not
+    // to want it, NOT the mechanism that removed it; that cap is never enforced on the
+    // output latent, as the § note above says and `very_high` proves by running at 2.09 MP.
     high: [
         { label: "1:1", w: 768, h: 768, icon: "rect_1_1" },
         { label: "9:16", w: 768, h: 1344, icon: "rect_9_16" },

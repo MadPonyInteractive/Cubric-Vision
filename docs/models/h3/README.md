@@ -213,21 +213,35 @@ toggle that can disagree with the media present. LTX should adopt this shape (MP
 `generate_h3.py` asserts all four branches survive, because a missing one does not error —
 it falls through to another and conditions on the wrong frames.
 
-### The keyframe resize is the graph's job, and it is already done
+### The keyframe resize belongs to the NODE — the graph lost it once already
 
 `MiniMaxH3ImageToVideo` treats its two keyframes differently: `first_frame` gets
 `_resize(..., "disabled")` — a plain stretch, the upstream comment calls it a "geometry
-anchor" — while `last_frame` gets `"center"`, an aspect-preserving cover-crop. Read alone
-that says an i2v source whose aspect misses the canvas is squashed into every frame, and
-MPI-449's research concluded exactly that (§ line 377, assigning a fix to MPI-452).
+anchor" — while `last_frame` gets `"center"`, an aspect-preserving cover-crop. So an i2v
+source whose aspect misses the canvas is squashed into every frame, and when BOTH frames
+are given they are conformed by two different rules and disagree with each other. MPI-449's
+research called this out (§ line 377) and assigned a fix to MPI-452.
 
-**It does not apply to the shipped graph, and no fix is wanted.** Nodes 218 and 220
-(`ImageResizeKJv2`, `keep_proportion: crop`, `crop_position: center`, `divisible_by: 32`)
-sit in front of BOTH frame paths and draw `width`/`height` from the same nodes that set the
-H3 canvas, so each frame arrives already at canvas size and the node's stretch is a no-op.
-All 15 `MINIMAX_H3_RATIOS` entries are divisible by 32 — matching `CANVAS_MULTIPLE = 32`
-in the node — so the resize can always land the canvas exactly. **Adding app-side aspect
-fitting would crop twice.** Verified 2026-08-06 against `comfy_workflows/minimax_h3_fl2va.json`.
+MPI-452 answered it **in the graph**: nodes 218/220 (`ImageResizeKJv2`, `keep_proportion:
+crop`, `crop_position: center`) sat in front of both frame paths, so each frame arrived at
+canvas size and core's stretch was a no-op. This section used to record that as settled and
+warn that app-side fitting would crop twice.
+
+**That answer did not survive its own graph rebuild.** The two-pass port (`6deb60b6`,
+2026-09-04) replaced the four-copy branch lattice with a single `MpiH3ImageToVideo`, and
+the two resize nodes went out with the lattice — `git log -S ImageResizeKJv2` shows them
+entering at `bb50b55e` and leaving at `6deb60b6`, and the rebuilt fl2va has **zero** resize
+nodes: `MpiLoadImageFromPath` 217/219 wire straight into the i2v node. The first user run
+that day came back squashed (MPI-687).
+
+The fix is now in the NODE, not the graph: `MpiH3ImageToVideo._cover_crop` (MpiNodes
+1.2.10) conforms **both** frames before delegating, so core's own resize is handed an
+at-size image and becomes a no-op. Crop, never pad — letterbox bars baked into frame 0 get
+animated as scenery. **Do not re-add graph resize nodes**: they would crop twice, and the
+reason this moved into the node is precisely that a graph node can be dropped by a rebuild
+without anything failing. The crop mode is pinned by `h3.py`'s self-check, because a
+regression to `'disabled'` is invisible in the graph and shows up only as a squashed
+frame 0.
 
 ## Frames, duration and canvas
 
@@ -245,6 +259,24 @@ fitting would crop twice.** Verified 2026-08-06 against `comfy_workflows/minimax
   768p→2K second pass, which is API-only and not in these weights ([ref2va.md](ref2va.md)).
 - **A canvas change is a different latent shape, so the same seed is a DIFFERENT sample.**
   Tier A/B can never be read as "same shot, sharper", and the UI must not imply it.
+- **The two-pass halves the canvas and doubles it back, so the tier number is not what
+  stage 1 renders.** Both H3 runtimes carry the pair: stage 1 is `floor(a / 32) * 16`, and
+  stage 2 is `floor(floor(a/16)*16 * b / 32 + 0.5) * 32` with `b = 2`. A /32-clean canvas
+  halves to a /16-clean one, and /16 is all the latent grid (`height // 16`) needs. **The
+  ceiling on stage 1 is /16, NOT /32** — that mistake is what broke it: the halving shipped
+  as `floor(a / 64) * 32`, over-constraining stage 1 to /32, which composes to
+  `floor(target / 64) * 64` and silently drops 32px from every canvas not divisible by 64.
+  Six of the 21 distinct dimensions in `MINIMAX_H3_RATIOS` were affected — `very_low`
+  352/608, `low` 480/864, `medium` 1376, `very_high` 800 — so the whole of the default tier
+  rendered 32px short while the status bar showed the label. Found and fixed 2026-09-04
+  (MPI-687), one day after the two-pass shipped. Read this before changing either
+  expression, and check the whole ladder rather than the one canvas in front of you: the
+  15 unaffected dimensions all happened to be /64 and hid it.
+- `adapt_canvas` (768 short edge, `MAX_PIXELS = 768*1344`) is **never applied to the output
+  latent** — it is called only from `MiniMaxH3ReferenceToVideo` to conform reference
+  VIDEOS. `MiniMaxH3ImageToVideo.execute` calls `_empty_av_latent(width, height, length)`
+  with no clamp at all, which is why `very_high` renders 2.09 MP. Do not reach for it to
+  explain a canvas that came back smaller than asked — that reflex cost MPI-687 a session.
 
 ## Audio
 

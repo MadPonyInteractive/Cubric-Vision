@@ -81,3 +81,21 @@ No `class_type` was removed or renamed, so no `comfy_workflows/` grep was requir
 - [ ] `Refine_Refs` needs doing ONCE in the bench graph — a title cannot be baked (the
       injection gate keys on it), so every re-export from an unrenamed bench re-breaks it.
       It has now been re-applied to raw twice
+
+- [x] **BUG 2 FIXED** — `MpiH3ImageToVideo` cover-crops BOTH keyframes to the canvas
+      before delegating (`ComfyUi-MpiNodes/h3.py`, `_cover_crop`). Crop, never pad, on the
+      user's call. MpiNodes 1.2.10 pushed (`8505769`), Action 33916139497 success, registry
+      PUT HTTP 200, pin moved in `dev_configs/node_lock.json`. r2va needed no change
+- [x] **BUG 1's OPEN QUESTION ANSWERED, and it was not `adapt_canvas`** — the two-pass
+      halving node was `floor(a / 64) * 32`, so the final output was always
+      `floor(target / 64) * 64` and every canvas not divisible by 64 lost 32px. That is the
+      1376 -> 1344, AND the 448x448 the 1:1 request came back as. Six of the 21 dimensions
+      in `MINIMAX_H3_RATIOS` were affected, `low` (the default tier) on every axis. Fixed to
+      `floor(a / 32) * 16` in both raw templates, both runtimes rebuilt
+- [x] `very_high` and `2k` were NOT silently clamped — every dimension in both is /64, so
+      they always came out at the labelled size. `2k`/`4k` likewise. The mis-sized six were
+      `very_low` 352/608, `low` 480/864, `medium` 1376, `very_high` 800
+- [ ] **USER TEST of the crop**: restart the app so the engine installs MpiNodes 1.2.10
+      (a `custom_nodes` dep installs at BOOT), then feed fl2va a 9:16 image on a 1:1 canvas
+- [ ] **USER TEST of the sizing**: any `low` or `very_low` tier run — the card's dimensions
+      must now match the status bar instead of coming back 32px short
