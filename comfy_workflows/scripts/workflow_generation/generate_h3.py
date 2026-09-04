@@ -154,6 +154,16 @@ BAKED_WIDGETS = [
     # exports at whatever was last rendered (352x608 on 2026-08-06).
     ("Input_Width", "int", 864),
     ("Input_Height", "int", 480),
+    # The stage-1 preview carries SOUND (MPI-687). Its VAEDecodeAudio hangs off
+    # MpiStageLatents output 1 (`denoised`) and is wired in the bench graph, but this
+    # flag is what makes the preview actually mux it — nothing in the app injects
+    # `use_audio`, it is a pure graph widget. Connected-but-false is the bad state: the
+    # graph looks right, the run costs the same, and the preview is silent. It is baked
+    # rather than left to the bench because there is no per-run reason to want a silent
+    # preview, and a widget nobody remembers on export regresses on the next one.
+    # H3's audio is the whole point of judging a take early — see the tuning session's
+    # rule that audio is judged on the two-pass output, never on the loud frames alone.
+    ("Output_Preview", "use_audio", True),
     # Turbo (MPI-505): the h3Turbo toggle is the authority and injects this per run —
     # the bake is only the SAFE DEFAULT, i.e. what a hand-run or a failed mount gets.
     # False = the 20-step path, which is the higher-quality one; turbo trades quality

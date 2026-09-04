@@ -838,6 +838,10 @@
       "images": [
         "572",
         0
+      ],
+      "audio": [
+        "571",
+        0
       ]
     },
     "class_type": "MpiSaveVideo",

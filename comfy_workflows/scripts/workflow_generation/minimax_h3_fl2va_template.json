@@ -170,6 +170,10 @@
       "images": [
         "289",
         0
+      ],
+      "audio": [
+        "505",
+        0
       ]
     },
     "class_type": "MpiSaveVideo",

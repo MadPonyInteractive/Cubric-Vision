@@ -165,10 +165,14 @@
     "inputs": {
       "fps": 24,
       "filename_prefix": "MpiVideo",
-      "use_audio": false,
+      "use_audio": true,
       "truncate_to_audio": false,
       "images": [
         "289",
+        0
+      ],
+      "audio": [
+        "505",
         0
       ]
     },
@@ -957,6 +961,22 @@
     "class_type": "MpiMath",
     "_meta": {
       "title": "Mpi Math"
+    }
+  },
+  "505": {
+    "inputs": {
+      "samples": [
+        "320",
+        1
+      ],
+      "vae": [
+        "122",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeAudio",
+    "_meta": {
+      "title": "VAE Decode Audio"
     }
   },
   "509": {

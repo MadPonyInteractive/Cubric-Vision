@@ -801,6 +801,22 @@
       "title": "VAE Decode"
     }
   },
+  "571": {
+    "inputs": {
+      "samples": [
+        "567",
+        1
+      ],
+      "vae": [
+        "527",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeAudio",
+    "_meta": {
+      "title": "VAE Decode Audio"
+    }
+  },
   "572": {
     "inputs": {
       "passthrough": [
@@ -817,10 +833,14 @@
     "inputs": {
       "fps": 24,
       "filename_prefix": "MpiVideo",
-      "use_audio": false,
+      "use_audio": true,
       "truncate_to_audio": false,
       "images": [
         "572",
+        0
+      ],
+      "audio": [
+        "571",
         0
       ]
     },
