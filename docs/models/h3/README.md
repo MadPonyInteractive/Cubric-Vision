@@ -260,18 +260,34 @@ frame 0.
 - **A canvas change is a different latent shape, so the same seed is a DIFFERENT sample.**
   Tier A/B can never be read as "same shot, sharper", and the UI must not imply it.
 - **The two-pass halves the canvas and doubles it back, so the tier number is not what
-  stage 1 renders.** Both H3 runtimes carry the pair: stage 1 is `floor(a / 32) * 16`, and
-  stage 2 is `floor(floor(a/16)*16 * b / 32 + 0.5) * 32` with `b = 2`. A /32-clean canvas
-  halves to a /16-clean one, and /16 is all the latent grid (`height // 16`) needs. **The
-  ceiling on stage 1 is /16, NOT /32** — that mistake is what broke it: the halving shipped
-  as `floor(a / 64) * 32`, over-constraining stage 1 to /32, which composes to
-  `floor(target / 64) * 64` and silently drops 32px from every canvas not divisible by 64.
-  Six of the 21 distinct dimensions in `MINIMAX_H3_RATIOS` were affected — `very_low`
-  352/608, `low` 480/864, `medium` 1376, `very_high` 800 — so the whole of the default tier
-  rendered 32px short while the status bar showed the label. Found and fixed 2026-09-04
-  (MPI-687), one day after the two-pass shipped. Read this before changing either
-  expression, and check the whole ladder rather than the one canvas in front of you: the
-  15 unaffected dimensions all happened to be /64 and hid it.
+  stage 1 renders.** Both H3 runtimes carry the pair: stage 1 is `floor(a / 64) * 32`, and
+  stage 2 is `floor(floor(a/16)*16 * b / 32 + 0.5) * 32` with `b = 2`.
+  **STAGE 1 MUST BE /32. DO NOT LOOSEN IT TO /16.** Core's `patchify_video`
+  (`comfy/ldm/minimax/model.py:47`) reshapes the stage-1 latent in 2×2 spatial blocks, so
+  that latent — stage-1 pixels ÷ 16 — has to be EVEN on both axes, and only a /32-clean
+  stage 1 makes it so. Halving as `floor(a / 32) * 16` gives an odd latent and the sampler
+  raises on every run, not on some canvases:
+
+  | tier | canvas | stage 1 | latent | patchify wanted |
+  |---|---|---|---|---|
+  | `very_low` | 352×608 | 176×304 | **11×19** | 10×18 |
+  | `low` | 480×864 | 240×432 | **15×27** | 14×26 |
+
+  `RuntimeError: shape '[1, 24, 1, 1, 5, 2, 9, 2]' is invalid for input of size 5016`
+  (5016 = 24·11·19). MPI-687 shipped that loosening for a few hours on 2026-09-04 and it
+  was caught by the user's own run, not by a gate — graph validation, the engine floor
+  check and the offline preflight all passed it, because the failure does not exist until
+  a tensor is real. `tests/h3-two-pass-dimensions.test.cjs` now asserts the arithmetic.
+- **`output = floor(canvas / 64) * 64` is therefore a PROPERTY, not a bug.** Stage 1 is /32
+  and stage 2 doubles it, so the two-pass path can only emit /64 sizes. Any dimension in
+  `MINIMAX_H3_RATIOS` that is not /64 is delivered 32px short of the label — six distinct
+  values across sixteen cells: `very_low` 352/608, `low` 480/864, `medium` 1376,
+  `very_high` 800, so the whole default tier renders short while the status bar shows the
+  label. All six are odd multiples of 32, exactly what /64 cannot represent. **The repair
+  is the TABLE, not the halving** — and it is a deliberate change to the tier ladder, so it
+  goes past the user rather than being rounded quietly. Check the whole ladder rather than
+  the one canvas in front of you: the /64-clean dimensions (`high` and both of `2k`/`4k`
+  among them) are identical under either expression and hide the whole thing.
 - `adapt_canvas` (768 short edge, `MAX_PIXELS = 768*1344`) is **never applied to the output
   latent** — it is called only from `MiniMaxH3ReferenceToVideo` to conform reference
   VIDEOS. `MiniMaxH3ImageToVideo.execute` calls `_empty_av_latent(width, height, length)`

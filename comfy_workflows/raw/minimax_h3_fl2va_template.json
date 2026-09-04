@@ -4973,10 +4973,10 @@
         "Node name for S&R": "MpiMath"
       },
       "widgets_values": [
-        "floor(a / 32) * 16"
+        "floor(a / 64) * 32"
       ],
       "widgets_values_named": {
-        "math_expression": "floor(a / 32) * 16"
+        "math_expression": "floor(a / 64) * 32"
       }
     },
     {
@@ -5030,10 +5030,10 @@
         "Node name for S&R": "MpiMath"
       },
       "widgets_values": [
-        "floor(a / 32) * 16"
+        "floor(a / 64) * 32"
       ],
       "widgets_values_named": {
-        "math_expression": "floor(a / 32) * 16"
+        "math_expression": "floor(a / 64) * 32"
       }
     },
     {

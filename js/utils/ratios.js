@@ -317,17 +317,33 @@ export const MINIMAX_H3_RATIOS = {
     // = 42 exactly. It also claimed the pipeline "silently pads up to 1376x768", which is
     // backwards: the user asked for 768x1376 and the card came back 768x1344.
     //
-    // THAT SHRINK WAS NOT THIS FILE'S FAULT AND NOT A MODEL CAP — the numbers here were
-    // being mangled downstream, by the TWO-PASS graph. Both H3 runtimes render stage 1 at
-    // half the canvas and let the latent upscaler double it back, and the halving node was
+    // THAT SHRINK WAS NOT THIS FILE'S FAULT AND NOT A MODEL CAP — the numbers here are
+    // quantised downstream, by the TWO-PASS graph. Both H3 runtimes render stage 1 at half
+    // the canvas and let the latent upscaler double it back, and the halving node is
     // spelled `floor(a / 64) * 32`, which floors stage 1 onto a /32 grid. Doubling that
-    // gives `floor(target / 64) * 64`, so every dimension not divisible by 64 lost 32px on
+    // gives `floor(target / 64) * 64`, so every dimension not divisible by 64 loses 32px on
     // the way through. 1376 -> 1344, and 480 -> 448, which is the 448x448 square a 1:1
-    // request came back as the same day. Six of the 21 dimensions in this table were
-    // affected, including all of `low`. Fixed in the raw templates (MPI-687) by halving as
-    // `floor(a / 32) * 16`: a /32-clean canvas halves to a /16-clean one, /16 is all the
-    // latent grid (height // 16) needs, and every /64-clean canvas keeps the identical
-    // stage-1 value — so nothing that already worked moved.
+    // request came back as the same day. Six distinct values here are affected — 352, 608,
+    // 480, 864, 1376, 800 — across sixteen cells, including all of `low`.
+    //
+    // THE HALVING IS NOT THE BUG, AND CHANGING IT BREAKS THE MODEL. MPI-687 first "fixed"
+    // this by halving as `floor(a / 32) * 16`, on the theory that /16 was all the latent
+    // grid needed. It is not. Core's `patchify_video` (comfy/ldm/minimax/model.py:47)
+    // reshapes the stage-1 latent in 2x2 spatial blocks, so that latent — stage-1 pixels
+    // divided by 16 — MUST BE EVEN, which means stage 1 must be /32. A /16-clean stage 1
+    // makes it odd and the sampler raises, immediately and on every run:
+    //   very_low 352x608 -> stage 1 176x304 -> latent 11x19
+    //     RuntimeError: shape '[1, 24, 1, 1, 5, 2, 9, 2]' is invalid for input of size 5016
+    //   low      480x864 -> stage 1 240x432 -> latent 15x27  (wanted 14x26)
+    // Reverted, with `tests/h3-two-pass-dimensions.test.cjs` now asserting the arithmetic:
+    // graph validation passed the broken version, and every offline gate did too, because
+    // the failure only exists once a tensor is real.
+    //
+    // So `output = floor(canvas / 64) * 64` is a PROPERTY OF THE ARCHITECTURE, not a defect
+    // to route around, and a dimension here that is not /64 cannot be delivered at the size
+    // it advertises. The six above are all ODD multiples of 32 — precisely what /64 cannot
+    // represent. Making them honest means editing THIS TABLE, and that is a deliberate
+    // product change to the tier ladder rather than something to quietly round.
     //
     // 1376 stays out regardless, on its own merits: 768 is the native SHORT EDGE and
     // 768x1344 is the canvas adapt_canvas itself produces, so 1376 was an invented number
