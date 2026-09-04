@@ -312,11 +312,19 @@ export const MINIMAX_H3_RATIOS = {
     ],
     // NATIVE — adapt_canvas output (768 short edge, 1344x768 area cap). The last
     // in-distribution tier; everything above extrapolates.
-    // Dev: changed to 1376 as its the actual 1.0 res and fills 16:9 better than 1344 (which is 0.98 MP). The 1376x768 is /32-clean, so it is the right number to ship. 1344x768 is /16-clean but not /32-clean, so it is a "soft" number that the pipeline silently pads up to 1376x768 anyway.
+    // 1376 was tried here and REVERTED (MPI-687). The comment that justified it said
+    // "1344x768 is /16-clean but not /32-clean" — that is arithmetically false: 1344/32
+    // = 42 exactly. It also claimed the pipeline "silently pads up to 1376x768", which is
+    // backwards. H3's own MAX_PIXELS is 768*1344 = 1,032,192 (comfy_extras/
+    // nodes_minimax_h3.py:28), and 768x1376 = 1,056,768 sits ABOVE it — so 1376 is the
+    // one number in this tier the model cannot honour, and the label promised a size the
+    // user never got (reported 2026-09-04: status bar said 768x1376, the card said
+    // 768x1344). The other three entries are all under the cap and unaffected, which is
+    // why only 9:16 and 16:9 ever disagreed with their own output.
     high: [
         { label: "1:1", w: 768, h: 768, icon: "rect_1_1" },
-        { label: "9:16", w: 768, h: 1376, icon: "rect_9_16" },
-        { label: "16:9", w: 1376, h: 768, icon: "rect_16_9" },
+        { label: "9:16", w: 768, h: 1344, icon: "rect_9_16" },
+        { label: "16:9", w: 1344, h: 768, icon: "rect_16_9" },
         { label: "21:9", w: 1536, h: 640, icon: "rect_21_9" }
     ],
     // ABOVE native — extrapolated detail tier, same role WAN's very_high plays.
