@@ -1,0 +1,13 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "services/ffmpegThumb.js",
+    "routes/projects.js",
+    "routes/videoConcat.js",
+    "routes/videoCrop.js",
+    "routes/videoReverse.js",
+    "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+    "tests/gallery-renditions.test.cjs",
+    "docs/gallery.md"
+  ]
+}

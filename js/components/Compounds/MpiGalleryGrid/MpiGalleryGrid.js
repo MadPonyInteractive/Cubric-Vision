@@ -941,23 +941,36 @@ export const MpiGalleryGrid = ComponentFactory.create({
             let _boxPx = 0;          // longest edge of the rendered card box, device px
             let _imgPromoted = false;
 
-            function _isImageCard() {
+            // A VIDEO card rides the same ladder (MPI-689): its poster is the same
+            // `.thumb.webp` / `.thumb.1280.webp` pair, painted into the same base
+            // `<img>` underneath the hover overlay, so a swap here is invisible to a
+            // promoted card and correct for every card that is not — which is the
+            // whole visible gallery while a generation holds the media (MPI-631).
+            // Only a video with NO poster is excluded: there the base thumb is a
+            // `<video preload=metadata>`, and swapping it for an `<img>` is exactly
+            // what `_swapThumbToVideo`'s fallback branch exists to avoid.
+            function _isPosterLadderCard() {
                 const sel = group?.history?.[group.selectedIndex];
                 if (!sel || sel.inputPreview) return false;
-                const isVideo = sel.type === 'video' || (group?.type === 'video' && sel.type !== 'image');
                 const isAudio = sel.type === 'audio' || group?.type === 'audio';
-                return !isVideo && !isAudio;
+                if (isAudio) return false;
+                const isVideo = sel.type === 'video' || (group?.type === 'video' && sel.type !== 'image');
+                return !isVideo || !!sel.thumbPath;
             }
 
             // A card that is not promoted asks with a box of 0 — the rule then returns
             // the cheap rendition, which is both the first paint and what the
             // scroll-out demote swaps back down to.
             function _imageSrcFor(selected) {
-                return pickImageRendition(selected, _imgPromoted ? _boxPx : 0);
+                const isVideo = selected?.type === 'video'
+                    || (group?.type === 'video' && selected?.type !== 'image');
+                // A video's `filePath` is a video, so it is not a legal fallback for
+                // the `<img>` this feeds — see pickImageRendition's `allowSource`.
+                return pickImageRendition(selected, _imgPromoted ? _boxPx : 0, { allowSource: !isVideo });
             }
 
             function _applyImageRendition() {
-                if (!_isImageCard()) return;
+                if (!_isPosterLadderCard()) return;
                 const selected = group?.history?.[group.selectedIndex];
                 if (!selected) return;
                 _swapThumbToImage(_imageSrcFor(selected), selected);
@@ -1127,7 +1140,11 @@ export const MpiGalleryGrid = ComponentFactory.create({
 
                 const thumbPath = selected?.thumbPath;
                 if (thumbPath) {
-                    _swapThumbToImage(thumbPath, selected);
+                    // The poster tier the card's box asks for, not the 512 unconditionally
+                    // (MPI-689) — a video card paints the same ~775-1250 device px an
+                    // image one does, and this poster is what shows until the hover
+                    // proxy promotes and again for the whole of every generation.
+                    _swapThumbToImage(_imageSrcFor(selected), selected);
                 } else {
                     // No poster — fall back to <video preload=metadata> as the base
                     // thumb. Hover handlers still work because _videoThumb is set.
@@ -1925,7 +1942,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
         // ── ResizeObserver ───────────────────────────────────────────────────
 
         // ── Viewport promotion: lazy load videos only when visible ───────────
-        // Cards initially render with a 256px JPG poster (instant paint). When
+        // Cards initially render with the 512 WebP poster (instant paint). When
         // the wrapper scrolls into view (or starts in view), promote to a
         // paused <video> showing frame 0 — high-res still without decode storm.
         //

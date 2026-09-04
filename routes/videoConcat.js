@@ -123,8 +123,9 @@ async function _writeOutputSidecar({ mediaDir, metaDir, outputPath, finalName, o
     };
     // Poster + 720p hover proxy (MPI-633). Null proxyPath just means the output is
     // already at or under 720p, in which case the master IS the proxy.
-    const { thumbPath, proxyPath } = await writeVideoDerivatives(outputPath, metaDir, newId, { sourceHeight: outMeta.height });
+    const { thumbPath, thumbPathLg, proxyPath } = await writeVideoDerivatives(outputPath, metaDir, newId, { sourceWidth: outMeta.width, sourceHeight: outMeta.height });
     if (thumbPath) sidecar.thumbPath = thumbPath;
+    if (thumbPathLg) sidecar.thumbPathLg = thumbPathLg;
     if (proxyPath) sidecar.proxyPath = proxyPath;
     await fs.writeJson(path.join(metaDir, `${newId}.json`), sidecar, { spaces: 2 });
     return sidecar;

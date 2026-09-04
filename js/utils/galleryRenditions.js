@@ -27,12 +27,20 @@ export const LARGE_RENDITION_MIN_BOX_PX = 512;
  * pass 0 for a card that is off screen, which is how the scroll-out demote asks for
  * the cheap rendition back.
  *
+ * `allowSource: false` removes `filePath` from both fallbacks, for a VIDEO card's
+ * poster (MPI-689). Same ladder, same files — but a video's `filePath` is a video,
+ * and the `<img>` this src lands in would paint a missing card. A clip is therefore
+ * always written a large poster when it is wider than the small tier, so the tier
+ * this returns exists whenever the box asks for it.
+ *
  * @param {{thumbPath?: string|null, thumbPathLg?: string|null, filePath?: string|null}} item
  * @param {number} boxPx
+ * @param {{allowSource?: boolean}} [opts]
  * @returns {string}
  */
-export function pickImageRendition(item, boxPx) {
-    const small = item?.thumbPath || item?.filePath || '';
+export function pickImageRendition(item, boxPx, { allowSource = true } = {}) {
+    const source = allowSource ? item?.filePath : null;
+    const small = item?.thumbPath || source || '';
     if (!(boxPx > LARGE_RENDITION_MIN_BOX_PX)) return small;
-    return item?.thumbPathLg || item?.filePath || small;
+    return item?.thumbPathLg || source || small;
 }

@@ -165,8 +165,9 @@ router.post('/api/video/crop', async (req, res) => {
             sourceGroupId: groupId || null,
         };
         // First-frame poster + 720p hover proxy alongside the sidecar (MPI-633).
-        const { thumbPath, proxyPath } = await writeVideoDerivatives(outputPath, metaDir, newId, { sourceHeight: outMeta.height });
+        const { thumbPath, thumbPathLg, proxyPath } = await writeVideoDerivatives(outputPath, metaDir, newId, { sourceWidth: outMeta.width, sourceHeight: outMeta.height });
         if (thumbPath) sidecar.thumbPath = thumbPath;
+        if (thumbPathLg) sidecar.thumbPathLg = thumbPathLg;
         if (proxyPath) sidecar.proxyPath = proxyPath;
 
         await fs.writeJson(path.join(metaDir, `${newId}.json`), sidecar, { spaces: 2 });

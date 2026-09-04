@@ -7,7 +7,7 @@ exists before relying on an entry.
 
 ## Video thumbnail pattern
 
-Three-stage pattern in `MpiGalleryGrid.js`: (1) Poster paint — `<img src=thumbPath>` (256px JPG from `services/ffmpegThumb.js`) renders instantly. (2) Lazy promotion — grid-level `IntersectionObserver` (rootMargin 200px) calls `card.el.promoteVideo()` when wrapper enters viewport; creates `<video preload=auto>`, fades in once `loadeddata` fires. (3) Hover playback — `mouseenter` calls `play()`; `mouseleave` pauses + resets to frame 0. Element persists so replay works on second hover. `--hover-video-ready` class must NOT be removed on mouseleave — it keeps the paused still visible.
+Three-stage pattern in `MpiGalleryGrid.js`: (1) Poster paint — `<img>` on the rendition ladder below (512/1280 WebP from `services/ffmpegThumb.js`) renders instantly. (2) Lazy promotion — grid-level `IntersectionObserver` (rootMargin 200px) calls `card.el.promoteVideo()` when wrapper enters viewport; creates `<video preload=auto>`, fades in once `loadeddata` fires. (3) Hover playback — `mouseenter` calls `play()`; `mouseleave` pauses + resets to frame 0. Element persists so replay works on second hover. `--hover-video-ready` class must NOT be removed on mouseleave — it keeps the paused still visible.
 
 **Images get a thumb too (MPI-319).** A 512px **WebP** at `.meta/<id>.thumb.webp` via `extractImageThumb` (same `ffmpegThumb.js`), written on save-generation + import in `routes/projects.js`. **`extractImageThumb` returns the path it ACTUALLY wrote** — callers pass a `.thumb.jpg` path and must use the return value, not the path they passed. The viewer still opens full-res (`filePath`). Decoding 100+ full-res 4K PNGs was the scroll-jank cause (~179x heavier than thumbs). Pre-existing images (made before thumbs) backfill via `POST /backfill-media-derivatives`, fired fire-and-forget on project load (`projectService._backfillMediaDerivatives`), which patches live items + rebuilds the grid. Derivatives live/die with the sidecar — the GC and the delete paths match `DERIVATIVE_RE` (`<id>.thumb.*` / `<id>.proxy.*`) by prefix rather than by an extension list, because three separate lists had to be edited in lock-step and a missed one leaks a file per asset.
 
@@ -21,6 +21,15 @@ Three-stage pattern in `MpiGalleryGrid.js`: (1) Poster paint — `<img src=thumb
 - **DEVICE pixels.** At 150% Windows scaling a 775px card rasterises at 1163; picking off the CSS box leaves exactly the users on scaled displays with the upscale this fixes.
 - **Nothing above 1280.** A bigger card upscales the 1280 rendition rather than mounting a 4K original — the viewer is where full resolution belongs.
 - **Never generated above the source**, so a 1280x800 asset (most of them) has no `.1280.webp` and a big card mounts `filePath`. Falling through to `filePath` is the correct answer, not a miss.
+
+**A VIDEO poster is on the same ladder (MPI-689)** — same `extractVideoThumb`, same `.thumb.webp` / `.thumb.1280.webp` names, painted into the same base `<img>` that sits under the hover overlay. It was a 256px JPG until then, i.e. a 3-5x upscale on any large card, and the reason videos "only look right on hover": hover mounts the 720p proxy. That poster is not a brief flash either — it is what EVERY video card falls back to for the whole of a generation, because `_releaseMedia('generation')` demotes them all.
+
+Two things differ from the image side, both because a clip's `filePath` is a video and the poster is an `<img>`:
+
+- `pickImageRendition(item, box, { allowSource: false })` for a video — the `filePath` fallback that is right for an image would paint an `.mp4` into an `<img>`.
+- So the large poster is owed by any clip **wider than the SMALL tier**, not wider than the large one: there is no "the source IS that tier" case to fall through to. `min(1280,iw)` still caps it, so a 768-wide clip gets a 768-wide large poster.
+
+A video with NO poster at all keeps the `<video preload=metadata>` base thumb — `_isPosterLadderCard()` excludes it for exactly that reason.
 
 ### Retention is per decoded URL, and the page cannot evict it
 

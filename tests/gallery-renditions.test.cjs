@@ -66,6 +66,22 @@ test('an item with no renditions at all falls back to filePath at every box', ()
     assert.strictEqual(pickImageRendition(item, 2000), FULL);
 });
 
+test('a VIDEO poster never falls back to filePath — that would paint a video into an <img>', () => {
+    // MPI-689. The clamp above is right for an image and catastrophic for a clip: the
+    // card's poster is an <img>, so `allowSource: false` is what keeps a 1152px clip
+    // with no large poster on its 512 one instead of pointing the <img> at the .mp4.
+    const clip = { thumbPath: SMALL, thumbPathLg: null, filePath: '/project-file?path=x.mp4' };
+    assert.strictEqual(pickImageRendition(clip, 775, { allowSource: false }), SMALL);
+    assert.strictEqual(pickImageRendition(clip, 0, { allowSource: false }), SMALL);
+    // With the large tier written — the normal case, since a clip wider than the
+    // small tier is always owed one — the big box still gets it.
+    const laddered = { ...clip, thumbPathLg: LARGE };
+    assert.strictEqual(pickImageRendition(laddered, 775, { allowSource: false }), LARGE);
+    // And a poster-less clip yields '' rather than the .mp4, so the caller's
+    // `if (thumbPath)` fallback branch is the one that runs.
+    assert.strictEqual(pickImageRendition({ filePath: '/project-file?path=x.mp4' }, 775, { allowSource: false }), '');
+});
+
 test('a missing item never throws and never yields undefined', () => {
     assert.strictEqual(pickImageRendition(null, 775), '');
     assert.strictEqual(pickImageRendition({}, 775), '');

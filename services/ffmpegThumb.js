@@ -4,9 +4,10 @@
  * ffmpegThumb.js — Extract a single JPG thumbnail from a video, or downscale
  * an image to a gallery-sized WebP thumbnail.
  *
- * Uses bundled ffmpeg (see ffmpegBinary.js). Video thumbs are 256-wide JPGs
- * (height auto, preserves aspect) at the given timestamp (default 0s). Image
- * thumbs come in TWO sizes (MPI-633) — see IMAGE_RENDITION_PX below. 512 was the
+ * Uses bundled ffmpeg (see ffmpegBinary.js). A video's poster is one frame at the
+ * given timestamp (default 0s) and rides the same ladder as an image (MPI-689) —
+ * it was a 256-wide JPG until then, which is why videos read as soft until hover.
+ * Thumbs come in TWO sizes (MPI-633) — see IMAGE_RENDITION_PX below. 512 was the
  * only one until then, and its claim to be "sharp enough at the biggest gallery
  * card" was measured in some window and is false on a wide one: at slider level 4
  * a card paints ~775-1250px from that 512px source.
@@ -38,19 +39,33 @@ const logger = require('../routes/logger');
 // rendition, so a project open popped ~20 of them (MPI-651, the tail of MPI-637).
 const execFileP = promisify(execFile);
 
-async function extractVideoThumb(inputPath, outPath, { atSeconds = 0 } = {}) {
+/**
+ * A video's poster frame, on the SAME rendition ladder as an image (MPI-689).
+ *
+ * It was a 256-wide JPG until then, sized for a gallery card that no longer exists:
+ * a card paints ~775-1250 device px, so every video read as soft and only came good
+ * on hover, which mounts the 720p proxy instead. The poster is not a brief flash
+ * either — it is what a card shows before promotion, and what EVERY video card falls
+ * back to for the whole of a generation (`_releaseMedia('generation')`, MPI-631).
+ *
+ * Same widths, same WebP, same `.thumb.webp` / `.thumb.1280.webp` names as the image
+ * ladder, so `pickImageRendition` and the sidecar GC need no video-shaped special case.
+ */
+async function extractVideoThumb(inputPath, outPath, { atSeconds = 0, width = IMAGE_RENDITION_PX.small } = {}) {
+    const webpPath = imageThumbPath(outPath, { width });
     try {
         const args = [
             '-y',
             '-ss', String(atSeconds),
             '-i', inputPath,
             '-frames:v', '1',
-            '-vf', 'scale=256:-2',
-            '-q:v', '4',
-            outPath,
+            '-vf', `scale='min(${width},iw)':-2`,
+            '-c:v', 'libwebp',
+            '-quality', '82',
+            webpPath,
         ];
         await execFileP(ffmpegPath, args, { maxBuffer: 4 * 1024 * 1024, windowsHide: true });
-        return outPath;
+        return webpPath;
     } catch (err) {
         logger.warn('ffmpegThumb', `thumb extract failed for ${inputPath}: ${err.message}`);
         return null;
@@ -174,13 +189,26 @@ async function extractVideoProxy(inputPath, outPath, { sourceHeight } = {}) {
  *
  * `proxyPath` is null when the source is already at or under the proxy height — the
  * master IS the proxy then — so null here is the normal case for a 720p clip.
+ *
+ * The large POSTER tier is gated differently from an image's (MPI-689): an image at or
+ * under 1280 needs none because the card mounts `filePath` for that tier, and a video's
+ * `filePath` is a video — an `<img>` pointed at it paints a missing card. So a clip is
+ * owed a large poster whenever it is wider than the SMALL tier, and `min(1280,iw)` caps
+ * it at the source. Unknown width writes it, same reasoning as the image path.
  */
-async function writeVideoDerivatives(inputPath, metaDir, id, { sourceHeight } = {}) {
+async function writeVideoDerivatives(inputPath, metaDir, id, { sourceWidth, sourceHeight } = {}) {
     const base = path.join(metaDir, `${id}.thumb.jpg`);
     const url = (p) => `/project-file?path=${encodeURIComponent(p)}`;
     const thumb = await extractVideoThumb(inputPath, base);
+    const large = (!(sourceWidth > 0) || sourceWidth > IMAGE_RENDITION_PX.small)
+        ? await extractVideoThumb(inputPath, base, { width: IMAGE_RENDITION_PX.large })
+        : null;
     const proxy = await extractVideoProxy(inputPath, base, { sourceHeight });
-    return { thumbPath: thumb ? url(thumb) : null, proxyPath: proxy ? url(proxy) : null };
+    return {
+        thumbPath: thumb ? url(thumb) : null,
+        thumbPathLg: large ? url(large) : null,
+        proxyPath: proxy ? url(proxy) : null,
+    };
 }
 
 module.exports = {

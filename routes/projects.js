@@ -33,7 +33,7 @@ const { v4: uuidv4 } = require('uuid');
 const { getProjectsRoot, COMFYUI_PORT, streamDownload, stripImageMetadata, readProjectPathsRegistry, addProjectPathToRegistry, removeProjectPathFromRegistry } = require('./shared');
 const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const { probeVideo, probeAudio } = require('../services/ffprobeVideo');
-const { extractImageThumb, extractVideoProxy, writeVideoDerivatives, imageThumbPath, videoProxyPath, IMAGE_RENDITION_PX, VIDEO_PROXY_HEIGHT } = require('../services/ffmpegThumb');
+const { extractImageThumb, extractVideoThumb, extractVideoProxy, writeVideoDerivatives, imageThumbPath, videoProxyPath, IMAGE_RENDITION_PX, VIDEO_PROXY_HEIGHT } = require('../services/ffmpegThumb');
 const { ffmpegPath, ffprobePath, quote } = require('../services/ffmpegBinary');
 const { muxAudioIntoVideo, mixAudioFiles } = require('../services/ffmpegMux');
 const { SCHEMA_VERSION } = require('../js/migrations/projectMigrations');
@@ -86,8 +86,8 @@ function pathFromProjectFileUrl(value) {
 }
 
 /**
- * Every companion file an item id owns, as a filename test: `<id>.thumb.jpg` (video
- * poster, and the legacy image thumb), `<id>.thumb.webp` (the 512 rendition),
+ * Every companion file an item id owns, as a filename test: `<id>.thumb.jpg` (the
+ * legacy thumb, image and video alike), `<id>.thumb.webp` (the 512 rendition),
  * `<id>.thumb.1280.webp` and `<id>.proxy.mp4` (MPI-633), `<id>.splat.ply` (MPI-623).
  * Matched by PREFIX, not by an extension list — three separate lists had to be edited
  * in lock-step every time one was added, and a missed one leaks a file per asset
@@ -1462,9 +1462,12 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
                 if (!metaContent.pixelDimensions.w && v.width)  metaContent.pixelDimensions.w = v.width;
                 if (!metaContent.pixelDimensions.h && v.height) metaContent.pixelDimensions.h = v.height;
             }
-            // First-frame poster + 720p hover proxy → .meta/<id>.thumb.jpg / .proxy.mp4
-            Object.assign(metaContent, await writeVideoDerivatives(
-                filePath, metaDir, id, { sourceHeight: metaContent.pixelDimensions?.h }));
+            // First-frame poster (both tiers) + 720p hover proxy → .meta/<id>.thumb*.webp
+            // / .proxy.mp4
+            Object.assign(metaContent, await writeVideoDerivatives(filePath, metaDir, id, {
+                sourceWidth: metaContent.pixelDimensions?.w,
+                sourceHeight: metaContent.pixelDimensions?.h,
+            }));
         } else if (mediaType === 'audio') {
             // Audio: no frames/dimensions/thumb — render an icon card. Duration is
             // the one thing the card CAN show, and it comes from probeAudio rather
@@ -1583,6 +1586,10 @@ router.post('/project-media/:projectId/probe-videos', async (req, res) => {
  * A video proxy is a real transcode, so an existing project's FIRST load after
  * updating pays for one per oversized clip. It converges — a clip at or under the
  * proxy height is never owed one, and `proxyPath` is written once.
+ *
+ * MPI-689: it also re-encodes a video POSTER written before the rendition ladder.
+ * Those are 256px JPGs, so every existing project's video cards are upscaling 3-5x
+ * until this pass replaces them; the stale `.thumb.jpg` is deleted with it.
  */
 router.post('/backfill-media-derivatives', async (req, res) => {
     try {
@@ -1608,18 +1615,43 @@ router.post('/backfill-media-derivatives', async (req, res) => {
             const thumbAbs = path.join(metaDir, `${id}.thumb.jpg`);
 
             if (meta.type === 'video') {
-                // Only OWED by a clip taller than the proxy height — below it the
-                // master IS the proxy, so a 720p project converges after one pass.
                 const srcH = meta.pixelDimensions?.h;
-                if (meta.proxyPath || (srcH > 0 && srcH <= VIDEO_PROXY_HEIGHT)) continue;
-                const proxy = await extractVideoProxy(inputPath, thumbAbs, { sourceHeight: srcH });
-                if (!proxy) continue;
-                meta.proxyPath = `/project-file?path=${encodeURIComponent(proxy)}`;
+                const srcW = meta.pixelDimensions?.w;
+                // The proxy is only OWED by a clip taller than the proxy height —
+                // below it the master IS the proxy, so a 720p project converges
+                // after one pass.
+                const needsProxy = !meta.proxyPath && !(srcH > 0 && srcH <= VIDEO_PROXY_HEIGHT);
+                // MPI-689: a poster written before the ladder is a 256px JPG, which
+                // is WRONG rather than merely missing — every video card upscales it
+                // 3-5x until hover. Re-encode those to the WebP ladder once. Unlike
+                // an image, a clip wider than the SMALL tier is always owed the large
+                // one, because a video card can never fall through to `filePath`.
+                const staleJpg = /\.thumb\.jpe?g(&|$)/i.test(meta.thumbPath || '');
+                const needsSmall = !meta.thumbPath || staleJpg;
+                const needsLarge = !meta.thumbPathLg && (!(srcW > 0) || srcW > IMAGE_RENDITION_PX.small);
+                if (!needsProxy && !needsSmall && !needsLarge) continue;
+
+                if (needsSmall) {
+                    const small = await extractVideoThumb(inputPath, thumbAbs);
+                    if (small) {
+                        if (staleJpg) { try { await fs.remove(thumbAbs); } catch (_) {} }
+                        meta.thumbPath = `/project-file?path=${encodeURIComponent(small)}`;
+                    }
+                }
+                if (needsLarge) {
+                    const large = await extractVideoThumb(inputPath, thumbAbs, { width: IMAGE_RENDITION_PX.large });
+                    if (large) meta.thumbPathLg = `/project-file?path=${encodeURIComponent(large)}`;
+                }
+                if (needsProxy) {
+                    const proxy = await extractVideoProxy(inputPath, thumbAbs, { sourceHeight: srcH });
+                    if (proxy) meta.proxyPath = `/project-file?path=${encodeURIComponent(proxy)}`;
+                }
+
                 await fs.writeJson(p, meta, { spaces: 2 });
                 thumbs[id] = {
                     thumbPath: meta.thumbPath || null,
                     thumbPathLg: meta.thumbPathLg || null,
-                    proxyPath: meta.proxyPath,
+                    proxyPath: meta.proxyPath || null,
                 };
                 patched++;
                 continue;
@@ -2101,8 +2133,10 @@ router.post('/project/save-generation', async (req, res) => {
                 metaContent.frameCount = videoInfo.frameCount;
                 metaContent.hasAudio   = videoInfo.hasAudio;
             }
-            Object.assign(metaContent, await writeVideoDerivatives(
-                filePath, metaDir, id, { sourceHeight: videoInfo?.height ?? metaContent.pixelDimensions?.h }));
+            Object.assign(metaContent, await writeVideoDerivatives(filePath, metaDir, id, {
+                sourceWidth: videoInfo?.width ?? metaContent.pixelDimensions?.w,
+                sourceHeight: videoInfo?.height ?? metaContent.pixelDimensions?.h,
+            }));
         } else if (isAudio) {
             // No thumb — the gallery renders an icon card for audio (MPI-132).
             if (audioInfo) metaContent.duration = audioInfo.duration;
@@ -2134,8 +2168,8 @@ router.post('/project/save-generation', async (req, res) => {
                 catch (e) { logger.warn('project', 'replace: old media remove failed', e.message); }
             }
             if (_replacePrevThumbPath) {
-                // Videos write `<id>.thumb.jpg`, images `<id>.thumb.webp`
-                // (MPI-319, MPI-627). On a same-id replace the new thumb IS one
+                // Every thumb is `<id>.thumb.webp` now, video posters included
+                // (MPI-319, MPI-627, MPI-689). On a same-id replace the new thumb IS one
                 // of those — never delete it as if it were the stale previous one.
                 const newThumbAbs = path.join(metaDir, `${id}.thumb.jpg`);
                 const newThumbWebp = imageThumbPath(newThumbAbs);

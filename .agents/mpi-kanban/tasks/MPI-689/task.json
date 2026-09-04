@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-689",
+  "title": "Video gallery posters are 256px",
+  "description": "A video card's poster is a 256-wide JPG while the card paints ~775-1250 device px, so every video looks soft until hover mounts the 720p proxy. Put the poster on the same 512/1280 WebP rendition ladder images got in MPI-633, and backfill existing projects.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "completed",
+  "created_at": "2026-09-04T00:00:00Z",
+  "updated_at": "2026-09-04T22:30:00Z",
+  "links": {
+    "checklist": "checklist.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "validation": "validation.md"
+  }
+}

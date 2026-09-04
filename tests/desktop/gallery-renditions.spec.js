@@ -101,6 +101,73 @@ test('a big card mounts the large rendition, a small one does not', async ({}, t
   }
 });
 
+test('a VIDEO poster rides the same ladder, and never falls through to the clip', async ({}, testInfo) => {
+  // MPI-689. The poster was a 256px JPG outside the ladder entirely, so every video
+  // card upscaled 3-5x until hover mounted the 720p proxy — and fell back to it for
+  // the whole of every generation, which is when the gallery suspends its decoders.
+  // The second half is the one that bites: `filePath` is a legal fallback for an
+  // image and is an .mp4 here, so the ladder must never hand it to the poster <img>.
+  const { app, window } = await launchApp(testInfo);
+
+  try {
+    await window.waitForTimeout(6000);
+
+    const mountAt = (level, withLarge) => window.evaluate(async ({ lvl, lg }) => {
+      const { MpiGalleryGrid } = await import('/js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js');
+      const { state } = await import('/js/state.js');
+      window.__mpi689?.grid?.el?.destroy?.();
+      window.__mpi689?.host?.remove();
+
+      const host = document.createElement('div');
+      host.id = 'mpi689-host';
+      host.style.cssText = 'position:fixed;top:0;left:0;width:1600px;height:900px;z-index:0;';
+      document.body.appendChild(host);
+
+      const groups = Array.from({ length: 6 }, (_, i) => ({
+        id: `mpi689-${i}`,
+        type: 'video',
+        selectedIndex: 0,
+        history: [{
+          id: `mpi689-item-${i}`,
+          type: 'video',
+          // A REAL clip: the promote observer mounts it as the hover overlay, and a
+          // src that 404s takes the missing-media path instead.
+          filePath:    '/comfy_workflows/display/flow-head-swap.mp4',
+          thumbPath:   '/comfy_workflows/display/flow-scribble.webp',
+          thumbPathLg: lg ? '/comfy_workflows/display/flow-outpaint.webp' : null,
+          pixelDimensions: { w: 1920, h: 1080 },
+        }],
+      }));
+
+      state.gallerySizeLevel = lvl;
+      window.__mpi689 = { grid: MpiGalleryGrid.mount(host, { groups }), host };
+    }, { lvl: level, lg: withLarge });
+
+    // The POSTER, not the hover overlay the promote observer appends beside it.
+    const posterSrc = () => window.evaluate(
+      () => document.querySelector('#mpi689-host img.mpi-group-card__thumb')?.getAttribute('src') || '');
+
+    await mountAt(4, true);
+    await expect.poll(posterSrc).toContain(LARGE);
+
+    await mountAt(1, true);
+    await expect.poll(posterSrc).toContain(SMALL);
+
+    // No large poster written (a clip narrower than the small tier). An image would
+    // correctly mount `filePath` here; a video must stay on the small poster.
+    await mountAt(4, false);
+    await expect.poll(posterSrc).toContain(SMALL);
+    expect(await posterSrc(), 'the poster <img> must never point at the clip').not.toContain('.mp4');
+  } finally {
+    await window.evaluate(() => {
+      window.__mpi689?.grid?.el?.destroy?.();
+      window.__mpi689?.host?.remove();
+      delete window.__mpi689;
+    }).catch(() => {});
+    await closeApp(app);
+  }
+});
+
 test('a card with no large rendition uses the ORIGINAL, never an upscaled thumb', async ({}, testInfo) => {
   // Clamp to source. Most assets in a project are 1280x800, so no `.1280.webp` is
   // ever written for them — the original IS that tier, and a big card must land on
