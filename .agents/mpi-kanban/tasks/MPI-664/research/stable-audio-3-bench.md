@@ -72,11 +72,23 @@ by any route.
 
 Generation is **2–6 s per clip**, so a head-to-head costs almost nothing in GPU time.
 
+## 🟢 QUESTION 1 IS ANSWERED — Fabio, 2026-09-04, on the first three clips
+
+*"The three clips you showed me sound really good."* Door slam at 10 s, the 1.5 s dry stick
+one-shot, rain with two thunder rolls at 25 s — all from `small_sfx`, hand-written prompts,
+**no reprompter in the path**, 8 steps, first seed, no iteration.
+
+That closes the highest-priority question this bench existed to ask: **SFX and one-shots are
+good enough on the first try**, and they are a capability Vision has no route to today. It also
+means the reprompter is an upgrade to evaluate rather than a dependency to make the thing work.
+
 ## Still open — needs ears, needs Fabio
 
-1. Quality of the SFX and one-shots. Measured non-silent; nobody has listened.
+1. ~~Quality of the SFX and one-shots.~~ **Answered above.**
 2. Instrumental music head-to-head against MiniMax (`stable_audio_3_medium`, downloaded, unrun).
 3. Vocals — the docs do not mention them, so MiniMax keeps that half unless it surprises us.
+4. New, from 1 being this good: does the reprompter add anything over a hand-written prompt?
+   `Enable_Reprompt` gates it, so this is one toggle and two runs.
 
 ## ⚠️ Licence, before ANY product wiring
 
