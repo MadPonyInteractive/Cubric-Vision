@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-690", "at": "2026-09-04T23:44:08+01:00", "actor": "claude", "column": "todo", "title": "CPU download Pod OOMs: fixed at cpu3c (~4GB) whatever the dep set"}
