@@ -95,7 +95,7 @@ No `class_type` was removed or renamed, so no `comfy_workflows/` grep was requir
 - [x] `very_high` and `2k` were NOT silently clamped — every dimension in both is /64, so
       they always came out at the labelled size. `2k`/`4k` likewise. The mis-sized six were
       `very_low` 352/608, `low` 480/864, `medium` 1376, `very_high` 800
-- [ ] **USER TEST of the crop**: restart the app so the engine installs MpiNodes 1.2.10
+- [x] **USER TEST of the crop**: restart the app so the engine installs MpiNodes 1.2.10
       (a `custom_nodes` dep installs at BOOT), then feed fl2va a 9:16 image on a 1:1 canvas
 - [ ] **USER TEST of the sizing**: any `low` or `very_low` tier run — the card's dimensions
       must now match the status bar instead of coming back 32px short

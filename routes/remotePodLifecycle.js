@@ -274,11 +274,30 @@ const POD_IMAGE_VERSION_CPU = 'v0.21.0';
 // gap the v0.21.0-dev build carried.
 // NOT SMOKED: the executing op matrix. This image is built, booted and pull-verified, not
 // proven to GENERATE on 0.34.0. `release:check` still refuses the bump without that
-// evidence, which is the gate working. The stable pair stays on v0.17.0 — a clean
+// evidence, which is the gate working. The stable pair stays on v0.21.0 — a clean
 // release-version rebuild at ship time remains MANDATORY, or users get a v0.34.0 local
 // engine against a 0.28.0 remote Pod.
-const POD_IMAGE_VERSION_DEV = 'v0.22.0-dev';
-const POD_IMAGE_VERSION_CPU_DEV = 'v0.22.0-dev';
+// v0.23.0-dev (MPI-687): the SAME engine, v0.34.0 — not an engine move, a rebuild. The
+// Pod's own node_lock.json was missing THREE nodes outright: ComfyUI-Mickmumpitz-Nodes,
+// ComfyUI-SplatKit and Comfyui_Minimax_h3_latent_Upscaler. The upscaler is the one that
+// mattered — both H3 runtimes are on the two-pass shape and cannot run a single op without
+// it — so v0.22.0-dev would have built clean, printed `node-import smoke test OK`,
+// pull-verified clean, and then failed EVERY H3 op at execution. That is the class the
+// import smoke is structurally blind to: a node absent from the lock is never installed, so
+// it is never imported, so it never fails. Only an executing matrix catches it, which is why
+// this image had to exist before the smoke and not after it. Synced in mpi-ci b3d2434 —
+// node_lock.json + python_deps.txt together, as always.
+// Also carries MpiNodes forward 53c01985 -> 8505769 (1.2.10), the fl2va keyframe cover-crop
+// fix. Without it the Pod would smoke H3 i2v with core's stretch still in the graph and
+// record a PASS on the bug. Pod pin and dev_configs/node_lock.json now agree on 8505769.
+// CI run 33920557736.
+// NOT SMOKED at the time of writing — this is the image the 0.34.0 op matrix runs ON, and
+// `release:check` still refuses 1.4.5 until that matrix has produced smoke-evidence.json.
+// The stable pair stays on v0.21.0 (ComfyUI 0.31.0) — a clean release-version rebuild at
+// ship time remains MANDATORY, or a 1.4.5 user gets a v0.34.0 local engine against a
+// 0.31.0 remote Pod, silently.
+const POD_IMAGE_VERSION_DEV = 'v0.23.0-dev';
+const POD_IMAGE_VERSION_CPU_DEV = 'v0.23.0-dev';
 // 0.2.23 (MPI-169): add GET /wrapper/disk (du -sb of the mounted volume) so the
 // Settings volume bar can show truthful USED bytes — RunPod's API has no used-bytes.
 // R2-publish-only (publish-runtime.sh, no image rebuild). Degrades gracefully: an
