@@ -165,7 +165,7 @@
     "inputs": {
       "fps": 24,
       "filename_prefix": "MpiVideo",
-      "use_audio": false,
+      "use_audio": true,
       "truncate_to_audio": false,
       "images": [
         "289",
