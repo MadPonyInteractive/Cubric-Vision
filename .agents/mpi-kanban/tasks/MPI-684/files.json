@@ -1,0 +1,8 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/data/flowsRegistry.js",
+    "tests/flow-uninstall-guard.test.cjs",
+    ".agents/mpi-kanban/tasks/MPI-684/"
+  ]
+}

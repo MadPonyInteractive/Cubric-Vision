@@ -1590,12 +1590,20 @@ export const FLOWS = [
             'chatterbox-mtl-grapheme',
             'chatterbox-mtl-cangjie',
             'chatterbox-mtl-conds',
-            // The VC pair (1.06GB), shared with the Voice Changer flow — same ids, so
-            // a user who owns that flow already has these.
-            'chatterbox-vc-s3gen',
-            'chatterbox-vc-conds',
+            // MPI-684 — the VC pair (`chatterbox-vc-s3gen` + `chatterbox-vc-conds`,
+            // 1.06GB) was declared here and is NOT. This flow never loads it: the graph
+            // runs `FL_ChatterboxTTS` + `FL_ChatterboxMultilingualTTS`, and
+            // `chatterbox_vc/` is reached only by `load_vc_model()`, whose only callers
+            // are inside `FL_ChatterboxVCNode`. The old comment justified the ids being
+            // IDENTICAL to Voice Changer's, which they are — not this flow needing them.
+            // Cost of the mistake: every Text to Speech user downloaded 1.06GB they
+            // never use, the drawer read 6.9GB against a real 5.96GB, and — because the
+            // dep guard walks DECLARED flows, installed or not — Voice Changer's whole
+            // footprint was a strict subset of this list, so its Uninstall could never
+            // free a single byte. Do not re-add them to "help" a user who owns both.
             // Flow-only node pack; no model declares it. `ComfyUI-MpiNodes` stays out
-            // for the reason spelled out on voice-changer above.
+            // for the reason spelled out on voice-changer above. This one IS shared with
+            // Voice Changer for real — both run the pack — so it stays in both lists.
             'ComfyUI_Fill-ChatterBox',
         ],
         operation: 'flowChatterBox',

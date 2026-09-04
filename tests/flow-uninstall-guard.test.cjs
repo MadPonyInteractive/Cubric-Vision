@@ -62,15 +62,25 @@ const imp = (p) => import(pathToFileURL(path.resolve(p)).href);
         }
     }
 
-    // (4) Last owner standing. voice-changer's 3 deps are ALL shared with chatter-box, so
-    //     its uninstall must free NOTHING — the shared-weight case that is live on the
-    //     current board, not hypothetical.
+    // (4) MPI-684 — voice-changer must be able to free its OWN weights, and the node pack
+    //     it genuinely shares must survive. This assertion used to read "voice-changer's
+    //     3 deps are ALL shared with chatter-box, so its uninstall must free NOTHING",
+    //     which pinned a BUG as expected behaviour: chatter-box declared the VC weight
+    //     pair it never loads (`chatterbox_vc/` is reached only by `load_vc_model()`,
+    //     called solely from `FL_ChatterboxVCNode`). Because the guard walks DECLARED
+    //     flows, that made voice-changer a strict subset of chatter-box and its Uninstall
+    //     a permanent no-op — no path existed to reclaim the 1.0GB. Re-adding those ids
+    //     to chatter-box fails this test, which is the point.
     const vc = ownDeps('voice-changer');
     const shared = vc.filter(id => ownDeps('chatter-box').includes(id));
-    assert.strictEqual(shared.length, 3, 'fixture drift: chatter-box should share 3 deps');
+    assert.deepStrictEqual(shared, ['ComfyUI_Fill-ChatterBox'],
+        'only the node pack is genuinely shared — a WEIGHT here means chatter-box has re-declared what it cannot load');
     const afterVc = dm._flowRequiredDepIds(reg.flowDepKey('voice-changer'));
-    for (const id of shared) {
-        assert.ok(afterVc.has(id), `${id} is still chatter-box's — must survive`);
+    assert.ok(afterVc.has('ComfyUI_Fill-ChatterBox'),
+        'the node pack is chatter-box\'s too — it must survive voice-changer\'s uninstall');
+    for (const id of ['chatterbox-vc-s3gen', 'chatterbox-vc-conds']) {
+        assert.ok(!afterVc.has(id),
+            `${id} is voice-changer's alone — its own uninstall must be able to free it`);
     }
 
     // (5) The exclusion is exactly "this flow's own deps that nobody else claims" —
