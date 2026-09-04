@@ -8582,7 +8582,7 @@
           "links": []
         }
       ],
-      "title": "Input_Refs",
+      "title": "Refine_Refs",
       "properties": {
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "da23e9112c292f073a95b8e5e60df69ea49bae04",
