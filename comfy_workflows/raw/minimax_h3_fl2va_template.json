@@ -1295,7 +1295,7 @@
       "widgets_values": [
         24,
         "MpiVideo",
-        false,
+        true,
         false
       ],
       "widgets_values_named": {
