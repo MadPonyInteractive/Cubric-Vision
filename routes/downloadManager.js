@@ -598,6 +598,28 @@ function _customNodeUninstallPath(dep, customNodesRoot) {
     return path.join(customNodesRoot, dep.filename);
 }
 
+// MPI-682 — the root a dep is LEGITIMATELY anchored to, by dep class. The uninstall
+// loop resolves each class of dep against a different root, but the containment rail
+// used to test them all against `managedModelsRoot` (customRoot || defaultModelsRoot).
+// A `targetPath` dep is engine-anchored ON PURPOSE (MPI-222), so it can never be inside
+// that root: resolution said engine, validation said models root, and the rail won.
+// Every targetPath weight was undeletable — silently, since the refusal surfaces to the
+// user as the reassuring "model files kept on disk; still installed". Measured
+// 2026-09-02 on the user's own app: uninstalling Text to Speech freed 0 of 5.96GB and
+// logged 11 `refused to trash outside managed models root` warnings. The rail is not
+// weakened here, it is aimed — each class is still confined to its own root, and a path
+// escaping that root is still refused.
+//
+// The ComfyUI repo root, not `<engine>/models`: a targetPath may point outside models/
+// (the rife ckpts sit under custom_nodes/). Not the dep's own targetPath directory
+// either — resolveComfyPath BUILDS the path from targetPath, so testing one against the
+// other compares a path with itself and proves nothing.
+function _uninstallAllowedRoot(dep, { managedModelsRoot, defaultCustomNodesRoot }) {
+    if (dep.targetPath) return getComfyPath(ENGINE_ROOT);
+    if (dep.type === 'custom_nodes') return defaultCustomNodesRoot;
+    return managedModelsRoot;
+}
+
 // ── Job Storage ────────────────────────────────────────────────────────────────
 const _depJobs = new Map();       // depId → DepJob
 const _modelJobs = new Map();     // modelId → DownloadJob
@@ -3054,6 +3076,7 @@ router.post('/comfy/models/uninstall', async (req, res) => {
 
     for (const dep of dependencies) {
         let localPath;
+        const allowedRoot = _uninstallAllowedRoot(dep, { managedModelsRoot, defaultCustomNodesRoot });
         if (dep.targetPath) {
             // MPI-222: in-node weight — engine-anchored regardless of customRoot.
             const { localPath: lp } = await resolveComfyPath(dep, customRoot, {});
@@ -3084,27 +3107,25 @@ router.post('/comfy/models/uninstall', async (req, res) => {
             continue;
         }
 
-        if (dep.type !== 'custom_nodes' && !_isInsidePath(managedModelsRoot, localPath)) {
+        // ONE containment rail, tested against the root this dep's own branch anchored
+        // it to (MPI-682). Two rails against two fixed globals is what let a targetPath
+        // weight fall through the models-root test it could never pass. The reasons stay
+        // class-specific because the client and the logs read them.
+        if (!_isInsidePath(allowedRoot, localPath)) {
             keptModelFiles.push({
                 depId: dep.id,
                 depName: dep.name || dep.id,
-                reason: 'outside-managed-models-root',
+                reason: dep.type === 'custom_nodes' ? 'outside-custom-nodes-root' : 'outside-managed-models-root',
             });
-            logger.warn('download', `uninstall: refused to trash outside managed models root: ${localPath}`);
+            logger.warn('download', `uninstall: refused to trash outside ${allowedRoot}: ${localPath}`);
             continue;
         }
 
-        if (dep.type === 'custom_nodes' && !_isInsidePath(defaultCustomNodesRoot, localPath)) {
-            keptModelFiles.push({
-                depId: dep.id,
-                depName: dep.name || dep.id,
-                reason: 'outside-custom-nodes-root',
-            });
-            logger.warn('download', `uninstall: refused to trash outside custom nodes root: ${localPath}`);
-            continue;
-        }
-
-        const isInModelsFolder = dep.type !== 'custom_nodes' && _isInsidePath(managedModelsRoot, localPath);
+        // MPI-682: `allowedRoot`, not `managedModelsRoot`. Against the fixed global this
+        // read false for every engine-anchored weight, so "keep files on disk" deleted
+        // the one class of weight it had just promised to keep — the same shape as the
+        // MPI-97 remote bug that cost a user ~30GB, in the opposite direction.
+        const isInModelsFolder = dep.type !== 'custom_nodes' && _isInsidePath(allowedRoot, localPath);
         if (!deleteFiles && isInModelsFolder) {
             keptModelFiles.push({ depId: dep.id, depName: dep.name || dep.id });
             continue;
@@ -3456,6 +3477,8 @@ module.exports = {
     finishCustomNodeInstall,
     _byteRatioExcludingNodes, // MPI-231 — exported for unit test
     _customNodeUninstallPath, // MPI-276 — exported for unit test
+    _uninstallAllowedRoot, // MPI-682 — exported for unit test
+    _isInsidePath, // MPI-682 — exported for unit test (the rail's other half)
     _filterDepsForEngine, // MPI-276 — exported for unit test
     _describeNodeInstallFailures, // MPI-387 — exported for unit test
     _describeTransportError, // MPI-427 — exported for unit test

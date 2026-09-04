@@ -11,6 +11,7 @@ import { state } from '../../../../state.js';
 import { MODELS, reSyncInstalledModels, getModelDepStatus, getModelDependencies } from '../../../../data/modelRegistry.js';
 import { DEPS } from '../../../../data/modelConstants/dependencies.js';
 import { PLUGINS, pluginDepKey, pluginAvailability } from '../../../../data/pluginsRegistry.js';
+import { FLOWS, flowDepKey } from '../../../../data/flowsRegistry.js';
 import {
     resolveFullUniverse, deriveInstalledOps,
     archVariantOptions, variantDepsOf, dedupeStable,
@@ -1533,6 +1534,13 @@ export const MpiModelManager = ComponentFactory.create({
         _unsubs.push(Events.on('download:complete', async () => { awaitReSync(); }));
 
         _unsubs.push(Events.on('download:uninstalled', ({ modelId, removed = [], keptUniversal = [], keptShared = [], keptModelFiles = [], keptPipInstalls = [] }) => {
+            // MPI-682 — a FLOW key is not ours to announce. `MpiFlowLibrary` toasts its
+            // own uninstall result, so a flow uninstall fired TWO toasts: the Flow
+            // Library's ("Text to Speech — every file is still needed…") and this one,
+            // which cannot name a flow and printed the raw key ("flow:chatter-box —
+            // model files kept on disk; still installed"). Plugins stay here: their row
+            // lives on this page, so this listener is the only one that speaks for them.
+            if (FLOWS.some(f => flowDepKey(f.id) === modelId)) return;
             // MPI-310 — modelId is a PLUGIN key (`plugin:<id>`) on the plugin-row path,
             // which MODELS never contains: the raw key leaked into the toast text.
             const modelName = MODELS.find(m => m.id === modelId)?.name
@@ -1576,7 +1584,7 @@ export const MpiModelManager = ComponentFactory.create({
                 // dep into keptShared[].sharedWith; the '(installing)'/'(app)'/'(plugin)'
                 // sentinels are internal markers, not names, so they are filtered out.
                 const holders = [...new Set(keptShared.flatMap(k => k.sharedWith || []))]
-                    .filter(n => n && !/^\((installing|app|plugin)\)$/.test(n));
+                    .filter(n => n && !/^\((installing|app|plugin|flow)\)$/.test(n));
                 // Cap the list at two + an overflow count. A weight shared by a whole
                 // model family (the abliterated encoder backs four Krea2 cards) would
                 // otherwise comma-join every name into an alarming wall of text. Two

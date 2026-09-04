@@ -806,6 +806,25 @@ finds the weight. Being `engineAsset`, the weight boot-installs + self-heals; on
 it's image-resident (baked inside the node folder, so the wrapper never installs it).
 Guard: `tests/node-drift.test.cjs`.
 
+**Trap (MPI-682) — the uninstall RAIL is a 4th site, and it validates rather than
+resolves.** Passing the full dep is necessary but not sufficient: the local uninstall
+loop resolved a `targetPath` dep correctly (engine-anchored, per MPI-222) and then
+tested the result for containment inside `managedModelsRoot` (`customRoot ||
+defaultModelsRoot`) — a root an engine-anchored path is never inside. The rail won, so
+**every `targetPath` weight was undeletable**, in the Model Library as well as the Flow
+Library. It failed silently: the refusal reaches the user as `keptModelFiles` →
+*"model files kept on disk; still installed"*, which reads as a benign no-op. Measured
+2026-09-02 on the user's own app — uninstalling Text to Speech freed 0 of 5.96GB behind
+11 `refused to trash outside managed models root` warnings. The same fixed root also
+drove `isInModelsFolder`, so `deleteFiles: false` ("keep files on disk") *deleted* the
+one class of weight it had promised to keep. Fix: `_uninstallAllowedRoot(dep, roots)`
+returns the root that dep's own class is anchored to — the ComfyUI repo root for
+`targetPath`, the custom-nodes root for `custom_nodes`, the managed models root
+otherwise — and one rail tests against that. **The rail is aimed, not widened:** a path
+escaping its own root is still refused. Guard: `tests/uninstall-allowed-root.test.cjs`,
+mutation-checked both ways (restore the old root → assertion 1 fails; defeat
+containment → assertion 5 fails).
+
 **Trap (MPI-293) — reading the dep registry as TEXT.** `dependencies.js` is a
 FACADE: it only spreads the four split files (`modelDeps.js`, `assetDeps.js`,
 `loraDeps.js`, `nodesDeps.js`) and holds NO inline block text. Runtime

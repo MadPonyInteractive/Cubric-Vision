@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-684", "at": "2026-09-02T05:51:40+01:00", "actor": "claude", "column": "todo", "title": "Text to Speech declares the Voice Changer weights it never loads"}

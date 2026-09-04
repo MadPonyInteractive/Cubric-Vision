@@ -37,3 +37,27 @@
 
 All three phases verified — see `validation.md`. 874/874 node tests, 46/46 desktop specs,
 and a live run against real weights that found and fixed a repaint defect.
+
+- [x] Phase 4 — REOPENED 2026-09-02. The user's own uninstall of Text to Speech freed
+      0 bytes, which phases 1–3 could not have caught: MiniMax has no `targetPath` dep.
+  - [x] Root cause, from the user's `app.log`, not inferred — 11 × `refused to trash
+        outside managed models root`. The loop resolves a `targetPath` dep on the ENGINE
+        (MPI-222) then tested containment against `managedModelsRoot`, which such a path
+        can never be inside. Every `targetPath` weight was undeletable, app-wide.
+  - [x] `_uninstallAllowedRoot(dep, roots)` — one root per dep class, extracted and
+        exported; the two rails collapse into one that tests against it
+  - [x] Second bug found in the same read: `isInModelsFolder` used the same fixed root,
+        so `deleteFiles: false` DELETED engine-anchored weights it promised to keep
+  - [x] `tests/uninstall-allowed-root.test.cjs` — 5 assertions over the real registry;
+        mutation-checked twice (old root → assertion 1 fails; containment defeated →
+        assertion 5 fails)
+  - [x] C — `(flow)` added to the sentinel filter (it leaked as a literal holder name),
+        and `MpiModelManager` now returns early on a flow key: the Flow Library already
+        toasts, so a flow uninstall fired two, one of them printing the raw `flow:<id>`
+  - [x] `docs/download-manager.md` — the trap recorded beside the MPI-222 targetPath entry
+  - [x] **Live, 2026-09-04, the user's own app** — `removed 11, kept 1 universal,
+        2 shared, 0 model files, swept 0`. 11 files left disk, `chatterbox_vc/` stayed,
+        Voice Changer stayed Ready, the drawer repainted with no restart, and ONE toast
+        named the flow. Re-installed: back to Ready, 13 files / 6.95GB, no restart.
+  - [x] **The install direction is proven** — `models:checked` fans out on the way IN as
+        well as OUT. The one thing this card could never show.

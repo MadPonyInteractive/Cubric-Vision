@@ -2,7 +2,33 @@
 
 ## Current State
 
-**All three phases shipped, 2026-09-01. Card is in `done`.** Evidence: `validation.md`.
+**REOPENED 2026-09-02 — back in `doing`. Phase 4 below.** The user ran the uninstall on
+their own app against Text to Speech instead of Music Maker (smaller, and it exercises a
+partial free that had never been tested). It freed **0 bytes**. Root cause from their
+`app.log`, not inferred: the uninstall loop resolves a `targetPath` dep on the ENGINE
+(MPI-222) and then tested containment against `managedModelsRoot`, so **every
+`targetPath` weight in the app was undeletable** — the Model Library too, not just flows.
+A second bug in the same read: `deleteFiles: false` deleted engine-anchored weights it
+promised to keep. Both fixed, `_uninstallAllowedRoot` extracted and unit-tested,
+mutation-checked both ways. Full account: `validation.md` § "2026-09-02 — REOPENED".
+
+*Why phases 1–3 could not have caught it:* MiniMax Music declares no `targetPath` dep, so
+every live run took the one path where the rail and the resolver agree.
+
+**CLOSED 2026-09-04.** The user ran it on their own app: `removed 11, kept 1 universal,
+2 shared, 0 model files, swept 0`, drawer repainted both ways with no restart, one toast,
+Voice Changer untouched. **The install direction is proven** — the only thing this card
+had never been able to show. Evidence: `validation.md` § "2026-09-04 — LIVE".
+
+**Split out:** `MPI-684` — Text to Speech declares the two Voice Changer weights it never
+loads (`chatterbox_vc/` is resolved only by `load_vc_model`, called solely from
+`FL_ChatterboxVCNode`). Costs every TTS user 1.0GB, overstates the flow as 6.9GB, and is
+what makes Voice Changer permanently un-uninstallable. Blocked on MPI-664's write claim
+over `js/data/flowsRegistry.js`.
+
+---
+
+**All three phases shipped, 2026-09-01.** Evidence: `validation.md`.
 Commits: 7dd159da (guard + button), 664d2a43 (the repaint fix), bb1b6f59 (customRoot
 re-run), 2287a542 (component maps). 874/874 node tests, 46/46 desktop specs, every new
 assertion mutation-checked.
