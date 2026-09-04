@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-688","type":"task.created","at":"2026-09-04T11:29:48Z","actor":"claude","to":"todo","summary":"H3 gained a latent upscaler; the Upscale Video flow is LTX-only. Same latent-space shape, so MinimaxH3LatentUpscaler3D drops into the LTXVLatentUpsampler slot."}

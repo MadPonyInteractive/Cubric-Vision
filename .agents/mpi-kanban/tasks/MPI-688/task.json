@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-688",
+  "title": "Video Upscale: add H3 alongside LTX",
+  "description": "The Upscale Video flow (ltx-upscale, MPI-584) is LTX-only. H3 now has a latent upscaler of its own (Comfyui_Minimax_h3_latent_Upscaler, MinimaxH3LatentUpscaler3D), so the flow should accept an H3 clip too. Structurally parallel: ltx_video_upscale.json already works in LATENT space (LatentUpscaleModelLoader -> LTXVLatentUpsampler -> SamplerCustomAdvanced + ManualSigmas), and the H3 path is the same shape with MinimaxH3LatentUpscaler3D in the upsampler slot. Also sweep the flows that use H3: their graphs gain a generation pass + an upscale pass and DROP Input_Single_Pass, matching the LTX two-pass shape. Requested by the user 2026-09-04; separate from MPI-687, which is the node wrapper, not the Flow surface.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-09-04T11:29:48Z",
+  "updated_at": "2026-09-04T11:29:48Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

@@ -1,0 +1,2 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-687","type":"task.created","at":"2026-09-04T10:54:28Z","actor":"claude","to":"doing","summary":"Wrap core MiniMaxH3ImageToVideo so empty first/last frame inputs stop forcing a boolean lattice."}
+{"schema":"mpi-kanban/event/v1","id":"MPI-687","type":"task.updated","at":"2026-09-04T11:02:00Z","actor":"claude","summary":"Node written, registered and smoke-tested offline; committed local 39c31ca. Not pushed, pin not moved - release pending. Remaining check is the workflow rewire, user judgement."}
