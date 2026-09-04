@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-686", "at": "2026-09-04T10:18:48+01:00", "actor": "claude", "column": "todo", "title": "A flow install announces its raw dep key to the user"}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-686", "at": "2026-09-04T10:20:35+01:00", "actor": "claude", "from": "todo", "to": "doing", "reason": "Fixing the flow install toast leak found while verifying MPI-684."}

@@ -17,6 +17,7 @@ import { state } from '../state.js';
 import { clientLogger } from '../services/clientLogger.js';
 import { getModelById } from '../data/modelRegistry.js';
 import { PLUGINS, pluginDepKey } from '../data/pluginsRegistry.js';
+import { FLOWS, flowDepKey } from '../data/flowsRegistry.js';
 import { StatusBar } from './statusBar.js';
 
 let ipcRenderer = null;
@@ -27,6 +28,31 @@ try {
 } catch (e) { /* Browser Mode — silent */ }
 
 const _unsubs = [];
+
+/**
+ * The name a finished download job is announced under — in the toast AND in the OS
+ * notification body, which leaves the app entirely.
+ *
+ * A download job id is either a bare model id or a NAMESPACED entity key, and every
+ * namespace needs a clause here or its raw key is what the user reads. This chain has
+ * been wrong once per entity added:
+ *   MPI-310 — plugins: "plugin:image-describer installed."
+ *   MPI-686 — flows:   "flow:voice-changer installed."
+ * Fabio, on the second: *"looks almost like code."* It is code — `flowDepKey()`'s output.
+ * An identifier belongs in `app.log`; the user gets the title the Library shows.
+ *
+ * `tests/job-display-name.test.cjs` fails if a FOURTH namespace is added without a
+ * clause, which is the only thing that stops this recurring a third time.
+ *
+ * @param {string} jobId model id, `plugin:<id>`, or `flow:<id>`
+ * @returns {string} the entity's display title, or the id when nothing claims it
+ */
+export function jobDisplayName(jobId) {
+    return getModelById(jobId)?.name
+        || PLUGINS.find(p => pluginDepKey(p.id) === jobId)?.title
+        || FLOWS.find(f => flowDepKey(f.id) === jobId)?.title
+        || jobId;
+}
 
 // Finished-gen counter for the coalesced completion notification (flushed when
 // state.generationQueueCount reaches 0). See the generation:complete handler.
@@ -209,13 +235,7 @@ export function initNotificationService() {
             if (!data.modelId
                 || data.modelId === '__universal_workflow__'
                 || data.silent === true) return;
-            // MPI-310 — a PLUGIN install broadcasts its `plugin:<id>` key here, which
-            // MODELS never contains, so the raw key leaked into the notification body
-            // ("plugin:image-describer installed."). Same miss as the uninstall toast.
-            const modelName = getModelById(data.modelId)?.name
-                || PLUGINS.find(p => pluginDepKey(p.id) === data.modelId)?.title
-                || data.modelId;
-            const message = `${modelName} installed.`;
+            const message = `${jobDisplayName(data.modelId)} installed.`;
             const osEligible = state.notificationPrefs?.downloads !== false;
             if (osEligible && ipcRenderer && !document.hasFocus()) {
                 ipcRenderer.send('notify-download-complete', {

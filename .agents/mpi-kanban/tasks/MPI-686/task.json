@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-686",
+  "title": "A flow install announces its raw dep key to the user",
+  "description": "js/shell/notificationService.js resolves a completed download's display name through MODELS then PLUGINS then falls back to data.modelId, so a flow install toasts 'flow:voice-changer installed.' and sends the same raw key as the OS notification body when the window is unfocused. MPI-310 added the PLUGINS clause for the identical plugin leak; flows (MPI-304) were never added. Third entity through the same chain, so the fix needs a guard test that fails when a fourth is added without a clause.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "created_at": "2026-09-04T10:18:48+01:00",
+  "updated_at": "2026-09-04T10:20:35+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
