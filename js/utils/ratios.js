@@ -293,22 +293,22 @@ export const LTX_RATIOS = {
 // a 32GB RTX 5090, and each OOM restarts the Pod).
 export const MINIMAX_H3_RATIOS = {
     very_low: [
-        { label: "1:1", w: 352, h: 352, icon: "rect_1_1" },
-        { label: "9:16", w: 352, h: 608, icon: "rect_9_16" },
-        { label: "16:9", w: 608, h: 352, icon: "rect_16_9" },
-        { label: "21:9", w: 832, h: 352, icon: "rect_21_9" }
+        { label: "1:1", w: 320, h: 320, icon: "rect_1_1" },
+        { label: "9:16", w: 320, h: 576, icon: "rect_9_16" },
+        { label: "16:9", w: 576, h: 320, icon: "rect_16_9" },
+        { label: "21:9", w: 768, h: 320, icon: "rect_21_9" }
     ],
     low: [
-        { label: "1:1", w: 480, h: 480, icon: "rect_1_1" },
-        { label: "9:16", w: 480, h: 864, icon: "rect_9_16" },
-        { label: "16:9", w: 864, h: 480, icon: "rect_16_9" },
-        { label: "21:9", w: 1152, h: 480, icon: "rect_21_9" }
+        { label: "1:1", w: 448, h: 448, icon: "rect_1_1" },
+        { label: "9:16", w: 448, h: 832, icon: "rect_9_16" },
+        { label: "16:9", w: 832, h: 448, icon: "rect_16_9" },
+        { label: "21:9", w: 1024, h: 448, icon: "rect_21_9" }
     ],
     medium: [
         { label: "1:1", w: 640, h: 640, icon: "rect_1_1" },
         { label: "9:16", w: 640, h: 1152, icon: "rect_9_16" },
         { label: "16:9", w: 1152, h: 640, icon: "rect_16_9" },
-        { label: "21:9", w: 1376, h: 576, icon: "rect_21_9" }
+        { label: "21:9", w: 1344, h: 576, icon: "rect_21_9" }
     ],
     // NATIVE — adapt_canvas output (768 short edge, 1344x768 area cap). The last
     // in-distribution tier; everything above extrapolates.
@@ -341,9 +341,26 @@ export const MINIMAX_H3_RATIOS = {
     //
     // So `output = floor(canvas / 64) * 64` is a PROPERTY OF THE ARCHITECTURE, not a defect
     // to route around, and a dimension here that is not /64 cannot be delivered at the size
-    // it advertises. The six above are all ODD multiples of 32 — precisely what /64 cannot
-    // represent. Making them honest means editing THIS TABLE, and that is a deliberate
-    // product change to the tier ladder rather than something to quietly round.
+    // it advertises. The six were all ODD multiples of 32 — precisely what /64 cannot
+    // represent — so the repair was THIS TABLE, not the halving.
+    //
+    // MOVED DOWN 2026-09-04 (MPI-687), on the user's call, onto the /64 grid: `very_low`
+    // 352/608 -> 320/576, `low` 480/864 -> 448/832, `medium` 21:9 1376 -> 1344, `very_high`
+    // 21:9 800 -> 768. DOWN rather than up because down is what the pipeline was already
+    // delivering — not one render changed size, cost or output, the label simply stopped
+    // lying. Every dimension here is now /64 on both axes and
+    // `tests/h3-two-pass-dimensions.test.cjs` asserts it: what the tier says is what the
+    // card gets.
+    //
+    // TWO 21:9 LONG EDGES MOVED TOO, and not for /64 reasons — `video-cinematic-ratio`
+    // (MPI-551) requires a 21:9 cell to land in 2.25-2.55, and rounding only the short edge
+    // put `very_low` at 832x320 (2.60) and `low` at 1152x448 (2.57), outside it. Those were
+    // ALREADY the frames those two cells delivered; the guard passed only because it read
+    // the label and the label was the thing that lied. So they are now 768x320 (2.40) and
+    // 1024x448 (2.29) — the only two cells in this table whose render actually changed.
+    // `medium` 1344x576 (2.333) and `very_high` 1920x768 (2.50) were already in band and
+    // were left alone, as was `high` at 1536x640 (2.40). These two tiers exist for FAST
+    // drafts, so a smaller cinematic frame costs them nothing that matters (user, MPI-687).
     //
     // 1376 stays out regardless, on its own merits: 768 is the native SHORT EDGE and
     // 768x1344 is the canvas adapt_canvas itself produces, so 1376 was an invented number
@@ -362,7 +379,7 @@ export const MINIMAX_H3_RATIOS = {
         { label: "1:1", w: 1088, h: 1088, icon: "rect_1_1" },
         { label: "9:16", w: 1088, h: 1920, icon: "rect_9_16" },
         { label: "16:9", w: 1920, h: 1088, icon: "rect_16_9" },
-        { label: "21:9", w: 1920, h: 800, icon: "rect_21_9" }
+        { label: "21:9", w: 1920, h: 768, icon: "rect_21_9" }
     ],
     // 2K — the SAME numbers LTX_RATIOS uses for its 2k tier, and MEASURED on H3 rather
     // than assumed (2026-08-07, bench, 4060 Ti): a bare 2560x1472 run came out clean,

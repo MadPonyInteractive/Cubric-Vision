@@ -81,25 +81,21 @@ test('every shipped H3 dimension yields an EVEN stage-1 latent', () => {
 });
 
 /**
- * The honesty half. A non-/64 dimension runs fine and silently delivers 32px short, which
- * is the bug the user reported as "the card does not match the status bar". This test does
- * not enforce /64 — it PINS the six that lie, so making the table honest is a deliberate
- * edit here rather than a silent drift.
+ * The honesty half. Before MPI-687 six values here could not be delivered at their labelled
+ * size — 352, 608, 480, 864, 1376, 800, every one an odd multiple of 32, which is exactly
+ * what a /64 output grid cannot represent. They rendered 32px short while the status bar
+ * showed the label, and that is the bug the user reported. The table was moved DOWN onto
+ * /64 (down, so no render changed size or cost — only the label stopped lying).
+ *
+ * Keep this green by editing the TABLE. A dimension that fails here is not deliverable, and
+ * loosening the halving to make it fit is the mistake the file header describes.
  */
-test('the dimensions that cannot be delivered at their labelled size are the known six', () => {
+test('every shipped H3 dimension is delivered at its labelled size', () => {
     const short = [];
     for (const { label, w, h } of readRatios()) {
         for (const [axis, px] of [['w', w], ['h', h]]) {
-            if (halve(px) * 2 !== px) short.push(`${label} ${axis}=${px}->${halve(px) * 2}`);
+            if (halve(px) * 2 !== px) short.push(`${label} ${axis}=${px} -> ${halve(px) * 2}`);
         }
     }
-    assert.deepStrictEqual(short.sort(), [
-        // Six distinct values lie, across sixteen cells: 352, 608 (very_low),
-        // 480, 864 (low), 1376 (medium), 800 (very_high). Every one is an ODD
-        // multiple of 32, which is exactly what /64 rounding cannot represent.
-        '16:9 h=352->320', '16:9 h=480->448', '16:9 w=608->576', '16:9 w=864->832',
-        '1:1 h=352->320', '1:1 h=480->448', '1:1 w=352->320', '1:1 w=480->448',
-        '21:9 h=352->320', '21:9 h=480->448', '21:9 h=800->768', '21:9 w=1376->1344',
-        '9:16 h=608->576', '9:16 h=864->832', '9:16 w=352->320', '9:16 w=480->448',
-    ].sort());
+    assert.deepStrictEqual(short, [], `these tier dimensions render short of their label:\n  ${short.join('\n  ')}`);
 });

@@ -7,9 +7,14 @@
 //      still looks right — `low` is a SUBSTRING of `very_low`, so a naive key
 //      search lands in the wrong array.
 //   2. A value drifting off the model's grid. Each model quantises differently
-//      (LTX /64 because its 2-stage pipeline FLOORS the halved size; H3 and the
-//      5B /32; WAN 14B /16), and an off-grid value does not error — it silently
-//      renders at a size that mismatches the label the user picked.
+//      (LTX /64 because its 2-stage pipeline FLOORS the halved size; H3 /64 for
+//      exactly the same reason since it went two-pass; the 5B /32; WAN 14B /16),
+//      and an off-grid value does not error — it silently renders at a size that
+//      mismatches the label the user picked.
+//
+// H3 WAS /32 HERE UNTIL MPI-687 and that was stale, not a judgement: it became a
+// 2-stage FLOORing pipeline on 2026-09-03 and the constant did not move with it.
+// A /32 H3 value renders 32px short of its label, which is what shipped.
 //
 // Also guards the H3 2k/4k "Experimental - High VRAM" note, which must sit on
 // EVERY ratio in those tiers, not just the cinematic one.
@@ -21,7 +26,7 @@ const RATIOS = 'file:///' + require('node:path')
     .resolve(__dirname, '../js/utils/ratios.js').replace(/\\/g, '/');
 
 // grid divisor per table — the constraint each model's pipeline actually enforces
-const GRID = { WAN_RATIOS: 16, WAN_5B_RATIOS: 32, LTX_RATIOS: 64, MINIMAX_H3_RATIOS: 32 };
+const GRID = { WAN_RATIOS: 16, WAN_5B_RATIOS: 32, LTX_RATIOS: 64, MINIMAX_H3_RATIOS: 64 };
 
 test('every video tier has exactly one 21:9 entry', async () => {
     const mod = await import(RATIOS);
