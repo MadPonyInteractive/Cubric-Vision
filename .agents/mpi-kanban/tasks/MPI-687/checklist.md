@@ -52,8 +52,32 @@ No `class_type` was removed or renamed, so no `comfy_workflows/` grep was requir
       a dependency of `minimax-h3-ref2va`, so a fresh install would never download it.
       **NOT re-judged on the 8-step**; the two-pass sweep of the H3 flows is MPI-688
 - [x] `npm test` — 883 pass, 0 fail. `eslint` clean on the three edited JS files
-- [ ] Port fl2va into `comfy_workflows/` (+ `raw/` template)
-- [ ] Port r2va
-- [ ] Fix shipped EasyCache -> `ModelAttentionBackend` link (fl2va 321, r2va 456,
-      flow_h3_extend 909 — all three read the pre-attention model)
-- [ ] Stage-1 preview audio nodes
+- [x] BOTH H3 runtimes rebuilt via `sync-raw-workflows.mjs` against 48188 (NOT the bench —
+      the engine's schema is the one the graph must satisfy). `minimax_h3_fl2va.json`
+      66 nodes / 2 `MpiH3ImageToVideo`; `minimax_h3_r2va.json` 84 nodes / 2 `MpiH3References`
+- [x] Refine reference encoder retitled `Refine_Refs` — two nodes titled `Input_Refs` is an
+      injection-rule violation, and it would have overwritten the refine's baked `max`
+- [x] `generate_h3.py` updated for the new shape: dropped the `Input_Single_Pass` bake
+      (node deleted by the rebuild), fl2va branch class → `MpiH3ImageToVideo`, both
+      variants `branch_count` 1→2, core's `MiniMaxH3ImageToVideo` named explicitly in the
+      forbidden set so the half-converted-graph check still fires
+- [x] VERIFIED AGAINST GROUND TRUTH, not the converter's own `OK`: shipped r2va diffed
+      node-by-node against `AnimateDiff_00046`'s embedded prompt. All three SigmaShifts
+      (4.0/2.0/0.5), the 3-step sigmas, both encoders' match/max, EasyCache,
+      ModelAttentionBackend and both IfElse arms byte-identical. Only the LoRA subfolder
+      differs — the user's own move into `loras/minimax-h3/`
+- [x] EasyCache→attention is correct in the rebuilt graphs (came in from the bench, so the
+      old shipped bug is gone rather than separately patched)
+- [x] App engine sees all three new weights and both new node classes — nothing to download
+- [x] Stage-1 preview audio SHIPS — `VAEDecodeAudio` off `MpiStageLatents` output 1
+      (`denoised`) into `Output_Preview`, `use_audio` true, on both graphs. The first
+      re-export had the nodes connected but the flag false: connected-but-inert, the run
+      costs the same and the preview is silent. Nothing in the app injects `use_audio`,
+      so it is set in the RAW source (the authoring truth) with the generator bake kept
+      only as a safety net
+- [x] Message sent to MPI-591 about the `flow_h3_extend` LoRA swap —
+      `state/messages/9e108c32-…json`
+- [ ] **USER TEST**: run fl2va and r2va in the app
+- [ ] `Refine_Refs` needs doing ONCE in the bench graph — a title cannot be baked (the
+      injection gate keys on it), so every re-export from an unrenamed bench re-breaks it.
+      It has now been re-applied to raw twice
