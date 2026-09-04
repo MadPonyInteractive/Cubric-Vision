@@ -168,3 +168,72 @@ i2v conditioning node, and it uses OUR wrapper (2x `MpiH3ImageToVideo`). `r2va` 
 (nodes_minimax_h3.py:218) -- no bug there. `generate_h3.py:352` keeps core's raw
 `MiniMaxH3ImageToVideo` in the FORBIDDEN set, so the generator refuses to ship a graph
 containing it. No call site left stretching.
+
+## The sizing "fix" was backwards — caught by the user in the app, 2026-09-04
+
+`048f47a3` changed the two-pass halving to `floor(a / 32) * 16` on the theory that /16 was
+all the latent grid needed. Wrong, and it broke every `very_low` and `low` generation.
+
+Core's `patchify_video` (`comfy/ldm/minimax/model.py:47`) reshapes the stage-1 latent in
+2x2 spatial blocks, so **the latent must be EVEN**. Latent = stage-1 px / 16, therefore
+**stage 1 must be /32**. A /16-clean stage 1 makes it odd:
+
+| tier | canvas | stage 1 | latent | wanted |
+|---|---|---|---|---|
+| `very_low` 16:9 | 608x352 | 304x176 | 19x11 | 18x10 |
+| `low` 16:9 | 864x480 | 432x240 | 27x15 | 26x14 |
+
+`RuntimeError: shape '[1, 24, 1, 1, 5, 2, 9, 2]' is invalid for input of size 5016`
+(5016 = 24*11*19). Reverted to `floor(a / 64) * 32` in all six copies (2 runtime, 2 raw,
+2 generator source).
+
+**No offline gate could see it.** Graph validation, `engine-floor-check`, the injection
+rules gate and the smoke preflight all passed the broken version — the failure does not
+exist until a tensor is real. `tests/h3-two-pass-dimensions.test.cjs` now asserts the
+ARITHMETIC instead: stage 1 is /32 and the latent even for all 21 shipped dimensions.
+
+### User verification in the real app (Windows, their own session)
+
+| run | result |
+|---|---|
+| fl2va `very_low` 16:9 (608x352 -> 576x320) | PASS |
+| fl2va `low` 16:9 (864x480 -> 832x448) | PASS |
+| r2va `very_low` 16:9 | PASS |
+| fl2va crop, 9:16 image onto a 1:1 canvas | PASS — cropped, not squashed |
+
+Between them those runs exercised **four of the six** broken values on both axes (352, 608,
+480, 864). `medium` 21:9 1376 and `very_high` 21:9 800 are the same arithmetic and are
+covered by the test.
+
+## The tier ladder is now honest (option A+, user's call)
+
+`output = floor(canvas / 64) * 64` is a PROPERTY of the two-pass path, so the repair was
+the TABLE, not the halving. Moved DOWN onto /64 — down, so not one render changed size,
+cost or output; only the label stopped lying:
+
+    very_low  352/608 -> 320/576        medium    21:9 1376 -> 1344
+    low       480/864 -> 448/832        very_high 21:9  800 ->  768
+
+Two 21:9 long edges also moved, and this is the only place a render changed. Rounding just
+the short edge put `very_low` at 832x320 (2.60) and `low` at 1152x448 (2.57), outside the
+2.25-2.55 band `video-cinematic-ratio` has required since MPI-551 — and those were ALREADY
+the frames those cells delivered, so the guard had been passing on the label rather than
+the render. Now 768x320 (2.40) and 1024x448 (2.29). The user's call: both tiers are for
+fast drafts and should not drag the real resolutions around.
+
+That test also declared H3's grid `/32` while its own comment explained LTX is `/64`
+"because its 2-stage pipeline FLOORS the halved size". H3 became that pipeline the day
+before; the constant never moved. Corrected to 64.
+
+    npm run lint    clean
+    npm test        887/887  (884 + 3 new)
+
+Commits: `6af0c1be` (revert + test + docs), `c965daf6` (ladder + grid constant).
+
+## Not changed, deliberately
+
+Both runtimes bake `Input_Width 864 / Input_Height 480` while raw and both generator
+sources say 768x1344. That is `orchestrate.py`'s bake, not drift, and it has no dimension
+config. It is invisible to users (the app injects `Input_Width`/`Input_Height` on every
+dispatch) and it does not crash — the smoke will simply record 832x448. Not worth
+hand-editing a generated file the sync owns.

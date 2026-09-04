@@ -77,7 +77,7 @@ No `class_type` was removed or renamed, so no `comfy_workflows/` grep was requir
       only as a safety net
 - [x] Message sent to MPI-591 about the `flow_h3_extend` LoRA swap —
       `state/messages/9e108c32-…json`
-- [ ] **USER TEST**: run fl2va and r2va in the app
+- [x] **USER TEST**: run fl2va and r2va in the app
 - [ ] `Refine_Refs` needs doing ONCE in the bench graph — a title cannot be baked (the
       injection gate keys on it), so every re-export from an unrenamed bench re-breaks it.
       It has now been re-applied to raw twice
@@ -97,5 +97,5 @@ No `class_type` was removed or renamed, so no `comfy_workflows/` grep was requir
       `very_low` 352/608, `low` 480/864, `medium` 1376, `very_high` 800
 - [x] **USER TEST of the crop**: restart the app so the engine installs MpiNodes 1.2.10
       (a `custom_nodes` dep installs at BOOT), then feed fl2va a 9:16 image on a 1:1 canvas
-- [ ] **USER TEST of the sizing**: any `low` or `very_low` tier run — the card's dimensions
+- [x] **USER TEST of the sizing**: any `low` or `very_low` tier run — the card's dimensions
       must now match the status bar instead of coming back 32px short
