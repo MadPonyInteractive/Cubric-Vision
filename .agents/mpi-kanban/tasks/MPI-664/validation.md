@@ -470,6 +470,43 @@ input **defaults to `true`**, so `[Intro]` matches a lowercase alternation. Veri
 Python and the node's own flag defaults (`scratchpad/baretags.py`). If a future check claims
 the tags vanish, suspect the checker before the graph.
 
+#### 🟡 FABIO'S VERDICT ON IT — the ORDER lands at the ends, the CONTENT does not
+
+> *"It started with some violins and a flute, and it had the on-beat drum kick. At the end, the
+> choir entered. The drum kick was there from the beginning to the end, and after the choir, that
+> was just a little flute phrase, and it finished."*
+
+| asked for | got | |
+|---|---|---|
+| `[Intro]` one single orchestral drum hit, **then silence** | violins + flute + a continuous on-beat kick | 🔴 |
+| `[Verse]` **solo viola**, nothing else | no solo viola section; strings from bar one | 🔴 |
+| `[Chorus]` the full string section **joins** | nothing joins — it was already full | 🔴 |
+| `[Outro]` a **choir** pad swells and fades | **the choir entered at the end** | 🟢 |
+| — | a drum kick running start to finish, and a flute nobody asked for having the last word | 🔴 |
+
+🟢 **Nothing was sung.** He describes instruments only, and a choir *pad* is what
+`Instrumental_Clause` explicitly permits as orchestral colour. The word-stripping and the clause
+both held — same as run 4.
+
+🔴 **THE FINDING: bare tags carry ORDER AND COUNT, and NO CONTENT.**
+`[Intro]\n\n[Verse]\n\n[Chorus]\n\n[Outro]` tells the model there are four sections in that
+order. It cannot say *what plays in section 2*, because MiniMax's tag set is nine fixed words —
+there is no room in that channel for an instrument. So every per-section instruction still
+travels `[ARRANGEMENT]`, which is the channel this card measured as the **weakest** of the four
+(Lyrics ≫ Global Metadata ≈ Vocal Details > Arrangement, seven runs). The one section that
+landed is the one whose position is unambiguous whatever the caption does: **last**.
+
+**This is a constraint of the model, not a defect in the change.** Bare tags did exactly what
+they shipped to do — the running order reached the channel the model follows precisely. What
+they cannot do is make it play a viola alone in section two. Writing that down rather than
+tuning at it: **a fix would have to put instrument words back into the lyrics slot, which is
+the change that made a man sing the stage directions.**
+
+⚠️ **Weigh it accordingly: ONE seed, ONE run, and the caption was HAND-WRITTEN.** The announcer
+never ran, and my stand-in `Input_Arrangement` was one prose paragraph with no per-section
+labels — a real recipe output binds instruments to sections differently, and might do better.
+**Do not act on this before the app run below.**
+
 🔴 **WHAT THIS RUN DOES NOT PROVE, and why the item above stays open.** The announcer never
 ran. `enhance.op` is a **separate** `promptEnhance` dispatch fired from `MpiBaseFlow._run`, and
 no agent path reaches it: `_submitFlow` → `resolveFlowFieldValues` **rejects**
