@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "dev_configs/node_lock.json",
+    "comfy_workflows/raw/minimax_h3_r2va_template.json",
+    "comfy_workflows/raw/minimax_h3_fl2va_template.json",
+    "comfy_workflows/minimax_h3_r2va.json",
+    "comfy_workflows/minimax_h3_fl2va.json",
+    ".agents/mpi-kanban/tasks/MPI-699/",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/sampler.py",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/vram.py",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/__init__.py",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/changelog.md",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/README.md"
+  ]
+}

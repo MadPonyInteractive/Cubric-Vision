@@ -1,0 +1,5 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-699", "at": "2026-09-05T16:04:19+01:00", "actor": "claude", "column": "todo", "title": "MpiWindowedSampler: temporal windowing so the H3 2K refine reaches 124 frames"}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-699", "type": "task.updated", "at": "2026-09-05T16:05:30+01:00", "actor": "claude", "summary": "Compact plan attached: plan.md"}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-699", "at": "2026-09-05T16:08:39+01:00", "actor": "claude", "from": "todo", "to": "doing", "reason": "Implementation started."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-699", "type": "checklist.updated", "at": "2026-09-05T16:08:58+01:00", "actor": "claude", "summary": "Checklist derived from plan.md; ownership written to files.json (10 paths, source: plan)."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-699", "type": "task.updated", "at": "2026-09-05T16:08:58+01:00", "actor": "claude", "summary": "Implementation session opened. h3.py excluded from ownership - MPI-591 holds a live write claim."}

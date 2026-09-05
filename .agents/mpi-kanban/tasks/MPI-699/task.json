@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-699",
+  "title": "MpiWindowedSampler: temporal windowing so the H3 2K refine reaches 124 frames",
+  "description": "Stage-2 refine OOMs at 2K above T=27 latent frames, but H3 TRAINED_MIN is 124 frames (T=37). A windowed drop-in for SamplerCustomAdvanced samples overlapping temporal windows and crossfades them, so the refine runs at a window size already proven to fit. Serves ltx_video_upscale.json on the same code path. Node lives in the sibling repo ComfyUi-MpiNodes.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "created_at": "2026-09-05T16:04:19+01:00",
+  "updated_at": "2026-09-05T16:08:58+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "activeSessionTitle": "MpiWindowedSampler implementation"
+}
