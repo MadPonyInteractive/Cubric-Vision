@@ -1545,9 +1545,12 @@ export const MODELS = [
         // are shared with the minimax-h3-ref2va card.
         dependencies: [
             'minimax-h3-fl2va-transformer',
-            // nvfp4_awq since MPI-698, replacing the 24.55GB int8_convrot: the int8 pair
-            // staged ~45GB and OOM-killed a 54GB Pod. NOT Blackwell-gated.
-            'h3-qwen3vl-32b-clip-nvfp4',
+            // int8_convrot Heretic, NOT the 14.61GB nvfp4_awq. MPI-698 swapped to nvfp4
+            // to stop the int8 pair OOM-killing a 54GB Pod, and the swap was REVERTED the
+            // same day on output quality (entity duplication). The Pod OOM is therefore
+            // BACK and is a known open cost — evidence and the tier plan are on the
+            // `h3-qwen3vl-32b-clip` dep in assetDeps.js.
+            'h3-qwen3vl-32b-clip',
             // int8_convrot, NOT the fp16 build — REQUIRES core >= v0.31.0 (MPI-517).
             'vae-minimax-h3-video-int8',
             'vae-minimax-h3-audio',
@@ -1642,8 +1645,9 @@ export const MODELS = [
         // exceptions, each argued on its own dep in assetDeps.js.
         dependencies: [
             'minimax-h3-ref2va-transformer',
-            // nvfp4_awq since MPI-698 — see the fl2va card above.
-            'h3-qwen3vl-32b-clip-nvfp4',
+            // int8_convrot Heretic — see the fl2va card above for why the MPI-698 nvfp4
+            // swap was reverted, and what it costs on a 54GB Pod.
+            'h3-qwen3vl-32b-clip',
             // int8_convrot, NOT the fp16 build — REQUIRES core >= v0.31.0 (MPI-517).
             'vae-minimax-h3-video-int8',
             'vae-minimax-h3-audio',

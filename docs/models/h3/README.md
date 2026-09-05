@@ -94,7 +94,7 @@ re-verified 2026-08-10 after the int8 swap below.
 | dep id | file | size |
 |---|---|---|
 | `minimax-h3-fl2va-transformer` | `minimax_h3_fl2va_pruned_int8_convrot.safetensors` | 20.97 GB |
-| `h3-qwen3vl-32b-clip-nvfp4` | `qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors` | 15.69 GB |
+| `h3-qwen3vl-32b-clip` | `qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors` | 24.55 GB |
 | `vae-minimax-h3-video-int8` | `minimax_h3_video_vae_int8_convrot.safetensors` | 3.17 GB |
 | `vae-minimax-h3-audio` | `minimax_h3_audio_vae_fp32.safetensors` | 0.61 GB |
 
@@ -120,29 +120,43 @@ ever observed at 56 frames, so it is NOT proven to persist on long clips. Re-tes
 a 32 GB re-download.
 
 **int4 encoders were rejected with evidence** (MPI-449 § 4/§ 5), and that verdict does NOT
-extend to the nvfp4_awq build shipped since MPI-698 — different quantisation, evaluated on
-its own A/B. Comfy-Org's own stock int8_convrot encoder is 27.14 GB.
+extend to the nvfp4_awq build — different quantisation, evaluated on its own A/B.
+Comfy-Org's own stock int8_convrot encoder is 27.14 GB.
 
-**The encoder is nvfp4_awq since MPI-698 (2026-09-05), down from 24.55 GB int8_convrot.**
-Two things drove it and both are worth keeping straight:
+**The encoder went to nvfp4_awq on 2026-09-05 (MPI-698) and came back the same day.** Both
+halves are worth keeping straight, because the reason for the swap did not go away — only
+the verdict did.
 
-- **Memory, not download size.** H3 stages the encoder *beside* the transformer, so the
-  int8 pair sat at ~45 GB resident at peak — at any resolution, because it is weight
-  staging and not activations. That SIGKILLed a 54 GB L4 Pod on `minimax-h3/t2v_ms` at
-  128px/1s (`code -9`, the Linux OOM killer) while the same op passed on an 80 GB box.
-  14.61 GiB takes the pair to ~35 GB. Windows never showed this: the pagefile absorbs the
-  overshoot and a Pod has no swap.
-- **The "Heretic" abliteration turned out not to be load-bearing.** The old build was
-  carried purely for uncensored output. Fabio A/B'd the two on 2026-09-05 across
-  uncensored and deliberately hard prompts and got identical results, so the stock
-  Qwen3-VL build is already uncensored in this role — consistent with H3 reading the
-  trimmed embedding layers as a conditioner rather than the instruction-tuned refusal
-  behaviour abliteration targets. **The evidence is the A/B, not that reasoning:** re-run
-  it before assuming a future encoder swap is equally free.
+- **Why nvfp4 was taken: memory, not download size.** H3 stages the encoder *beside* the
+  transformer, so the int8 pair sits at ~45 GB resident at peak — at any resolution,
+  because it is weight staging and not activations. That SIGKILLed a 54 GB L4 Pod on
+  `minimax-h3/t2v_ms` at 128px/1s (`code -9`, the Linux OOM killer) while the same op
+  passed on an 80 GB box. 14.61 GiB takes the pair to ~35 GB. Windows never showed this:
+  the pagefile absorbs the overshoot and a Pod has no swap.
+- **Why it was reverted: entity duplication.** Across ~10 further generations the nvfp4
+  build repeatedly produced structural corruption — a third leg, a cup appearing from
+  nowhere — where the int8_convrot build has a long clean baseline. Fabio's call, same
+  day.
+- **The abliteration is NOT what won it.** The first A/B, across uncensored and
+  deliberately hard prompts, came back identical, and that half held: the stock Qwen3-VL
+  build is uncensored in this role too, consistent with H3 reading the trimmed embedding
+  layers as a conditioner rather than the instruction-tuned refusal behaviour abliteration
+  targets. What did **not** hold was "identical" as a general claim — the sample was too
+  small to catch an occasional structure failure. **Do not clear a future encoder swap on
+  a short A/B.**
+
+**So the ~45 GB Pod OOM is BACK, knowingly.** It is a live cost of the revert, not an
+oversight, and it is what H3 Pod smoke on a 54 GB box runs into.
+
+**nvfp4 is retained as a low-VRAM tier candidate — the R2 object is NOT to be deleted**
+(Fabio, 2026-09-05). `h3-qwen3vl-32b-clip-nvfp4` stays in `assetDeps.js` with both URLs
+live: it is the obvious weight for a small-box tier, and the orphan sweep needs the entry
+regardless. Wiring that tier is not done and has no card yet.
 
 **`nvfp4` does NOT mean Blackwell-only.** Comfy-Org's README says outright that this
-encoder "does not require Blackwell GPU to use", and the smoke matrix runs it on Ada (L4)
-and Ampere hosts. Do not add a GPU-generation gate on the strength of the filename.
+encoder "does not require Blackwell GPU to use", and the smoke matrix ran it on Ada (L4)
+and Ampere hosts. Do not add a GPU-generation gate on the strength of the filename if the
+tier work revives it.
 
 ## Two-stage — and why there is no `_stage2` twin
 
@@ -277,7 +291,11 @@ frame 0.
   quadratic in token count), so 1088x1920 is ~25.6 min for a 2.33 s clip and roughly an
   hour at 124 frames. Quality holds up there better than "extrapolated" suggests — a bare
   2560x1472 run was measured clean, which is what earned the `2k` tier — so treat the top
-  of the ladder as a COST limit first. Do not confuse it with **H3-Regenerate-2K**, the
+  of the ladder as a COST limit first. **That clean 2K run was ONE SECOND** (MPI-477's
+  table; the session's own timing beside it is `2560x1472, 1s, 10 steps -> 544s`). It is
+  evidence that the canvas is not intrinsically broken, and it is NOT evidence that native
+  2K holds at 124 frames — nobody has run that. Do not cite this line for a long clip;
+  corrected 2026-09-05 after it was read exactly that way. Do not confuse it with **H3-Regenerate-2K**, the
   768p→2K second pass, which is API-only and not in these weights ([ref2va.md](ref2va.md)).
 - **A canvas change is a different latent shape, so the same seed is a DIFFERENT sample.**
   Tier A/B can never be read as "same shot, sharper", and the UI must not imply it.

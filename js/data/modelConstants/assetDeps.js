@@ -1044,8 +1044,11 @@ export const assetDeps = {
     //      and a publisher-hosted dep generates no mirrors (`_mirrorUrlsFor` only rewrites
     //      URLs under the R2 prefix), so a delete or a silent re-export would break every
     //      new H3 install with nothing to fall back to.
-    //   2. `h3-qwen3vl-32b-clip-nvfp4` (MPI-698, and `h3-qwen3vl-32b-clip` before it,
-    //      MPI-653) — the licence argument does not REACH it, so there was nothing to
+    //   2. THE H3 TEXT ENCODER, whichever build is current — `h3-qwen3vl-32b-clip`
+    //      (MPI-653, and current again after MPI-698's nvfp4 swap was reverted) and
+    //      `h3-qwen3vl-32b-clip-nvfp4` (MPI-698), which is retained. The exception is
+    //      about the WEIGHTS, so it survives a build swap in either direction.
+    //      The licence argument does not REACH either, so there was nothing to
     //      outrank. The encoder is Alibaba's Qwen3-VL-32B-Instruct trimmed to the layers
     //      H3 reads and quantised: apache-2.0 down the whole chain, and carrying no
     //      MiniMax weights, parameters, operational patterns or Outputs. That makes it
@@ -1080,33 +1083,53 @@ export const assetDeps = {
     // H3 emits video AND stereo audio from one sampler pass, so it needs TWO VAEs —
     // the packed NestedTensor latent is decoded by both (VAEDecode + VAEDecodeAudio).
     // That is not a duplicate: dropping either loses half the output.
+    // NOT REFERENCED BY ANY MODEL as of the MPI-698 revert — `h3-qwen3vl-32b-clip` is the
+    // live encoder again. Kept for the usual orphan-sweep reason (see the two SUPERSEDED
+    // entries below), and additionally because Fabio intends it as a LOW-TIER option: it
+    // is 10GB smaller and takes the resident pair from ~45GB to ~35GB, which is the whole
+    // difference between running and not running on a small box. Wiring that tier is not
+    // done — until it is, this entry earns its place by keeping the file sweepable.
+    //
+    // THE R2 OBJECT IS NOT TO BE DELETED (Fabio, 2026-09-05, reversing the earlier
+    // authorisation). `release:deps` HEADs every URL in DEPS and both of this entry's
+    // URLs must stay live.
     'h3-qwen3vl-32b-clip-nvfp4': {
         id: 'h3-qwen3vl-32b-clip-nvfp4',
-        name: 'Qwen3-VL 32B text encoder for MiniMax H3 (nvfp4_awq)',
+        name: 'Qwen3-VL 32B text encoder for MiniMax H3 (nvfp4_awq, not currently referenced)',
         origin: 'Comfy-Org/MiniMax-H3 text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors (Apache-2.0 via Qwen/Qwen3-VL-32B-Instruct)',
         filename: 'text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors',
-        // WHY THIS REPLACED THE 24.55GB int8_convrot BUILD (MPI-698). H3 stages the text
-        // encoder BESIDE the transformer — ~45GB resident at peak on the int8 pair, at
-        // ANY resolution, because it is weight staging and not activations. That is what
-        // SIGKILLed a 54GB L4 Pod on `minimax-h3/t2v_ms` at 128px (`code -9`, the Linux
-        // OOM killer) while the same op passed on an 80GB box. 24.55 -> 14.61GB takes the
-        // pair to ~35GB and puts a 54GB box back in range. Windows never showed it: the
-        // pagefile absorbs the overshoot, a Pod has no swap.
+        // WHY THIS BRIEFLY REPLACED THE 24.55GB int8_convrot BUILD (MPI-698), AND WHY IT
+        // STILL MATTERS. H3 stages the text encoder BESIDE the transformer — ~45GB
+        // resident at peak on the int8 pair, at ANY resolution, because it is weight
+        // staging and not activations. That is what SIGKILLed a 54GB L4 Pod on
+        // `minimax-h3/t2v_ms` at 128px (`code -9`, the Linux OOM killer) while the same op
+        // passed on an 80GB box. 24.55 -> 14.61GB takes the pair to ~35GB and puts a 54GB
+        // box back in range. Windows never showed it: the pagefile absorbs the overshoot,
+        // a Pod has no swap.
+        //
+        // That measurement is still true, and reverting to int8_convrot BRINGS THE POD
+        // OOM BACK. It was reverted anyway, on output quality — the trade is recorded on
+        // `h3-qwen3vl-32b-clip` below. This is the entry a low-VRAM tier would point at.
         //
         // NOT BLACKWELL-GATED, despite the `nvfp4` name — Comfy-Org's own README says so
         // outright ("This nvfp4 text encoder does not require Blackwell GPU to use"), and
         // the smoke matrix runs Ada (L4) and Ampere hosts. Do not add a GPU-generation
         // gate on the strength of the filename.
         //
-        // UNCENSORED, AND THE "HERETIC" LINEAGE TURNED OUT NOT TO BE LOAD-BEARING. The
-        // build this replaces was ethanfel's Ultra-Heretic abliteration, carried for one
-        // reason: uncensored output. Fabio A/B'd the two on 2026-09-05 across uncensored
-        // and deliberately hard prompts and got IDENTICAL results, so the stock Qwen3-VL
-        // build is already uncensored in this role. Consistent with what the encoder does
-        // here — H3 reads the trimmed embedding layers as a conditioner, not the
-        // instruction-tuned refusal behaviour that abliteration targets. Evidence is the
-        // A/B, not this reasoning: re-run it before assuming a FUTURE encoder swap is
-        // equally free.
+        // "IDENTICAL RESULTS" WAS WRONG, AND THE CORRECTION IS THE REASON THIS IS NOT THE
+        // DEFAULT. This entry used to record a 2026-09-05 A/B across uncensored and
+        // deliberately hard prompts that came back identical. The censorship half of that
+        // held — the stock Qwen3-VL build is uncensored in this role, and the Ultra-
+        // Heretic abliteration is NOT load-bearing for that. What did not hold was
+        // "identical": the sample was too small. Fabio ran ~10 more generations the same
+        // day and this build produced repeated ENTITY DUPLICATION — a third leg, a cup
+        // appearing from nowhere — against a long clean int8_convrot baseline. Reverted
+        // the same day.
+        //
+        // The standing lesson is about sample size, not about this file: a handful of
+        // prompts cannot separate two encoders, because the failure is occasional
+        // structure corruption rather than a refusal or a style shift. Do not clear a
+        // FUTURE encoder swap on a short A/B.
         //
         // R2-primary — exception 2 in the section header above, and read the Comfy-Org
         // repo-label caveat there before citing this as precedent for anything else in
@@ -1133,25 +1156,22 @@ export const assetDeps = {
         bytes: 15687142551,
         sha256: '35a88d51044231fe332301d7a62aa81e3f2cba62febeb446e2c1e3e0ef76f2c6',
     },
-    // SUPERSEDED by `h3-qwen3vl-32b-clip-nvfp4` (MPI-698) and referenced by NO model.
+    // THE LIVE H3 TEXT ENCODER (MPI-653; briefly replaced by the nvfp4_awq build in
+    // MPI-698 and restored the same day). Referenced by both H3 models.
     //
-    // KEPT ANYWAY, ON PURPOSE — the same orphan-sweep rule spelled out on
-    // `vae-minimax-h3-video` below. `_orphanedDepIds` (routes/downloadManager.js) walks
-    // `Object.keys(DEPS)` and resolves each `filename`; a file on disk whose filename is
-    // absent from every DEPS entry is invisible to the sweep, permanently. Deleting this
-    // entry would strand 24.55GB on the disk of every user who installed H3 before the
-    // swap — the single largest orphan the catalogue has ever had. Present-but-
-    // unreferenced is exactly the orphan definition the sweep tests for, so leaving it
-    // here is what RECLAIMS the bytes on the next uninstall sweep.
+    // WHY IT WON, AND WHAT THAT COSTS. The nvfp4 build is 10GB smaller and was taken for
+    // exactly that: the int8 pair stages ~45GB resident beside the transformer and
+    // SIGKILLed a 54GB L4 Pod on `minimax-h3/t2v_ms` (`code -9`). Restoring this build
+    // RESTORES THAT FAILURE — it is a known, open cost, not an oversight, and it is what
+    // gates H3 Pod smoke on a 54GB box. It was accepted because nvfp4 produced repeated
+    // entity duplication over ~10 generations where this build has a long clean baseline;
+    // the full evidence is on `h3-qwen3vl-32b-clip-nvfp4` above.
     //
-    // Both URLs stay live and correct on purpose: `release:deps` HEADs every URL in DEPS,
-    // and the R2 object is NOT to be deleted while this entry stands (an R2 delete needs
-    // Fabio's approval in any case).
-    //
-    // Delete only once no plausible installed base still holds the int8_convrot file.
+    // So the two are a QUALITY-vs-FOOTPRINT pair, not a superseded/current pair. Keep both
+    // entries live, and do not "tidy" either away.
     'h3-qwen3vl-32b-clip': {
         id: 'h3-qwen3vl-32b-clip',
-        name: 'Qwen3-VL 32B text encoder for MiniMax H3 (uncensored, int8_convrot, superseded)',
+        name: 'Qwen3-VL 32B text encoder for MiniMax H3 (uncensored, int8_convrot)',
         origin: 'ethanfel/Qwen3-VL-32B-Ultra-Heretic-H3-ComfyUI-INT8-ConvRot (Apache-2.0)',
         filename: 'text_encoders/qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors',
         url: 'https://models.cubric.studio/vision/models/text_encoders/qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors',

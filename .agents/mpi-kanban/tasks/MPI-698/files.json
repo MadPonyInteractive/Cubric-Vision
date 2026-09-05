@@ -11,7 +11,11 @@
     "comfy_workflows/scripts/workflow_generation/minimax_h3_r2va_template.json",
     "comfy_workflows/minimax_h3_fl2va.json",
     "comfy_workflows/minimax_h3_r2va.json",
+    "comfy_workflows/raw/minimax_h3_fl2va_template.json",
+    "comfy_workflows/raw/minimax_h3_r2va_template.json",
+    "comfy_workflows/raw/flow_h3_extend.json",
+    "comfy_workflows/flow_h3_extend.json",
     ".agents/mpi-kanban/tasks/MPI-698/"
   ],
-  "note": "OWNERSHIP CHANGED MID-CARD. comfy_workflows/ started as Fabio's (he re-pointed the graphs, session cubric-vision-5a synced the raw templates and committed 86989063). That session then HANDED THE BAKE BACK — message c1836f1d, 2026-09-05T11:08Z — and stopped. This session took generate_h3.py and ran orchestrate.py from there. Peer is idle on this path, not competing."
+  "note": "OWNERSHIP CHANGED MID-CARD. comfy_workflows/ started as Fabio's (he re-pointed the graphs, session cubric-vision-5a synced the raw templates and committed 86989063). That session then HANDED THE BAKE BACK — message c1836f1d, 2026-09-05T11:08Z — and stopped. This session took generate_h3.py and ran orchestrate.py from there. Peer is idle on this path, not competing. WIDENED 2026-09-05 by the revert: the encoder swap is ATOMIC across every graph that bakes the clip_name, so the four raw/compiled files added above had to move in the same pass or tests/flow-model-choice.test.cjs goes red. flow_h3_extend.json is MPI-591's file — its claim cc1502ab is `complete` (2026-09-04T20:27:42Z) with no active writer, so this is an edit over settled provenance, not a contested one. MPI-591 must be told the clip_name moved."
 }
