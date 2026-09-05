@@ -44,9 +44,48 @@ GPU lease for a command that uses no GPU, or renaming the path to slip the
 regex, are both worse than saying the gap out loud. The brief's `## Verify`
 allows "a synthetic `[download]` WARN in a fixture log", which is what ran.
 
-**First real evidence** will be the next live smoke run: `⚠ [download] …` lines
-appearing under the dots during the install phase, and `dev_configs/smoke-run.txt`
-carrying them beside the transcript.
+## How this card closes
+
+**Not on just any smoke run.** The 2026-09-05 release run (minimax-h3) proves
+why: its volume was already full, so the install read
+
+```
+[09:10:06.336Z]   installing 9 deps on a CPU Pod (download mode)…
+[09:10:06.337Z]   [1/1] minimax-h3
+[09:10:07.000Z]   installs verified: no failed deps
+```
+
+One second, zero polls. The drain would have run at most once. A run that
+re-verifies an already-filled volume can never close this card.
+
+It needs a run that actually **downloads** weights. Expected: the music-maker
+models (MPI-664 MiniMax Music 3, MPI-694 Stable Audio 3), which will be the first
+new weights on the volume in a while. MPI-664 has been asked (message
+`65ea3341`) to preserve the install section of `dev_configs/smoke-run.txt`,
+which is opened with `'w'` and destroyed by the next run.
+
+**Two-part closure, because absence is not evidence here:**
+
+1. A clean download proves the drain polls without crashing or spamming — but a
+   healthy install emits no `[download]` WARN at all, so "nothing printed" is
+   also exactly what a totally broken drain looks like. That half is necessary,
+   not sufficient.
+2. The card is only really proven by a `⚠ [download] …` line actually appearing.
+   Either one occurs naturally (SSE drops mid-install are common enough that
+   MPI-97, MPI-690 and MPI-691 all exist because of them), or it is induced —
+   `POST /remote/pod/delete-active` mid-download, on a small pinned volume,
+   `--install-only`, no GPU rented, ~20 min. Not to be added to MPI-664's run.
+
+A cheaper partial, available any time with no Pod: run `downloadWarnings()`
+against the live app's `GET /logs/read` to prove it parses a REAL `app.log` —
+format, stamps and rotation are the likeliest things to be wrong, and that check
+costs one read-only GET.
+
+## Volume headroom — may block the run that closes this
+
+The same transcript measured `free 25.8 GB` on `cubric-smoke` (340 GB,
+`uebvm3350f`). The fit verdict refuses a set that does not fit with 5% headroom,
+*after* the CPU Pod is up. The music-maker deps may not fit. Flagged to MPI-664.
 
 Live verification was refused by design, per the brief: GPU 0 is held by the
 1.4.5 release matrix, and a live run rents a CPU Pod and pulls ~290 GB.

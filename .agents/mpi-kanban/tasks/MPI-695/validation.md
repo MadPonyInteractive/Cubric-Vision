@@ -55,7 +55,26 @@ the same call the old inline probe made, relocated unchanged, but no live run ha
 exercised it. Live verification is refused by design: GPU-lease gated behind the
 1.4.5 release matrix, and a live run rents a Pod to pull ~290 GB.
 
-First real evidence, shared with [[MPI-692]]: the next live smoke run.
+## How this card closes
+
+A smoke run that actually **downloads** weights — not one that re-verifies an
+already-filled volume. The 2026-09-05 release run (minimax-h3) shows the
+difference: `installing 9 deps` at 09:10:06.336Z, `installs verified` at
+09:10:07.000Z. One second, **zero dots** — the probe returned true on its first
+call and the wait never looped, so it exercised nothing.
+
+Expected closer: the music-maker models (MPI-664 MiniMax Music 3, MPI-694 Stable
+Audio 3). Unlike [[MPI-692]], a clean run is **sufficient** here — dots under
+`[1/N] <model>` mean the wait is really polling, which is `installProbe`'s whole
+mechanism: bytes moving, clock resetting, false then true. No induced failure
+needed.
+
+A stall appearing naturally would be a bonus, not a requirement: the line to
+look for is `⚠ install <id> stalled — no bytes moved for 10 min` followed by the
+Pod recycle, where the pre-fix code dotted on for three hours.
+
+MPI-664 has been asked (message `65ea3341`) to preserve the install section of
+`dev_configs/smoke-run.txt` before the next run truncates it.
 
 ## Constraints honoured
 
