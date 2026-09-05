@@ -86,12 +86,21 @@ export const DEFAULT_RUNPOD_CONFIG = Object.freeze({
   // here and die with the Pod. Default 100; clamped server-side. Ignored when a
   // network volume is attached (models live on the volume).
   containerDiskGb: 100,
-  // minRamGb: optional system-RAM FLOOR (GB) for the connected Pod's host (MPI-160).
+  // minRamGb: system-RAM FLOOR (GB) for the connected Pod's host (MPI-160).
   // RunPod honors minMemoryInGb as a hard placement filter, so a user whose model
   // needs a high-RAM host (LTX warm perf ~90GB) sets this and RunPod only lands a
-  // host with >= that much system RAM. 0 = no floor (default). Ignored for the CPU
-  // download Pod and Any-region.
-  minRamGb: 0,
+  // host with >= that much system RAM. 0 = no floor. Ignored for the CPU download
+  // Pod and Any-region.
+  //
+  // Defaulted to 64 (was 0 = place anywhere). Weights spill to system RAM on any
+  // consumer card, and RunPod's consumer hosts are RAM-starved — a 4090 host offers
+  // 31 GB and a 5090 46 GB at their cheapest tier. On 2026-09-05 minimax-h3/t2v_ms
+  // OOM-KILLED a 54 GB L4 (SIGKILL, `code -9`) at 128px/1 frame, staging a 25 GB text
+  // encoder and a 20 GB transformer at once; it passed on a host placed against an
+  // 80 GB floor. With no floor at all those users were being placed on boxes with no
+  // chance. This is a TRADE: a floor that cannot be met returns "no host available"
+  // instead of a Pod, which is why it is 64 and not 80 — and why autoRetry exists.
+  minRamGb: 64,
 });
 
 // Idle-watchdog floor/default in seconds (mirrors MpiSettings IDLE_FLOOR_MIN /

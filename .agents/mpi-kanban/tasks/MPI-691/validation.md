@@ -42,8 +42,34 @@ pending timer short-circuits a second close) and then the 90 s stall watchdog, s
 back-to-back `_onRemoteStreamClosed` calls only ever exercise round 1. That was a
 real gap in the first draft of the test, caught by it failing.
 
-## Not yet verified
+## The live path DID NOT FIRE — and that is the honest result
 
-The live path. Closing evidence is the resumed smoke matrix: if the Pod restarts
-again, the run must either recover on its own (a `re-issuing (round n/3)` line in
-`app.log`) or end with a real failure. Never 70 minutes of silence.
+The resumed smoke matrix ran 2026-09-05 08:07–08:57Z against the app restarted at
+07:51:56Z (fix commit `819ab084` landed 07:47:46Z, so the main process carried it).
+All 102 deps installed across 12 models with **no container restart during the
+download phase**, so the recovery path had nothing to recover.
+
+`app.log` under `[download]` for the whole run is one line:
+
+```
+[2026-09-05T07:51:59.432Z] [INFO] [download] curated python deps already installed (3921692037b5daec)
+```
+
+No `re-issuing (round n/3)`, no `remote deps unrecoverable`. This card therefore
+**closes on its unit evidence** (4 cases in `tests/remote-restart-reissue.test.cjs`,
+`isRemoteActive()` stubbed true throughout because that IS the bug), and the live
+leg is recorded as UNEXERCISED rather than passed. Silence here is absence of the
+trigger, not proof of the fix.
+
+MPI-690's fix is the likely reason it never fired: capping the fan-out at 3 removed
+the memory pressure that was OOM-killing the download Pod, and that OOM was what
+restarted the container in the first place. The two cards were always one story.
+
+What would exercise it, if it is ever wanted: kill the wrapper mid-install (or
+`POST /wrapper/restart-comfy` while deps are outstanding) and watch for
+`re-issuing (round 1/3)` followed by aria2 resuming from the `.part`.
+
+A separate, unrelated OOM DID occur later in the same run — `minimax-h3/t2v_ms`
+SIGKILLed the GPU Pod's ComfyUI during the *generation* phase (`[cubric] internal
+ComfyUI exited unexpectedly (code -9)`). That is the H3 memory footprint, not a
+download-path restart, and it is covered in the 1.4.5 release notes.

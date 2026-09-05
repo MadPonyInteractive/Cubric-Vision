@@ -38,7 +38,42 @@ const APP = `http://127.0.0.1:${process.env.CUBRIC_PORT || 3000}`;
 // ── Infrastructure. Decided in MPI-467; reasons in docs/playbooks/bump-engine/01-smoke-run.md
 const DATACENTER = 'EU-RO-1';          // volumes are DC-locked; the cards live here
 const GPU_ORDER = ['L4', 'RTX 3090', 'RTX 4090'];  // cheapest-first by measured availability
-const MIN_RAM_GB = 48;                 // weights spill to RAM on a 24GB card (footprint.js)
+// Weights spill to RAM on a 24GB card (footprint.js). 48 is no longer enough for H3: on
+// 2026-09-05 minimax-h3/t2v_ms OOM-killed a 54 GB L4 — `[cubric] internal ComfyUI exited
+// unexpectedly (code -9)`, the kernel's SIGKILL. It stages MiniMaxH3TEModel_ (25,140 MB) and
+// MiniMaxH3 (19,995 MB) at once, ~45 GB, at a budget of 1 step / 128px / 1 frame, so this is
+// weight staging and not activations — resolution cannot buy it back, and a real 768p job is
+// further over the line, not closer.
+//
+// WHAT CAUSED IT IS NOT ESTABLISHED. The same op passed in 124s on an L4 at ComfyUI 0.31.0
+// (21d61f69, 2026-08-10), which looks like an engine regression and is NOT one on this
+// evidence: H3 was rebuilt between those runs. c39b5008/6deb60b6 made it TWO-PASS with a
+// MinimaxH3LatentUpscaler3D refine, 4eda8c6b/fae92d80 moved it onto new ~2 GB 8-step turbo
+// LoRAs, and 14c1a04f bumped the engine. Three changes, one comparison — a refine stage means
+// more models resident at peak, so the graph rebuild is at least as likely as the engine.
+// Do not repeat "0.34.0 broke H3" until something isolates the variable.
+//
+// A container has no swap. The same peak on Windows pages to disk and merely gets slow,
+// which is why this reproduces only on a Pod, and why the local half reads as "H3 got
+// slower on 0.34.0" rather than as a failure.
+//
+// The box had 54 GB. Do NOT trust the 62 GB that RunPod's REST pod (`memoryInGb`) and the
+// wrapper's /remote/pod/stats (`total`) BOTH reported for it — the console's figure was 54,
+// and the app shows that same inflated field to users in the Pod specs badge.
+//
+// Do NOT size this off `/runpod/gpu-availability`'s `lowestPrice.minMemory`. That is the RAM
+// on a card's CHEAPEST offering, not the card's RAM, and reading it as the latter produced a
+// table saying RTX 5090 = 46 GB and RTX 4090 = 31 GB. The 5090 this op actually ran on placed
+// against an 80 GB floor, so that field is a floor across offerings and useless for capacity.
+//
+// 96 was tried first and REFUSED on 2026-09-05 — `/remote/pod/create -> 502 ...
+// "ramFloorMissed": true`, every attempt, on the L40. A floor has to be SATISFIABLE as well
+// as sufficient: raise it too far and users get "no host available" instead of a Pod.
+//
+// 80 is what is PROVEN: t2v_ms passed on an RTX 5090 placed against this floor (21s), having
+// OOM-killed a 54 GB L4. True demand is somewhere in (54, 80] and is still unpinned — nobody
+// has measured the peak, only the two ends. Do not lower this on a guess; measure first.
+const MIN_RAM_GB = 80;
 const VOLUME_NAME = 'cubric-smoke';
 const VOLUME_HEADROOM_GB = 40;
 const CPU_SENTINEL = '__cpu__';        // download-mode Pod (MPI-88); slim -cpu image, no GPU bill
@@ -1358,8 +1393,15 @@ function loadMergeBase() {
  */
 function mergeEvidence(prior, fresh) {
     const key = (r) => `${r.model}/${r.op}`;
-    const rows = new Map(prior.results.map(r => [key(r), { ...r, run: r.run || prior.at }]));
-    for (const r of fresh.results) rows.set(key(r), { ...r, run: fresh.at });
+    // `gpu` is stamped per row for the same reason `run` is, and it was missing: the file
+    // carries ONE top-level gpu, so a scoped retry on a different card overwrote it and the
+    // merged file claimed every row was proven on the retry's hardware. Live on 2026-09-05 —
+    // 36 rows proven on an L4, minimax-h3/t2v_ms re-run on an RTX 5090, and the file then read
+    // `gpu: NVIDIA GeForce RTX 5090` for all 37. That hid the finding: t2v_ms OOM-KILLED the
+    // L4 and passes only on a >=80GB host, so a reader saw 37/37 and concluded H3 t2v is fine
+    // on any Pod.
+    const rows = new Map(prior.results.map(r => [key(r), { ...r, run: r.run || prior.at, gpu: r.gpu || prior.gpu }]));
+    for (const r of fresh.results) rows.set(key(r), { ...r, run: fresh.at, gpu: fresh.gpu });
     const results = [...rows.values()];
     const n = (s) => results.filter(r => r.status === s).length;
 
