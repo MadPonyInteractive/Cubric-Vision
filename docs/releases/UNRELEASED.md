@@ -56,6 +56,12 @@ Gate 0 run per bullet against v1.4.4 on 2026-09-05:
   smaller machines and on rented GPUs — where running short of memory would previously
   stop a video partway through without explaining why.
 
+- Rented GPUs are now chosen with enough memory to actually run H3. Renting a remote GPU
+  used to place you on whatever machine was free, including ones with too little system
+  memory for a video model, where a generation could be killed partway through with no
+  explanation. New Pods now ask for at least 62 GB. You can change that figure in
+  settings, and should raise it for anything heavier than H3.
+
 ## What's new
 
 - **Sharper 2K and 4K video from MiniMax H3.** H3 now works in two stages: it lays the
@@ -77,16 +83,14 @@ Gate 0 run per bullet against v1.4.4 on 2026-09-05:
   sizes offered now match what H3 renders.
 
 <!--
-HELD — needs Fabio's number before it can be written.
+Remote Pod RAM floor — WRITTEN, Fabio set the number at 62 (a92a89a1).
 
-Remote Pod RAM floor. This line ships `minRamGb: 0` (js/core/storage.js): NO floor, so a
-rented Pod can land on a 30-31GB 3090/4090 host. The encoder swap takes H3's staging pair
-from ~45GB to ~35GB, which clears a 54GB L4 but NOT a 31GB host — so H3-on-Pod is only
-half fixed without one. Master set 80, calibrated against the OLD 45GB staging; porting
-that number verbatim would now refuse L4s that work. Suggested 48, which delivers ~42 on
-Fabio's own "the ask is not the read" measurement (an L4 advertises 62 and gives 54).
+Gate 0: this line really did ship `minRamGb: 0` (js/core/storage.js on v1.4.4), i.e. no
+floor at all, so "used to place you on whatever machine was free" is accurate rather than
+same-version churn. 62 rather than the 2.0 line's 80 because the encoder swap took H3's
+staging pair from ~45GB to ~35GB, and 80 would now refuse L4 hosts that run it fine.
 
-If a floor lands, add a bullet saying rented GPUs are now picked with enough memory to
-run H3, and that an existing Pod setting may need raising.
+The copy says "at least 62 GB" and calls it changeable on purpose: it is a suggestion, not
+a ceiling.
 -->
 
