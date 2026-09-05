@@ -39,6 +39,7 @@ import { initFloatLatentBridge } from './shell/floatLatentBridge.js';
 import { initAgentDispatch } from './shell/agentDispatch.js';
 import { initProjectUI, loadProjectGrid } from './shell/projectUI.js';
 import { initHeroStats } from './shell/heroStats.js';
+import { initHeroQuote } from './shell/heroQuote.js';
 import { start as startProjectStats } from './services/projectStatsService.js';
 import { triggerMemoryRelease, bindMemoryHotkeys } from './shell/memoryOps.js';
 import { StatusBar } from './shell/statusBar.js';
@@ -188,6 +189,7 @@ export async function initShell() {
   // 4. Bind Interactions
   initProjectUI();
   initHeroStats();
+  initHeroQuote();   // MPI-696 — one draw per boot, never per navigation
   startProjectStats();
   StatusBar.init();
   StatusBar.listen();

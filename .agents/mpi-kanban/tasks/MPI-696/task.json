@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-696",
+  "title": "Landing hero: cycling artist quotes instead of the product blurb",
+  "description": "Replace the hero paragraph (\"A workstation for AI imagery and video...\") with a rotating inspiring quote for artists. 50 curated quotes, drawn from a shuffled deck whose position persists across app restarts so nothing repeats until the deck is spent.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "created_at": "2026-09-05T08:51:30Z",
+  "updated_at": "2026-09-05T08:56:31Z",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl",
+    "files": "files.json",
+    "validation": "validation.md"
+  }
+}

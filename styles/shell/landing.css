@@ -133,6 +133,28 @@
   max-width: 480px;
 }
 
+/* MPI-696: the blurb slot now carries a rotating quote. Fixed min-height so a one-line
+   quote and a three-line one do not shove the CTA row up and down between launches. */
+.mpi-landing__quote {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  min-height: 5.6em;
+}
+
+.mpi-landing__quote-text {
+  font-style: italic;
+  text-wrap: balance;
+}
+
+.mpi-landing__quote-by {
+  font-size: var(--t-2xs);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-style: normal;
+}
+
 /* CTA row */
 .mpi-landing__cta {
   display: flex;

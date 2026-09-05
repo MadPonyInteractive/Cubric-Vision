@@ -77,6 +77,10 @@ export const STORAGE_KEYS = {
   // us to bind the user before they receive the weights —
   // { [modelId]: { licenceId, version, at } }. Written only by licences.js.
   LICENCE_ACCEPTED: 'mpi_model_licence_accepted',
+
+  // MPI-696: landing-hero quote deck — { order: number[], pos } . A shuffled deck,
+  // not a last-shown index, so every quote is dealt once before any repeats.
+  HERO_QUOTE_DECK: 'mpi_hero_quote_deck',
 };
 
 // --- sessionStorage keys ---

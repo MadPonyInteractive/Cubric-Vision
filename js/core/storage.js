@@ -265,6 +265,11 @@ export const Storage = {
   // js/data/modelConstants/licences.js — nothing else should touch these.
   getLicenceReceipts: () => get(STORAGE_KEYS.LICENCE_ACCEPTED, {}) || {},
   setLicenceReceipts: (v) => set(STORAGE_KEYS.LICENCE_ACCEPTED, v),
+
+  // MPI-696: hero quote deck. Shape is validated by pickFromDeck (a deck dealt from a
+  // different-length quote list is discarded there), so nothing is normalised here.
+  getHeroQuoteDeck: () => get(STORAGE_KEYS.HERO_QUOTE_DECK, null),
+  setHeroQuoteDeck: (v) => set(STORAGE_KEYS.HERO_QUOTE_DECK, v),
 };
 
 export const Session = {
