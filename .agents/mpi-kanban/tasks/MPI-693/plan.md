@@ -22,21 +22,27 @@ for (const group of groups) {
     if (_filter !== 'all' && group.type !== _filter) continue;    // g.type, like the gallery
     const item = group.history?.[group.selectedIndex];
     if (!item?.filePath) continue;                                // pending/failed card — no file
-    out.push({ item, type: item.type || group.type, label: group.customName || _stripExt(_basename(item.filePath)) });
+    const label = group.customName || item.name || group.name || _stripExt(_basename(item.filePath));
+    out.push({ item, type: item.type || group.type, label });
 }
 ```
 
-Four things to get right:
+The whole of this is **the gallery's own behaviour, applied to the picker** — same unit (the card),
+same label, same filter axis, same archived exclusion. Four things to get right:
 
 1. **The type filter reads `group.type`, not the item's.** `_collect()` filtered per item because a
    group may hold mixed types; that only made sense when the tiles *were* items. The picker now
    claims to show the gallery's cards, so it buckets them the way the gallery does
    (`MpiGalleryGrid.js:1858-1860`). Filtering per item would make a card whose selected take is an
    image vanish from the Videos tab the gallery lists it under.
-2. **The label is `customName`, else the FILENAME** — the user's rule, and it is deliberately *not*
-   the gallery's chain (`customName || selected?.name || group.name`, `MpiGalleryGrid.js:1228`).
-   That chain ends at `group.name`, which defaults to the literal string `'Untitled Group'`; a grid
-   of tiles all reading "Untitled Group" is worse than the filenames the picker shows today.
+2. **The label is the gallery's chain verbatim** — `customName || selected?.name || group.name`
+   (`MpiGalleryGrid.js:1228`). That already *is* "the user's title, else the filename": `group.name`
+   is set at creation to the filename stem — `truncateCardName(it.displayName || it.operation || …)`
+   for a generation (`generationService.js:1469`), `displayName` for an import
+   (`MpiGalleryBlock.js:1747`) — so a card with no `customName` reads as its file, and the picker
+   caption comes out byte-identical to the gallery caption beside it, truncation included. The
+   `_stripExt(_basename(filePath))` tail is only for the `createItemGroup` default `'Untitled Group'`,
+   which nothing in the app writes but a legacy or hand-edited `project.json` could carry.
 3. **The label is carried on the entry.** `_buildTile` currently derives its own name from
    `displayName || basename`; it takes `entry.label` instead, so there is one naming rule in one
    place. Same string feeds the tile caption, the `title` tooltip and the `aria-label` on Preview.
@@ -91,7 +97,10 @@ explicit stop above is about sound, not leaks.
 2. New spec `tests/desktop/media-picker-cards.spec.js` (there is no picker spec today):
    - fixture project, one group with 3 history entries and a `customName` → **1** tile, captioned
      with the `customName`;
-   - a second group with no `customName` → captioned with its selected item's filename, no extension;
+   - a second group with no `customName` → captioned with `group.name`, i.e. its filename stem;
+   - the caption of every tile equals the caption the gallery renders for the same card — assert
+     against `MpiGalleryGrid`'s own `.mpi-group-card__name` text, not against a hard-coded string,
+     so the two cannot drift apart later;
    - an archived group and a group whose selected item has no `filePath` → neither renders;
    - the Videos tab shows a `type: 'video'` group whose selected take is an image;
    - an audio tile: `mouseenter` → its `<audio>` is not paused; `mouseleave` → paused and

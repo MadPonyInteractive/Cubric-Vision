@@ -2,6 +2,7 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiModal } from '../../Primitives/MpiModal/MpiModal.js';
 import { MpiButton, mountButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { state } from '../../../state.js';
+import { Storage } from '../../../core/storage.js';
 import { resolveMediaUrl } from '../../../utils/mediaActions.js';
 import { qs, ce, on } from '../../../utils/dom.js';
 import { renderIcon } from '/js/utils/icons.js';
@@ -25,6 +26,13 @@ import { clientLogger } from '../../../services/clientLogger.js';
  *
  * The picked media is already on disk and already recorded in the project, so
  * there is nothing to place or copy: the caller gets a path and uses it.
+ *
+ * IT LISTS CARDS, NOT FILES (MPI-693). One tile per gallery card — that card's
+ * SELECTED entry, under the gallery's own label — never one tile per history
+ * take. A card with 14 takes used to be 14 tiles captioned with raw filenames,
+ * sitting beside a gallery that showed one card under the name the user gave it.
+ * The cost is that a non-selected take is no longer reachable from here: select
+ * it on the card in the gallery first, then open the slot.
  *
  * ORDERING is the gallery's own, at the moment the picker opens — deliberately
  * NOT a sort control. The user has just been looking at the gallery; the order
@@ -99,23 +107,60 @@ export const MpiMediaPicker = ComponentFactory.create({
         }
 
         /**
-         * Every history item matching the active filter, in the GALLERY's order.
+         * The gallery's own label for a card, so a tile here reads exactly like the
+         * card it stands for (`MpiGalleryGrid` `_renderCard`).
          *
-         * `type` is the item's own field; a group may hold mixed types, so the
-         * filter is per ITEM, never per group. Items with no `filePath` are
-         * skipped — a pending or failed generation has a card but no file, and
-         * handing one to a Flow slot would resolve to a broken URL.
+         * That chain ALREADY means "the title the user typed, else the file name":
+         * `group.name` is set at creation to the filename stem — `truncateCardName`
+         * of `displayName` for a generation (`generationService.js`), the import's
+         * own `displayName` otherwise — and `item.name` is null on everything the
+         * app creates. So the two descriptions are one rule, and the caption comes
+         * out byte-identical to the gallery's, truncation included.
+         *
+         * The basename tail is only for `createItemGroup`'s `'Untitled Group'`
+         * default, which nothing in the app writes but a legacy or hand-edited
+         * project.json can carry — a grid of tiles all reading "Untitled Group"
+         * names nothing, and the file does.
+         */
+        function _cardLabel(group, item) {
+            if (group.customName) return group.customName;
+            const derived = item.name || group.name;
+            return derived && derived !== 'Untitled Group'
+                ? derived
+                : _stripExt(_basename(item.filePath));
+        }
+
+        /**
+         * Every gallery CARD matching the active filter, in the GALLERY's order.
+         *
+         * One entry per ItemGroup, not one per history entry (MPI-693) — see the
+         * component header for why.
+         *
+         * The filter reads `group.type`, matching `_rerenderJustified` in
+         * `MpiGalleryGrid`. A group may hold mixed types, so filtering on the
+         * selected item's type instead would drop a card out of the very tab the
+         * gallery lists it under.
+         *
+         * A card whose SELECTED entry has no `filePath` is skipped — a pending or
+         * failed generation has a card but no file, and handing one to a Flow slot
+         * would resolve to a broken URL.
          */
         function _collect() {
             const groups = state.currentProject?.itemGroups || [];
             const out = [];
             for (const group of groups) {
-                for (const item of group.history || []) {
-                    if (!item?.filePath) continue;
-                    const type = item.type || item.mediaType || 'image';
-                    if (_filter !== 'all' && type !== _filter) continue;
-                    out.push({ item, type });
-                }
+                // Archived media is put away everywhere, not just in the gallery —
+                // otherwise a card you archived keeps turning up in Flow slots
+                // (MPI-678).
+                if (group.archived) continue;
+                if (_filter !== 'all' && group.type !== _filter) continue;
+                const item = group.history?.[group.selectedIndex];
+                if (!item?.filePath) continue;
+                out.push({
+                    item,
+                    type: item.type || group.type || 'image',
+                    label: _cardLabel(group, item),
+                });
             }
             return out;
         }
@@ -129,6 +174,29 @@ export const MpiMediaPicker = ComponentFactory.create({
         modal.el.appendChild(el);
 
         const grid = qs('#grid-slot', el);
+
+        // The one clip the picker is playing, if any. Tracked in a variable and NOT
+        // found by a DOM query: `_stopOtherGalleryMedia` in MpiGalleryGrid selects
+        // `audio[data-src]` across the whole DOCUMENT on every gallery scroll event,
+        // and MpiModal portals this picker to document.body — so marking these
+        // elements the way the gallery marks its own would hand the grid behind the
+        // modal a remote control over the picker's playback.
+        let _playingAudio = null;
+
+        function _stopPickerAudio() {
+            if (!_playingAudio) return;
+            _playingAudio.pause();
+            try { _playingAudio.currentTime = 0; } catch (_) {}
+            _playingAudio = null;
+        }
+
+        // Every dismissal path — a pick, Cancel, Escape, the backdrop, a
+        // `ui:close-all-popups` pulse — ends at the modal's own hide(), and the last
+        // three never run picker code. Detaching a playing <audio> does not stop it,
+        // so the stop is wrapped around hide() once instead of repeated at the call
+        // sites this component owns and still missed by the ones it does not.
+        const _modalHide = modal.el.hide;
+        modal.el.hide = () => { _stopPickerAudio(); _modalHide(); };
 
         // ── the upload card's input: the picker's second source, same accept
         //    filter as the slot behind it so the two never disagree ──
@@ -159,6 +227,8 @@ export const MpiMediaPicker = ComponentFactory.create({
         /** A large preview over the grid. Its own layer so the grid keeps its scroll. */
         function _openPreview(entry) {
             _closePreview();
+            // The preview autoplays; a tile still playing under it would double up.
+            _stopPickerAudio();
             const { item, type } = entry;
             const layer = ce('div', { className: 'mpi-media-picker__preview' });
             const inner = ce('div', { className: 'mpi-media-picker__preview-inner' });
@@ -391,9 +461,54 @@ export const MpiMediaPicker = ComponentFactory.create({
             }
         }
 
+        /**
+         * Hovering an audio tile plays it, the way an audio card in the gallery does
+         * (MPI-693).
+         *
+         * The <audio> is built on the FIRST hover, not with the tile: at
+         * `preload='metadata'` one element per tile is a metadata fetch for every
+         * clip in the project the moment the Audio tab opens, for tiles nobody will
+         * ever hover. It is kept afterwards, so a second hover replays instantly.
+         *
+         * Volume is the gallery's own, and 0 IS the mute — a silent play would still
+         * swap the glyph to Stop and lie about what is happening, so it is skipped
+         * outright rather than played at zero.
+         */
+        function _wireAudioHover(media, icon, item) {
+            let audio = null;
+            const _setIcon = (name) => { icon.innerHTML = renderIcon(name, 'lg'); };
+
+            _unsubs.push(on(media, 'mouseenter', () => {
+                const volume = Storage.getGalleryVolume();
+                if (volume === 0) return;
+                if (!audio) {
+                    audio = ce('audio', {
+                        src: resolveMediaUrl(item.filePath),
+                        preload: 'metadata',
+                    });
+                    _unsubs.push(on(audio, 'play',  () => _setIcon('stop')));
+                    _unsubs.push(on(audio, 'pause', () => _setIcon('audio')));
+                    // `pause` does NOT fire when a clip runs out — only `ended` does,
+                    // so without this the glyph stays on Stop for a finished tile.
+                    _unsubs.push(on(audio, 'ended', () => {
+                        _setIcon('audio');
+                        try { audio.currentTime = 0; } catch (_) {}
+                    }));
+                    media.appendChild(audio);
+                }
+                if (_playingAudio !== audio) _stopPickerAudio();
+                audio.volume = volume;
+                _playingAudio = audio;
+                audio.play().catch(() => {});
+            }));
+
+            _unsubs.push(on(media, 'mouseleave', () => {
+                if (audio && _playingAudio === audio) _stopPickerAudio();
+            }));
+        }
+
         function _buildTile(entry) {
-            const { item, type } = entry;
-            const name = _stripExt(item.displayName || _basename(item.filePath));
+            const { item, type, label: name } = entry;
 
             const tile = ce('div', { className: 'mpi-media-picker__tile' });
 
@@ -428,6 +543,7 @@ export const MpiMediaPicker = ComponentFactory.create({
                 const icon = ce('span', { className: 'mpi-media-picker__tile-icon' });
                 icon.innerHTML = renderIcon('audio', 'lg');
                 media.appendChild(icon);
+                _wireAudioHover(media, icon, item);
             } else {
                 media.appendChild(ce('img', {
                     src: resolveMediaUrl(item.thumbPath || item.filePath),
@@ -537,6 +653,7 @@ export const MpiMediaPicker = ComponentFactory.create({
         el.destroy = () => {
             _closePreview();
             _closeVoiceLibrary();
+            _stopPickerAudio();
             _unsubs.forEach(fn => fn());
             _unsubs.length = 0;
             cancel?.el?.destroy?.();

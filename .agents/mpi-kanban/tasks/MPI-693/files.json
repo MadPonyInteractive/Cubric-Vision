@@ -1,0 +1,8 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/components/Compounds/MpiMediaPicker/MpiMediaPicker.js",
+    "tests/desktop/media-picker-cards.spec.js",
+    "docs/component-contracts.md"
+  ]
+}

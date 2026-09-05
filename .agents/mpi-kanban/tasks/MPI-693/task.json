@@ -1,16 +1,19 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-693",
-  "title": "Media picker: persisted Cards/Files mode + audio plays on hover",
-  "description": "The pop-up picker lists every history file; add a persisted Cards/Files toggle that shows one tile per gallery card under its card name, and make audio tiles play on hover.",
-  "column": "todo",
-  "maturity": "planned",
+  "title": "Media picker lists CARDS, not files, and audio plays on hover",
+  "description": "The pop-up picker lists every history file; make it list one tile per gallery card under the gallery's own label, and make audio tiles play on hover.",
+  "column": "doing",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-09-05T08:35:42Z",
-  "updated_at": "2026-09-05T08:35:42Z",
+  "updated_at": "2026-09-05T09:02:10Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
-    "events": "events.jsonl"
+    "events": "events.jsonl",
+    "checklist": "checklist.md",
+    "files": "files.json",
+    "validation": "validation.md"
   }
 }
