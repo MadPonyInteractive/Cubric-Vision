@@ -493,10 +493,78 @@ async function pickGpu(volumeId, exclude = []) {
         + `Types offered: ${gpus.map(g => `${g.displayName || g.id}${inStock(g) ? '' : ' (no stock)'}`).join(', ')}`);
 }
 
-/** @param {{soft?:boolean}} [o] soft → return false on timeout instead of exiting */
+// ── The app's own [download] warnings, surfaced inline ───────────────────────
+// MPI-692. This runner printed a dot per poll and never read app.log, so on
+// 2026-09-04 the app diagnosed a dead download Pod at 22:07:45 — "remote install
+// SSE closed", "silent for 94s with 1 dep(s) outstanding — treating as stalled"
+// — and the run kept dotting until 22:43. Thirty-six minutes of a paid Pod with
+// the answer sitting in the log the whole time.
+//
+// No detection lives here, deliberately. The app owns the thresholds and the
+// vocabulary (MPI-691 made a genuine stall terminal after 3 rounds); the runner
+// only has to stop hiding them. A rolling MB/s throughput floor was designed
+// first and REJECTED — do not revive it without reading MPI-692's brief: bytes
+// legitimately stop landing during aria2 finalization and sha256 verify, so any
+// window-based rate check false-alarms on a healthy run.
+
+/**
+ * The pure half: the `[download]` WARN/ERROR messages in a log body that have
+ * not been reported yet.
+ *
+ * Deduped by whole LINE, not by byte offset, because routes/logger.js rotates
+ * app.log at MAX_LOG_BYTES (256 KB) — routinely, mid-install. An offset into a
+ * file that restarts at 0 would replay the new file from its middle.
+ *
+ * @param {string} text the whole of app.log
+ * @param {Set<string>} seen mutated — lines already reported
+ * @returns {string[]} messages, stamp/level/category stripped, in file order
+ */
+function downloadWarnings(text, seen) {
+    const out = [];
+    for (const raw of String(text).split('\n')) {
+        const line = raw.trimEnd();
+        const m = /^\[[^\]]+\] \[(?:WARN|ERROR)\] \[download\] (.+)$/.exec(line);
+        if (!m || seen.has(line)) continue;
+        seen.add(line);
+        out.push(m[1]);
+    }
+    return out;
+}
+
+const _seenDownloadWarnings = new Set();
+
+/**
+ * Fetch and print them. A whole-file read per poll needs no range protocol: the
+ * 256 KB rotation ceiling above is also the most /logs/read can ever hand back.
+ *
+ * @param {boolean} [print] false primes `seen` silently, so a re-run after a
+ *   failure does not replay YESTERDAY's warnings as if they were current.
+ */
+async function drainDownloadWarnings(print = true) {
+    let text;
+    // A log that cannot be read must never fail a paid run — the same rule
+    // _transcribe follows. The install is what is being watched, not the watcher.
+    try { text = (await app('/logs/read')).log || ''; } catch { return; }
+    const msgs = downloadWarnings(text, _seenDownloadWarnings);
+    // The leading newline closes the running row of dots. `log()`, not
+    // console.log, so the warning lands in smoke-run.txt beside the transcript
+    // it explains.
+    if (print) for (const msg of msgs) log(`\n  ⚠ [download] ${msg}`);
+}
+
+/**
+ * @param {{soft?:boolean, watchLog?:boolean}} [o]
+ *   soft → return false on timeout instead of exiting.
+ *   watchLog → print the app's `[download]` warnings between polls (MPI-692).
+ *   Opt-in: the install phase wants it, and the generation matrix must not pay
+ *   an HTTP round trip per poll for a phase that downloads nothing.
+ */
 async function waitReady(what, probe, timeoutMs, o = {}) {
     const t0 = Date.now();
     while (Date.now() - t0 < timeoutMs) {
+        // Drained BEFORE the probe: a probe that succeeds returns straight out
+        // of the loop, so anything logged in the run-up would never print.
+        if (o.watchLog) await drainDownloadWarnings();
         try { if (await probe()) return true; } catch { /* keep polling */ }
         process.stdout.write('.');
         await sleep(5000);
@@ -1386,7 +1454,7 @@ async function main() {
                 if (got !== last) { last = got; lastMoveMs = Date.now(); }
                 else if (Date.now() - lastMoveMs > STALL_MS) throw new Error('stalled');
                 return !IN_FLIGHT.includes(j.status);
-            }, 3 * 60 * 60 * 1000, { soft: true }).catch(() => false);
+            }, 3 * 60 * 60 * 1000, { soft: true, watchLog: true }).catch(() => false);
 
             if (!done) {
                 // Recycle the Pod and re-POST once. aria2 resumes from the volume, so the
@@ -1402,7 +1470,7 @@ async function main() {
                 await waitReady(`install ${e.model.id} (retry)`, async () => {
                     const j = ((await app('/comfy/downloads/status')).jobs || []).find(x => x.modelId === e.model.id);
                     return !!j && !IN_FLIGHT.includes(j.status);
-                }, 3 * 60 * 60 * 1000);
+                }, 3 * 60 * 60 * 1000, { watchLog: true });
             }
         }
         const jobs = (await app('/comfy/downloads/status')).jobs || [];
@@ -1410,6 +1478,9 @@ async function main() {
             .map(j => j.modelId);
     };
 
+    // Swallow whatever [download] warnings app.log already holds, so the first
+    // poll reports THIS install and not the wreckage of the run before it.
+    await drainDownloadWarnings(false);
     log(`  installing ${set.depIds.length} deps on a CPU Pod (download mode)…`);
     let bad = await installModels(set);
 
@@ -1706,6 +1777,29 @@ if (INVOKED_DIRECTLY && flag('self-check')) {
     // double-reporting it here would explain it worse.
     assert(holes({ 1: { class_type: 'MpiNotInThisEngine', inputs: {} } }).length === 0,
         'a class absent from /object_info is skipped, not crashed on — gate 8 owns that finding');
+
+    // downloadWarnings (MPI-692). The fixture is the real 2026-09-04 shape, as
+    // routes/logger.js:102 writes it: `[<ISO>] [<LEVEL>] [<category>] <message>`.
+    // Two lines that must surface, two that must not.
+    const fixtureLog = [
+        '[2026-09-04T22:07:45.123Z] [WARN] [download] remote install SSE closed (bad-response); 7 dep(s) outstanding — recovering',
+        '[2026-09-04T22:08:00.000Z] [INFO] [download] installing 12 deps',
+        '[2026-09-04T22:09:45.000Z] [WARN] [engine] comfy restarted',
+        '[2026-09-04T22:43:06.000Z] [ERROR] [download] remote target inactive; failing 17 outstanding dep(s)',
+    ].join('\n');
+    const dwSeen = new Set();
+    const dw = downloadWarnings(fixtureLog, dwSeen);
+    assert(dw.length === 2, `only [download] WARN/ERROR surfaces — INFO and other categories are noise; got ${dw.length}: ${dw.join(' | ')}`);
+    assert(dw[0].startsWith('remote install SSE closed') && dw[1].startsWith('remote target inactive'),
+        `messages come back in file order with the stamp/level/category stripped, got ${dw.join(' | ')}`);
+    // The dedupe is what makes a 5s poll printable at all — without it every
+    // poll reprints the whole log and the dots are replaced by a worse spam.
+    assert(downloadWarnings(fixtureLog, dwSeen).length === 0, 'a second poll over the same log repeats nothing');
+    // Rotation at MAX_LOG_BYTES (256 KB) restarts app.log mid-install. Deduping
+    // by line survives it; a byte offset would resume into the middle of a file
+    // that just went back to zero.
+    assert(downloadWarnings('[2026-09-04T22:44:00.000Z] [WARN] [download] fresh after rotation', dwSeen).length === 1,
+        'a rotated log still reports its unseen lines');
 
     console.log(`self-check OK (${applied.join(', ')})`);
     process.exit(0);
