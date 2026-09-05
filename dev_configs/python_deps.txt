@@ -314,8 +314,10 @@ scipy==1.18.0
     #   trimesh
 segment-anything==1.0
     # via -r dev_configs/python_deps.in
-setuptools==83.0.0
-    # via torch
+setuptools==80.10.2
+    # via
+    #   -r dev_configs/python_deps.in
+    #   torch
 shapely==2.1.2
     # via trimesh
 shellingham==1.5.4

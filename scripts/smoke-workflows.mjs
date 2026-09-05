@@ -1119,11 +1119,43 @@ function checkPodLock() {
     // python_deps.txt is the SECOND half of the sync and drifts silently (MPI-413): the
     // Dockerfile COPYs both, a node bump moves both, and shipping one without the other
     // bakes a mismatched engine. Checking only the lock is how a "synced" pod still drifts.
-    // Compare LF-normalized — this repo converts line endings, so raw bytes false-positive.
+    //
+    // COVERAGE, NOT EQUALITY (MPI-698). This was a byte-compare, which asks the wrong
+    // question. What matters is "does the image contain, at the same version, every
+    // package this build ships" — an image carrying EXTRA packages cannot invalidate the
+    // run, it just belongs to a bigger node set. Equality made that a hard stop: the 1.4.x
+    // maintenance line ships 15 nodes / 125 packages against the image's 21 / 150, where
+    // all 25 extras are Flow-pack dependencies (MelodramaBox, ChatterBox, SplatKit), and
+    // the release was blocked on a difference that could not affect a single op it runs.
+    //
+    // The direction still matters, and only one direction: a package WE ship that the
+    // image lacks, or holds at a different version, means the smoke measured something
+    // the user will not get. That is real drift and still fails.
     const podDeps = path.join(POD_REPO, 'python_deps.txt');
-    const norm = (p) => readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
     if (!existsSync(podDeps)) drift.push('python_deps.txt (missing)');
-    else if (norm(path.join(REPO, 'dev_configs/python_deps.txt')) !== norm(podDeps)) drift.push('python_deps.txt');
+    else {
+        // `name==version`, ignoring comments, `# via` annotation lines and env markers.
+        const pins = (p) => {
+            const out = new Map();
+            for (const line of readFileSync(p, 'utf8').replace(/\r\n/g, '\n').split('\n')) {
+                const m = /^([A-Za-z0-9._-]+)\s*==\s*([^\s;]+)/.exec(line);
+                if (m) out.set(m[1].toLowerCase(), m[2]);
+            }
+            return out;
+        };
+        const oursPins = pins(path.join(REPO, 'dev_configs/python_deps.txt'));
+        const podPins = pins(podDeps);
+        const missing = [], mismatched = [];
+        for (const [name, version] of oursPins) {
+            if (!podPins.has(name)) missing.push(name);
+            else if (podPins.get(name) !== version) mismatched.push(`${name} ${podPins.get(name)} != ${version}`);
+        }
+        if (missing.length) drift.push(`python_deps.txt — image is MISSING ${missing.length}: ${missing.slice(0, 6).join(', ')}${missing.length > 6 ? ', …' : ''}`);
+        if (mismatched.length) drift.push(`python_deps.txt — version mismatch: ${mismatched.slice(0, 6).join('; ')}${mismatched.length > 6 ? '; …' : ''}`);
+        if (!missing.length && !mismatched.length && oursPins.size !== podPins.size) {
+            log(`\n  note: the Pod image carries ${podPins.size - oursPins.size} package(s) this build does not ship — a superset, which does not affect these ops.`);
+        }
+    }
     if (!drift.length) { log(`\n  pod lock + python_deps in sync with ${ourTag} ✓`); return true; }
 
     log(`\n  🛑 POD LOCK IS BEHIND — ${drift.join(', ')}`);

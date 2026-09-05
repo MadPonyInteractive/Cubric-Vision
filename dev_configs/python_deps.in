@@ -42,6 +42,24 @@
 #   install, silently (MPI-413 Evidence C). Its only job is runtime CUDA detection, which
 #   is exactly what this file replaces.
 
+# ── setuptools: pinned BELOW the pkg_resources removal ──────────────────────────
+# setuptools arrives transitively and resolved to 83.0.0. `pkg_resources` was removed in
+# 81, and this repo has already been bitten by that removal once at BUILD time — see the
+# cupy-wheel note above, whose setup.py imports it and therefore fails to build on every
+# platform, on every fresh install, silently.
+#
+# Pinned here for TWO reasons, either sufficient:
+#   1. The hazard is generic. Anything importing pkg_resources dies on 81+, and this file
+#      exists precisely so that is decided once by us rather than by whichever node
+#      resolved last.
+#   2. Smoke parity (MPI-698). The Pod image bakes 80.10.2, so leaving this at 83 means
+#      the matrix measures a setuptools the user never gets. checkPodLock compares
+#      per-package versions now, so that gap is a hard stop rather than a silent gamble.
+#
+# ponytail: a version ceiling, not a downgrade treadmill. Lift it when nothing in the
+# tree imports pkg_resources, not on a setuptools release.
+setuptools<81
+
 # ── Pinned shared set ───────────────────────────────────────────────────────────
 # These were `pipPins` in js/data/modelConstants/nodesDeps.js — a per-node, hand-
 # maintained repair applied AFTER each node's requirements had already drifted the
