@@ -1,0 +1,50 @@
+[
+  {
+    "arm": "C",
+    "seed": 265629063,
+    "baseline": 1292763136,
+    "peak": 6643257866,
+    "wall": 17.963,
+    "cached": [],
+    "file": [
+      "sa3_vram_C_00003.flac"
+    ],
+    "total": 17175150592
+  },
+  {
+    "arm": "B",
+    "seed": 96379372,
+    "baseline": 1292763136,
+    "peak": 6821589074,
+    "wall": 31.919,
+    "cached": [],
+    "file": [
+      "sa3_vram_B_00004.flac"
+    ],
+    "total": 17175150592
+  },
+  {
+    "arm": "C",
+    "seed": 530612690,
+    "baseline": 1292763136,
+    "peak": 6911704658,
+    "wall": 15.289,
+    "cached": [],
+    "file": [
+      "sa3_vram_C_00004.flac"
+    ],
+    "total": 17175150592
+  },
+  {
+    "arm": "B",
+    "seed": 965562869,
+    "baseline": 1292763136,
+    "peak": 6821589074,
+    "wall": 32.614,
+    "cached": [],
+    "file": [
+      "sa3_vram_B_00005.flac"
+    ],
+    "total": 17175150592
+  }
+]

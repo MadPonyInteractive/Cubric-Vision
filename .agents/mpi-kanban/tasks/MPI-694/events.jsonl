@@ -1,0 +1,1 @@
+{"schema":"mpi-kanban/event/v1","id":"MPI-694","type":"task.created","at":"2026-09-05T09:55:00Z","actor":"claude","summary":"Split out of MPI-664 after Fabio approved Stable Audio 3 on the bench. Both licences read whole; MpiClearVram measured at -5.9GB peak, VAEDecodeAudioTiled rejected at 60s."}

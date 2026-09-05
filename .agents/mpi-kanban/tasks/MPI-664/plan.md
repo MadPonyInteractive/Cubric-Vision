@@ -127,6 +127,29 @@ and the sections should now land where he put them.
 
 ---
 
+🟢 **2026-09-05, eighth session — THE THREE APPROVED JOBS ARE DONE. One of them came back with
+the opposite answer.**
+
+1. 🟢 **BOTH LICENCES READ WHOLE** — Stability Community License + Core Models list + AUP, and
+   the Gemma Terms + Prohibited Use Policy. Not a summary; the incorporated-by-reference policies
+   too. **Both weights are in scope, neither licence restricts by territory, and neither puts a
+   bar on Outputs.** Five obligations block a RELEASE (Stability registration, a `Notice` file,
+   bundled licence copies, a "Powered by Stability AI" string, a Gemma §3.2 clause in our terms);
+   none blocks the build. Full findings: `../MPI-694/brief.md` § GATE 1.
+2. 🔴 **THE "TWO-NODE VRAM FIX" IS A ONE-NODE FIX. Measured, four arms, on the bench.**
+   `MpiClearVram` is the entire win — **12.35 GB → 6.4 GB, −48%, for +0.7 s**. `VAEDecodeAudioTiled`
+   saves nothing once the unload is in and costs **+15 s at 60 s, reproduced three times**;
+   chunking alone still peaks at 12.16 GB, which proves **the reprompter was pinning the card, not
+   the decode**. Ship node 1; hold node 2 as a long-duration/small-card fallback. Runner and raw
+   numbers: `bench/stable_audio_vram.mjs` + `.results.json`.
+3. 🟢 **MPI-694 CREATED** — "Stable Audio 3: SFX, one-shots, instruments, instrumental music",
+   `todo`/`planned`. Board validator exit 0.
+
+**NEXT: the two blank bullets.** Fabio has been asked what outcomes 4 and 5 are. The one-flow
+design does not start until he names them.
+
+---
+
 🟢 **2026-09-05, seventh session — STABLE AUDIO 3 IS EVALUATED AND IN. The card's shape changed.**
 
 Shipped: bare tags (`7b7c3545`), and three research commits (`2c18c0f4`, `ca7fae10`, `ef95173d`).

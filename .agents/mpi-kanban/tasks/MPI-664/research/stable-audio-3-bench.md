@@ -103,16 +103,23 @@ His timings, 60 s of music on an idle card:
 qwen3.5 4.55 + t5gemma 1.19 + audio ~4.6 (fp16) = **10.34 GB of weights**, before activations,
 because their subgraph carries NO unload node. ~10 s of the cold run is just loading them.
 
-## Two levers, both one node, neither tried yet
+## 🟢 THE TWO LEVERS ARE MEASURED, 2026-09-05 — and only ONE of them pays
 
-1. **`MpiClearVram` between `TextGenerate` and the audio stage.** Their graph has no unload of any
-   kind — 16 node types, not one frees VRAM. Ours does (`qwen3vl_4b_prompt_enhancer.json` node
-   13). `passthrough` is `*`/`forceInput`, so it takes the generated string, frees, passes it on.
-   Should drop the ~11 GB peak by the 4.55 GB reprompter.
-2. **`VAEDecodeAudioTiled` instead of `VAEDecodeAudio`** (`tile_size` 512, `overlap` 64; our
-   MiniMax graph already uses it at node 51). Stability's own figure is 6.49 GB → 5.14 GB at 120 s
-   with chunked decoding. This is why the 190 s bench run pinned a 16 GB card and 380 s fell back
-   to weight streaming — **the decode, not the model**.
+Four arms on the bench, reprompter ON, peak polled off `/system_stats` at 200 ms. Runner:
+`../bench/stable_audio_vram.mjs`. Full table and reasoning: **`../../MPI-694/brief.md`**.
+
+1. 🟢 **`MpiClearVram` between `TextGenerate` and the audio stage is the whole win** —
+   **12.35 GB → 6.4 GB (−5.9 GB, −48%) for +0.7 s.** Their graph has no unload of any kind;
+   ours does (`qwen3vl_4b_prompt_enhancer.json` node 13). `passthrough` is `*`/`forceInput`, so
+   it takes the generated string, frees, passes it on. Put it on the `TextGenerate → encoder`
+   edge and it stays inside `ComfySwitchNode`'s lazy branch. **Ship it.**
+2. 🔴 **`VAEDecodeAudioTiled` does NOT pay, and this reverses what this note predicted.** Once
+   the unload is in, chunking saves nothing on peak (6.35 vs 6.19–6.44 GB, inside the noise) and
+   costs **+15 s at 60 s, reproduced three times**; at 190 s it is −0.44 GB for +4.2 s. Chunking
+   *alone* peaks at **12.16 GB**, which is the proof: **the decode was never what pinned the
+   card — the resident 4.55 GB reprompter was.** Stability's 6.49 → 5.14 GB figure is real but
+   it is measured against everything else still resident. Keep tiled decode as a long-duration /
+   small-card fallback, not the default.
 
 `Enable_Reprompt` is worth knowing about too: their `ComfySwitchNode` declares `on_true`/`on_false`
 as `lazy: true`, so with it off `TextGenerate` never runs and the 4.55 GB is never allocated at
@@ -147,26 +154,25 @@ So the 9.22 GB file is **~4.6 GB resident at fp16** — the DiT (`model`) is 1.4
 3. Vocals stay MiniMax's. Not contested.
 4. Does the reprompter beat a hand-written prompt? Still untested, and now less urgent.
 
-## ⚠️ THE LICENCE IS NOW THE GATE, not a footnote
+## 🟢 THE LICENCE GATE IS CLEARED, 2026-09-05 — read whole, and it is a build/ship split
 
-The moment this stops being a bench and starts being a Flow, this has to be read whole. **TWO
-licences stack:**
+Both agreements read end to end, plus both policies they incorporate by reference. **The full
+findings and the five shipping obligations live in `../../MPI-694/brief.md` § GATE 1 — read
+that, not a re-derivation.** The three answers this note was waiting on:
 
-- **Stability AI Community License** — the model card points commercial use at
-  `https://stability.ai/license`. Do NOT take a summary of this, including this line: read the
-  actual terms for the revenue threshold, the commercial trigger, and — per
-  [[project_model_licences_can_be_territory_restricted]] — whether the bar reaches **Outputs**.
-- **Gemma Terms of Use**, restrictions in **§3.2**, because `t5gemma_b_b_ul2` is Gemma-derived.
-  Easy to miss and it applies to the text encoder every arm needs.
+- 🟢 **Both weights are in scope.** Stability's Core Models page names **Stable Audio 3.0 Small**
+  and **Stable Audio 3.0 Medium** explicitly.
+- 🟢 **The bar does NOT reach Outputs**, contrary to what
+  [[project_model_licences_can_be_territory_restricted]] warned to check for. Stability §IV(c)(iii)
+  and Gemma §3.3 both hand outputs to the user, and there is no territory clause in either.
+  The Stability AUP still governs how an output may be *used*.
+- 🟢 **Gemma applies, confirmed not assumed** — **T5Gemma is named in the Gemma Appendix**, so
+  `t5gemma_b_b_ul2` is squarely inside §3.2.
 
-Read both the way MiniMax's weights licence was read (MPI-664 GAP 2), before any wiring.
-
-## ⚠️ Licence, before ANY product wiring
-
-Comfy-Org lists the repo as `other`, pointing at Stability's own LICENSE.md. Per
-[[project_model_licences_can_be_territory_restricted]] the bar can cover **outputs**, not just
-weights. Fine for a bench. Not safe to assume for shipping — read it whole, as the MiniMax
-weights licence was (MPI-664 GAP 2).
+🔴 **Nothing here blocks the build. Five things block a RELEASE:** register with Stability
+(mandatory for commercial use at *any* revenue), one `Notice` file carrying both verbatim
+strings, both licence copies bundled, a "Powered by Stability AI" string in the UI, and one
+enforceable Gemma §3.2 clause in our own terms. Details in the MPI-694 brief.
 
 ## Reproduce
 

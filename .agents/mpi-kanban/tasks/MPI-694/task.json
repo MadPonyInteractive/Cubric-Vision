@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-694",
+  "title": "Stable Audio 3: SFX, one-shots, instruments, instrumental music",
+  "description": "Ship Stable Audio 3 as the non-vocal half of Music Maker. Bench-approved by Fabio across all four modes; both licences read; the VRAM fix is measured. Split out of MPI-664.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-09-05T09:55:00Z",
+  "updated_at": "2026-09-05T09:55:00Z",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  }
+}
