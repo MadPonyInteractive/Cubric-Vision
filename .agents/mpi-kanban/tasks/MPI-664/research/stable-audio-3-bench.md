@@ -82,13 +82,84 @@ That closes the highest-priority question this bench existed to ask: **SFX and o
 good enough on the first try**, and they are a capability Vision has no route to today. It also
 means the reprompter is an upgrade to evaluate rather than a dependency to make the thing work.
 
-## Still open — needs ears, needs Fabio
+## 🟢 THE EVAL IS DONE — Fabio, 2026-09-05, all four modes in the bench
 
-1. ~~Quality of the SFX and one-shots.~~ **Answered above.**
-2. Instrumental music head-to-head against MiniMax (`stable_audio_3_medium`, downloaded, unrun).
-3. Vocals — the docs do not mention them, so MiniMax keeps that half unless it surprises us.
-4. New, from 1 being this good: does the reprompter add anything over a hand-written prompt?
-   `Enable_Reprompt` gates it, so this is one toggle and two runs.
+*"This model is good, and the audio quality is really good as well. I tried everything.
+Instrumental, effects, one-shot, and music: it's very good."*
+
+**THE PRODUCT CONCLUSION, his words: *"We can use it for everything else but sung songs."***
+Stable Audio 3 takes SFX, one-shots, instruments and instrumental music; MiniMax keeps the one
+thing Stable Audio does not claim — **vocals**. That is a split by capability, not a replacement,
+and SFX/one-shots are a NEW capability rather than a better version of an existing one.
+
+His timings, 60 s of music on an idle card:
+
+| | |
+|---|---|
+| warm (models resident, seed changed only) | **7 s** |
+| cold (after unloading) | **17 s**, peak **~11 GB** |
+
+**That 11 GB is the co-residency this note predicted, and it confirms it numerically:**
+qwen3.5 4.55 + t5gemma 1.19 + audio ~4.6 (fp16) = **10.34 GB of weights**, before activations,
+because their subgraph carries NO unload node. ~10 s of the cold run is just loading them.
+
+## Two levers, both one node, neither tried yet
+
+1. **`MpiClearVram` between `TextGenerate` and the audio stage.** Their graph has no unload of any
+   kind — 16 node types, not one frees VRAM. Ours does (`qwen3vl_4b_prompt_enhancer.json` node
+   13). `passthrough` is `*`/`forceInput`, so it takes the generated string, frees, passes it on.
+   Should drop the ~11 GB peak by the 4.55 GB reprompter.
+2. **`VAEDecodeAudioTiled` instead of `VAEDecodeAudio`** (`tile_size` 512, `overlap` 64; our
+   MiniMax graph already uses it at node 51). Stability's own figure is 6.49 GB → 5.14 GB at 120 s
+   with chunked decoding. This is why the 190 s bench run pinned a 16 GB card and 380 s fell back
+   to weight streaming — **the decode, not the model**.
+
+`Enable_Reprompt` is worth knowing about too: their `ComfySwitchNode` declares `on_true`/`on_false`
+as `lazy: true`, so with it off `TextGenerate` never runs and the 4.55 GB is never allocated at
+all. Every clip judged good so far was made with it OFF.
+
+## 🔴 DO NOT DOWNLOAD `medium_base`. It is not the quality ceiling.
+
+Its own card: *"the base (pre-trained) model intended for fine-tuning"*, and it says to use Medium
+instead for generation. Stability's write-up is blunter — the adversarially post-trained model does
+*"8 inference steps while producing better outputs than the 50-step base model"*, because
+post-training exists to *"reduce the number of inference steps while improving fidelity and prompt
+adherence"*. Distillation smoothed the output; the adversarial stage put the sharpness back and
+past it.
+
+So Base is worth its 9.22 GB **only if we fine-tune or train a LoRA on it** — never to hear whether
+it sounds better. Sources: the two HF cards plus
+`artintech.substack.com/p/stable-audio-3-explained-in-5-figures` (Jordi Pons).
+
+## What the weights actually cost
+
+Read off the safetensors header, not a model card: **2,305,495,793 params, 997 tensors, ALL F32**.
+So the 9.22 GB file is **~4.6 GB resident at fp16** — the DiT (`model`) is 1.45B and the VAE
+(`pretransform`) 0.85B, which is why public write-ups say "1.4B": they count the DiT alone.
+`medium_base` is byte-identical, so its weights cost exactly the same. Stability publish ~6.5 GB at
+120 s for Medium, which agrees with a bench run measured at +5,149 MiB for 10 s at cfg 7.
+
+## Still open
+
+1. ~~Quality of the SFX and one-shots.~~ **Answered — good, first try, no reprompter.**
+2. ~~Instrumental music.~~ **Answered — "very good".** A direct A/B against MiniMax on one brief is
+   still worth doing before deciding which engine owns instrumental music.
+3. Vocals stay MiniMax's. Not contested.
+4. Does the reprompter beat a hand-written prompt? Still untested, and now less urgent.
+
+## ⚠️ THE LICENCE IS NOW THE GATE, not a footnote
+
+The moment this stops being a bench and starts being a Flow, this has to be read whole. **TWO
+licences stack:**
+
+- **Stability AI Community License** — the model card points commercial use at
+  `https://stability.ai/license`. Do NOT take a summary of this, including this line: read the
+  actual terms for the revenue threshold, the commercial trigger, and — per
+  [[project_model_licences_can_be_territory_restricted]] — whether the bar reaches **Outputs**.
+- **Gemma Terms of Use**, restrictions in **§3.2**, because `t5gemma_b_b_ul2` is Gemma-derived.
+  Easy to miss and it applies to the text encoder every arm needs.
+
+Read both the way MiniMax's weights licence was read (MPI-664 GAP 2), before any wiring.
 
 ## ⚠️ Licence, before ANY product wiring
 
