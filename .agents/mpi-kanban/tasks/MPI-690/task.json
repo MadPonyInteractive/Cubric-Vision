@@ -4,10 +4,10 @@
   "title": "CPU download Pod OOMs: fixed at cpu3c (~4GB) whatever the dep set",
   "description": "BLOCKS 1.4.5. routes/remotePodLifecycle.js:838 hardcodes spec.cpuFlavorIds = [CPU_FLAVORS[0]] ('cpu3c', the cheapest) and never sets minMemoryInGb, though _createPodInternal accepts it. Line 791 justifies it with 'a model download is network/disk-bound' - which is wrong about MEMORY. The wrapper spawns one aria2c per file (create_subprocess_exec in _download_aria2) at '-x 16 -s 128 -k 1M' with NO --disk-cache cap, so aria2's default 16MiB cache applies PER PROCESS. Observed 2026-09-04 on the 1.4.5 smoke matrix (102 deps, 340GB, the largest ever asked of it): 17 concurrent .part files, ~17 aria2 processes, on a 3.725GiB box. RunPod System log: 'WARN: container is unhealthy: exit code 137: (docker kill?); triggered memory limits (OOM)' at 23:10:51 and again ~23:24 local, each followed by a container restart. Fix options, not yet chosen: a larger-RAM CPU flavor (cpu3g/cpu5g are general-purpose, more RAM per vCPU) and/or wiring minMemoryInGb through the noGpu branch; cap concurrent aria2 processes app-side; set --disk-cache small/0 in the wrapper (that half is mpi-ci, publish-runtime.sh dev, NOT an image rebuild). Whatever is chosen must be sized against the WHOLE dep set, not one file. Pairs with the app-side card: the OOM is what triggers it, the hang is what the user actually sees.",
   "column": "doing",
-  "maturity": "in-progress",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-09-04T23:44:08+01:00",
-  "updated_at": "2026-09-05T08:39:25+01:00",
+  "updated_at": "2026-09-05T08:48:09+01:00",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",

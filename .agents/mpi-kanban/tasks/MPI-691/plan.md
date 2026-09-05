@@ -63,3 +63,20 @@ remote-INACTIVE case and left this one.
 - Live: the resumed smoke matrix. If a restart happens again, the run must
   either recover on its own or end with a real failure — never 70 minutes of
   silence.
+
+## Current State (2026-09-05)
+
+Shipped in `819ab084` (pushed) alongside MPI-690, which owns the queue this
+re-issue path pumps into. 897/897 tests, lint clean, card `doing`/`validating`.
+Only the LIVE leg is outstanding, and it is opportunistic: it only proves itself
+if the Pod actually restarts again. If MPI-690 holds, this path may never fire —
+that is a PASS, not missing evidence. Say so in the close-out rather than
+letting an unexercised path read as unverified.
+
+## Plan Drift
+
+The first draft of the terminal-state test drove `_onRemoteStreamClosed` four
+times in a row and failed: the MPI-97 reconnect timer short-circuits a second
+close, so only round 1 ever ran. Production spaces the rounds with the reconnect
+plus the 90s stall watchdog. `_recoverOrphanedRemoteInstalls` is exported and
+driven directly instead.

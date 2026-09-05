@@ -48,3 +48,20 @@ headroom. Both.
 - `npm test`
 - Live: the resumed smoke matrix on volume `uebvm3350f` must pass 60.6 GB
   without a 137 in the RunPod System log.
+
+## Current State (2026-09-05)
+
+Both edits shipped in `819ab084` (pushed). 897/897 tests, lint clean, card
+`doing`/`validating`. Only the LIVE leg is outstanding.
+
+Blocked on one thing the agent must not do itself: the app on `:3000` needs a
+RESTART. Both fixes are in `routes/` — main-process Express, not the renderer —
+and the smoke runner drives the app's own routes, so an unrestarted app rebuilds
+the same 4GB Pod with the same 17-way fan-out and proves nothing. The user is
+restarting it now.
+
+Found while checking the resume path: `smoke-workflows.mjs` installs models one
+at a time through the normal per-model route with NO force flag, so the 60.6 GB
+and the aria2 control files on the volume are picked up, not re-downloaded. The
+17 concurrent downloads were the deps *within* one model — exactly what the cap
+of 3 bounds.
