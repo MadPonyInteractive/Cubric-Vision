@@ -126,6 +126,113 @@ with a grid snap added anyway, since 27 vs 21 is otherwise unexplained.
 44 frames sampled against 27's 54, so it keeps most of the speed win. Bypass node
 538 `MpiVideoSamplingPreview` during the test to remove the ambiguity.
 
+## The black frame was an OFF-GRID WINDOW (resolved 2026-09-05)
+
+**Answered.** The artefacts are real, not a `MpiVideoSamplingPreview` lie. Fabio
+watched the saved decode and the live preview of two separate runs at
+`window=21`: flashing artefacts through window 2 and a black frame at the end of
+BOTH windows. The preview branch of the hypothesis is dead.
+
+**Cause.** H3 patchifies time as a 2-frame causal head plus blocks of 5, so a
+legal latent length is `5k+2` and a legal cut point is a multiple of 5. `27` is
+`5*5+2`, no remainder, and it was clean. `21` leaves `(21-2)/5 = 3.8` blocks: the
+trailing part-block is padded, and the padding is what comes back black. The
+run's own log also shows window 2 STARTING at 16, which is off-grid too. The
+blend maths was exonerated first (identity-sampler reconstruction under `1e-5`
+across 875 shape combinations), so length was the only thing left.
+
+**Fix, in `c:/AI/Mpi/ComfyUi-MpiNodes/sampler.py`, uncommitted:**
+- New `frame_grid` widget (default 5; `1` = no constraint, plain fixed windows).
+- Window length snapped to `5k+2` AND stride snapped to a multiple of `grid`, so
+  windows start on the grid as well as end on it. Stride rounding can only buy
+  MORE overlap than requested, never less.
+- `window` is now a CEILING, not a target. Pass count is the cost, not window
+  size, so once the pass count is fixed the window shrinks to the smallest legal
+  size that still covers. `T=37` ceiling 27 now plans `[(0,22),(15,37)]` — 44
+  latent-frames of sampling instead of 54. Measured support: 21-frame windows ran
+  6:54 / 6:45 against 9:40 / 9:48 at 27.
+- Where grid and ceiling disagree the GRID wins: an over-ceiling window risks an
+  OOM, an off-grid one guarantees a corrupt one. The log reports both numbers.
+- Self-check: 747,257 assertions — every `T=5k+2` to 197 x window 2-59 x overlap
+  0-11 asserting on-grid size, on-grid start, equal sizes, no gaps, full
+  coverage; plus `grid=1` proven a no-op across 80 x 40 x 8.
+
+**Gate before the push is now one clean run** at ceiling 27 / overlap 4 /
+frame_grid 5. Node repo still NOT pushed, `dev_configs/node_lock.json` still NOT
+bumped.
+
+**Auto-window is AFTER the pin, decided 2026-09-05.** The pin ships a node that
+works today; auto needs a second VRAM calibration point that does not exist yet,
+and per this card's own constraint a wrong guess OOMs rather than degrading. Auto
+lands later as an optional widget on the same node, so shipped workflows keep
+their sockets and it costs one more pin bump. Note that auto can never infer
+`frame_grid`: `T=37` is legal under both `grid=5` and `grid=1`, so the grid stays
+authored per workflow whatever happens to `window`.
+
+## The seam was the FADE WIDTH, and the units moved to video frames (2026-09-05)
+
+Committed in the node repo at **e9e3633, NOT pushed and NOT pinned.**
+
+**Black frames: gone, confirmed by Fabio.** The grid snap did it. That gate is
+closed.
+
+**The seam was a second, separate bug of mine.** `plan_windows` hands out more
+overlap than requested once the stride is snapped, but `_blend_weights` was
+still ramping over the REQUESTED number -- a plan sharing 7 frames crossfaded
+across 4 and hard-cut the other 3. Now ramps over `_edge_overlaps`, the real
+shared region per edge. Measured on one seam at T=37, low-res, everything else
+identical:
+
+| fade | what Fabio saw |
+|---|---|
+| T4  | her face visibly becomes two faces |
+| T7  | a trace of distortion |
+| T17 | clean |
+
+**This is palliative and the card should say so.** The windows denoise the
+shared frames independently, so two valid but different answers get averaged;
+width hides it, nothing here removes it. The removal is per-step blending --
+the node becomes a MODEL wrapper (`set_model_unet_function_wrapper`, the
+AnimateDiff context-window shape), full latent to the sampler, windows split and
+re-blend inside each `apply_model` so they cannot drift. NOT DONE, and Fabio has
+not chosen it. Ship-with-generous-overlap is the alternative.
+
+**Units moved to VIDEO frames** (`window_frames`, `overlap_frames`; `frame_grid`
+stays latent and advanced), plus a third `info` STRING output. Rationale: an OOM
+is discovered as "died at 124, survived at 90", so a latent-frame dial cannot be
+calibrated by the person who hit the wall. No extra widget needed --
+`ratio*T - (ratio-1)*ceil(T/grid)` with `latent_format.temporal_downscale_ratio`
+reproduces ComfyUI's own count exactly.
+
+**Resolution scaling, asked 2026-09-05.** `max_T = budget / (latent_W*latent_H)`,
+budget = 397,440 tokens (`27*92*160`, the ONE measured point). Tokens go with
+area, so doubling linear resolution quarters the window:
+
+| output | latent | max T | window | passes | cost vs 2K |
+|---|---|---|---|---|---|
+| 1024x1792 | 112x64 | 55 | 124f | 1 | 0.33x |
+| 1280x2240 | 140x80 | 35 | 90f | 2 | 0.76x |
+| 1472x2560 (2K) | 160x92 | 27 | 90f | 2 | 1.00x |
+| 1856x3232 | 202x116 | 16 | 39f | 6 | 2.12x |
+| 2944x5120 (4K) | 320x184 | 6 | **OVER BUDGET** | - | - |
+
+4K does not fit on the 4060 Ti at all: the smallest legal H3 window (T7) needs
+412,160 tokens against a 397,440 budget. 3.7% over is exactly the margin one
+calibration point cannot call -- only an attempt settles it. A linear token
+budget is itself suspect, because attention is superlinear in T, which is the
+second reason auto-window needs the 5090 point.
+
+**THE ONE THING LEFT BEFORE THE PUSH.** The video-frame widgets and the info
+output have NEVER executed in ComfyUI -- every clean run used the old
+latent-frame widgets. One 2K run with `window_frames 90 / overlap_frames 26 /
+frame_grid 5` (plans `[(0,27),(10,37)]`, the spans already proven clean at both
+2K and low-res) verifies the new surface and 2K together. Then: push the node
+repo, bump `dev_configs/node_lock.json`, wire node 602 into both H3 raw
+templates and their compiled twins.
+
+Fabio's tutorial will tell ComfyUI users to change `frame_grid` for a non-H3
+model, so the widget is now public API -- do not rename it casually.
+
 ## Plan Drift
 
 - **2026-09-05 — `window` is a ceiling, not a target.** `plan_windows` pads the
