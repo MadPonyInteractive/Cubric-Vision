@@ -30,9 +30,9 @@ connection refused against a booting Pod is normal and must be retried.
 
 | Site | Probe | Classification |
 |---|---|---|
-| `:623` Pod ready | `(await app('/remote/comfy/status')).ready` | Throws only transiently (a booting Pod refuses connections). **The swallow is load-bearing — must keep working.** |
-| `:1450` install | movement check, throws `'stalled'` | **The bug.** Give-up signal swallowed. |
-| `:1470` install retry | no movement check at all | **Second hole.** A Pod that dies during the retry hangs the full 3 h with nothing watching. |
+| Pod-ready wait (`/remote/comfy/status`) | `(await app('/remote/comfy/status')).ready` | Throws only transiently (a booting Pod refuses connections). **The swallow is load-bearing — must keep working.** |
+| install, first round | movement check, throws `'stalled'` | **The bug.** Give-up signal swallowed. |
+| install, retry round | no movement check at all | **Second hole.** A Pod that dies during the retry hangs the full 3 h with nothing watching. |
 
 ## Fix
 

@@ -35,7 +35,7 @@ the return value alone does not discriminate, only the elapsed time does, which
 is why the timing assert exists.
 
 The second is the one that matters for blast radius. It proves the suite catches
-a regression that would make the Pod-ready wait at `:623` die on the first
+a regression that would make the Pod-ready wait die on the first
 connection refused against a still-booting host.
 
 Mutant copies deleted.
@@ -44,9 +44,9 @@ Mutant copies deleted.
 
 | Site | Change | Proof |
 |---|---|---|
-| `:623` Pod ready | none; transient throws still retried | mutation 2 above |
-| `:1493` install | give-up now ends the wait in ~0 s instead of 3 h | mutations 1 + 3 |
-| `:1507` install retry | **gained** a movement check it never had, via the shared factory | same `installProbe`, same asserts |
+| Pod-ready wait (`/remote/comfy/status`) | none; transient throws still retried | mutation 2 above |
+| install, first round | give-up now ends the wait in ~0 s instead of 3 h | mutations 1 + 3 |
+| install, retry round | **gained** a movement check it never had, via the shared factory | same `installProbe`, same asserts |
 
 ## CLOSED — the last gap shut live, 2026-09-05
 
