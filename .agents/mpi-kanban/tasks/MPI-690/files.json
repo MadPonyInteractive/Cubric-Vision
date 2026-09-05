@@ -1,0 +1,10 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "routes/remotePodLifecycle.js",
+    "routes/downloadManager.js",
+    "tests/pod-cpu-flavors.test.cjs",
+    "tests/remote-install-concurrency.test.cjs",
+    ".agents/mpi-kanban/tasks/MPI-690/"
+  ]
+}

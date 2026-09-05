@@ -76,3 +76,29 @@ test('a refused GPU create still makes exactly one attempt', async () => {
   });
   assert.equal(calls, 1, 'the CPU flavor walk must not leak onto the GPU path');
 });
+
+// MPI-690 — the flavor id alone lands the family MINIMUM instance, and cpu3c is
+// compute-optimised at 2GB RAM per vCPU with a 2-vCPU floor: a 4GB box (observed
+// 3.725GiB live). The 1.4.5 smoke matrix OOM-killed it twice, `exit code 137`,
+// visible only in the RunPod *System* log. A flavor walk that lands four different
+// 4GB boxes in a row is not a fix, so the size travels with the spec.
+const CREATED = { ok: true, status: 201, json: { id: 'pod-abc' } };
+
+test('a CPU download Pod asks for a real vCPU count, not the family minimum', async () => {
+  const specs = [];
+  client.createPod = async (_key, spec) => { specs.push(spec); return CREATED; };
+  await _createPodInternal('key', CPU_ARGS);
+  assert.equal(specs.length, 1);
+  assert.ok(specs[0].vcpuCount >= 4,
+    `a download Pod must be sized above the 2-vCPU/4GB minimum; got ${specs[0].vcpuCount}`);
+  assert.equal(specs[0].computeType, 'CPU', 'still a CPU Pod');
+});
+
+test('a GPU Pod does not carry the CPU vCPU count', async () => {
+  const specs = [];
+  client.createPod = async (_key, spec) => { specs.push(spec); return CREATED; };
+  await _createPodInternal('key', {
+    gpuTypeId: 'NVIDIA GeForce RTX 5090', volumeId: 'vol1', datacenter: 'EU-RO-1', wait: false,
+  });
+  assert.equal(specs[0].vcpuCount, undefined, 'vcpuCount is a CPU-download-mode field only');
+});

@@ -1,0 +1,8 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "routes/downloadManager.js",
+    "tests/remote-restart-reissue.test.cjs",
+    ".agents/mpi-kanban/tasks/MPI-691/"
+  ]
+}

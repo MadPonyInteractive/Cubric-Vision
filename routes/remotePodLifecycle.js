@@ -426,6 +426,20 @@ const CPU_SENTINEL = '__cpu__';
 // only that SOMETHING is free.
 const CPU_FLAVORS = ['cpu3c', 'cpu3g', 'cpu5c', 'cpu5g'];
 
+// MPI-690: how many vCPUs to ask for on a CPU download Pod. Omitting this lands
+// the flavor family's MINIMUM instance, and `cpu3c` is compute-optimised at 2GB
+// RAM per vCPU with a 2-vCPU floor — a 4GB box (observed 3.725GiB live). The
+// 1.4.5 smoke matrix (102 deps, 340GB) OOM-killed it twice: `exit code 137 ...
+// triggered memory limits`, visible ONLY in the RunPod *System* log, never the
+// container log. 8 vCPU puts `cpu3c` at 16GB — real headroom over the capped
+// three concurrent aria2 streams (downloadManager REMOTE_DOWNLOAD_CONCURRENCY)
+// plus their writeback page cache, which is charged to the container's cgroup.
+// The extra cores are not waste either: 2 vCPU also throttled the fan-out.
+// The note above — "a model download is network/disk-bound, so the CPU class
+// does not matter" — was right about CPU and wrong about MEMORY; a bigger flavor
+// on the MPI-667 walk (cpu3g is 4GB/vCPU) simply gets more headroom, not less.
+const CPU_DOWNLOAD_VCPUS = 8;
+
 // MPI-189: SINGLE cu130 image for ALL GPU cards. The old cu124/cu128 per-arch
 // branching is GONE — torch 2.10+cu130 carries both Ada sm_89 (4090) and Blackwell
 // sm_120 (5090/PRO 6000/B200) in one wheel, so one tag runs every card we deploy
@@ -788,7 +802,8 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, contai
   // aria2c only, no torch/ComfyUI) is REQUIRED — the full GPU image's entrypoint
   // inits CUDA and won't run on a CPU Pod (verified: 0 processes, eternal
   // "connecting"). /health + /wrapper/models/install work for downloads with no GPU
-  // bill. cpu3c = cheapest flavor; a model download is network/disk-bound.
+  // bill. cpu3c = cheapest flavor, sized by CPU_DOWNLOAD_VCPUS (MPI-690: the flavor
+  // family MINIMUM is a 4GB box and the matrix OOM-killed it).
   const imageName = podImageForCard(gpuTypeId);
   logger.info('runpod', `Pod image for ${noGpu ? 'CPU (download mode)' : gpuTypeId}: ${imageName}`);
   // MPI-329: a volume GPU Pod mirrors its container disk to the network-volume size
@@ -836,6 +851,7 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, contai
   if (noGpu) {
     spec.computeType = 'CPU';
     spec.cpuFlavorIds = [CPU_FLAVORS[0]];
+    spec.vcpuCount = CPU_DOWNLOAD_VCPUS; // MPI-690 — see CPU_DOWNLOAD_VCPUS
     // Belt-and-braces: the -cpu image's start-cpu.sh already exports this, but set
     // it on the Pod env too so the wrapper reports /health ready (no ComfyUI probe)
     // even if the image is ever launched with a different entrypoint.

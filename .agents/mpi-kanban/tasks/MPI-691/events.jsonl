@@ -1,1 +1,2 @@
 {"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-691", "at": "2026-09-04T23:44:23+01:00", "actor": "claude", "column": "todo", "title": "A Pod container restart hangs remote installs forever, silently"}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-691", "at": "2026-09-05T08:39:27+01:00", "actor": "claude", "from": "todo", "to": "doing", "reason": "Implementation started: detect a restarted wrapper and re-issue or fail terminally."}

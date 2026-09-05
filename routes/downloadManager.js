@@ -632,6 +632,16 @@ const _activeDownloaders = new Map(); // depId → FileDownloader (actively down
 // 3 overlaps small deps with large ones without thrashing. (MPI-140)
 const LOCAL_DOWNLOAD_CONCURRENCY = 3;
 
+// MPI-690 — the REMOTE twin, and it did not exist until 1.4.5. The remote driver
+// POSTed /wrapper/models/install for every dep of a request at once, and each one
+// spawns its own aria2c on the Pod. A normal model (2-6 deps) never showed it; the
+// smoke matrix asked for 102 deps / 340GB and put 17 concurrent downloads on a
+// 4GB CPU Pod, which the kernel OOM-killed twice. Unbounded fan-out also makes the
+// Pod size a lottery — a bigger box only moves the ceiling. Same number as the
+// local cap for the same reason: one R2 stream already saturates the link, so 3
+// overlaps small deps with large ones without thrashing.
+const REMOTE_DOWNLOAD_CONCURRENCY = 3;
+
 function _createDepJob(dep) {
     return {
         id: dep.id,
@@ -1924,6 +1934,93 @@ const _remoteDepIds = new Set();     // dep ids currently installing remotely
 let _remoteReconnectTimer = null;    // MPI-97 — pending SSE reconnect timer
 let _remoteReconnectAttempt = 0;     // MPI-97 — backoff counter (reset on a clean open)
 
+// MPI-690 — deps waiting for a wrapper install slot. `_remoteDepIds` is already
+// the in-flight set (added on issue, deleted on every settle), so it IS the slot
+// counter and needs no parallel bookkeeping. Anything that asks "is remote work
+// outstanding?" must consult BOTH — a queued dep has no wrapper install yet, but
+// abandoning it is the same frozen bar as abandoning an in-flight one.
+const _remoteInstallQueue = [];      // dep objects awaiting an install slot
+// MPI-691 — the dep object we sent, kept while the dep is outstanding. A re-issue
+// after a wrapper restart needs the whole thing (url, type, filename, sha256,
+// requirementsOnly, forceReinstall), not the id; `_depJobs` drops some of it.
+const _remoteDepSpecs = new Map();   // depId -> dep object
+
+/** True while any remote dep is installing OR waiting for a slot (MPI-690). */
+function _remoteWorkOutstanding() {
+    return _remoteDepIds.size > 0 || _remoteInstallQueue.length > 0;
+}
+
+/** Issue wrapper installs up to REMOTE_DOWNLOAD_CONCURRENCY (MPI-690). */
+function _pumpRemoteInstalls() {
+    while (_remoteDepIds.size < REMOTE_DOWNLOAD_CONCURRENCY && _remoteInstallQueue.length) {
+        _issueRemoteInstall(_remoteInstallQueue.shift());
+    }
+}
+
+/**
+ * Queue one dep for remote install. The dep job goes to 'queued', not
+ * 'downloading' — a dep with no wrapper install behind it must not paint a live
+ * bar (the MPI-539 lesson: silence reading as progress).
+ */
+function _enqueueRemoteInstall(dep) {
+    const depJob = _depJobs.get(dep.id);
+    if (depJob) _setDepStatus(depJob, 'queued', 'remote dep queued');
+    _remoteDepSpecs.set(dep.id, dep);
+    _remoteInstallQueue.push(dep);
+}
+
+/** Fire one /wrapper/models/install and wire its settle paths back to the pump. */
+function _issueRemoteInstall(dep) {
+    const depJob = _depJobs.get(dep.id);
+    if (depJob) _setDepStatus(depJob, 'downloading', 'remote dep start');
+    _remoteDepIds.add(dep.id);
+    _remoteDepSpecs.set(dep.id, dep);
+    // Do NOT pass the app's display `size` ("67MB") as size_bytes — it is
+    // approximate and the wrapper rejects an exact-correct file on a
+    // done != expected_size mismatch. The wrapper uses content-length for
+    // the progress total and the dep sha256 (when present) for integrity.
+    remoteModels.remoteInstallDep(dep, { force: dep.forceReinstall === true })
+        .then((out) => {
+            // already_installed: the SSE will not fire — settle here.
+            if (out && out.status === 'already_installed') {
+                const dj = _depJobs.get(dep.id);
+                if (dj) {
+                    _setDepStatus(dj, 'complete', 'remote uw dep complete');
+                    dj.downloadedBytes = dj.totalBytes || _parseSizeToBytes(dep.size);
+                }
+                _releaseRemoteDep(dep.id);
+                _broadcast('download:complete', { depId: dep.id, modelId: null });
+                _checkModelJobsComplete();
+                _teardownRemoteEventStreamIfIdle();
+            }
+        })
+        .catch((err) => {
+            const dj = _depJobs.get(dep.id);
+            // MPI-480 — stash the transient verdict alongside the message. The dep-level
+            // broadcast below is silent client-side (no modelId, MPI-97); the reason and
+            // its classification only reach the user via _checkModelJobsComplete, which
+            // reads them off the failed dep. Dropping the flag here loses it for good.
+            if (dj) { _setDepStatus(dj, 'failed', 'remote uw dep error'); dj.error = err.message; dj.transient = Boolean(err.transient); }
+            _releaseRemoteDep(dep.id);
+            logger.error('download', `remote install trigger failed for ${dep.id}: ${err.message}`);
+            _broadcast('download:failed', { depId: dep.id, error: err.message });
+            _checkModelJobsComplete();
+            _teardownRemoteEventStreamIfIdle();
+        });
+}
+
+/**
+ * A remote dep reached a terminal state: free its slot, drop its spec, and let
+ * the next queued dep in. Every settle path funnels through here so a freed slot
+ * can never be forgotten — a stuck queue is the same frozen bar as a stuck
+ * install, just further from the wrapper.
+ */
+function _releaseRemoteDep(depId) {
+    _remoteDepIds.delete(depId);
+    _remoteDepSpecs.delete(depId);
+    _pumpRemoteInstalls();
+}
+
 // MPI-136 — silent-SSE-stall watchdog. MPI-97 recovers a CLOSED stream, but a
 // stream that stays OPEN while the Pod's download loop is wedged on a zombie
 // socket stops emitting progress with no close event → a permanent ghost bar.
@@ -2000,6 +2097,7 @@ function _ensureRemoteEventStream() {
         (evt) => {
             // A live event means the stream is healthy — clear backoff + stamp tick.
             _remoteReconnectAttempt = 0;
+            _remoteReissueRounds = 0; // MPI-691 — any real event is progress
             _markRemoteTick();
             _onRemoteInstallEvent(evt);
         },
@@ -2015,7 +2113,7 @@ function _ensureRemoteEventStream() {
 // let it stay closed.
 function _onRemoteStreamClosed(reason) {
     _remoteEventStream = null;
-    if (_remoteDepIds.size === 0) { _stopRemoteStallWatchdog(); return; } // clean close
+    if (!_remoteWorkOutstanding()) { _stopRemoteStallWatchdog(); return; } // clean close
     // MPI-539 — remote mode went inactive with installs STILL OUTSTANDING. This used to
     // `return` and the deps were simply abandoned: they stayed in _depJobs as
     // 'downloading' forever, so GET /comfy/downloads/status kept serving the Pod's last
@@ -2032,18 +2130,75 @@ function _onRemoteStreamClosed(reason) {
     // models:install-complete was missed and the card would hang forever. Settle
     // those against the volume via the existing models/status check (no new
     // wrapper endpoint) before/independently of the reconnect.
-    _reconcileOutstandingRemoteDeps().catch((err) =>
-        logger.warn('download', `remote dep reconcile failed: ${err.message}`));
+    // MPI-691 — then ask the wrapper what it is REALLY installing. Reconcile only
+    // settles deps that finished; it cannot see a dep whose install died with the
+    // container, and reconnecting to a healthy-but-idle wrapper produces no ticks,
+    // so the stall watchdog re-enters here every 90s forever.
+    _reconcileOutstandingRemoteDeps()
+        .then(() => _recoverOrphanedRemoteInstalls())
+        .catch((err) =>
+            logger.warn('download', `remote dep reconcile failed: ${err.message}`));
 
-    if (_remoteDepIds.size === 0) return;          // reconcile may have settled them all
+    if (!_remoteWorkOutstanding()) return;         // reconcile may have settled them all
 
     const delay = Math.min(1000 * 2 ** _remoteReconnectAttempt, 15000); // 1s,2s,4s… cap 15s
     _remoteReconnectAttempt += 1;
     _remoteReconnectTimer = setTimeout(() => {
         _remoteReconnectTimer = null;
-        if (_remoteDepIds.size === 0 || !remoteModels.isRemoteActive()) return;
+        if (!_remoteWorkOutstanding() || !remoteModels.isRemoteActive()) return;
         _ensureRemoteEventStream();
     }, delay);
+}
+
+// MPI-691 — the container-restart hole MPI-539 left open.
+//
+// A Pod container OOM-restart does NOT make remote mode inactive: the Pod is
+// still there and the wrapper comes back healthy on the same URL. So
+// _failOutstandingRemoteDeps — gated on !isRemoteActive() — never fires, the SSE
+// reconnects fine, and the app waits for progress that can never arrive, because
+// the wrapper's in-memory install registry died with the container and NOTHING
+// re-issues the install. Observed live 2026-09-04: 70+ minutes of "recovering"
+// then silence, a frozen bar, no error and no Retry, on a 340GB matrix.
+//
+// remoteActiveInstallIds() (MPI-481) is the wrapper's own registry of what is
+// really running — the same fresh truth the ATTACH guard already uses. Any dep we
+// still hold outstanding that the wrapper disowns is an orphan: re-enqueue it.
+// aria2 resumes from the `.part` already on the volume, so a re-issue re-downloads
+// nothing. A failed QUESTION (unreachable / an old wrapper) is not evidence of an
+// orphan — warn and let the plain reconnect proceed exactly as before.
+const REMOTE_REISSUE_LIMIT = 3;      // fruitless recovery rounds before failing terminally
+let _remoteReissueRounds = 0;        // reset on any real SSE event (see _ensureRemoteEventStream)
+async function _recoverOrphanedRemoteInstalls() {
+    if (_remoteDepIds.size === 0) return;
+    if (!remoteModels.isRemoteActive()) return;    // the close path already fails these
+    let wrapperInFlight;
+    try {
+        wrapperInFlight = await remoteModels.remoteActiveInstallIds();
+    } catch (err) {
+        logger.warn('download', `remote in-flight check failed during recovery: ${err.message}`);
+        return;
+    }
+    const orphans = Array.from(_remoteDepIds).filter((depId) => !wrapperInFlight.has(depId));
+    if (!orphans.length) return;                   // the wrapper is genuinely working
+
+    // A recovery that keeps finding the same orphans is a stall that will never
+    // clear itself. Give it a bounded number of tries, then reach a TERMINAL state
+    // with a real Retry — silence must never be the final answer.
+    _remoteReissueRounds += 1;
+    if (_remoteReissueRounds > REMOTE_REISSUE_LIMIT) {
+        logger.error('download', `remote installs did not restart after ${REMOTE_REISSUE_LIMIT} attempts; failing ${orphans.length} dep(s)`);
+        _failOutstandingRemoteDeps('remote installs will not restart');
+        return;
+    }
+
+    logger.warn('download', `wrapper has no install for ${orphans.length} outstanding dep(s) (restart?) — re-issuing (round ${_remoteReissueRounds}/${REMOTE_REISSUE_LIMIT})`);
+    for (const depId of orphans) {
+        const dep = _remoteDepSpecs.get(depId);
+        if (!dep) continue;                        // nothing to re-issue it from
+        _remoteDepIds.delete(depId);               // back to queued; the pump re-issues
+        _enqueueRemoteInstall(dep);
+    }
+    _pumpRemoteInstalls();
 }
 
 // MPI-539 — settle every outstanding remote dep as FAILED when the remote target is
@@ -2055,8 +2210,16 @@ function _onRemoteStreamClosed(reason) {
 // is still there, so volume truth can settle deps as complete.
 const _REMOTE_ABANDON_MSG = 'Remote engine disconnected before the install finished.';
 function _failOutstandingRemoteDeps(reason) {
-    const outstanding = Array.from(_remoteDepIds);
-    logger.warn('download', `remote target inactive (${reason}); failing ${outstanding.length} outstanding dep(s) — no remote target left to recover to`);
+    // MPI-690 — a QUEUED dep has no wrapper install behind it, but abandoning it is
+    // the same frozen card as abandoning an in-flight one. Drain the queue into the
+    // same terminal sweep; anything left in it would be re-issued by the next pump.
+    const queued = _remoteInstallQueue.splice(0, _remoteInstallQueue.length).map((d) => d.id);
+    const outstanding = Array.from(new Set([...Array.from(_remoteDepIds), ...queued]));
+    _remoteReissueRounds = 0; // MPI-691 — terminal; the next install starts clean
+    // MPI-691 gave this a SECOND caller where the target is still reachable — it just
+    // will not restart the installs — so the line names the reason instead of asserting
+    // the target is gone.
+    logger.warn('download', `remote deps unrecoverable (${reason}); failing ${outstanding.length} outstanding dep(s)`);
     for (const depId of outstanding) {
         const depJob = _depJobs.get(depId);
         if (depJob) {
@@ -2071,6 +2234,7 @@ function _failOutstandingRemoteDeps(reason) {
             _setDepStatus(depJob, 'failed', 'remote target inactive');
         }
         _remoteDepIds.delete(depId);
+        _remoteDepSpecs.delete(depId);
         _broadcast('download:failed', { depId, error: _REMOTE_ABANDON_MSG });
     }
     _stopRemoteStallWatchdog();
@@ -2116,7 +2280,7 @@ async function _reconcileOutstandingRemoteDeps() {
                 _setDepStatus(depJob, 'complete', 'local complete');
                 depJob.downloadedBytes = depJob.totalBytes || depJob.downloadedBytes;
             }
-            _remoteDepIds.delete(depId);
+            _releaseRemoteDep(depId);
             _broadcast('download:complete', { depId, modelId: null });
         }
     }
@@ -2124,12 +2288,13 @@ async function _reconcileOutstandingRemoteDeps() {
 }
 
 function _teardownRemoteEventStreamIfIdle() {
-    if (_remoteDepIds.size > 0) return;
+    if (_remoteWorkOutstanding()) return; // MPI-690 — a queued dep is still work
     if (_remoteReconnectTimer) {
         clearTimeout(_remoteReconnectTimer);
         _remoteReconnectTimer = null;
     }
     _remoteReconnectAttempt = 0;
+    _remoteReissueRounds = 0;
     _stopRemoteStallWatchdog(); // MPI-136 — no installs left, stop polling
     if (_remoteEventStream) {
         _remoteEventStream.abort();
@@ -2244,7 +2409,7 @@ function _onRemoteInstallEvent(evt) {
         depJob.downloadedBytes = Number(data.size_bytes) || depJob.totalBytes || 0;
         depJob.totalBytes = depJob.downloadedBytes;
         _setDepStatus(depJob, 'complete', 'remote complete');
-        _remoteDepIds.delete(depId);
+        _releaseRemoteDep(depId);
         _broadcast('download:complete', { depId, modelId: null });
         // A per-model custom_node landed on the volume; ComfyUI only scans
         // custom_nodes at startup, so the Pod must warm-cycle before the new
@@ -2255,7 +2420,7 @@ function _onRemoteInstallEvent(evt) {
         _checkModelJobsComplete();
         _teardownRemoteEventStreamIfIdle();
     } else if (evt.type === 'models:install-error') {
-        _remoteDepIds.delete(depId);
+        _releaseRemoteDep(depId);
         if (data.error === 'cancelled') {
             _setDepStatus(depJob, 'cancelled', 'remote cancelled');
         } else {
@@ -2372,7 +2537,7 @@ async function _startRemoteDownload(modelId, dependencies, res) {
             // Drop the record too, or _remoteDepIds never empties: the stall
             // watchdog keeps polling and _teardownRemoteEventStreamIfIdle never
             // closes the SSE, both for a dep no wrapper is installing.
-            _remoteDepIds.delete(dep.id);
+            _releaseRemoteDep(dep.id);
             logger.warn('download', `stale in-flight record for ${dep.id} — the wrapper has no such install; reinstalling`);
         }
         if (reallyInFlight || reallyComplete) {
@@ -2518,43 +2683,10 @@ async function _startRemoteDownload(modelId, dependencies, res) {
     res.json({ success: true, jobId: modelId, version: store.version(), job: _serializeModelJob(modelJob) });
 
     _ensureRemoteEventStream();
-    for (const dep of toInstall) {
-        const depJob = _depJobs.get(dep.id);
-        if (depJob) _setDepStatus(depJob, 'downloading', 'remote dep start');
-        _remoteDepIds.add(dep.id);
-        // Do NOT pass the app's display `size` ("67MB") as size_bytes — it is
-        // approximate and the wrapper rejects an exact-correct file on a
-        // done != expected_size mismatch. The wrapper uses content-length for
-        // the progress total and the dep sha256 (when present) for integrity.
-        remoteModels.remoteInstallDep(dep, { force: dep.forceReinstall === true })
-            .then((out) => {
-                // already_installed: the SSE will not fire — settle here.
-                if (out && out.status === 'already_installed') {
-                    const dj = _depJobs.get(dep.id);
-                    if (dj) {
-                        _setDepStatus(dj, 'complete', 'remote uw dep complete');
-                        dj.downloadedBytes = dj.totalBytes || _parseSizeToBytes(dep.size);
-                    }
-                    _remoteDepIds.delete(dep.id);
-                    _broadcast('download:complete', { depId: dep.id, modelId: null });
-                    _checkModelJobsComplete();
-                    _teardownRemoteEventStreamIfIdle();
-                }
-            })
-            .catch((err) => {
-                const dj = _depJobs.get(dep.id);
-                // MPI-480 — stash the transient verdict alongside the message. The dep-level
-                // broadcast below is silent client-side (no modelId, MPI-97); the reason and
-                // its classification only reach the user via _checkModelJobsComplete, which
-                // reads them off the failed dep. Dropping the flag here loses it for good.
-                if (dj) { _setDepStatus(dj, 'failed', 'remote uw dep error'); dj.error = err.message; dj.transient = Boolean(err.transient); }
-                _remoteDepIds.delete(dep.id);
-                logger.error('download', `remote install trigger failed for ${dep.id}: ${err.message}`);
-                _broadcast('download:failed', { depId: dep.id, error: err.message });
-                _checkModelJobsComplete();
-                _teardownRemoteEventStreamIfIdle();
-            });
-    }
+    // MPI-690 — queue, then pump. This loop used to fire every dep's install at
+    // once; at 102 deps that put 17 aria2 processes on the CPU Pod and OOM-killed it.
+    for (const dep of toInstall) _enqueueRemoteInstall(dep);
+    _pumpRemoteInstalls();
 }
 
 // ── Model Job Completion ──────────────────────────────────────────────────────
@@ -2859,9 +2991,14 @@ router.post('/comfy/models/download/cancel', async (req, res) => {
         // invisibly while every re-press 404'd. (MPI-258 Bug B; refCount DELETED
         // MPI-276.) _otherActiveModelUsesDep excludes THIS model (still in _modelJobs).
         if (!_otherActiveModelUsesDep(dep.id, modelId)) {
+            // MPI-690 — a dep can now be QUEUED rather than in flight: no wrapper
+            // install exists yet, so there is nothing to cancel, but leaving it in
+            // the queue means the pump fires it moments after the user cancelled.
+            const queuedAt = _remoteInstallQueue.findIndex((d) => d.id === dep.id);
+            if (queuedAt !== -1) _remoteInstallQueue.splice(queuedAt, 1);
             // Remote install in flight on the Pod — cancel via the wrapper.
             if (_remoteDepIds.has(dep.id)) {
-                _remoteDepIds.delete(dep.id);
+                _releaseRemoteDep(dep.id);
                 await remoteModels.remoteCancelInstall(dep.id);
                 // MPI-123 — remoteCancelInstall is SOFT+ASYNC: the wrapper only
                 // sets a cancel flag and removes the `<dest>.part` on its next
@@ -3495,6 +3632,10 @@ module.exports = {
     _sweepOrphanedDepsRemote, // MPI-464 — exported for unit test (orphan sweep, remote twin)
     _startRemoteDownload, // MPI-481 — exported for unit test (stale attach guard)
     _remoteDepIds, // MPI-481 — exported for unit test only; never mutate outside tests
+    _remoteInstallQueue, // MPI-690 — exported for unit test only; never mutate outside tests
+    _pumpRemoteInstalls, // MPI-690 — exported for unit test (concurrency cap refill)
+    _onRemoteStreamClosed, // MPI-691 — exported for unit test (restart recovery)
+    _recoverOrphanedRemoteInstalls, // MPI-691 — exported for unit test (re-issue bound)
     _failOutstandingRemoteDeps, // MPI-539 — exported for unit test (abandon-loudly path)
     _modelJobs, // MPI-539 — exported for unit test only; never mutate outside tests
     _depJobs, // MPI-539 — exported for unit test only; never mutate outside tests
