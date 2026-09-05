@@ -1,0 +1,3 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-697", "at": "2026-09-05T10:04:14+01:00", "actor": "claude", "column": "todo", "title": "guard-gpu over-matches read-only commands and under-matches a real run"}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-697", "at": "2026-09-05T10:04:26+01:00", "actor": "claude", "from": "todo", "to": "doing", "reason": "Implementation started: anchor the guard patterns on their interpreter."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-697", "at": "2026-09-05T10:07:04+01:00", "actor": "claude", "from": "doing", "to": "done", "reason": "Verified 29/29 against the live file; guard re-parsed and armed."}

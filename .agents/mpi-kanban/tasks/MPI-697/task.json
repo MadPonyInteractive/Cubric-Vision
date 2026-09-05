@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-697",
+  "title": "guard-gpu over-matches read-only commands and under-matches a real run",
+  "description": "The pattern matches command TEXT, so grep/sed/git naming the runner are blocked; and its exemption lookahead scans the whole line, so a --self-check in a later segment exempts a genuine unleased invocation.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-09-05T10:04:14+01:00",
+  "updated_at": "2026-09-05T10:07:04+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

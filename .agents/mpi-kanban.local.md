@@ -49,8 +49,8 @@ bundles:
   - name: component-maps
     rules: [behaviour, component-mounts, component-events, component-state, component-comfy]
 gpu_command_patterns:
-  - "scripts/pre_release_test\.py"
-  - "scripts/smoke-workflows\.mjs(?!.*(--plan|--self-check))"
+  - "(?<![\w-])py(?:thon)?\S*(?:\s+-\S+)*\s+\S*scripts/pre_release_test\.py"
+  - "(?<![\w-])node\S*(?:\s+-\S+)*\s+\S*scripts/smoke-workflows\.mjs(?![^&|;\n]*(?:--plan|--self-check))"
   - "127\.0\.0\.1:(8188|48188)/prompt"
   - "/connector/generate"
 ---
@@ -95,10 +95,44 @@ The four patterns are the commands that actually *execute* a generation from the
 shell. They are deliberately narrow — the guard blocks on a regex hit with no
 "this one is fine" escape, so a broad pattern taxes ordinary work:
 
-- `scripts/pre_release_test\.py` — submits every op to a running ComfyUI. Local card, long.
-- `scripts/smoke-workflows\.mjs` — a minimal generation per op. Pod GPU, and real money.
+- `pre_release_test\.py` — submits every op to a running ComfyUI. Local card, long.
+- `smoke-workflows\.mjs` — a minimal generation per op. Pod GPU, and real money.
 - `127\.0\.0\.1:(8188|48188)/prompt` — direct dispatch to the bench (8188) or the app engine (48188).
 - `/connector/generate` — the app route that lands a real gallery card.
+
+### The two file patterns are anchored on their interpreter (MPI-697, 2026-09-05)
+
+They used to be bare paths, which was wrong in **both** directions.
+
+*Over-match:* `re.search` runs against the raw command, so any command merely
+*naming* the file was refused — `grep`, `sed`, `git diff`, `git commit`. Four in
+one session. The hook's own remedy makes it worse: wrapping a `grep` in
+`gpu_lease.py run` takes a real machine-global lease and blocks behind whatever
+holds it.
+
+*Under-match, the dangerous one:* the exemption was `(?!.*(--plan|--self-check))`,
+whose `.*` scans the whole remaining command. So
+`node smoke-workflows.mjs && node other.mjs --self-check` — a genuine unleased
+matrix run — was **exempted** by a flag belonging to a different command.
+
+Both fixed by requiring the interpreter (`\S*` after it covers `node.exe`,
+`python3`, `py`, and a full path; `(?<![\w-])` stops `mynode-runner` arming it)
+and by confining the lookahead to the current command segment with
+`[^&|;\n]*`. Verified by driving the hook's own `offending()` over a 29-case
+table — 13 must-block, 16 must-not — which the old patterns failed 8 of.
+
+**Write these with SINGLE backslashes.** `configured_patterns()` reads the
+frontmatter with a line regex and strips the quotes; it does not run a YAML
+unescape. `\\w` therefore reaches the regex as a literal backslash, matches
+nothing, and silently disarms the guard. After editing this block, re-parse it
+with `configured_patterns()` and assert you get 4 patterns that compile — a
+disarmed guard looks exactly like a working one until a run collides.
+
+**The two URL patterns stay broad, deliberately.** They have the same over-match
+in principle, but no reliable invocation anchor: curl, wget, Invoke-RestMethod,
+httpie, python requests and node fetch all reach them. The asymmetry decides it —
+a false positive costs an agent one retry, a false negative costs a collided paid
+run whose wrongness is invisible in the output.
 
 Deliberately NOT matched, and each for a reason:
 
