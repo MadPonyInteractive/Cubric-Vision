@@ -1,2 +1,3 @@
 {"schema": "mpi-kanban/event/v1", "id": "MPI-696", "type": "task.created", "at": "2026-09-05T08:51:30Z", "actor": "claude", "summary": "Card opened in doing: hero blurb becomes a persisted rotating quote deck."}
 {"schema": "mpi-kanban/event/v1", "id": "MPI-696", "type": "task.updated", "at": "2026-09-05T08:56:31Z", "actor": "claude", "summary": "Shipped: 50-quote deck, persisted position, hero wired. Tests + lint + live probe green. Validating on the user's copy call."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-696", "type": "task.done", "at": "2026-09-05T09:10:57Z", "actor": "claude", "summary": "Deck now spreads categories proportionally - no themed streaks, and film/music appear from the first launches. Copy and treatment approved by the user."}
