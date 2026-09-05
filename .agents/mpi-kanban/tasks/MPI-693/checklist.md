@@ -12,7 +12,7 @@
   - [x] `npx eslint js/components/Compounds/MpiMediaPicker tests/desktop/media-picker-cards.spec.js` — clean
   - [x] the new spec passes — 3/3, 26.1s
   - [x] four mutants run, four killed (see `validation.md`)
-  - [ ] `user-ux` — Fabio's call on losing direct access to a non-selected take from a Flow slot
+  - [x] `user-ux` — Fabio confirmed losing direct access to a non-selected take is the right shape (2026-09-05)
 
-Machine verification passed (`validation.md`). One `user-ux` question is outstanding and has
-been asked in-session; the card stays in `doing` until it is answered.
+Machine verification passed and the one `user-ux` question is answered — see `validation.md`.
+Card closed.

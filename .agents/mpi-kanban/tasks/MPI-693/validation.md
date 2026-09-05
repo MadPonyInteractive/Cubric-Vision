@@ -64,8 +64,12 @@ gallery comparison and says why. Nothing in the app writes that value — only a
 hand-edited `project.json` can — so every card a user can actually create is still covered by the
 byte-identical comparison.
 
-## Outstanding — a human call, not a machine one
+## The one human call — asked and answered (2026-09-05)
 
-The picker can no longer reach a **non-selected history take** for a Flow slot. It is still
-reachable (select that take on the card in the gallery, then open the slot), but it is two surfaces
-now instead of one. Asked in-session; the card stays in `doing` until answered.
+The picker can no longer reach a **non-selected history take** for a Flow slot. Put to Fabio, who
+confirmed it is the right shape and already how he works: open the card and change its current
+entry, or — if the take is wanted more than once — promote it to a card of its own in the History
+workspace. The gallery answers it twice already, so the picker does not need a third route. Recorded
+in `docs/component-contracts.md` so nobody "restores" the per-item walk as a bug fix.
+
+Card closed. No outstanding checks.

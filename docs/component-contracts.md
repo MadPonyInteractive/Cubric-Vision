@@ -168,7 +168,7 @@ A full-width on/off toggle row = `MpiButton { icon:'circle', iconActive:'check',
 
 ## MpiMediaPicker — it lists CARDS, and its `<audio>` must stay unmarked (MPI-693)
 
-`_collect()` returns **one entry per ItemGroup** — that group's `history[selectedIndex]` — never one per history entry. It used to push every take, so a card with 14 takes was 14 tiles captioned with raw filenames beside a gallery showing one card under the user's own name for it. Consequence to know before "fixing" a bug report: **a non-selected take is not reachable from the picker.** Select it on the card in the gallery first. Restoring the per-item walk is not the fix; `tests/desktop/media-picker-cards.spec.js` fails on it.
+`_collect()` returns **one entry per ItemGroup** — that group's `history[selectedIndex]` — never one per history entry. It used to push every take, so a card with 14 takes was 14 tiles captioned with raw filenames beside a gallery showing one card under the user's own name for it. Consequence to know before "fixing" a bug report: **a non-selected take is not reachable from the picker, and that is the design.** The gallery already answers it two ways — open the card and change its current entry, or promote the take to a card of its own in the History workspace if it is wanted more than once — so the picker deliberately does not grow a third. Confirmed with Fabio 2026-09-05 as how he actually works. Restoring the per-item walk is not the fix; `tests/desktop/media-picker-cards.spec.js` fails on it.
 
 Three rules the entry carries, each with a reason:
 
