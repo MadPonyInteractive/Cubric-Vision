@@ -553,24 +553,80 @@ async function drainDownloadWarnings(print = true) {
 }
 
 /**
+ * A probe raising this means "stop — waiting longer is pointless", as opposed to
+ * an ordinary throw, which means "blip, poll again" (MPI-695).
+ *
+ * A probe has two things to say and used to have one channel to say them in.
+ * `waitReady` caught every throw as transient, so the install stall check —
+ * STALL_MS, ten minutes with no byte movement — threw on every poll and the loop
+ * dotted on for the full three-hour budget before recycling the Pod. Deleting
+ * that catch is NOT the fix: at the Pod-ready call site a connection refused
+ * against a still-booting host is normal and must be retried. Two meanings, two
+ * channels.
+ */
+class GiveUp extends Error {}
+
+/**
  * @param {{soft?:boolean, watchLog?:boolean}} [o]
- *   soft → return false on timeout instead of exiting.
+ *   soft → return false instead of exiting, on timeout OR give-up.
  *   watchLog → print the app's `[download]` warnings between polls (MPI-692).
  *   Opt-in: the install phase wants it, and the generation matrix must not pay
  *   an HTTP round trip per poll for a phase that downloads nothing.
  */
 async function waitReady(what, probe, timeoutMs, o = {}) {
     const t0 = Date.now();
-    while (Date.now() - t0 < timeoutMs) {
+    let gaveUp = null;
+    while (!gaveUp && Date.now() - t0 < timeoutMs) {
         // Drained BEFORE the probe: a probe that succeeds returns straight out
         // of the loop, so anything logged in the run-up would never print.
         if (o.watchLog) await drainDownloadWarnings();
-        try { if (await probe()) return true; } catch { /* keep polling */ }
+        try { if (await probe()) return true; }
+        catch (e) { if (e instanceof GiveUp) { gaveUp = e.message; continue; } /* transient — keep polling */ }
         process.stdout.write('.');
         await sleep(5000);
     }
-    if (o.soft) { log(`\n  ⚠ ${what} did not become ready within ${Math.round(timeoutMs / 60000)} min`); return false; }
-    die(`${what} did not become ready within ${Math.round(timeoutMs / 60000)} min`);
+    const why = gaveUp || `did not become ready within ${Math.round(timeoutMs / 60000)} min`;
+    if (o.soft) { log(`\n  ⚠ ${what} ${why}`); return false; }
+    die(`${what} ${why}`);
+}
+
+// `installing` and `paused` are in-flight too (routes/downloadManager.js:1523) —
+// waiting on downloading/queued alone lets the run leave for the GPU while the Pod
+// is still unpacking.
+const IN_FLIGHT = ['queued', 'downloading', 'paused', 'installing'];
+
+/**
+ * The install probe, shared by the first attempt AND the retry round (MPI-695).
+ *
+ * The job must EXIST before "not in flight" can mean "finished" — a POST that has
+ * not registered yet would otherwise read as an instant install.
+ *
+ * And bytes must actually MOVE. The app's counters are SSE-fed, so when the Pod
+ * stops answering they simply stop changing — on 2026-08-08 that read as a
+ * download in progress for ninety minutes while nothing was happening. A wait with
+ * no progress check cannot tell a slow download from a dead one.
+ *
+ * ONE factory for both rounds, deliberately. The retry used to carry a stripped
+ * copy with no movement check at all, so a Pod that died during the retry hung the
+ * full three-hour budget with nothing watching it. A copy is how that hole got
+ * there, and a second copy is how it would come back.
+ *
+ * @param {string} modelId
+ * @param {{getJobs?: () => Promise<object[]>, stallMs?: number}} [o] seams for
+ *   --self-check only; the defaults are the app's own status route and STALL_MS.
+ */
+function installProbe(modelId, o = {}) {
+    const getJobs = o.getJobs || (async () => (await app('/comfy/downloads/status')).jobs || []);
+    const stallMs = o.stallMs ?? STALL_MS;
+    let last = -1, lastMoveMs = Date.now();
+    return async () => {
+        const j = (await getJobs()).find(x => x.modelId === modelId);
+        if (!j) return false;
+        const got = (j.deps || []).reduce((a, d) => a + (d.downloadedBytes || 0), 0);
+        if (got !== last) { last = got; lastMoveMs = Date.now(); }
+        else if (Date.now() - lastMoveMs > stallMs) throw new GiveUp(`stalled — no bytes moved for ${Math.round(stallMs / 60000)} min`);
+        return !IN_FLIGHT.includes(j.status);
+    };
 }
 
 /**
@@ -1412,11 +1468,6 @@ async function main() {
     log(`  ${fit.line}`);
     if (!fit.ok) await abort(fit.why);
 
-    // `installing` and `paused` are in-flight too (routes/downloadManager.js:1523) —
-    // waiting on downloading/queued alone lets the run leave for the GPU while the Pod
-    // is still unpacking.
-    const IN_FLIGHT = ['queued', 'downloading', 'paused', 'installing'];
-
     /**
      * Install the models ONE AT A TIME, each fully drained before the next.
      *
@@ -1439,22 +1490,8 @@ async function main() {
                 method: 'POST',
                 body: JSON.stringify({ modelId: e.model.id, dependencies: reg.resolveDeps(e.model, null, null, ENGINE, { arch: ARCH }).map(id => reg.DEPS[id]).filter(Boolean) }),
             });
-            // The job must EXIST before "not in flight" can mean "finished" — a POST that
-            // has not registered yet would otherwise read as an instant install.
-            //
-            // And bytes must actually MOVE. The app's counters are SSE-fed, so when the Pod
-            // stops answering they simply stop changing — on 2026-08-08 that read as a
-            // download in progress for ninety minutes while nothing was happening. A wait
-            // with no progress check cannot tell a slow download from a dead one.
-            let last = -1, lastMoveMs = Date.now();
-            const done = await waitReady(`install ${e.model.id}`, async () => {
-                const j = ((await app('/comfy/downloads/status')).jobs || []).find(x => x.modelId === e.model.id);
-                if (!j) return false;
-                const got = (j.deps || []).reduce((a, d) => a + (d.downloadedBytes || 0), 0);
-                if (got !== last) { last = got; lastMoveMs = Date.now(); }
-                else if (Date.now() - lastMoveMs > STALL_MS) throw new Error('stalled');
-                return !IN_FLIGHT.includes(j.status);
-            }, 3 * 60 * 60 * 1000, { soft: true, watchLog: true }).catch(() => false);
+            const done = await waitReady(`install ${e.model.id}`, installProbe(e.model.id),
+                3 * 60 * 60 * 1000, { soft: true, watchLog: true }).catch(() => false);
 
             if (!done) {
                 // Recycle the Pod and re-POST once. aria2 resumes from the volume, so the
@@ -1467,10 +1504,8 @@ async function main() {
                     method: 'POST',
                     body: JSON.stringify({ modelId: e.model.id, dependencies: reg.resolveDeps(e.model, null, null, ENGINE, { arch: ARCH }).map(id => reg.DEPS[id]).filter(Boolean) }),
                 });
-                await waitReady(`install ${e.model.id} (retry)`, async () => {
-                    const j = ((await app('/comfy/downloads/status')).jobs || []).find(x => x.modelId === e.model.id);
-                    return !!j && !IN_FLIGHT.includes(j.status);
-                }, 3 * 60 * 60 * 1000, { watchLog: true });
+                await waitReady(`install ${e.model.id} (retry)`, installProbe(e.model.id),
+                    3 * 60 * 60 * 1000, { watchLog: true });
             }
         }
         const jobs = (await app('/comfy/downloads/status')).jobs || [];
@@ -1800,6 +1835,47 @@ if (INVOKED_DIRECTLY && flag('self-check')) {
     // that just went back to zero.
     assert(downloadWarnings('[2026-09-04T22:44:00.000Z] [WARN] [download] fresh after rotation', dwSeen).length === 1,
         'a rotated log still reports its unseen lines');
+
+    // waitReady + installProbe (MPI-695). The stall watchdog could never fire: the
+    // probe threw to say "give up" and the loop caught every throw as "blip, retry",
+    // so STALL_MS (10 min) silently became the 3-hour timeout.
+    const job = (status, bytes) => [{ modelId: 'm', status, deps: [{ downloadedBytes: bytes }] }];
+
+    // Movement, then none. stallMs -1, not 0: two calls land in the same
+    // millisecond, so `now - lastMoveMs` is 0 and `> 0` would be a coin flip.
+    let bytes = 10;
+    const stalling = installProbe('m', { getJobs: async () => job('downloading', bytes), stallMs: -1 });
+    assert(await stalling() === false, 'a job still downloading is not ready');
+    let threw = null;
+    try { await stalling(); } catch (e) { threw = e; }
+    assert(threw instanceof GiveUp, `no byte movement past stallMs raises GiveUp, got ${threw}`);
+    // Movement resets the clock — otherwise a slow download reads as a dead one.
+    bytes = 20;
+    const moving = installProbe('m', { getJobs: async () => job('downloading', bytes), stallMs: -1 });
+    await moving(); bytes = 30;
+    assert(await moving() === false, 'bytes moving means keep waiting, never give up');
+    assert(await installProbe('m', { getJobs: async () => job('completed', 30) })() === true,
+        'a job out of IN_FLIGHT is done');
+    assert(await installProbe('m', { getJobs: async () => [] })() === false,
+        'a job that has not registered yet is NOT an instant install');
+
+    // GiveUp ends the wait NOW. Pre-fix this ran the full 60s timeout, so the
+    // elapsed time is what discriminates fixed from broken — not the return value.
+    const t1 = Date.now();
+    assert(await waitReady('give-up', async () => { throw new GiveUp('stalled — synthetic'); }, 60_000, { soft: true }) === false,
+        'a soft wait returns false when the probe gives up');
+    assert(Date.now() - t1 < 1000, `give-up must end the wait immediately, took ${Date.now() - t1}ms of a 60s budget`);
+
+    // The other half, and the reason the bare catch could not simply be deleted:
+    // at the Pod-ready call site a connection refused against a still-booting host
+    // is normal. An ordinary throw must still be swallowed and retried. Costs one
+    // real 5s poll interval — deliberately, it guards the paid-hardware path.
+    const t2 = Date.now();
+    let polls = 0;
+    assert(await waitReady('transient', async () => { polls++; throw new Error('ECONNREFUSED'); }, 1, { soft: true }) === false,
+        'an ordinary throw does not end the wait early; it times out normally');
+    assert(polls === 1 && Date.now() - t2 >= 5000,
+        `an ordinary throw is swallowed and polled again, not treated as give-up (polls=${polls}, ${Date.now() - t2}ms)`);
 
     console.log(`self-check OK (${applied.join(', ')})`);
     process.exit(0);

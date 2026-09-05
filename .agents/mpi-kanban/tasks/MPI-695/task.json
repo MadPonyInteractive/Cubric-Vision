@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-695",
+  "title": "Smoke runner stall watchdog can never fire",
+  "description": "waitReady swallows the install probe's stall throw, so STALL_MS (10 min) degrades into the 3-hour timeout before the Pod is recycled. The retry probe has no movement check at all.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "created_at": "2026-09-05T09:42:59+01:00",
+  "updated_at": "2026-09-05T09:48:01+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
