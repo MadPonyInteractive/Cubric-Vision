@@ -3,12 +3,12 @@
   "_doc": "Single source of truth for ComfyUI core + frontend + custom-node pins. BOTH install paths consume this: the app (js/data/modelConstants/dependencies.js builds node download URLs from it) and the RunPod Pod image build (mpi-ci/cubric-vision-pod). Per-node `source`: registry|git-tag|git-commit. `installRequirements` discriminates BAKED (pip-req nodes \u00e2\u2020\u2019 Pod image at build time) from VOLUME (code-only nodes \u00e2\u2020\u2019 installed on connect via the wrapper). To bump a node, edit its entry here only.",
   "comfyui": {
     "core": {
-      "tag": "v0.31.0",
-      "commit": "43cb4fffc89bba20ab7bd61467a36d0339338dab"
+      "tag": "v0.34.0",
+      "commit": "12d5279438bfefc058a269eae805ceab6047777f"
     },
     "frontend": {
-      "comfyui-frontend-package": "1.48.7",
-      "comfyui-workflow-templates": "0.11.34"
+      "comfyui-frontend-package": "1.49.6",
+      "comfyui-workflow-templates": "0.11.48"
     }
   },
   "nodes": {
@@ -22,7 +22,7 @@
     "ComfyUI-MpiNodes": {
       "source": "git-commit",
       "repo": "MadPonyInteractive/ComfyUi-MpiNodes",
-      "commit": "fe812d47626c01b4c15ce945bebcd1096e0e688b",
+      "commit": "85057698ccb8cd62f53f484c3fae42326b0e8a06",
       "filename": "ComfyUI-MpiNodes",
       "installRequirements": false
     },
@@ -109,6 +109,13 @@
       "repo": "lquesada/ComfyUI-Inpaint-CropAndStitch",
       "commit": "3617559bcb9d15ff60b24c6800701402eb2cd478",
       "filename": "comfyui-inpaint-cropandstitch",
+      "installRequirements": false
+    },
+    "Comfyui_Minimax_h3_latent_Upscaler": {
+      "source": "git-commit",
+      "repo": "LBH-123-AI/Comfyui_Minimax_h3_latent_Upscaler",
+      "commit": "d7c01b9011f2e8439493f6c02c29995a27df276f",
+      "filename": "Comfyui_Minimax_h3_latent_Upscaler",
       "installRequirements": false
     }
   }

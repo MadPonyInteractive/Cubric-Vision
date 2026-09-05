@@ -53,17 +53,13 @@ export const PROMPT_CONTROL_DEFAULTS = Object.freeze({
     // declared type, so this default is always in range; a model that somehow lacks it
     // falls back to its own first entry when the picker mounts.
     controlType: 'depth',
-    // MiniMax H3 ref2va reference scaling (Input_Refs.ref_image_size, a COMBO whose
-    // values are the literal strings 'match' | 'max' — not an index). Both are
-    // aspect-preserving, down-only and never crop; they differ in the ceiling.
-    // 'match' fits each reference to the OUTPUT's pixel area, 'max' to a 2048 short edge.
-    // Default 'match' matches the workflow's baked value and is the cheap one: measured
-    // 2026-08-07 with ONE reference, 'match' ran 11-12 s/step against 'max' at 14 s/step,
-    // and reference tokens ride through EVERY sampling step — so nine references at 'max'
-    // costs far more than that 20%. 'max' is the explicit best-identity choice: a
-    // character sheet needs it, because 'match' squashes the sheet down to the output's
-    // area and each individual view loses readability. (MPI-475)
-    refImageSize: 'match',
+    // refImageSize (MiniMax H3 ref2va, Input_Refs.ref_image_size) was REMOVED in MPI-687
+    // along with its "Reference detail" radio. Both values are still real and still baked
+    // — 'match' on stage 1, 'max' on the two-pass refine encoder — the app just no longer
+    // asks. The cost measurement that justified the default stands: reference tokens ride
+    // EVERY sampling step, so 'max' on stage 1 scales badly with nine references, while on
+    // the refine's 3 steps it costs +13% once and fixes reference colour and identity.
+    // Removed rather than defaulted because a control with one good answer is noise.
     // LTX audio mode: 'reference' = voice-ID from a reference clip,
     // 'original' = use the input audio directly. Default reference (headline mode).
     audioMode: 'reference',

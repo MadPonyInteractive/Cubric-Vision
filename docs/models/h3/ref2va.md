@@ -188,14 +188,22 @@ the rest. `--lowvram` in the engine's launch line is a **no-op** here — its ow
 
 ## Controls
 
-- **Reference detail** (`ref_image_size`) — `match` is the default and the baked value;
-  `max` raises s/step noticeably (11–12 → 14 with ONE reference on the bench, and
-  reference tokens ride every sampling step, so more references is steeper). **If `max`
-  costs nothing, the control is not reaching the node** — check the injected
-  `Input_Refs.ref_image_size` key.
-  **`max` usually gives the better result** (user, 2026-08-07) — but the default
-  **stays `match`, and this is SETTLED, not open** (user, 2026-08-08): it is a user
-  control, so the user decides per generation. Do not re-raise a default flip.
+- **Reference detail** (`ref_image_size`) — **the control was REMOVED in MPI-687.** It is
+  now baked per encoder: `match` on stage 1, `max` on the two-pass refine encoder. The
+  earlier ruling that the default "stays `match`, and this is SETTLED" (user, 2026-08-08)
+  was about the DEFAULT of a user control; the two-pass shape removed the question rather
+  than answering it, so that note is superseded, not contradicted.
+  What the two-pass measured (2026-09-04): `max` on the REFINE encoder is a **colour and
+  identity** win, not a detail one — green eyes stay green where `match` turns them blue —
+  for +16 s (+13%), with background detail unchanged (bg/centre 0.81 vs 0.83) and grain
+  identical (HF corr 0.092 both). It actually costs a little subject sharpness
+  (centre lapE 0.000817 → 0.000676). Since the refine is 3 steps, `max` is cheap there and
+  ruinous on stage 1's 25 — which is the whole reason the two are baked differently.
+  The refine encoder must **not** be titled `Input_Refs`, or title injection overwrites its
+  baked value.
+  Historical, from when it was a control: `max` raised s/step noticeably (11–12 → 14 with
+  ONE reference on the bench, and reference tokens ride every sampling step, so more
+  references is steeper), and **`max` usually gave the better result** (user, 2026-08-07).
   **Use `max` for a character sheet** — that is the case where identity fidelity is the
   whole point and the extra s/step is worth it. This guidance used to live in the
   control's own `info` tooltip; it was moved here 2026-08-08 because that string had

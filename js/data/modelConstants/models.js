@@ -1319,24 +1319,36 @@ export const MODELS = [
         },
         // FLAT dependencies (not commonDeps/operations): ONE transformer serves both ops,
         // so there is no separable install unit and no per-op toggle in the manager.
-        // The transformer and the encoder are NOT on R2 and that is deliberate — see
-        // minimax-h3-fl2va-transformer in modelDeps.js for the licence reasoning. The one
-        // exception is the int8 video VAE (MPI-517), R2-primary for a supply reason
-        // explained on the dep itself. The encoder and both VAEs are shared with the
+        // The TRANSFORMER is not on R2 and that is deliberate — see
+        // minimax-h3-fl2va-transformer in modelDeps.js for the licence reasoning. Two deps
+        // here ARE R2-primary and are exceptions of different kinds: the int8 video VAE
+        // (MPI-517, a supply reason) and the text encoder (MPI-698, out of the CLA's scope
+        // entirely). Both are argued on their own dep in assetDeps.js — read the section
+        // header there before citing either. The encoder and both VAEs are shared with the
         // minimax-h3-ref2va card.
         dependencies: [
             'minimax-h3-fl2va-transformer',
-            'h3-qwen3vl-32b-clip',
+            // nvfp4_awq since MPI-698, replacing the 24.55GB int8_convrot: the int8 pair
+            // staged ~45GB and OOM-killed a 54GB Pod. NOT Blackwell-gated.
+            'h3-qwen3vl-32b-clip-nvfp4',
             // int8_convrot, NOT the fp16 build — REQUIRES core >= v0.31.0 (MPI-517).
             'vae-minimax-h3-video-int8',
             'vae-minimax-h3-audio',
-            // 1.82GB turbo distill (MPI-505, weight swapped to lightx2v in MPI-508),
-            // SHARED with ref2va — installing both downloads it once. A flat dep like
-            // krea2's accelerator rather than an opt-in extra: turbo is a per-run toggle,
-            // so the weight has to be on disk before the user can flip it. With turbo OFF
-            // both strengths gate to 0 and MpiLoraModelClip short-circuits the file load
-            // entirely, so it costs nothing on the default path.
-            'minimax-h3-turbo-lora',
+            // 1.82GB turbo distill (MPI-505; lightx2v in MPI-508, v1.0 resized in MPI-662,
+            // the full 8-step v1.0 in MPI-687). NOT shared with ref2va — that card takes
+            // its own ref2v-trained distill, so installing both models downloads two turbo
+            // LoRAs. A flat dep like krea2's accelerator rather than an opt-in extra: turbo
+            // is a per-run toggle, so the weight has to be on disk before the user can flip
+            // it. Since MPI-687 the arm is an MpiIfElse switch, so with turbo OFF the LoRA
+            // node is bypassed outright and the file is never read.
+            // The 0.41GB 4-step 'minimax-h3-turbo-lora' it replaces stays defined in
+            // loraDeps.js so the orphan sweep can still reclaim it — just not listed here.
+            'minimax-h3-fl2va-turbo-8step',
+            // The two-pass shape's upscaler — node + weight, both hard deps since MPI-687.
+            // Stage 1 samples at half-res, the weight lifts the video half of the packed AV
+            // latent, a 3-step refine rebuilds detail. Shared with ref2va, one download.
+            'Comfyui_Minimax_h3_latent_Upscaler',
+            'minimax-h3-latent-upscaler',
             // 22MB tiny TAE, live previews only (MPI-508). H3 has NO core previewer path
             // at all — its latent format names no decoder — so without this every H3
             // preview is a latent2rgb colour blob. Read by KJNodes' ModelPreviewOverrideKJ,
@@ -1404,19 +1416,29 @@ export const MODELS = [
         },
         // FLAT dependencies: one transformer, one op. The encoder and both VAEs are the
         // SAME dep ids fl2va uses, so installing this on top of fl2va downloads only the
-        // 20.97GB transformer. The transformer and the encoder are not on R2 — see
+        // 20.97GB transformer. The TRANSFORMER is not on R2 — see
         // minimax-h3-ref2va-transformer in modelDeps.js for the licence reasoning; the
-        // int8 video VAE is the one exception (MPI-517).
+        // int8 video VAE (MPI-517) and the text encoder (MPI-698) are the two exceptions,
+        // each argued on its own dep in assetDeps.js.
         dependencies: [
             'minimax-h3-ref2va-transformer',
-            'h3-qwen3vl-32b-clip',
+            // nvfp4_awq since MPI-698 — see the fl2va card above.
+            'h3-qwen3vl-32b-clip-nvfp4',
             // int8_convrot, NOT the fp16 build — REQUIRES core >= v0.31.0 (MPI-517).
             'vae-minimax-h3-video-int8',
             'vae-minimax-h3-audio',
-            // Same turbo distill as fl2va (MPI-505/508) — one weight, both DiTs. The
-            // filename says fl2v; it is applied to ref2va too, which is how the upstream
-            // community graph uses it.
-            'minimax-h3-turbo-lora',
+            // Its OWN turbo distill since MPI-662 — NOT the fl2va weight, and MPI-687
+            // re-proved that by measurement: the fl2v weight bound cleanly on this graph
+            // but lost on grain and background detail at matched motion. MPI-687 moved it
+            // from the 4-step v0.1 to the full 8-step v1.0, which is what lifted the
+            // "shiny and plasticky" 4-step signature the refine could not recover from.
+            // Both strength gates are gone — the arm is an MpiIfElse switch at strength 1.0
+            // — so the old 1.0-vs-0.75 harmonisation warning no longer applies.
+            // Installing both models downloads two turbo LoRAs (1.82GB each).
+            'minimax-h3-ref2va-turbo-8step',
+            // Same upscaler node + weight as fl2va (MPI-687) — shared, one download.
+            'Comfyui_Minimax_h3_latent_Upscaler',
+            'minimax-h3-latent-upscaler',
             // Same preview decoder as fl2va (MPI-508) — shared, one download.
             'taeh3-decoder',
             'ComfyUI-MpiNodes',

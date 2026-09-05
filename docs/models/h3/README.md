@@ -15,7 +15,7 @@ formality.** Read § Licence before scoping anything.
 | Ops | `t2v_ms`, `i2v_ms` — one graph, `comfy_workflows/minimax_h3_fl2va.json` |
 | Stages | Two, in ONE file. No `_stage2` twin |
 | Audio | Emitted, not accepted. `capabilities.audio` is OFF — see § Audio |
-| Weights | 4 files, 53.15 GB, **publisher-hosted, never R2** |
+| Weights | 6 files, **48.03 GB** (computed from `DEPS`, 2026-08-30). The two DiTs and the audio VAE are publisher-hosted; the encoder (MPI-653), the int8 video VAE (MPI-517), the turbo LoRA and the TAE are R2-primary — so "never R2" no longer holds |
 | Engine floor | ComfyUI **0.30.0** (the H3 nodes do not exist before it) |
 
 There are two H3 transformers. This card is **fl2va** (`MiniMaxH3ImageToVideo`), the
@@ -94,7 +94,7 @@ re-verified 2026-08-10 after the int8 swap below.
 | dep id | file | size |
 |---|---|---|
 | `minimax-h3-fl2va-transformer` | `minimax_h3_fl2va_pruned_int8_convrot.safetensors` | 20.97 GB |
-| `h3-qwen3vl-32b-clip` | `qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors` | 26.36 GB |
+| `h3-qwen3vl-32b-clip-nvfp4` | `qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors` | 15.69 GB |
 | `vae-minimax-h3-video-int8` | `minimax_h3_video_vae_int8_convrot.safetensors` | 3.17 GB |
 | `vae-minimax-h3-audio` | `minimax_h3_audio_vae_fp32.safetensors` | 0.61 GB |
 
@@ -119,8 +119,30 @@ one real difference is temporal — unpruned is slightly more expressive — and
 ever observed at 56 frames, so it is NOT proven to persist on long clips. Re-testing costs
 a 32 GB re-download.
 
-**int4 encoders were rejected with evidence** (MPI-449 § 4/§ 5). Comfy-Org's own stock
-encoder is 27.14 GB, so 26.36 GB is not the large option.
+**int4 encoders were rejected with evidence** (MPI-449 § 4/§ 5), and that verdict does NOT
+extend to the nvfp4_awq build shipped since MPI-698 — different quantisation, evaluated on
+its own A/B. Comfy-Org's own stock int8_convrot encoder is 27.14 GB.
+
+**The encoder is nvfp4_awq since MPI-698 (2026-09-05), down from 24.55 GB int8_convrot.**
+Two things drove it and both are worth keeping straight:
+
+- **Memory, not download size.** H3 stages the encoder *beside* the transformer, so the
+  int8 pair sat at ~45 GB resident at peak — at any resolution, because it is weight
+  staging and not activations. That SIGKILLed a 54 GB L4 Pod on `minimax-h3/t2v_ms` at
+  128px/1s (`code -9`, the Linux OOM killer) while the same op passed on an 80 GB box.
+  14.61 GiB takes the pair to ~35 GB. Windows never showed this: the pagefile absorbs the
+  overshoot and a Pod has no swap.
+- **The "Heretic" abliteration turned out not to be load-bearing.** The old build was
+  carried purely for uncensored output. Fabio A/B'd the two on 2026-09-05 across
+  uncensored and deliberately hard prompts and got identical results, so the stock
+  Qwen3-VL build is already uncensored in this role — consistent with H3 reading the
+  trimmed embedding layers as a conditioner rather than the instruction-tuned refusal
+  behaviour abliteration targets. **The evidence is the A/B, not that reasoning:** re-run
+  it before assuming a future encoder swap is equally free.
+
+**`nvfp4` does NOT mean Blackwell-only.** Comfy-Org's README says outright that this
+encoder "does not require Blackwell GPU to use", and the smoke matrix runs it on Ada (L4)
+and Ampere hosts. Do not add a GPU-generation gate on the strength of the filename.
 
 ## Two-stage — and why there is no `_stage2` twin
 
@@ -213,21 +235,35 @@ toggle that can disagree with the media present. LTX should adopt this shape (MP
 `generate_h3.py` asserts all four branches survive, because a missing one does not error —
 it falls through to another and conditions on the wrong frames.
 
-### The keyframe resize is the graph's job, and it is already done
+### The keyframe resize belongs to the NODE — the graph lost it once already
 
 `MiniMaxH3ImageToVideo` treats its two keyframes differently: `first_frame` gets
 `_resize(..., "disabled")` — a plain stretch, the upstream comment calls it a "geometry
-anchor" — while `last_frame` gets `"center"`, an aspect-preserving cover-crop. Read alone
-that says an i2v source whose aspect misses the canvas is squashed into every frame, and
-MPI-449's research concluded exactly that (§ line 377, assigning a fix to MPI-452).
+anchor" — while `last_frame` gets `"center"`, an aspect-preserving cover-crop. So an i2v
+source whose aspect misses the canvas is squashed into every frame, and when BOTH frames
+are given they are conformed by two different rules and disagree with each other. MPI-449's
+research called this out (§ line 377) and assigned a fix to MPI-452.
 
-**It does not apply to the shipped graph, and no fix is wanted.** Nodes 218 and 220
-(`ImageResizeKJv2`, `keep_proportion: crop`, `crop_position: center`, `divisible_by: 32`)
-sit in front of BOTH frame paths and draw `width`/`height` from the same nodes that set the
-H3 canvas, so each frame arrives already at canvas size and the node's stretch is a no-op.
-All 15 `MINIMAX_H3_RATIOS` entries are divisible by 32 — matching `CANVAS_MULTIPLE = 32`
-in the node — so the resize can always land the canvas exactly. **Adding app-side aspect
-fitting would crop twice.** Verified 2026-08-06 against `comfy_workflows/minimax_h3_fl2va.json`.
+MPI-452 answered it **in the graph**: nodes 218/220 (`ImageResizeKJv2`, `keep_proportion:
+crop`, `crop_position: center`) sat in front of both frame paths, so each frame arrived at
+canvas size and core's stretch was a no-op. This section used to record that as settled and
+warn that app-side fitting would crop twice.
+
+**That answer did not survive its own graph rebuild.** The two-pass port (`6deb60b6`,
+2026-09-04) replaced the four-copy branch lattice with a single `MpiH3ImageToVideo`, and
+the two resize nodes went out with the lattice — `git log -S ImageResizeKJv2` shows them
+entering at `bb50b55e` and leaving at `6deb60b6`, and the rebuilt fl2va has **zero** resize
+nodes: `MpiLoadImageFromPath` 217/219 wire straight into the i2v node. The first user run
+that day came back squashed (MPI-687).
+
+The fix is now in the NODE, not the graph: `MpiH3ImageToVideo._cover_crop` (MpiNodes
+1.2.10) conforms **both** frames before delegating, so core's own resize is handed an
+at-size image and becomes a no-op. Crop, never pad — letterbox bars baked into frame 0 get
+animated as scenery. **Do not re-add graph resize nodes**: they would crop twice, and the
+reason this moved into the node is precisely that a graph node can be dropped by a rebuild
+without anything failing. The crop mode is pinned by `h3.py`'s self-check, because a
+regression to `'disabled'` is invisible in the graph and shows up only as a squashed
+frame 0.
 
 ## Frames, duration and canvas
 
@@ -245,6 +281,40 @@ fitting would crop twice.** Verified 2026-08-06 against `comfy_workflows/minimax
   768p→2K second pass, which is API-only and not in these weights ([ref2va.md](ref2va.md)).
 - **A canvas change is a different latent shape, so the same seed is a DIFFERENT sample.**
   Tier A/B can never be read as "same shot, sharper", and the UI must not imply it.
+- **The two-pass halves the canvas and doubles it back, so the tier number is not what
+  stage 1 renders.** Both H3 runtimes carry the pair: stage 1 is `floor(a / 64) * 32`, and
+  stage 2 is `floor(floor(a/16)*16 * b / 32 + 0.5) * 32` with `b = 2`.
+  **STAGE 1 MUST BE /32. DO NOT LOOSEN IT TO /16.** Core's `patchify_video`
+  (`comfy/ldm/minimax/model.py:47`) reshapes the stage-1 latent in 2×2 spatial blocks, so
+  that latent — stage-1 pixels ÷ 16 — has to be EVEN on both axes, and only a /32-clean
+  stage 1 makes it so. Halving as `floor(a / 32) * 16` gives an odd latent and the sampler
+  raises on every run, not on some canvases:
+
+  | tier | canvas | stage 1 | latent | patchify wanted |
+  |---|---|---|---|---|
+  | `very_low` | 352×608 | 176×304 | **11×19** | 10×18 |
+  | `low` | 480×864 | 240×432 | **15×27** | 14×26 |
+
+  `RuntimeError: shape '[1, 24, 1, 1, 5, 2, 9, 2]' is invalid for input of size 5016`
+  (5016 = 24·11·19). MPI-687 shipped that loosening for a few hours on 2026-09-04 and it
+  was caught by the user's own run, not by a gate — graph validation, the engine floor
+  check and the offline preflight all passed it, because the failure does not exist until
+  a tensor is real. `tests/h3-two-pass-dimensions.test.cjs` now asserts the arithmetic.
+- **`output = floor(canvas / 64) * 64` is therefore a PROPERTY, not a bug.** Stage 1 is /32
+  and stage 2 doubles it, so the two-pass path can only emit /64 sizes. Any dimension in
+  `MINIMAX_H3_RATIOS` that is not /64 is delivered 32px short of the label — six distinct
+  values across sixteen cells: `very_low` 352/608, `low` 480/864, `medium` 1376,
+  `very_high` 800, so the whole default tier renders short while the status bar shows the
+  label. All six are odd multiples of 32, exactly what /64 cannot represent. **The repair
+  is the TABLE, not the halving** — and it is a deliberate change to the tier ladder, so it
+  goes past the user rather than being rounded quietly. Check the whole ladder rather than
+  the one canvas in front of you: the /64-clean dimensions (`high` and both of `2k`/`4k`
+  among them) are identical under either expression and hide the whole thing.
+- `adapt_canvas` (768 short edge, `MAX_PIXELS = 768*1344`) is **never applied to the output
+  latent** — it is called only from `MiniMaxH3ReferenceToVideo` to conform reference
+  VIDEOS. `MiniMaxH3ImageToVideo.execute` calls `_empty_av_latent(width, height, length)`
+  with no clamp at all, which is why `very_high` renders 2.09 MP. Do not reach for it to
+  explain a canvas that came back smaller than asked — that reflex cost MPI-687 a session.
 
 ## Audio
 

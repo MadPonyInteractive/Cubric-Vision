@@ -271,4 +271,17 @@ export const nodesDeps = {
         ],
         size: '42.7MB',
     },
+    // The two-pass H3 shape's spatial upscaler (MPI-687). Lifts the video half of the
+    // packed AV latent between stage 1 and the refine pass, which is what makes 2K/4K
+    // hold detail instead of softening. installRequirements:false = a VOLUME node, so it
+    // needs no Pod image rebuild.
+    'Comfyui_Minimax_h3_latent_Upscaler': {
+        id: 'Comfyui_Minimax_h3_latent_Upscaler',
+        name: 'MiniMax H3 Latent Upscaler',
+        type: 'custom_nodes',
+        filename: 'Comfyui_Minimax_h3_latent_Upscaler',
+        url: lockUrl('Comfyui_Minimax_h3_latent_Upscaler'),
+        installRequirements: false,
+        size: '8.9MB',
+    },
 };

@@ -306,6 +306,30 @@ export const assetDeps = {
         bytes: 995743560,
         sha256: '5f416311fa8172b65af67530758964708d29a317b830d689a51143b7f91913ed',
     },
+    // The H3 two-pass shape's upscaler: stage 1 samples at half-res, this lifts the VIDEO
+    // half of the packed AV latent (LTXVSeparateAVLatent -> here -> LTXVConcatAVLatent),
+    // then a 3-step refine rebuilds detail at full res. Dep of BOTH H3 models.
+    //
+    // Why it matters beyond speed: 2K (1472x2560) completed in 14:01 on a 16GB card
+    // through this path — a canvas that OOMs single-pass on a 5090. That is the argument
+    // for two-pass being the default rather than an option.
+    //
+    // bf16, NOT the fp16 sibling in the same repo — the bench graph loads bf16 and the two
+    // are near-identical in size, so a swap would be silent. Apache-2.0 (stated in the model
+    // card body, absent from the HF metadata), so no licences.js record. The card credits
+    // the LTX 2.3 Spatial Upscaler above and Ttl/ComfyUi_NNLatentUpscale as architectural
+    // references; the weights are the author's own.
+    'minimax-h3-latent-upscaler': {
+        id: 'minimax-h3-latent-upscaler',
+        name: 'MiniMax H3 Latent Upscaler 3D',
+        origin: 'LBH-123-AI/Minimax_h3_latent_Upscaler (Apache-2.0)',
+        filename: 'latent_upscale_models/minimax_h3_latent_upscaler_3d_bf16.safetensors',
+        url: 'https://models.cubric.studio/vision/models/latent_upscale_models/minimax_h3_latent_upscaler_3d_bf16.safetensors',
+        mirrorUrl: 'https://huggingface.co/LBH-123-AI/Minimax_h3_latent_Upscaler/resolve/main/minimax_h3_latent_upscaler_3d_bf16.safetensors',
+        size: '658.61MB',
+        bytes: 690592992,
+        sha256: '4f57821f5837f32f7142b67d815606dbd7550f194e5c769f7d6c3f83b146a5e6',
+    },
     // Upscale Models (engine assets) ---------------------------------------
     '4x-NMKD-Siax': {
         id: '4x-NMKD-Siax',
@@ -570,13 +594,41 @@ export const assetDeps = {
     // Publisher-hosted for the licence reason spelled out on
     // `minimax-h3-fl2va-transformer` in modelDeps.js — NOT on R2, deliberately.
     //
-    // ONE EXCEPTION: `vae-minimax-h3-video-int8` below is R2-primary (MPI-517). Not a
-    // softening of the licence position — a supply decision that outranked it. Its only
-    // publisher is a repo named "experimental", and these deps generate no mirrors
-    // (`_mirrorUrlsFor` only rewrites URLs under the R2 prefix), so a delete or a silent
-    // re-export would break every new H3 install with nothing to fall back to. Do NOT
-    // generalise it to the transformers or the encoder: those have a stable publisher
-    // (Comfy-Org, 6M downloads) and the §III argument still governs them.
+    // TWO EXCEPTIONS are R2-primary, and they are exceptions of DIFFERENT KINDS. Neither
+    // one softens the licence position; read which is which before citing either as
+    // precedent.
+    //
+    //   1. `vae-minimax-h3-video-int8` (MPI-517) — the licence argument APPLIES and was
+    //      OUTRANKED by supply risk. Its only publisher is a repo named "experimental",
+    //      and a publisher-hosted dep generates no mirrors (`_mirrorUrlsFor` only rewrites
+    //      URLs under the R2 prefix), so a delete or a silent re-export would break every
+    //      new H3 install with nothing to fall back to.
+    //   2. `h3-qwen3vl-32b-clip-nvfp4` (MPI-698) — the licence argument does not REACH it,
+    //      so there was nothing to outrank. The encoder is Alibaba's Qwen3-VL-32B-Instruct
+    //      trimmed to the layers H3 reads and quantised: apache-2.0 down the whole chain,
+    //      carrying no MiniMax weights, parameters, operational patterns or Outputs. That
+    //      makes it neither a §I.11 Model Derivative nor §I.10 Materials (which is MiniMax
+    //      H3 *as made available by MiniMax* — this never was). H3-*shaped* is not
+    //      H3-*derived*.
+    //
+    //      THE FILE LIVES IN Comfy-Org/MiniMax-H3, WHOSE REPO CARD DECLARES THE MINIMAX
+    //      CLA (`license: other`, `license_name: minimax-h3-community-license-agreement`).
+    //      That blanket label does not reach it: the label is a repo property and the
+    //      question is what the WEIGHTS ARE. Comfy-Org's README names the source —
+    //      "converted from https://huggingface.co/cybermotaz/Qwen3-VL-32B-Instruct-NVFP4"
+    //      — and that repo declares `license_name: qwen` pointing at
+    //      Qwen/Qwen3-VL-32B-Instruct/LICENSE, which is apache-2.0. Chain walked
+    //      2026-09-05.
+    //
+    //      NOTE: this REPLACES an older note here that lumped the encoder in with the
+    //      transformers under §III. That was written before anyone walked the chain and
+    //      it is wrong about the encoder specifically.
+    //
+    // Do NOT generalise either one to the TRANSFORMERS — and specifically, do not read
+    // exception 2 as "files from Comfy-Org/MiniMax-H3 can go on R2". They cannot. The
+    // transformers in that same repo are MiniMax's own weights from a stable publisher
+    // (Comfy-Org, 6M downloads) and §III redistribution still governs them. What travels
+    // here is the chain-walk, never the hostname.
     //
     // SHARED with the ref2va model (minimax-h3-ref2va): the second DiT is a different
     // transformer but takes the SAME encoder and the SAME two VAEs, which is why these
@@ -585,16 +637,81 @@ export const assetDeps = {
     // H3 emits video AND stereo audio from one sampler pass, so it needs TWO VAEs —
     // the packed NestedTensor latent is decoded by both (VAEDecode + VAEDecodeAudio).
     // That is not a duplicate: dropping either loses half the output.
+    'h3-qwen3vl-32b-clip-nvfp4': {
+        id: 'h3-qwen3vl-32b-clip-nvfp4',
+        name: 'Qwen3-VL 32B text encoder for MiniMax H3 (nvfp4_awq)',
+        origin: 'Comfy-Org/MiniMax-H3 text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors (Apache-2.0 via Qwen/Qwen3-VL-32B-Instruct)',
+        filename: 'text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors',
+        // WHY THIS REPLACED THE 24.55GB int8_convrot BUILD (MPI-698). H3 stages the text
+        // encoder BESIDE the transformer — ~45GB resident at peak on the int8 pair, at
+        // ANY resolution, because it is weight staging and not activations. That
+        // SIGKILLed a 54GB remote Pod on H3 text-to-video at 128px (`code -9`, the Linux
+        // OOM killer) while the same op passed on an 80GB box. 24.55 -> 14.61GB takes the
+        // pair to ~35GB and puts a 54GB box back in range. Windows never showed it: the
+        // pagefile absorbs the overshoot, a Pod has no swap.
+        //
+        // NOT BLACKWELL-GATED, despite the `nvfp4` name. `supports_nvfp4_compute()`
+        // requires compute capability >= 10, so Ada and Ampere fail it — but
+        // `pick_operations()` does not refuse: it marks nvfp4 emulated and sets
+        // `_full_precision_mm`, keeping the weight PACKED and upcasting per matmul. The
+        // memory saving survives on non-Blackwell hardware; only speed is paid. Verified
+        // in the engine source, and present in v0.31.0 — the core this release ships —
+        // as well as v0.34.0. Comfy-Org's README says the same in one line.
+        //
+        // UNCENSORED, AND THE "HERETIC" LINEAGE TURNED OUT NOT TO BE LOAD-BEARING. The
+        // build this replaces was ethanfel's Ultra-Heretic abliteration, carried for one
+        // reason: uncensored output. Fabio A/B'd the two on 2026-09-05 across uncensored
+        // and deliberately hard prompts and got IDENTICAL results. Consistent with what
+        // the encoder does here — H3 reads the trimmed embedding layers as a conditioner,
+        // not the instruction-tuned refusal behaviour abliteration targets. The evidence
+        // is the A/B, not that reasoning: re-run it before assuming a FUTURE encoder swap
+        // is equally free.
+        //
+        // R2-primary — exception 2 in the section header above. Read the Comfy-Org
+        // repo-label caveat there before citing this as precedent for anything else in
+        // that repo.
+        //
+        // The explicit `mirrorUrl` is LOAD-BEARING, not decoration: `_mirrorUrlsFor`
+        // short-circuits on it and returns it as the ONLY alternate, which suppresses the
+        // generic /vision/models/ -> our-HF rewrite. So this dep implies NO second re-host
+        // into Mad-Pony-Interactive/cubric-studio; failover goes straight back to
+        // Comfy-Org. Byte-identical upstream, verified 2026-09-05: HF's `lfs.oid` for that
+        // path IS the sha256 below.
+        url: 'https://models.cubric.studio/vision/models/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors',
+        mirrorUrl: 'https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors',
+        // Apache-2.0 attribution (§4). No repo in the chain ships a LICENSE or NOTICE
+        // file, so §4(c) does not bite — what remains is naming the authors, which
+        // MpiAbout renders from this block. Not a gated model: no `licences/` folder and
+        // no consent gate.
+        credit: {
+            author: 'Qwen (Alibaba) — NVFP4 quant by cybermotaz, ComfyUI repackage by Comfy-Org',
+            work: 'Qwen3-VL-32B-Instruct (nvfp4_awq)',
+            url: 'https://huggingface.co/cybermotaz/Qwen3-VL-32B-Instruct-NVFP4',
+        },
+        size: '14.61GB',
+        bytes: 15687142551,
+        sha256: '35a88d51044231fe332301d7a62aa81e3f2cba62febeb446e2c1e3e0ef76f2c6',
+    },
+    // SUPERSEDED by `h3-qwen3vl-32b-clip-nvfp4` (MPI-698) and referenced by NO model.
+    //
+    // KEPT ANYWAY, ON PURPOSE — the same orphan-sweep rule spelled out on
+    // `vae-minimax-h3-video` below. `_orphanedDepIds` (routes/downloadManager.js) walks
+    // `Object.keys(DEPS)` and resolves each `filename`; a file on disk whose filename is
+    // absent from every DEPS entry is invisible to the sweep, permanently. Deleting this
+    // entry would strand 24.55GB on the disk of every user who installed H3 before the
+    // swap — the single largest orphan the catalogue has ever had. Present-but-
+    // unreferenced is exactly the orphan definition the sweep tests for, so leaving it
+    // here is what RECLAIMS the bytes on the next uninstall sweep.
+    //
+    // Its URL stays live and correct on purpose: `release:deps` HEADs every URL in DEPS.
+    //
+    // Delete only once no plausible installed base still holds the int8_convrot file.
     'h3-qwen3vl-32b-clip': {
         id: 'h3-qwen3vl-32b-clip',
-        name: 'Qwen3-VL 32B text encoder for MiniMax H3 (uncensored, int8_convrot)',
+        name: 'Qwen3-VL 32B text encoder for MiniMax H3 (uncensored, int8_convrot, superseded)',
         origin: 'ethanfel/Qwen3-VL-32B-Ultra-Heretic-H3-ComfyUI-INT8-ConvRot',
         filename: 'text_encoders/qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors',
         url: 'https://huggingface.co/ethanfel/Qwen3-VL-32B-Ultra-Heretic-H3-ComfyUI-INT8-ConvRot/resolve/main/qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors',
-        // int8, NOT int4. The 14.95GB int4 encoder was rejected with evidence in
-        // MPI-449 § 4/§ 5. Comfy-Org's own stock encoder is 27.14GB, so this is not the
-        // large option — it is the same size class, already trimmed of the Qwen3-VL
-        // language layers H3 never reads.
         size: '24.55GB',
         bytes: 26363476151,
         sha256: 'd84547412144b7c50a6ec77437a889b869d3ace88da77ef1775d3d2a4901c192',

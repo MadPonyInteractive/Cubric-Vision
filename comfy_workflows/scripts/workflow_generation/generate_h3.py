@@ -71,9 +71,17 @@ VARIANT_SPECS = {
         "transformer": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
         # Path strings feeding the MpiAnyChecker booleans that pick the branch.
         "media_titles": ("Input_Start_Frame", "Input_End_Frame"),
-        "branch_class": "MiniMaxH3ImageToVideo",
-        # One per reachable media combination: t2v, start only, end only, start+end.
-        "branch_count": 4,
+        # MPI-687 replaced the four-copy lattice of core's MiniMaxH3ImageToVideo with one
+        # blank-tolerant wrapper: it accepts a connected-but-empty first/last frame, so a
+        # single node covers t2va, start-only, end-only and start+end.
+        "branch_class": "MpiH3ImageToVideo",
+        # TWO, not one: stage 1 and the refine each need their own conditioning, because
+        # the keyframe is VAE-encoded at the pass's own width/height while PackedLayout
+        # sizes its cond rows off the TARGET grid. Reusing stage 1's on an upscaled latent
+        # raises a broadcast error inside SamplerCustomAdvanced — 4x the tokens, the anchor
+        # still at 1x. Rebuilding it was the second reason the wrapper exists; with the old
+        # lattice it would have meant duplicating all four copies.
+        "branch_count": 2,
         "extra_widgets": (),
     },
     "minimax_h3_r2va_template.json": {
@@ -83,13 +91,22 @@ VARIANT_SPECS = {
         "transformer": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
         "media_titles": _REF_SLOT_TITLES,
         "branch_class": "MpiH3References",
-        # ONE node takes all 18 slots and filters internally. Branching per combination
-        # would need 2**18 of them, which is why MpiH3References exists.
-        "branch_count": 1,
-        # `match` is the shipped fallback: it fits each reference to the output's pixel
-        # area. `max` uses a 2048 short edge for best identity and is measurably slower
-        # (reference tokens ride through EVERY sampling step), so it must be the user's
-        # explicit choice, injected as `Input_Refs.ref_image_size`, never the default.
+        # ONE node takes all 18 slots and filters internally — branching per combination
+        # would need 2**18 of them, which is why MpiH3References exists. TWO of them since
+        # MPI-687, for the same reason fl2va has two: stage 1 (`Input_Refs`) and the refine
+        # (`Refine_Refs`), each encoding the references at its own pass's dimensions.
+        "branch_count": 2,
+        # `match` is the shipped fallback on STAGE 1: it fits each reference to the
+        # output's pixel area, and `max` there is ruinous because reference tokens ride
+        # through every one of the 25 steps.
+        #
+        # The refine encoder bakes `max` in the graph and is deliberately NOT titled
+        # `Input_Refs` — injection is by title, so sharing the title would overwrite its
+        # baked value (and the validator rejects the duplicate outright). On the refine's
+        # 3 steps `max` costs +13% once and buys reference COLOUR and identity: green eyes
+        # stay green where `match` turns them blue. It buys no detail — measured
+        # bg/centre 0.81 vs 0.83, grain identical — which is why it is baked per encoder
+        # rather than offered. The user-facing "Reference detail" radio was removed with it.
         "extra_widgets": (("Input_Refs", "ref_image_size", "match"),),
     },
 }
@@ -137,18 +154,34 @@ BAKED_WIDGETS = [
     # exports at whatever was last rendered (352x608 on 2026-08-06).
     ("Input_Width", "int", 864),
     ("Input_Height", "int", 480),
+    # The stage-1 preview carries SOUND (MPI-687). Its VAEDecodeAudio hangs off
+    # MpiStageLatents output 1 (`denoised`) and is wired in the bench graph, but this
+    # flag is what makes the preview actually mux it — nothing in the app injects
+    # `use_audio`, it is a pure graph widget. Connected-but-false is the bad state: the
+    # graph looks right, the run costs the same, and the preview is silent. It is baked
+    # rather than left to the bench because there is no per-run reason to want a silent
+    # preview, and a widget nobody remembers on export regresses on the next one.
+    # H3's audio is the whole point of judging a take early — see the tuning session's
+    # rule that audio is judged on the two-pass output, never on the loud frames alone.
+    ("Output_Preview", "use_audio", True),
     # Turbo (MPI-505): the h3Turbo toggle is the authority and injects this per run —
     # the bake is only the SAFE DEFAULT, i.e. what a hand-run or a failed mount gets.
     # False = the 20-step path, which is the higher-quality one; turbo trades quality
     # for 204s -> 96s at 864x480 and is opt-in. The bench exports it True (that is what
     # was last measured), so this bake is load-bearing, not cosmetic.
     ("Input_is_Turbo", "boolean", False),
-    # Single-pass collapses the two sampler stages into one. NOT wired to any control
-    # yet — the decision is still open (the 204.02s two-stage baseline is n=1). Baked
-    # False so the shipped graph keeps the two-stage shape progressStages.js declares;
-    # flipping it without the `single: 2 -> 1` edit would advertise a bar segment that
-    # never arrives.
-    ("Input_Single_Pass", "boolean", False),
+    # Input_Single_Pass is GONE from both H3 graphs (MPI-687) and its bake was removed
+    # with it. It existed to collapse the old same-resolution two-stage into one full-res
+    # pass; the two-pass rebuild replaced that shape entirely — stage 1 samples at half
+    # res, the latent upscaler lifts it, and a 3-step refine finishes — so there is no
+    # longer a second shape to collapse to. The open decision the old comment named is
+    # closed by measurement: two-pass is the default, not an option (2K completed in
+    # 14:01 on a 16GB card through it, a canvas that OOMs single-pass on a 5090).
+    #
+    # The app still injects the param (commandExecutor.js:697) and that is deliberately
+    # harmless — the injector silently skips a title matching no node, exactly as it
+    # already did on LTX and WAN. The progress-bar delta is safe too: it is gated on the
+    # node being present in the loaded workflow, not on the param.
 ]
 
 # Every weight the graph loads, as a SET rather than per-title: two VAELoaders share the
@@ -158,7 +191,11 @@ BAKED_WIDGETS = [
 # ComfyUI then cannot find the name baked in the graph.
 # Shared by both variants; the transformer comes from the variant spec.
 SHARED_WEIGHTS = {
-    "qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors",
+    # nvfp4_awq since MPI-698, replacing the 24.55GB int8_convrot build. This set is a
+    # HAND-MAINTAINED MIRROR of the dep filenames — nothing here reads models.js or
+    # assetDeps.js — so a dep swap that does not also edit this line fails the check
+    # below as "unexpected in graph / declared but unused" and looks like a registry bug.
+    "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
     "minimax_h3_video_vae_int8_convrot.safetensors",
     "minimax_h3_audio_vae_fp32.safetensors",
     # Tiny TAEHV decoder for MpiVideoSamplingPreview, NOT a sampling VAE. It rides a
@@ -310,7 +347,13 @@ def _assert_branches(workflow: dict, spec: dict) -> int:
         raise SystemExit(f"[FAIL] {n} {want_class} node(s), expected {want_n} — a missing "
                          f"one does not error, it falls through and conditions on the "
                          f"wrong media")
-    others = {s["branch_class"] for s in VARIANT_SPECS.values()} - {want_class}
+    # Core's MiniMaxH3ImageToVideo is named explicitly, not derived from the specs: since
+    # MPI-687 no variant declares it, so deriving `others` from branch_class alone would
+    # stop catching the exact stray this assert was written for — a surviving keyframe
+    # node in r2va, which has no keyframe path at all. It is forbidden in BOTH graphs now:
+    # fl2va routes through the MpiH3ImageToVideo wrapper, so a core copy there is a
+    # half-converted lattice.
+    others = ({s["branch_class"] for s in VARIANT_SPECS.values()} | {"MiniMaxH3ImageToVideo"}) - {want_class}
     for cls in sorted(others):
         stray = [nid for nid, node in workflow.items() if node.get("class_type") == cls]
         if stray:
