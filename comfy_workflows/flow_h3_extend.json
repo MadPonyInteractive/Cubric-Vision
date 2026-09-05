@@ -11,7 +11,7 @@
   },
   "390": {
     "inputs": {
-      "clip_name": "qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors",
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
       "type": "minimax",
       "device": "default"
     },
@@ -60,35 +60,10 @@
       "title": "ModelAttentionBackend"
     }
   },
-  "457": {
-    "inputs": {
-      "lora_name": "minimax-h3\\minimax_h3_ref2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors",
-      "model": [
-        "910",
-        0
-      ],
-      "clip": [
-        "390",
-        0
-      ],
-      "strength_model": [
-        "915",
-        0
-      ],
-      "strength_clip": [
-        "915",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModelClip",
-    "_meta": {
-      "title": "Turbo LoRA"
-    }
-  },
   "454": {
     "inputs": {
       "shift_video": 12,
-      "shift_audio": 5,
+      "shift_audio": 4,
       "model": [
         "497",
         0
@@ -103,7 +78,7 @@
     "inputs": {
       "preview_rate": 24,
       "model": [
-        "457",
+        "910",
         0
       ],
       "vae": [
@@ -197,8 +172,8 @@
     "inputs": {
       "ref_image_size": "match",
       "clip": [
-        "457",
-        1
+        "390",
+        0
       ],
       "vae": [
         "388",
@@ -287,10 +262,10 @@
   "412": {
     "inputs": {
       "scheduler": "beta",
-      "steps": 6,
+      "steps": 8,
       "denoise": 1,
       "model": [
-        "464",
+        "957",
         0
       ]
     },
@@ -302,7 +277,7 @@
   "423": {
     "inputs": {
       "model": [
-        "464",
+        "957",
         0
       ],
       "conditioning": [
@@ -493,7 +468,7 @@
       "end_percent": 0.95,
       "verbose": true,
       "model": [
-        "392",
+        "497",
         0
       ]
     },
@@ -509,7 +484,7 @@
         0
       ],
       "false": [
-        "909",
+        "955",
         0
       ],
       "boolean": [
@@ -519,7 +494,7 @@
     },
     "class_type": "MpiIfElse",
     "_meta": {
-      "title": "Turbo ? SigmaShift : EasyCache"
+      "title": "Turbo ? shift 4 : EasyCache + shift 2"
     }
   },
   "911": {
@@ -528,7 +503,7 @@
       "steps": 25,
       "denoise": 1,
       "model": [
-        "464",
+        "957",
         0
       ]
     },
@@ -554,7 +529,7 @@
     },
     "class_type": "MpiIfElse",
     "_meta": {
-      "title": "Turbo ? 6 steps : 25 steps"
+      "title": "Turbo ? 8 steps : 25 steps"
     }
   },
   "913": {
@@ -584,19 +559,6 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "Turbo ? euler : res_multistep"
-    }
-  },
-  "915": {
-    "inputs": {
-      "math_expression": "1.0 if a else 0.2",
-      "a": [
-        "908",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "Turbo LoRA strength"
     }
   },
   "916": {
@@ -814,6 +776,54 @@
     "class_type": "MpiMath",
     "_meta": {
       "title": "Add Guide Frames to Duration"
+    }
+  },
+  "955": {
+    "inputs": {
+      "shift_video": 12,
+      "shift_audio": 2,
+      "model": [
+        "909",
+        0
+      ]
+    },
+    "class_type": "MiniMaxH3SigmaShift",
+    "_meta": {
+      "title": "Quality shift (audio 2)"
+    }
+  },
+  "956": {
+    "inputs": {
+      "lora_name": "minimax-h3\\minimax_h3_ref2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors",
+      "strength_model": 1.0,
+      "model": [
+        "464",
+        0
+      ]
+    },
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "Turbo LoRA (8-step)"
+    }
+  },
+  "957": {
+    "inputs": {
+      "true": [
+        "956",
+        0
+      ],
+      "false": [
+        "464",
+        0
+      ],
+      "boolean": [
+        "908",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Turbo ? 8-step LoRA : no LoRA"
     }
   }
 }

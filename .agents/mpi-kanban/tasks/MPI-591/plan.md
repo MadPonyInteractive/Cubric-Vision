@@ -229,6 +229,73 @@ bench-proven, and the app side is wired and tested. The card is in `doing` / `in
 > `any-of-models.md` ("a slot may pick a different GRAPH, not just different params"). The
 > `hiddenWhen` model clauses are ALREADY documented in `ui/carousel-frame/fields.md`.
 
+> **PHASE 5g PORT DONE (2026-09-04) - AND IT IS BIT-IDENTICAL TO F16b.** F16b is in
+> `comfy_workflows/flow_h3_extend.json` and its `raw/` twin, both 40 -> 52 nodes, both edited
+> surgically with `pos`/`size` asserted unchanged on every survivor. The shipped file driven with
+> the bench arm's own inputs produces **the same file byte for byte on picture AND sound** - video
+> md5 `e56a0cd65c540e57bf2bd3fac81b67cf`, decoded-audio md5 `6d81b0b5f94366bd775d762b72a0e9da`,
+> matching F16b on both. Round trip 0 differences, check 3 (`graphToPrompt` in the real frontend)
+> 0 differences, both validators green, 83/83 tests.
+> **ONE CHANGE BEYOND THE HANDOFF'S FOUR, AND IT WAS NOT OPTIONAL.** The guide costs 39 frames of
+> the model's own output, so delivered new frames are `N - 40`. Feeding `Input_Duration` straight
+> into `MpiH3Length` under-delivered every duration by 1.67 s AND **crashed at the slider's minimum**
+> (1 s -> N=22, `#941 start_index 40` out of range). `#954 MpiMath "a + 40/24"` adds the frames back
+> before the 17k+5 snap: 4 s now asks for N=141 - the bench arm's own length - and 1 s for 56. The
+> cost is real and inherent to the clip guide: 141 sampled frames at 4 s where the one-frame pin
+> sampled 90.
+> **BLOCKER, AND IT IS FABIO'S CALL: `MpiAudioSplice` IS NOT AT THE PIN.** `node_lock.json` pins
+> `ccc25d1`, which is `origin/main` exactly and has `MpiAudioRange` but not `MpiAudioSplice`; the
+> node is in `09e75c9`, one of **nine unpushed commits** on `ComfyUi-MpiNodes` `main`. The bench runs
+> the working tree, so no bench run can see this - an H3 extend in the APP dies node-not-found.
+> Shipping needs a push plus a pin bump, and those nine commits carry other cards' unshipped work.
+> Core is fine: the shipped engine's `MiniMaxH3AddGuide` already has `audio`/`audio_vae`/`image`.
+> **48188 WAS DOWN this session**, so conversion and verification ran against 8188; re-run
+> `verify-workflow.mjs` against the app engine when it is up.
+> **NEXT: the pin decision, then Reuse Prompt on a finished H3 extend, then Phase 6 docs.**
+
+> **PHASE 5h - THE 8-STEP ALIGNMENT (2026-09-04). Static proofs green; THE GATE IS UNRUN.**
+> MPI-687's `c39b5008` swapped this graph onto the 8-step distill for dependency reasons and
+> explicitly did NOT re-tune it, leaving an 8-step LoRA sampled the 4-step way. The arm now
+> matches `minimax_h3_r2va` line for line (`arm_equivalence.py`): `MpiLoraModel` **switched**
+> in/out at strength 1 instead of `MpiLoraModelClip` faded to 0.2, `beta/8` instead of
+> `beta/6`, shift `12/4` turbo and `12/2` quality, `Input_Refs.clip` straight off the
+> CLIPLoader. `#457` + `#915` deleted; 52 -> 53 nodes.
+> **THREE PRE-EXISTING DEFECTS FIXED ON THE WAY, all on the branch being rebuilt:** the
+> quality arm had NO sigma shift at all; the turbo LoRA was on the CLIP and still at 0.2 when
+> turbo was off; and `#909 EasyCache` hung off the raw UNET, so quality silently skipped
+> `ModelAttentionBackend`.
+> **A V3 TRAP WORTH REMEMBERING:** the first run wrote `steps: 8` into
+> `BasicScheduler.scheduler`, because this engine declares a COMBO as the literal string
+> `"COMBO"` rather than as the list of options, and a missed COMBO shifts every LATER widget
+> by one. `verify-workflow`, the injection validator and 883 tests all pass on a shifted
+> widget - **only the raw round trip caught it.**
+> **PIN BLOCKER CLEARED:** MpiNodes 1.2.9 (`e00086a9`) is pinned and carries `MpiAudioSplice`.
+> **NEXT, AND IT IS THE ONLY THING LEFT BEFORE THIS CARD CLOSES: THE 8-STEP GATE.** No
+> generation ran this session - Fabio was mid-test on the GPU and asked for it to be left
+> alone - so every Phase 5d-5g number, the `e56a0cd6` md5 included, is 4-step evidence that no
+> longer describes this graph. Run the shipped file with the Phase 5g inputs, measure with
+> `luma.py` + `dropouts.py`, and put an 8-step extend in front of Fabio. Then Reuse Prompt and
+> Phase 6 docs.
+> **The two-pass sweep is MPI-688, not this card.** If extend goes there, the refine's
+> reference encoder is titled `Refine_Refs` - a second `Input_Refs` is an injection violation.
+
+> **TEXT ENCODER RE-BAKED (2026-09-05).** Fabio opened `raw/flow_h3_extend.json` in ComfyUI,
+> swapped the text encoder and re-saved, which also re-laid-out the graph (the raw diff is large
+> and almost all of it is `pos`). **All 53 nodes survived his export** - the F16b port, the 8-step
+> arm, `#457`/`#915` still deleted - verified node by node before anything was baked. The runtime
+> file was one value stale, so `tests/flow-model-choice.test.cjs` was **RED in the working tree**:
+> *"the minimax-h3-ref2va arm loads qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors
+> (CLIPLoader.clip_name), which no dependency of that model supplies"* - MPI-698 supersedes that
+> encoder with `qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors` and leaves the old one referenced by
+> no model. Exactly the trap MPI-687's LoRA swap hit. Re-baked `#390` to the nvfp4 encoder: round
+> trip vs the converter **0 differences**, verify + injection green against 48188, `npm test`
+> **902/902**, and that test is green again.
+> **THE LESSON FOR THE NEXT WEIGHT CHANGE: nothing propagates it.** `sync-raw-workflows.mjs`
+> converts each raw file independently and shares no weight names between graphs, so every H3
+> sweep has to touch `flow_h3_extend.json` explicitly or it silently names a weight no model
+> downloads. This is the second time (4-step LoRA, then the encoder). **Extend belongs in the H3
+> sweep's file list from now on**, not chased afterwards.
+
 - **PHASE 4b — DONE.** Turbo is the user's choice, default TRUE. `#908 Input_is_Turbo` drives three
   `MpiIfElse` plus `#915`'s strength math; `hiddenWhen` gained `{ model }` / `{ modelNot }` so the
   toggle hides on LTX and the `negative` box finally hides on H3. Turbo re-earned at **69.5 s**

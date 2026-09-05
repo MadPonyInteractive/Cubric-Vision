@@ -231,3 +231,36 @@ port alone). Bench writes to `D:\WORK\Images\Outputs`, never `<ComfyUI>\output`.
 - [ ] DO NOT CHASE the 4.7553 s sample step - the SOURCE clip has it too (1.8x its own 99.99pct).
 - [ ] Then port F12k into `comfy_workflows/flow_h3_extend.json` + its `raw/` twin (round trip +
       both validators). Guide length 56/73 was never run and is now a knob, not a pending fix.
+- [x] PORT F16b into `comfy_workflows/flow_h3_extend.json` + its `raw/` twin - DONE 2026-09-04,
+      40 -> 52 nodes on both, and the shipped file driven with the bench's inputs is BIT-IDENTICAL
+      to F16b on video (`e56a0cd6...`) and on decoded audio (`6d81b0b5...`). Round trip 0 diffs,
+      check 3 `graphToPrompt` 0 diffs, both validators green, 83/83 tests.
+- [x] `#954 MpiMath "a + 40/24"` - the guide costs 39 frames of the model's own output, so without
+      it every duration under-delivered by 1.67 s and the slider's MINIMUM (1 s -> N=22) crashed
+      `#941` with "Start index is out of range". 4 s now asks for N=141, the bench arm's own length.
+- [ ] BLOCKER: `MpiAudioSplice` is NOT at the pinned MpiNodes commit (`ccc25d1` == `origin/main`).
+      It is in `09e75c9`, one of NINE unpushed commits. The bench runs the working tree, so this is
+      invisible to a bench run and fatal in the app. Push + pin bump - Fabio's call, because those
+      nine commits carry other cards' unshipped work.
+- [ ] Re-run `verify-workflow.mjs` against 48188 - it was DOWN this session, so the conversion and
+      both checks ran against 8188.
+- [x] BLOCKER CLEARED: MpiNodes 1.2.9 released and pinned (`e00086a9`); `MpiAudioSplice` is
+      at the pin and the pack is 0 commits ahead. `pin_check.py`: MISSING AT THE PIN: none.
+- [x] 8-step alignment (2026-09-04): the arm now matches `minimax_h3_r2va` exactly -
+      `MpiLoraModel` switched in/out at strength 1, `beta/8`, shift `12/4` turbo and `12/2`
+      quality, clip straight off the CLIPLoader. `#457`/`#915` deleted, 52 -> 53 nodes.
+      Round trip 0 diffs, check 3 0 diffs, verify + injection green AGAINST 48188, 883/883.
+- [x] Three pre-existing defects fixed on the rebuilt branch: the quality arm had no sigma
+      shift, the turbo LoRA was applied to the CLIP and still at 0.2 with turbo off, and
+      EasyCache hung off the raw UNET so quality skipped ModelAttentionBackend.
+- [ ] THE 8-STEP GATE - the only thing left before this card can close. No generation ran
+      2026-09-04 (GPU in use by Fabio, asked to leave it alone), so F16b's pass and every
+      Phase 5d-5g number are 4-STEP evidence that no longer describes this graph. Run the
+      shipped file with the Phase 5g inputs, measure with `luma.py` + `dropouts.py`, and put
+      an 8-step extend in front of Fabio.
+- [ ] REPORTED, NOT FIXED: three `widgets_values_named` blocks in the raw twin contradict
+      their own positional values (`#908` boolean, `#911` scheduler + steps) and do so at
+      HEAD too. Inert - check 3 proves the frontend reads positionally - but `#911`'s claims
+      the quality arm runs 6 steps.
+- [ ] The two-pass sweep is MPI-688, not this card. `Refine_Refs`, never a second
+      `Input_Refs`.

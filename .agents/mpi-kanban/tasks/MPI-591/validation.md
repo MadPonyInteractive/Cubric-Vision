@@ -1368,3 +1368,226 @@ bench had evicted ComfyUI's cache; F16b then reused F16a's sample. **So the benc
 reproducible across a cache eviction, and any A/B that spans one is comparing two different samples,
 not two different stitches.** Build variant arms back to back, and check the video md5 before
 attributing a difference to the change under test.
+
+## Phase 5g - THE PORT, VERIFIED 2026-09-04. Bit-identical to F16b, and one pin short of shippable.
+
+F16b carried into `comfy_workflows/flow_h3_extend.json` and its `raw/` LiteGraph twin. Both copies
+go 40 -> 52 nodes. Both were edited SURGICALLY, never regenerated: the script asserts `pos` and
+`size` are byte-identical on all 40 survivors before it writes, and the per-file serialiser was
+proved by round-tripping the untouched bytes first (both files: indent 2, `ensure_ascii`, CRLF,
+trailing newline - the raw file is pure ASCII and every string added to it is too).
+
+### What the port is
+
+| # | nodes | what it does |
+|---|---|---|
+| 1 | `#902 num_frames 1 -> 39`, `#940 MpiAudioRange(#906, fps #331, -39, -1)` -> `#903.audio`, `#903.audio_vae <- #387`, `ref_audio_1` off `#330` | the guide is a CLIP with its own audio |
+| 2 | `#904 overlap 1`, `new_images <- #949` | the HARD join. The 39-frame `linear_blend` is NOT ported |
+| 3 | `#946`/`#947` -> `#948 ColorMatch reinhard` -> `#949 ImageBatch(#948, #941)` | the flash frame, level-matched against its own successor |
+| 4 | `#950 MpiAudioRange(#906, fps #331, 0, -1)` -> `#907.audio1`; `#942(#404, 24, 40, -1)` -> `#907.audio2`; `#951(#404, 24, 16, -1)` + `#952 MpiAudioSplice(crossfade 800)` -> `#442.audio` | the AAC-padding trim and the 800 ms splice crossfade |
+
+`#943`/`#944`/`#945` are NOT ported and that is correct: reachability from `Output_Video` on the
+bench arm shows all three orphaned the moment `#904.new_images` was repointed to `#949`. They are
+the fade arm's re-take chain, dead in F16b.
+
+### Two bench constants the shipped graph has to derive, both proved equivalent
+
+- **`#941 num_frames`** is `101` on the bench and **4096** here. `GetImageRangeFromBatch` clamps
+  `end_index = min(start_index + num_frames, len(images))`, so 4096 reads as "to the end" and
+  returns exactly 101 frames at N=141. No math node needed.
+- **`#952 start`** is `-125` on the bench and `#953 MpiMath "16 - a"` off `#213`'s frame count here.
+  At N=141 that is -125. The patch always lands flush with the end of the track, which is what
+  `MpiAudioSplice` raises on if the arithmetic is wrong - so a mis-wired arm fails loudly.
+
+### The change the handoff did not carry, and without it the Flow is broken
+
+**The guide costs 39 frames of the model's own output.** The model re-takes the guide before it
+continues, so delivered new frames are `N - 40`, not `N`. `Input_Duration` fed `MpiH3Length`
+directly, which means:
+
+- every duration under-delivered by **1.67 s**, and
+- the slider's **minimum (1 s)** snapped to N=22 and crashed `#941` with
+  `ValueError: Start index is out of range` - a hard failure on a legal slider value.
+
+`#954 MpiMath "a + 40/24"` between `#214` and `#213.seconds` adds the frames back before
+`MpiH3Length` snaps to its 17k+5 grid. 4 s now asks for **N=141, the bench arm's own length**;
+1 s asks for 56. The cost is honest and inherent to the clip guide: at 4 s the sampler runs 141
+frames where the one-frame pin ran 90.
+
+| Input_Duration | N | delivered |
+|---|---|---|
+| 1 s | 56 | 16 frames (0.67 s) |
+| 4 s | 141 | 101 frames (4.21 s) |
+| 10 s | 277 | 237 frames (9.88 s) |
+
+### The proofs
+
+| check | result |
+|---|---|
+| serialiser round trip, per file, before writing | exact on both |
+| `pos`/`size` on all 40 surviving nodes | unchanged |
+| `workflow-to-api.mjs raw/` vs the runtime file, node by node and input by input | **0 differences** |
+| `verify-workflow.mjs` (8188) | 52 nodes, clean |
+| `validate-injection-rules.mjs` | clean |
+| frontend `loadGraphData` + `graphToPrompt` (check 3, playwright-cli on the bench) | 52 nodes, 0 unregistered types, 0 node errors, 0 dangling links, and **0 differences** against the runtime file |
+| `inject-params-titles` + `flow-model-choice` + `flow-required-media` + `flow-output-filename` + `workflow-input-staging-gate` | 53/53 |
+| `node-drift` + `comfy-port-lockstep` | 30/30 |
+| structural equivalence vs `F16b_audiofade_800.json` | every difference explained: 3 dead nodes, 2 derived values, and the run-time injections |
+
+### The run: bit-identical to F16b, on both streams
+
+The SHIPPED file driven with the bench arm's own source, prompt, seed and turbo flag - nothing
+structural touched, `Input_Duration` left at its shipped default of 4. 210.3 s, 225 frames
+(124 source + 101 new), 864x480, 9.375 s.
+
+```
+P5g_port_00001.mp4        video MD5 e56a0cd65c540e57bf2bd3fac81b67cf
+F16b_audiofade_800_00001  video MD5 e56a0cd65c540e57bf2bd3fac81b67cf
+                          audio MD5 6d81b0b5f94366bd775d762b72a0e9da  (both, decoded s16le/32k/2ch)
+```
+
+That is the whole verification in one line: the shipped graph and the arm Fabio passed produce the
+same file, byte for byte, on picture AND sound. It also lands on the video md5 Phase 5g recorded
+for F16a/F16b, so the sample survived a bench restart cycle.
+
+`luma.py` over the join window (source ends at frame 123): span **2.20**, worst 1-frame step
+**1.14**, source-half motion mean 5.69. `dropouts.py` over the WHOLE file: no dropout at the join
+at all; the only sub-median windows are the file's own fade-in (0 - 0.025 s) and a -12.4 dB dip at
+1.44 s that **the source has too** at -12.3 dB. The 4.7553 s sample step is present and is 1.3x the
+file's 99.99th percentile against the source's own 1.8x - content, as recorded in Phase 5f.
+
+### BLOCKER FOR THE APP: `MpiAudioSplice` is not at the pinned commit
+
+The graph runs on the bench because the bench has the node pack's WORKING TREE installed. A user
+gets the commit `dev_configs/node_lock.json` pins, and that is **`ccc25d1`, which has
+`MpiAudioRange` but not `MpiAudioSplice`** - the node landed in `09e75c9`, one of **nine commits
+sitting unpushed** on `ComfyUi-MpiNodes` `main` (`origin/main` == `ccc25d1` exactly). So an H3
+extend in the app dies with a `MpiAudioSplice` node-not-found, and no bench run can show that.
+
+Shipping needs: push `ComfyUi-MpiNodes` -> bump `ComfyUI-MpiNodes.commit` in `node_lock.json`.
+NOT taken unilaterally - the nine commits carry other cards' unshipped work (H3 audio masking,
+`MpiInpaintHeal` perf), and publishing them is a decision, not a side effect of this port.
+
+Checked and NOT a problem: core `MiniMaxH3AddGuide` carries `audio`, `audio_vae` and `image` in the
+**shipped** engine on disk (`engine/ComfyUI_windows_portable/ComfyUI/comfy_extras/nodes_minimax_h3.py`),
+so the guide-clip half needs no core bump. Every other MpiNodes class in the graph exists at the pin.
+
+### Deviation: converted and verified against 8188, not 48188
+
+The standing rule is to convert against the engine on 48188. **It was not listening** - Fabio's app
+was down for this session - so the conversion, `verify-workflow.mjs` and check 3 all ran against the
+bench. The risk that rule guards is a widget-name or ordering drift between bench and engine; here
+it is bounded by reading the shipped engine's own source off disk for the one class whose optional
+inputs the port newly relies on, and by `pin_check.py` for the custom nodes. Re-run
+`verify-workflow.mjs` against 48188 once the app engine is up.
+
+## Phase 5h - THE 8-STEP ALIGNMENT (2026-09-04). Static proofs only; the GATE IS UNRUN.
+
+MPI-687 swapped this graph's turbo LoRA to the 8-step distill in `c39b5008` because the
+4-step weight stopped being a dependency of any model - a correctness fix, and its own
+message says so: *"Treat the swap as 'references a weight that exists', not 'tuned'."*
+That left an 8-step distill being sampled the 4-step way. This brings the arm onto the
+one MPI-687 actually proved on `minimax_h3_r2va`.
+
+`arm_equivalence.py` compares the two graphs by SHAPE (they number differently and r2va
+carries six user LoRA slots and a two-pass tail), and every line now agrees:
+
+| | was | now, == r2va |
+|---|---|---|
+| turbo LoRA | `#457 MpiLoraModelClip`, strength `1.0 if a else 0.2` | `#956 MpiLoraModel`, strength 1, **switched** by `#957` |
+| turbo steps | `beta / 6` | `beta / 8` |
+| turbo shift | `12 / 5` | `12 / 4` |
+| quality shift | **none at all** | `12 / 2` off EasyCache (`#955`) |
+| quality sampler / steps | `res_multistep` / `simple 25` | unchanged |
+| `Input_Refs.clip` | through the turbo LoRA | straight from `#390 CLIPLoader` |
+
+`#457` and `#915` (its strength math) lost their last consumer and are deleted: 52 -> 53
+nodes.
+
+### Three things this exposed that were NOT 8-step alignment
+
+1. **The quality arm had no sigma shift.** `#910` selected raw `#909 EasyCache` on false,
+   so non-turbo ran on core's default shift while turbo ran on 12/5. r2va shifts both.
+2. **The turbo LoRA was being applied to the CLIP**, and at 0.2 rather than 0 on the
+   quality arm - so "turbo off" still carried a fifth of a turbo LoRA, on both towers.
+3. **`#909 EasyCache` hung off the raw UNET `#392`**, in parallel with
+   `ModelAttentionBackend` rather than after it, so the quality arm silently skipped the
+   attention backend. Repointed to `#497`, as r2va does.
+
+All three are fixed here rather than filed, because the branch they sit on is the branch
+being rebuilt; leaving them would have meant knowingly shipping a quality arm that
+differs from the proven one in three ways.
+
+### A V3 schema trap, caught by the round trip and by nothing else
+
+The first run wrote `steps: 8` into `BasicScheduler.scheduler`, producing
+`widgets_values [8, 6, 1]`. Cause: this engine declares a COMBO as the literal STRING
+`"COMBO"` with its options in the second element, and the node-synthesis classifier only
+recognised the V1 shape where the type IS the list. A missed COMBO is not a skipped
+widget - it consumes no positional slot, so **every later widget on the node shifts by
+one**. That is the MPI-466 trap in a new place. The classifier now accepts all three
+shapes and lives in its own module (`h3_schema.py`) so the audit can import it without
+importing a patch script - which, once, silently patched the file on import.
+
+**The raw round trip is what caught it.** `verify-workflow`, the injection validator and
+the whole test suite pass on a graph with a shifted widget: the value is still a legal
+member of the wrong widget's type.
+
+### Three pre-existing `widgets_values_named` disagreements, reported not fixed
+
+`audit_named.py` finds three nodes whose named block contradicts its own positional
+values - and finds all three at `HEAD` too, so they predate this session:
+
+| node | named says | positional says |
+|---|---|---|
+| `#908 MpiSimpleBoolean` | `boolean: false` | `true` |
+| `#911 BasicScheduler` | `beta`, `6` | `simple`, `25` |
+
+**Inert, and proved inert:** check 3's `graphToPrompt` returns `simple`/`25` for `#911`,
+matching the positional values and the API file exactly, so the frontend reads
+positionally. Left alone as out of scope - but a named block that lies is a trap for
+whoever edits this file next, and `#911`'s claims the quality arm runs 6 steps.
+
+### The proofs
+
+| check | result |
+|---|---|
+| files restored to `HEAD` before patching, byte-identical | confirmed |
+| `pos`/`size` on every surviving node | unchanged |
+| `workflow-to-api.mjs raw/` vs the runtime file | **0 differences** |
+| `verify-workflow.mjs` **against 48188, the ENGINE** | 53 nodes, clean |
+| `validate-injection-rules.mjs` | clean |
+| check 3 - `loadGraphData` + `graphToPrompt` in the real frontend | 53 nodes, 0 unregistered, 0 errors, 0 dangling, **0 differences** |
+| `arm_equivalence.py` vs `minimax_h3_r2va.json` | every arm agrees |
+| `npm test` | **883/883** |
+
+**48188 was UP this session**, so the conversion and `verify-workflow` ran against the
+engine rather than the bench - closing the deviation Phase 5g had to record. Check 3 still
+used 8188, since it needs a frontend and writing a temp workflow into the app engine's own
+userdata store was not worth the risk.
+
+### THE GATE IS UNRUN, AND THAT IS DELIBERATE
+
+**No generation was dispatched.** The user was mid-test on the GPU with no lease taken and
+asked for it to be left alone; the only HTTP this session made was `/object_info` and the
+userdata file store, neither of which samples.
+
+So every number in Phase 5d-5g - `e56a0cd65c540e57bf2bd3fac81b67cf` included - is
+**4-step evidence, and it no longer describes this graph.** F16b's pass was a 4-step
+sample. The remaining work on this card is one bench run of the shipped file with the
+Phase 5g inputs, `luma.py` + `dropouts.py` over it, and Fabio watching an 8-step extend.
+Nothing about the stitch, the level match or the audio splice changed, so the expectation
+is that they hold - but that is an expectation, not a measurement.
+
+### The pin blocker from Phase 5g is CLEARED
+
+MpiNodes 1.2.9 is released and pinned: `node_lock.json` now carries `e00086a9`,
+`MpiAudioSplice` is in it, and the pack is 0 commits ahead of `origin/main`.
+`pin_check.py` reports `MISSING AT THE PIN: none`.
+
+### NOT in scope, and it has a card
+
+The two-pass shape (half-res stage 1 -> `MinimaxH3LatentUpscaler3D` -> 3-step refine) is
+**MPI-688**, which already names sweeping the H3 flows onto it. If extend moves there, the
+refine's reference encoder must be titled `Refine_Refs`, never a second `Input_Refs` -
+`validate-injection-rules.mjs` rejects the duplicate outright.
