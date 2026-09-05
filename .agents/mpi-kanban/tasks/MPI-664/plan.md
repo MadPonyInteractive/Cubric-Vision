@@ -123,8 +123,35 @@ caption) still holds for the CAPTION and only the caption: the prose still reach
 through the enhancer, and only wordless tags reach the encoder. Two destinations, no rivalry.
 
 **NEXT: one Generate with Instrumental ON, on Fabio's GPU.** Nothing sung (unchanged from run 4),
-and the sections should now land where he put them. Then bench Stable Audio 3 (SFX and one-shots
-are a capability Vision lacks entirely; MiniMax's own docs say it cannot do them).
+and the sections should now land where he put them.
+
+---
+
+🟢 **2026-09-05, seventh session — STABLE AUDIO 3 IS EVALUATED AND IN. The card's shape changed.**
+
+Shipped: bare tags (`7b7c3545`), and three research commits (`2c18c0f4`, `ca7fae10`, `ef95173d`).
+Full bench facts in `research/stable-audio-3-bench.md` — read it, do not re-derive it.
+
+**FABIO'S VERDICT, all four modes in the bench:** *"instrumental, effects, one-shot, and music:
+it's very good… We can use it for everything else but sung songs."*
+
+🔴 **THE ARCHITECTURE HE ASKED FOR — ONE FLOW, TWO MODELS, ONE ANNOUNCER.** Not two flows and not
+a second engine bolted behind Music Maker. One flow where the user does everything:
+
+- music **with lyrics** → MiniMax (the only one that sings)
+- music **as effects** → Stable Audio 3
+- **one-shots and instruments** → Stable Audio 3
+- 🔴 **TWO MORE OUTCOMES FABIO LISTED AS BLANK BULLETS AND HAS NOT NAMED YET — ASK HIM FIRST.**
+
+**ONE ANNOUNCER, his explicit constraint.** Do NOT ship two prompt-enhancer LLMs.
+**Consolidation is not a VRAM win** — ours (`qwen3vl-abliterated-clip`) is 4.88GB, theirs
+(`qwen3.5_2b_bf16`) 4.55GB, 330MB apart. The cost of two is that users download **both, 9.43GB**.
+RECOMMENDATION, not a decision: keep ours and port Stability's four category recipes onto it —
+ours is already shipped and shared with the Image Describer plugin
+(`pluginsRegistry.js:66`), so switching to theirs would ADD 4.55GB for anyone holding both.
+
+**The three jobs Fabio approved for the next session:** read both licences whole; apply the
+two-node VRAM fix in the bench workflow; create the Stable Audio card.
 
 ---
 
