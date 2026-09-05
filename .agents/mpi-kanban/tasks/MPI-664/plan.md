@@ -145,8 +145,27 @@ the opposite answer.**
 3. 🟢 **MPI-694 CREATED** — "Stable Audio 3: SFX, one-shots, instruments, instrumental music",
    `todo`/`planned`. Board validator exit 0.
 
-**NEXT: the two blank bullets.** Fabio has been asked what outcomes 4 and 5 are. The one-flow
-design does not start until he names them.
+4. 🟢 **THE FIVE OUTCOMES ARE NAMED, AND THE FLOW IS DESIGNED.** Fabio, 2026-09-05:
+   *"Music with lyrics · Instrumentals · Instrument · One-shot · Sound effects. That's five."*
+   Four of them ARE Stability's own `CustomCombo` verbatim. He then asked for the shape himself —
+   *"in stage 0, have a dropdown for the user to select what he wants to do, and that will
+   determine the other stages"* — and closed the install question with *"all in one, bro, all in
+   one. All weights, one flow."*
+
+   **The full design is `../MPI-694/plan.md`. Read that, not a summary.** The three findings that
+   made it cheap: a STEP already takes `hiddenWhen` (MPI-664 shipped it), `MpiIfElse` is genuinely
+   lazy so the idle checkpoint never loads, and this graph ALREADY carries both the `MpiClearVram`
+   and the plain/tiled decode pair behind `Input_Low_Vram` — so the measured VRAM fix and its
+   fallback are both already in place and the Stable Audio arm just hangs off them.
+
+   🔴 **`Input_Instrumental` dies as a control** — it becomes stage 0's `instrumentals` arm, which
+   routes to Stable Audio. **Do not delete `Lyrics_Gate`** with it; re-point it at
+   `Input_Outcome`. Deleting it on 2026-09-02 was the defect that made a man sing the stage
+   directions.
+
+**NEXT: the owed Generate.** One MiniMax run with Instrumental ON, to judge whether bare tags put
+the sections where Fabio asked. Only he can run it, and stage 0 moves that control — so it is
+worth doing before the merge, or accepting it moves.
 
 ---
 
