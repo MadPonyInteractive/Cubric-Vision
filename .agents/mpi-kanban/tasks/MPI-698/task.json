@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-698",
+  "title": "H3 text encoder: swap the 26.4GB int8_convrot for the 15.7GB NVFP4 AWQ build",
+  "description": "Fabio compared Comfy-Org/MiniMax-H3 text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors (15,687,142,551 bytes) against the shipped ethanfel Ultra-Heretic int8_convrot (26,363,476,151) on uncensored and hard prompts: identical results, so the Comfy-Org build is already uncensored and the Heretic lineage is not needed. Swap it. Takes the H3 staging pair from ~45GB to ~35GB, which is the real fix for the L4 OOM (minimax-h3/t2v_ms SIGKILL, code -9). Upload to R2, rewrite the dep entry, keep the old entry for the orphan sweep, then re-run the L4 smoke.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "created_at": "2026-09-05T11:48:08+01:00",
+  "updated_at": "2026-09-05T11:48:08+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

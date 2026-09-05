@@ -94,7 +94,7 @@ re-verified 2026-08-10 after the int8 swap below.
 | dep id | file | size |
 |---|---|---|
 | `minimax-h3-fl2va-transformer` | `minimax_h3_fl2va_pruned_int8_convrot.safetensors` | 20.97 GB |
-| `h3-qwen3vl-32b-clip` | `qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors` | 26.36 GB |
+| `h3-qwen3vl-32b-clip-nvfp4` | `qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors` | 15.69 GB |
 | `vae-minimax-h3-video-int8` | `minimax_h3_video_vae_int8_convrot.safetensors` | 3.17 GB |
 | `vae-minimax-h3-audio` | `minimax_h3_audio_vae_fp32.safetensors` | 0.61 GB |
 
@@ -119,8 +119,30 @@ one real difference is temporal — unpruned is slightly more expressive — and
 ever observed at 56 frames, so it is NOT proven to persist on long clips. Re-testing costs
 a 32 GB re-download.
 
-**int4 encoders were rejected with evidence** (MPI-449 § 4/§ 5). Comfy-Org's own stock
-encoder is 27.14 GB, so 26.36 GB is not the large option.
+**int4 encoders were rejected with evidence** (MPI-449 § 4/§ 5), and that verdict does NOT
+extend to the nvfp4_awq build shipped since MPI-698 — different quantisation, evaluated on
+its own A/B. Comfy-Org's own stock int8_convrot encoder is 27.14 GB.
+
+**The encoder is nvfp4_awq since MPI-698 (2026-09-05), down from 24.55 GB int8_convrot.**
+Two things drove it and both are worth keeping straight:
+
+- **Memory, not download size.** H3 stages the encoder *beside* the transformer, so the
+  int8 pair sat at ~45 GB resident at peak — at any resolution, because it is weight
+  staging and not activations. That SIGKILLed a 54 GB L4 Pod on `minimax-h3/t2v_ms` at
+  128px/1s (`code -9`, the Linux OOM killer) while the same op passed on an 80 GB box.
+  14.61 GiB takes the pair to ~35 GB. Windows never showed this: the pagefile absorbs the
+  overshoot and a Pod has no swap.
+- **The "Heretic" abliteration turned out not to be load-bearing.** The old build was
+  carried purely for uncensored output. Fabio A/B'd the two on 2026-09-05 across
+  uncensored and deliberately hard prompts and got identical results, so the stock
+  Qwen3-VL build is already uncensored in this role — consistent with H3 reading the
+  trimmed embedding layers as a conditioner rather than the instruction-tuned refusal
+  behaviour abliteration targets. **The evidence is the A/B, not that reasoning:** re-run
+  it before assuming a future encoder swap is equally free.
+
+**`nvfp4` does NOT mean Blackwell-only.** Comfy-Org's README says outright that this
+encoder "does not require Blackwell GPU to use", and the smoke matrix runs it on Ada (L4)
+and Ampere hosts. Do not add a GPU-generation gate on the strength of the filename.
 
 ## Two-stage — and why there is no `_stage2` twin
 

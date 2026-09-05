@@ -1085,7 +1085,7 @@ quotes to block correct work. Three H3-install deps are R2-primary today:
 |---|---|
 | `minimax-h3-turbo-lora` (`loraDeps.js`) | Apache-2.0 upstream — no licences.js record at all |
 | `vae-minimax-h3-video-int8` (`assetDeps.js`, MPI-517) | The licence argument APPLIES and was OUTRANKED: the sole publisher is a repo named "experimental", and a publisher-hosted dep generates no mirrors, so a delete would break every new install |
-| `h3-qwen3vl-32b-clip` (`assetDeps.js`, MPI-653) | The licence argument does not REACH it — the encoder is Alibaba's Qwen3-VL-32B-Instruct, apache-2.0 down the whole chain, holding no MiniMax weights, parameters or Outputs. Neither a §I.11 Model Derivative nor §I.10 Materials |
+| `h3-qwen3vl-32b-clip-nvfp4` (`assetDeps.js`, MPI-653 then MPI-698) | The licence argument does not REACH it — the encoder is Alibaba's Qwen3-VL-32B-Instruct, apache-2.0 down the whole chain, holding no MiniMax weights, parameters or Outputs. Neither a §I.11 Model Derivative nor §I.10 Materials. **MPI-698 moved it into `Comfy-Org/MiniMax-H3`, whose repo card declares the MiniMax CLA — that blanket label does not reach this file.** Comfy-Org's README names the source (`cybermotaz/Qwen3-VL-32B-Instruct-NVFP4`), which declares `license_name: qwen` pointing at Qwen's apache-2.0 LICENSE. A repo label is not a chain-walk, and this is emphatically NOT a precedent for the transformers in that same repo |
 
 The test is **whose weights are in the file**, not which model install pulls it.
 H3-*shaped* is not H3-*derived*. The transformers are MiniMax's work and stay HF-primary;
@@ -1163,9 +1163,14 @@ Now: three retries of the SAME url on `RETRY_BACKOFF_MS = [2s, 5s, 15s]`, re-ent
 **This matters most where there is no second origin**, and the catalogue is NOT uniformly
 "R2 primary, HF fallback" in either direction (counted 2026-08-06):
 
-- **HF-primary with no alternate** — the four MiniMax H3 deps (`minimax-h3-fl2va-transformer`,
-  `h3-qwen3vl-32b-clip`, `vae-minimax-h3-video`, `vae-minimax-h3-audio`) plus
-  `controlnet-union-flux`. H3 is HF-only; nothing was staged to R2.
+- **HF-primary with no alternate** — `minimax-h3-fl2va-transformer`,
+  `minimax-h3-ref2va-transformer`, `vae-minimax-h3-audio`, plus `controlnet-union-flux`.
+  **The "H3 is HF-only, nothing staged to R2" line this bullet used to carry has been
+  false since MPI-653** and was left standing through MPI-517 as well: the int8 video VAE
+  (MPI-517) and the text encoder (MPI-653, re-based onto the nvfp4 build in MPI-698) are
+  both R2-primary with an explicit `mirrorUrl`. The count above is dated 2026-08-06 and
+  the hosting split moved twice after it — treat any "X is not on R2" claim in this file
+  as a prompt to `curl -sI` the URL, never as the check.
 - **R2-primary with no alternate** — the `noMirror` set: the three TAESD decoders, and only
   those. `krea2-raw-transformer-nsfw` left this set on 2026-08-10 (MPI-433).
 - The other 100 R2 deps have a second route: 66 by explicit `mirrorUrl`, the rest by the

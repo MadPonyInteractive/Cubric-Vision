@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-698", "at": "2026-09-05T11:48:08+01:00", "actor": "claude", "column": "doing", "title": "H3 text encoder: swap the 26.4GB int8_convrot for the 15.7GB NVFP4 AWQ build"}

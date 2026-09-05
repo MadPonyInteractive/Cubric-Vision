@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/data/modelConstants/assetDeps.js",
+    "js/data/modelConstants/models.js",
+    "docs/models/h3/README.md",
+    "docs/download-manager.md",
+    "docs/releases/UNRELEASED.md",
+    "comfy_workflows/scripts/workflow_generation/generate_h3.py",
+    "comfy_workflows/scripts/workflow_generation/minimax_h3_fl2va_template.json",
+    "comfy_workflows/scripts/workflow_generation/minimax_h3_r2va_template.json",
+    "comfy_workflows/minimax_h3_fl2va.json",
+    "comfy_workflows/minimax_h3_r2va.json",
+    ".agents/mpi-kanban/tasks/MPI-698/"
+  ],
+  "note": "OWNERSHIP CHANGED MID-CARD. comfy_workflows/ started as Fabio's (he re-pointed the graphs, session cubric-vision-5a synced the raw templates and committed 86989063). That session then HANDED THE BAKE BACK — message c1836f1d, 2026-09-05T11:08Z — and stopped. This session took generate_h3.py and ran orchestrate.py from there. Peer is idle on this path, not competing."
+}

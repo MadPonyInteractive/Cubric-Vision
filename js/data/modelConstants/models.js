@@ -1536,14 +1536,18 @@ export const MODELS = [
         },
         // FLAT dependencies (not commonDeps/operations): ONE transformer serves both ops,
         // so there is no separable install unit and no per-op toggle in the manager.
-        // The transformer and the encoder are NOT on R2 and that is deliberate — see
-        // minimax-h3-fl2va-transformer in modelDeps.js for the licence reasoning. The one
-        // exception is the int8 video VAE (MPI-517), R2-primary for a supply reason
-        // explained on the dep itself. The encoder and both VAEs are shared with the
-        // minimax-h3-ref2va card.
+        // The TRANSFORMER is not on R2 and that is deliberate — see
+        // minimax-h3-fl2va-transformer in modelDeps.js for the licence reasoning. Two
+        // deps here ARE R2-primary and are exceptions of different kinds: the int8 video
+        // VAE (MPI-517, a supply reason) and the text encoder (MPI-653/MPI-698, out of
+        // the CLA's scope entirely). Both are argued on their own dep in assetDeps.js —
+        // read the section header there before citing either. The encoder and both VAEs
+        // are shared with the minimax-h3-ref2va card.
         dependencies: [
             'minimax-h3-fl2va-transformer',
-            'h3-qwen3vl-32b-clip',
+            // nvfp4_awq since MPI-698, replacing the 24.55GB int8_convrot: the int8 pair
+            // staged ~45GB and OOM-killed a 54GB Pod. NOT Blackwell-gated.
+            'h3-qwen3vl-32b-clip-nvfp4',
             // int8_convrot, NOT the fp16 build — REQUIRES core >= v0.31.0 (MPI-517).
             'vae-minimax-h3-video-int8',
             'vae-minimax-h3-audio',
@@ -1632,12 +1636,14 @@ export const MODELS = [
         },
         // FLAT dependencies: one transformer, one op. The encoder and both VAEs are the
         // SAME dep ids fl2va uses, so installing this on top of fl2va downloads only the
-        // 20.97GB transformer. The transformer and the encoder are not on R2 — see
+        // 20.97GB transformer. The TRANSFORMER is not on R2 — see
         // minimax-h3-ref2va-transformer in modelDeps.js for the licence reasoning; the
-        // int8 video VAE is the one exception (MPI-517).
+        // int8 video VAE (MPI-517) and the text encoder (MPI-653/MPI-698) are the two
+        // exceptions, each argued on its own dep in assetDeps.js.
         dependencies: [
             'minimax-h3-ref2va-transformer',
-            'h3-qwen3vl-32b-clip',
+            // nvfp4_awq since MPI-698 — see the fl2va card above.
+            'h3-qwen3vl-32b-clip-nvfp4',
             // int8_convrot, NOT the fp16 build — REQUIRES core >= v0.31.0 (MPI-517).
             'vae-minimax-h3-video-int8',
             'vae-minimax-h3-audio',

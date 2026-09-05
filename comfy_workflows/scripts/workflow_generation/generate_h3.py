@@ -191,7 +191,11 @@ BAKED_WIDGETS = [
 # ComfyUI then cannot find the name baked in the graph.
 # Shared by both variants; the transformer comes from the variant spec.
 SHARED_WEIGHTS = {
-    "qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors",
+    # nvfp4_awq since MPI-698, replacing the 24.55GB int8_convrot build. This set is a
+    # HAND-MAINTAINED MIRROR of the dep filenames — nothing here reads models.js or
+    # assetDeps.js — so a dep swap that does not also edit this line fails the check
+    # below as "unexpected in graph / declared but unused" and looks like a registry bug.
+    "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
     "minimax_h3_video_vae_int8_convrot.safetensors",
     "minimax_h3_audio_vae_fp32.safetensors",
     # Tiny TAEHV decoder for MpiVideoSamplingPreview, NOT a sampling VAE. It rides a

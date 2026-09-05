@@ -10,7 +10,7 @@
   },
   "212": {
     "inputs": {
-      "int": 3
+      "int": 4
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -44,7 +44,7 @@
   },
   "232": {
     "inputs": {
-      "string": "The woman from <Picture 1> walks towards the camera until her face fills the frame. Then she says, \"Cubric Vision rocks.\" She is outdoors on a rainy city street at night, neon signs reflecting on the wet pavement. Sound of rain, distant traffic, and her bare feet on wet stone."
+      "string": "The woman from <Picture 1> is sitting in a yacht, outside while the yacht is moving at high speed, she is wearing a bikini and drinking a tequila. The camera approaches from the side she looks at the camera and winks, She then stands up and starts walking inside the yacht. The camera follows her from behind.  "
     },
     "class_type": "MpiText",
     "_meta": {
@@ -53,7 +53,7 @@
   },
   "321": {
     "inputs": {
-      "string": "D:\\WORK\\Models\\Liora Vale\\POSTS\\10_2025\\27\\WF\\photo_00003_.png",
+      "string": "",
       "channel": "alpha",
       "block_if_empty": false
     },
@@ -324,7 +324,7 @@
   },
   "444": {
     "inputs": {
-      "boolean": false
+      "boolean": true
     },
     "class_type": "MpiSimpleBoolean",
     "_meta": {
@@ -343,7 +343,7 @@
   },
   "518": {
     "inputs": {
-      "clip_name": "qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors",
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
       "type": "minimax",
       "device": "default"
     },

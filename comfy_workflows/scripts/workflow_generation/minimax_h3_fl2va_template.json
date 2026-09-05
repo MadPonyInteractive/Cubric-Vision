@@ -29,7 +29,7 @@
   },
   "130": {
     "inputs": {
-      "clip_name": "qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors",
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
       "type": "minimax",
       "device": "default"
     },
@@ -120,7 +120,7 @@
   },
   "167": {
     "inputs": {
-      "int": 768
+      "int": 1152
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -129,7 +129,7 @@
   },
   "168": {
     "inputs": {
-      "int": 1344
+      "int": 640
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -203,7 +203,7 @@
   },
   "212": {
     "inputs": {
-      "int": 3
+      "int": 1
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -240,7 +240,7 @@
       "channel": "alpha",
       "block_if_empty": false,
       "string": [
-        "254",
+        "253",
         0
       ]
     },
@@ -254,7 +254,7 @@
       "channel": "alpha",
       "block_if_empty": false,
       "string": [
-        "258",
+        "257",
         0
       ]
     },
@@ -388,23 +388,11 @@
   },
   "253": {
     "inputs": {
-      "string": "D:\\WORK\\Models\\Liora Vale\\POSTS\\10_2025\\27\\WF\\photo_00003_.png"
+      "string": ""
     },
     "class_type": "MpiString",
     "_meta": {
       "title": "Input_Start_Frame"
-    }
-  },
-  "254": {
-    "inputs": {
-      "any": [
-        "253",
-        0
-      ]
-    },
-    "class_type": "MpiAnyChecker",
-    "_meta": {
-      "title": "Mpi Any Checker"
     }
   },
   "257": {
@@ -414,18 +402,6 @@
     "class_type": "MpiString",
     "_meta": {
       "title": "Input_End_Frame"
-    }
-  },
-  "258": {
-    "inputs": {
-      "any": [
-        "257",
-        0
-      ]
-    },
-    "class_type": "MpiAnyChecker",
-    "_meta": {
-      "title": "Mpi Any Checker"
     }
   },
   "289": {

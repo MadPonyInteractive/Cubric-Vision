@@ -322,13 +322,17 @@
   progress was indistinguishable from a frozen app. A card with a spinner appears the moment
   you drop a file and turns into the finished item when it lands.
 
-- MiniMax H3 installs far faster. Both H3 models share one very large file - a 24.55 GB
-  text encoder - and it was the slowest thing in the app by a wide margin, arriving at well
-  under 1 MB/s. On a normal connection that alone ran for hours, and installs could give up
-  before it finished. It now comes from our own servers and downloads at tens of megabytes a
-  second. If our copy is ever unreachable the app falls back to the original source on its
-  own, so nothing breaks. The rest of H3's files are unchanged and still come from
-  HuggingFace: those are MiniMax's own model weights, and their licence does not let us
+- MiniMax H3 installs far faster, and takes 10 GB less disk. Both H3 models share one very
+  large file - the text encoder - and it was the slowest thing in the app by a wide margin,
+  arriving at well under 1 MB/s. On a normal connection that alone ran for hours, and
+  installs could give up before it finished. It now comes from our own servers and
+  downloads at tens of megabytes a second. It is also a smaller build than before - 15.7 GB
+  where it used to be 24.6 GB - which frees up the disk space and, more importantly, leaves
+  H3 far more room to work in memory. Quality is unchanged: the two were compared
+  side by side, including on prompts the old one was specifically chosen to handle, and the
+  results were identical. If our copy is ever unreachable the app falls back to the original
+  source on its own, so nothing breaks. The rest of H3's files are unchanged and still come
+  from HuggingFace: those are MiniMax's own model weights, and their licence does not let us
   host copies.
 
 - A half-installed model can give its disk space back. If a model lost one of its files —
