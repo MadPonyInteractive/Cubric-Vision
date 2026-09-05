@@ -105,8 +105,17 @@ and raw results: `../MPI-664/bench/stable_audio_vram.mjs` + `.results.json`.
 
 🟢 **`MpiClearVram` IS THE WHOLE WIN: 12.35 GB → 6.4 GB, −5.9 GB (−48%), for +0.7 s.**
 It confirms the co-residency the bench note predicted (qwen 4.55 + t5gemma 1.19 + audio
-~4.6) and removes it. Ship it. It goes on the `TextGenerate → encoder` edge, which keeps it
-inside `ComfySwitchNode`'s lazy branch, so with the reprompter off it never runs.
+~4.6) and removes it. On the `TextGenerate → encoder` edge it stays inside
+`ComfySwitchNode`'s lazy branch, so with the reprompter off it never runs.
+
+🔴 **BUT THAT CO-RESIDENCY IS STABILITY'S PROBLEM, NOT OURS — read this before "applying the
+fix" to anything in Vision.** Their reprompter and audio stage share one subgraph. Ours do
+not: `enhance.op` is `promptEnhance`, a **separate dispatch** on
+`qwen3vl_4b_prompt_enhancer.json`, which already clears at node 13. The music graph's own
+`MpiClearVram` (node 60) sits after the DECODE and is a different job. So the fix is not
+something to port INTO Vision — it is the measured cost of ever collapsing the announcer into
+the audio graph, which is a shape to avoid. **−5.9 GB is the price of a mistake we have not
+made.**
 
 🔴 **`VAEDecodeAudioTiled` DOES NOT PAY AT 60 s, AND THIS REVERSES THE PLAN.** Once the
 unload is in, chunking saves **nothing** on peak (6.35 vs 6.19–6.44 GB, inside the noise)

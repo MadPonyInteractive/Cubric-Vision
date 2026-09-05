@@ -1,0 +1,12 @@
+{
+  "prompt_id": "b7913b3e-4a80-4b60-99e0-5e1a52f6f0df",
+  "wall": "229.0",
+  "files": [
+    {
+      "filename": "mpi664_instrumental_00001.flac",
+      "subfolder": "audio",
+      "type": "output"
+    }
+  ],
+  "structure": "[Intro] one single orchestral drum hit, then silence\n[Verse] solo viola carries the melody, nothing else\n[Chorus] the full string section joins the viola\n[Outro] a choir pad swells and fades out"
+}

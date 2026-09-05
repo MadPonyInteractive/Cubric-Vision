@@ -96,10 +96,18 @@ the same node `Lyrics_Gate` / `Bpm_Gate` / `Vocal_Gate` already use in this grap
 
 Three things the shipped graph ALREADY has, which the merge inherits rather than adds:
 
-1. 🟢 **`MpiClearVram` (node 60) already sits after the announcer.** One clear serves both
-   arms — the Stable Audio stage simply hangs downstream of it. This is the fix measured at
-   **−5.9 GB (12.35 → 6.4 GB) for +0.7 s**; on the MiniMax side it was verified present on
-   2026-09-03. **Nothing to build.**
+1. 🟢 **VISION NEVER HAS THE ANNOUNCER AND THE AUDIO MODEL CO-RESIDENT — the architecture
+   already prevents it, and this is the real reason the fix is free.** The announcer is NOT in
+   the music graph. `enhance.op` is `promptEnhance`, a **separate dispatch** running
+   `qwen3vl_4b_prompt_enhancer.json`, which carries its own `MpiClearVram` (node 13) after its
+   `TextGenerate`. The music graph's own `MpiClearVram` (node 60) sits after the DECODE, before
+   `SaveAudio` — it is not the same node doing the same job.
+
+   So the **12.35 → 6.4 GB** measured on the bench is a fix for **Stability's single-subgraph
+   blueprint**, where the reprompter and the audio stage share one graph. Ours splits them
+   already. **The measurement's value here is a warning, not a patch: do NOT port their
+   subgraph shape.** If the Stable Audio arm is ever collapsed into one graph with the
+   announcer, it costs 5.9 GB — and the only reason it does not today is that nobody did.
 2. 🟢 **Both decoders are already in the graph** — `VAEDecodeAudio` (50) and
    `VAEDecodeAudioTiled` (51), gated by `MpiIfElse` node 66, **`Input_Low_Vram`**. That is
    exactly the "long-duration / small-card fallback, not the default" the measurement argued
@@ -158,7 +166,14 @@ dep gating.**
 | `qwen3vl-abliterated-clip` | 4.88 |
 | **total** | **30.92** |
 
-Up from 18.22 GB. **Never type these sizes** — `computeDepHashes.py --sizes`, because `size` is
+Up from 18.22 GB. 🟡 **The smoke volume fits this, but only just.** MPI-695 measured
+`cubric-smoke` (uebvm3350f, EU-RO-1) at **314.2 of 340.0 GB used — 25.8 GB free**, and
+`ensureVolume` refuses a run that does not fit with 5% headroom *after* the CPU Pod is already
+up. The three new deps are **12.68 GB** (9.22 + 2.27 + 1.19), so they fit — with ~13 GB to
+spare, and nothing else may land first. **Run `--plan` before renting anything; it prints the
+set and its GB and spends nothing.** Peer message `65ea3341`.
+
+**Never type these sizes** — `computeDepHashes.py --sizes`, because `size` is
 parsed 1024-based while HuggingFace displays decimal. The three new deps come from `Comfy-Org`
 (not gated), URLs baked into Stability's own blueprints, and **every one is sha256-verified
 against the `lfs.sha256` the HF API exposes** — a truncated download exits 0, and it already

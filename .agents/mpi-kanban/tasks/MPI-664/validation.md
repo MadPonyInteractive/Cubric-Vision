@@ -442,3 +442,39 @@ One Generate, Instrumental ON, with a Song structure typed. Two things to judge:
    both hold).
 2. **The sections land where he put them.** This is the actual bet: the running order is now in the
    channel the model follows precisely, instead of only in the one it treats as a suggestion.
+
+#### 🟢 THE GRAPH HALF IS NOW RUN — bench, 2026-09-05, `mpi664_instrumental_00001.flac`
+
+Fabio cleared the GPU and asked for a run. Dispatched the **shipped** `flow_minimax_music.json`
+straight at the bench (8188), Instrumental ON, 90 s asked. Runner:
+`bench/instrumental_run.mjs`; audio handed to Fabio.
+
+| | |
+|---|---|
+| prompt | `b7913b3e-4a80-4b60-99e0-5e1a52f6f0df` |
+| wall | 229.0 s |
+| asked / got | 90 s → **74.87 s** (`ffprobe`) — the cut-off only ever shortens, as measured twice before. **Not a new finding, and not a reason to reopen track length.** |
+| structure typed | `[Intro] one single orchestral drum hit…` / `[Verse] solo viola…` / `[Chorus] full string section…` / `[Outro] a choir pad…` |
+
+**Read back from the engine's own record of the executed graph** (`/history` → `prompt[2]`),
+not from what the script sent:
+
+- `Input_Instrumental` = `true`
+- `Lyrics_Gate` (103) resolved its **true** arm to `["105", 0]` — `Bare_Tags`, not `Empty_String`
+- the lyrics slot therefore received `'[Intro]\n\n[Verse]\n\n[Chorus]\n\n[Outro]\n\n'` —
+  **four tags, in the user's order, and not one word besides**
+
+⚠️ **A JS re-implementation of that regex said the tags were stripped entirely, and it was
+wrong twice over** — `\1` is a Python group reference, and `RegexReplace`'s `case_insensitive`
+input **defaults to `true`**, so `[Intro]` matches a lowercase alternation. Verified with
+Python and the node's own flag defaults (`scratchpad/baretags.py`). If a future check claims
+the tags vanish, suspect the checker before the graph.
+
+🔴 **WHAT THIS RUN DOES NOT PROVE, and why the item above stays open.** The announcer never
+ran. `enhance.op` is a **separate** `promptEnhance` dispatch fired from `MpiBaseFlow._run`, and
+no agent path reaches it: `_submitFlow` → `resolveFlowFieldValues` **rejects**
+`Input_Mood`/`Input_Vocal`/`Input_Arrangement` because they are enhancer targets, not declared
+fields. They were hand-written for this run, deliberately following the structure rather than
+rivalling it. So this closes **"do bare tags travel wordless, in order"** — a property of the
+graph — and closes nothing about what a user gets. **Item 1 and 2 above still need Fabio's
+press and Fabio's ears.**
