@@ -21,14 +21,29 @@ test.before(async () => {
 const stocked = (id, displayName) => ({ id, displayName, lowestPrice: { minMemory: 24 } });
 const dry = (id, displayName) => ({ id, displayName, lowestPrice: { minMemory: null } });
 
-test('picks the cheapest preferred card when everything is in stock', () => {
+test('picks the top preferred card when everything is in stock', () => {
     const { hit, rank } = selectGpu([
         stocked('NVIDIA GeForce RTX 4090', 'RTX 4090'),
         stocked('NVIDIA L4', 'L4'),
+        stocked('NVIDIA GeForce RTX 5090', 'RTX 5090'),
         stocked('NVIDIA GeForce RTX 3090', 'RTX 3090'),
     ]);
-    assert.equal(hit.displayName, 'L4', 'L4 is preference #1 regardless of array order');
+    assert.equal(hit.displayName, 'RTX 5090', 'preference #1 regardless of array order');
     assert.equal(rank, 1);
+});
+
+// GPU_ORDER led with L4 until 2026-09-05, when MIN_RAM_GB went to 80 and made L4 (54 GB
+// hosts), 3090 (30) and 4090 (31) unable to satisfy the floor at all — leading with one of
+// them spends a create attempt per card to reach the only one that can place. They stay in
+// the list as the fallback walk if the floor is ever lowered, so rank still has to advance
+// past a missing top preference rather than defaulting to 1.
+test('falls to the next preference when the top card is not offered at all', () => {
+    const { hit, rank } = selectGpu([
+        stocked('NVIDIA GeForce RTX 3090', 'RTX 3090'),
+        stocked('NVIDIA L4', 'L4'),
+    ]);
+    assert.equal(hit.displayName, 'L4');
+    assert.equal(rank, 2, 'L4 is preference #2 now, and rank reports the real position');
 });
 
 test('a card that already refused a create is skipped for the next preference', () => {

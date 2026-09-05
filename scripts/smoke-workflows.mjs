@@ -37,7 +37,12 @@ const APP = `http://127.0.0.1:${process.env.CUBRIC_PORT || 3000}`;
 
 // ── Infrastructure. Decided in MPI-467; reasons in docs/playbooks/bump-engine/01-smoke-run.md
 const DATACENTER = 'EU-RO-1';          // volumes are DC-locked; the cards live here
-const GPU_ORDER = ['L4', 'RTX 3090', 'RTX 4090'];  // cheapest-first by measured availability
+// Was cheapest-first by measured availability. RTX 5090 now leads because it is the only
+// entry that can satisfy MIN_RAM_GB below: L4 hosts measured 54 GB and 3090/4090 hosts 30/31,
+// so with an 80 GB floor those three can only ever be REFUSED. Left in place as the fallback
+// walk if the floor is ever lowered — selectGpu knows nothing about RAM, so leading with a
+// card that cannot meet the floor just spends three create attempts to reach this one.
+const GPU_ORDER = ['RTX 5090', 'L4', 'RTX 3090', 'RTX 4090'];
 // Weights spill to RAM on a 24GB card (footprint.js). 48 is no longer enough for H3: on
 // 2026-09-05 minimax-h3/t2v_ms OOM-killed a 54 GB L4 — `[cubric] internal ComfyUI exited
 // unexpectedly (code -9)`, the kernel's SIGKILL. It stages MiniMaxH3TEModel_ (25,140 MB) and

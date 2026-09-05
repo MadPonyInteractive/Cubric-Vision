@@ -92,15 +92,21 @@ export const DEFAULT_RUNPOD_CONFIG = Object.freeze({
   // host with >= that much system RAM. 0 = no floor. Ignored for the CPU download
   // Pod and Any-region.
   //
-  // Defaulted to 64 (was 0 = place anywhere). Weights spill to system RAM on any
-  // consumer card, and RunPod's consumer hosts are RAM-starved — a 4090 host offers
-  // 31 GB and a 5090 46 GB at their cheapest tier. On 2026-09-05 minimax-h3/t2v_ms
-  // OOM-KILLED a 54 GB L4 (SIGKILL, `code -9`) at 128px/1 frame, staging a 25 GB text
-  // encoder and a 20 GB transformer at once; it passed on a host placed against an
-  // 80 GB floor. With no floor at all those users were being placed on boxes with no
-  // chance. This is a TRADE: a floor that cannot be met returns "no host available"
-  // instead of a Pod, which is why it is 64 and not 80 — and why autoRetry exists.
-  minRamGb: 64,
+  // Defaulted to 80 (was 0 = place anywhere). Weights spill to system RAM on any
+  // consumer card. On 2026-09-05 minimax-h3/t2v_ms OOM-KILLED a 54 GB L4 (SIGKILL,
+  // `code -9`) at 128px/1 frame — staging a 25 GB text encoder and a 20 GB transformer
+  // at once — and PASSED on a host placed against an 80 GB floor. With no floor at all
+  // users were being placed on boxes with no chance.
+  //
+  // 80 and not 64 because THE ASK IS NOT THE READ: the floor filters on a figure that
+  // runs higher than what the container actually gets (that L4 advertised 62 and
+  // delivered 54). Asking 64 can therefore land ~56 — two GB above the box that died,
+  // on the SMALLEST job the runner can build. A real 768p generation has less room,
+  // not more.
+  //
+  // This is a TRADE: a floor that cannot be met returns "no host available" instead of
+  // a Pod. That is what autoRetry is for, and the settings hint says so.
+  minRamGb: 80,
 });
 
 // Idle-watchdog floor/default in seconds (mirrors MpiSettings IDLE_FLOOR_MIN /
