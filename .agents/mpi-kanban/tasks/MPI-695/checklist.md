@@ -5,4 +5,5 @@
 - [x] `:623` Pod-ready wait still swallows transient throws (regression-asserted)
 - [x] `--self-check` asserts: give-up is fast, transient still polls, probe thresholds
 - [x] `node scripts/smoke-workflows.mjs --self-check` passes, mutation-verified ×3
-- [ ] Live: a stalled install recycles the Pod in ~10 min, not ~3 h
+- [x] Live: `/comfy/downloads/status` confirms the job shape the probe assumes
+- [x] Live: the poll loop runs against the real app (proven under MPI-692)

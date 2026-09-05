@@ -48,7 +48,43 @@ Mutant copies deleted.
 | `:1493` install | give-up now ends the wait in ~0 s instead of 3 h | mutations 1 + 3 |
 | `:1507` install retry | **gained** a movement check it never had, via the shared factory | same `installProbe`, same asserts |
 
-## NOT verified
+## CLOSED — the last gap shut live, 2026-09-05
+
+The self-check fixture invented the job shape from the old inline probe, so
+`installProbe`'s default `getJobs` — `(await app('/comfy/downloads/status')).jobs
+|| []` — was the one unexercised line. Checked against the real route
+(`scratchpad/check_probe_shape.mjs`, read-only):
+
+```
+top-level keys: success, version, jobs
+`jobs` is an array: true
+jobs: 13
+  modelId=sdxl-nsfw status=complete deps=10 depKeys=id|status|downloadedBytes|totalBytes|error
+  j.modelId  string    j.status  string    d.downloadedBytes  number
+```
+
+Every field the probe reads is present with the assumed type, `.jobs || []` is
+the right envelope, and the 13 real jobs sit at `complete` — which
+`!IN_FLIGHT.includes('complete')` correctly reads as done. `deps[].status` is
+there too, which is what the failed-dep filter downstream reads.
+
+The poll loop itself was exercised live in the same session under [[MPI-692]]:
+the real `waitReady` polled the real app three times, printing dots, and returned
+true normally.
+
+So: movement/stall logic proven by fixture with real timing and mutation-verified
+three ways, job shape proven against live data, loop proven live. Closing.
+
+**Honest residual:** no live multi-gigabyte download has run through this code —
+the volume has been full since the 2026-09-05 release matrix, so every install
+since has verified in about a second. The give-up path has therefore never fired
+in production, only under mutation. It is not being held open for that: the
+checks that define the card ran and passed, and waiting for a production stall is
+waiting for a failure that may not come for months. If the music-maker run
+(MPI-664 / MPI-694) does download fresh weights, its transcript is worth reading
+as confirmation — dots under `[1/N] <model>` — but nothing depends on it.
+
+## Was: NOT verified (superseded above)
 
 The `getJobs` default (`app('/comfy/downloads/status')`) has not executed — it is
 the same call the old inline probe made, relocated unchanged, but no live run has

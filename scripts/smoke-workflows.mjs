@@ -1710,7 +1710,7 @@ const INVOKED_DIRECTLY = !!process.argv[1]
 // applyFastTier / minimizeGraph / summarizeNodeErrors / injectByTitle / hotStoreFiles
 // already carry inline `export` — which is the point: this file was ALWAYS a module
 // someone meant to import, and the bare main() call made doing so cost money.
-export { requiredInputHoles, prepOp, loadRegistry, healSeparators, mergeEvidence };
+export { requiredInputHoles, prepOp, loadRegistry, healSeparators, mergeEvidence, downloadWarnings };
 
 // demo(): the pure half runs with no app, no Pod, no network.
 if (INVOKED_DIRECTLY && flag('self-check')) {

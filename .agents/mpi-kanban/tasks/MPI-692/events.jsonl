@@ -3,3 +3,4 @@
 {"schema": "mpi-kanban/event/v1", "type": "task.updated", "id": "MPI-692", "at": "2026-09-05T09:32:08+01:00", "actor": "claude", "maturity": "validating", "status": "active", "reason": "Fixture self-check passes; wiring unproven until a live smoke run."}
 {"schema": "mpi-kanban/event/v1", "type": "validation.updated", "id": "MPI-692", "at": "2026-09-05T09:32:08+01:00", "actor": "claude", "reason": "--self-check passes and is mutation-verified; drainDownloadWarnings/watchLog bodies never executed."}
 {"schema": "mpi-kanban/event/v1", "type": "checklist.updated", "id": "MPI-692", "at": "2026-09-05T09:32:08+01:00", "actor": "claude", "reason": "6 of 7 done; live smoke-run item still open."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-692", "at": "2026-09-05T10:40:09+01:00", "actor": "claude", "from": "doing", "to": "done", "reason": "Proven live: parser 15/15 on the real app.log, wiring driven through waitReady against the running app."}

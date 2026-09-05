@@ -29,7 +29,61 @@ exit=1
 The asserts execute, exit non-zero on failure, and extract the two right
 messages. Scratchpad copy deleted.
 
-## NOT verified — stated, not rounded up
+## CLOSED — proven live, 2026-09-05
+
+Superseded everything below. Two checks against the running app, read-only, no
+Pod, no GPU.
+
+**1. The parser, against the real `app.log`** (`scratchpad/check_live_log.mjs`,
+importing the real `downloadWarnings` — the module is import-safe because
+`INVOKED_DIRECTLY` guards `main()`):
+
+```
+app.log: 193330 bytes, 1543 lines (rotates at 256 KB)
+lines matching the [stamp] [LEVEL] [category] shape: 1221
+download-category lines present: download/INFO=3 download/WARN=15
+downloadWarnings() extracted 15
+second call over the same text: 0 (must be 0)
+independent count of [download] WARN/ERROR lines: 15
+MATCH — the parser agrees with an independent scan of the real log.
+```
+
+15 of 15, cross-checked against a scan written independently of the function, so
+a regex silently matching nothing could not have passed as "no warnings today".
+3 `download/INFO` lines and ~1200 shaped lines from other categories correctly
+ignored. Dedupe holds on a real body.
+
+The log still held the **2026-09-04 incident this card was written about** — the
+brief's own four lines came back out of it:
+
+```
+⚠ [download] remote install SSE closed (bad-response); 7 dep(s) outstanding — recovering
+⚠ [download] remote install silent for 94s with 1 dep(s) outstanding — treating as stalled
+⚠ [download] remote install SSE closed (error); 17 dep(s) outstanding — recovering
+⚠ [download] remote target inactive (remote inactive); failing 17 outstanding dep(s) …
+```
+
+(The last one's wording moved with MPI-691; the logged line predates that change.)
+Also found a family the brief did not name: `remote dep reconcile failed:
+wrapper status 404` ×4.
+
+**2. The wiring** (`scratchpad/driver_wiring.mjs`, appended to a copy of the
+runner with its `main()` call stripped — verified 0 remaining before running):
+the real `waitReady(..., { watchLog: true })` drove the real
+`drainDownloadWarnings()` from inside its poll loop against the live app. All 15
+warnings printed in the intended `  ⚠ [download] <msg>` form, then two bare dots
+for polls 2 and 3 — dedupe holding live — and the wait returned true normally.
+`_seenDownloadWarnings.size === 15` afterwards proves the drain ran *inside* the
+loop, not merely in the standalone call.
+
+That is the brief's `## Verify` satisfied on real data rather than a fixture:
+the line appears in runner stdout within one poll interval.
+
+Footnote: this verification was blocked all morning by `guard-gpu` refusing any
+command naming the runner — a plain `sed` of the file. MPI-697 fixed that, and
+this is the first thing the fix paid for.
+
+## Was: NOT verified — stated, not rounded up (superseded above)
 
 **The wiring is verified by reading, not by execution.** `downloadWarnings()` is
 proven by fixture. `drainDownloadWarnings()` (one `app('/logs/read')` call + a
