@@ -86,12 +86,26 @@ export const DEFAULT_RUNPOD_CONFIG = Object.freeze({
   // here and die with the Pod. Default 100; clamped server-side. Ignored when a
   // network volume is attached (models live on the volume).
   containerDiskGb: 100,
-  // minRamGb: optional system-RAM FLOOR (GB) for the connected Pod's host (MPI-160).
-  // RunPod honors minMemoryInGb as a hard placement filter, so a user whose model
-  // needs a high-RAM host (LTX warm perf ~90GB) sets this and RunPod only lands a
-  // host with >= that much system RAM. 0 = no floor (default). Ignored for the CPU
-  // download Pod and Any-region.
-  minRamGb: 0,
+  // minRamGb: system-RAM FLOOR (GB) for the connected Pod's host (MPI-160).
+  // RunPod honors minMemoryInGb as a hard placement filter, so a host with less system
+  // RAM than this is simply never landed. Ignored for the CPU download Pod and Any-region.
+  //
+  // 62 IS A SUGGESTION, NOT A CEILING — the user can change it in settings, and should
+  // raise it for a model heavier than H3.
+  //
+  // Why a floor exists at all (MPI-698): it used to be 0, i.e. none, so a Pod could land
+  // on a 30-31GB 3090/4090 host. MiniMax H3 stages its text encoder BESIDE the
+  // transformer, and that pair is ~35GB even after the nvfp4 encoder cut it from ~45GB —
+  // at ANY resolution, because it is weight staging and not activations. On a host that
+  // small the Linux OOM killer takes ComfyUI (`code -9`) mid-generation. Windows never
+  // shows this: the pagefile absorbs the overshoot and a Pod has no swap.
+  //
+  // Why 62 and not 80: 80 was set on the 2.0 line against the OLD ~45GB pair and would
+  // now refuse L4 hosts that run H3 perfectly well. And why not 35, the actual need —
+  // THE ASK IS NOT THE READ: RunPod filters on an advertised figure that runs higher than
+  // the container receives (an L4 advertises 62 and delivers 54), so the number here has
+  // to sit above the requirement, not on it.
+  minRamGb: 62,
 });
 
 // Idle-watchdog floor/default in seconds (mirrors MpiSettings IDLE_FLOOR_MIN /
