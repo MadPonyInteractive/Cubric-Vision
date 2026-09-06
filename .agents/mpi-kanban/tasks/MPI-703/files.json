@@ -1,0 +1,13 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "changelog.md",
+    "pyproject.toml",
+    "README.md",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/changelog.md",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/pyproject.toml",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/README.md",
+    "dev_configs/node_lock.json"
+  ],
+  "note": "Release work is in the SIBLING repo (ComfyUi-MpiNodes); only dev_configs/node_lock.json is a Vision file, and it is the pin bump that must come AFTER the push - a pin on an unpushed sha 404s for every user. README needs no edit, the four commits already synced it."
+}

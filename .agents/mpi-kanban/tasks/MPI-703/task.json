@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-703",
+  "title": "Release ComfyUi-MpiNodes v1.2.11 and pin it in node_lock.json",
+  "description": "Publish the four unpushed MpiNodes commits as v1.2.11 and move the Vision pin off 8505769. Contents: MpiWindowedSampler + MpiClearVramEnd (MPI-699, 5319ed9), windows cut on the model temporal grid in video frames (e9e3633), MpiSaveVideo video_path output (MPI-700, b8bc9b3), MpiWindowedSampler audio sliced to its window (MPI-701, ed4d289). README is already synced by those commits and changelog V1.2.11 already carries all six entries, so the release work is the pyproject bump, the next empty changelog header, the push, and the registry changelog PUT. Follows c:/AI/Mpi/ComfyUi-MpiNodes/.claude/commands/release.md, which does not auto-load in a Vision session. Requested by Fabio 2026-09-06 at session close.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "created_at": "2026-09-06T18:05:01+01:00",
+  "updated_at": "2026-09-06T18:05:01+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
