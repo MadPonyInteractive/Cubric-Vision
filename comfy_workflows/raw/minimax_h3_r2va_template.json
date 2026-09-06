@@ -1,8 +1,8 @@
 {
   "id": "b7203ad8-1d79-4f1b-9c51-5818c6501c66",
   "revision": 0,
-  "last_node_id": 860,
-  "last_link_id": 1160,
+  "last_node_id": 862,
+  "last_link_id": 1162,
   "nodes": [
     {
       "id": 196,
@@ -6699,34 +6699,6 @@
       }
     },
     {
-      "id": 764,
-      "type": "MpiClearVramEnd",
-      "pos": [
-        3825.992240196447,
-        6735.560631928013
-      ],
-      "size": [
-        171.683203125,
-        26
-      ],
-      "flags": {},
-      "order": 183,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "trigger",
-          "type": "*",
-          "link": 1085
-        }
-      ],
-      "outputs": [],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "e9e36338dae9ad7b1bc5f89d1b7fe5fe0819f59a",
-        "Node name for S&R": "MpiClearVramEnd"
-      }
-    },
-    {
       "id": 774,
       "type": "PreviewAny",
       "pos": [
@@ -6751,9 +6723,7 @@
         {
           "name": "STRING",
           "type": "STRING",
-          "links": [
-            1085
-          ]
+          "links": []
         }
       ],
       "properties": {
@@ -9158,13 +9128,13 @@
         {
           "name": "images",
           "type": "IMAGE",
-          "link": 1159
+          "link": 1161
         },
         {
           "name": "audio",
           "shape": 7,
           "type": "AUDIO",
-          "link": 1160
+          "link": 1162
         }
       ],
       "outputs": [
@@ -9193,6 +9163,80 @@
         "filename_prefix": "MpiVideo",
         "use_audio": true,
         "truncate_to_audio": false
+      }
+    },
+    {
+      "id": 861,
+      "type": "MpiClearVram",
+      "pos": [
+        3261.7141752382786,
+        6509.355922442379
+      ],
+      "size": [
+        186.9140625,
+        26
+      ],
+      "flags": {},
+      "order": 178,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "passthrough",
+          "shape": 7,
+          "type": "*",
+          "link": 1159
+        }
+      ],
+      "outputs": [
+        {
+          "name": "passthrough",
+          "type": "*",
+          "links": [
+            1161
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "fd9bdcae56a6792cbc6d39756b7dfe51d20596e0",
+        "Node name for S&R": "MpiClearVram"
+      }
+    },
+    {
+      "id": 862,
+      "type": "MpiClearVram",
+      "pos": [
+        3261.7141752382786,
+        6569.355922442379
+      ],
+      "size": [
+        186.9140625,
+        26
+      ],
+      "flags": {},
+      "order": 179,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "passthrough",
+          "shape": 7,
+          "type": "*",
+          "link": 1160
+        }
+      ],
+      "outputs": [
+        {
+          "name": "passthrough",
+          "type": "*",
+          "links": [
+            1162
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "fd9bdcae56a6792cbc6d39756b7dfe51d20596e0",
+        "Node name for S&R": "MpiClearVram"
       }
     }
   ],
@@ -10518,14 +10562,6 @@
       "MODEL"
     ],
     [
-      1085,
-      774,
-      0,
-      764,
-      0,
-      "STRING"
-    ],
-    [
       1093,
       564,
       0,
@@ -10649,13 +10685,29 @@
       1159,
       605,
       0,
-      610,
+      861,
       0,
       "IMAGE"
     ],
     [
       1160,
       606,
+      0,
+      862,
+      0,
+      "AUDIO"
+    ],
+    [
+      1161,
+      861,
+      0,
+      610,
+      0,
+      "IMAGE"
+    ],
+    [
+      1162,
+      862,
       0,
       610,
       1,
