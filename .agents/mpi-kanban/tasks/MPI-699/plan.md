@@ -491,6 +491,74 @@ has baked is the first thing to read** -- if it is still the nvfp4 build, then t
 deformation, and possibly the "seam" too, belong to MPI-698 and not to this node at all.
 The repo-side revert does not touch that bench graph.
 
+## Shipped into both runtimes, and the 1K tier is now MEASURED (2026-09-06)
+
+**The node is wired, baked and pushed** (`d254ce61`, `ce3f8245`, `f91438ca`).
+`MpiWindowedSampler` is in `minimax_h3_r2va.json` (712) and
+`minimax_h3_fl2va.json` (532) with `overlap_frames 17`, `frame_grid 5`, pinned at
+`287edb8` (v1.2.11, MPI-703). `window_frames` is NOT a widget: it is driven by an
+`MpiMath` titled `Window Frames` reading the two wires that already feed
+`MinimaxH3LatentUpscaler3D`, so the tier follows the stage-2 target and picks up
+any change to `Upscale Factor` for free.
+
+```
+100000 if a * b < 850000 else (124 if a * b < 1600000 else (90 if a * b < 6000000 else 39))
+```
+
+Because `window_frames` is a LINK, the app can never write it and node 712 does
+NOT need an `Input_Window` title. That dissolves the constraint recorded in the
+2026-09-05 handoff. Re-title it only if an app-side override is ever wanted.
+
+**THE ENCODER SUSPICION WAS RIGHT, AND IT WAS fl2va.** The re-exported
+`raw/minimax_h3_fl2va_template.json` had `CLIPLoader` 130 on
+`qwen3vl_32b_minimax_h3_nvfp4_awq` -- the build MPI-698 reverted for entity
+duplication. `orchestrate.py`'s loader-vs-deps gate refused the bake and named
+it; nothing else in the pipeline would have caught it. **r2va was already
+correct** (node 518, `int8_convrot`), so its readings stand and only its stale
+`properties.models` download hint still says nvfp4 -- metadata, not what runs.
+Every fl2va quality reading from 2026-09-06, including "far superior to ref2va",
+was scored on the reverted encoder. **Root cause is the bench graph on
+`G:\ComfyUi`, which the repo-side revert never touched** -- the next re-export
+brings nvfp4 straight back unless the bench CLIPLoader is fixed.
+
+**Overlap is ONE CONSTANT, not a tier.** Swept every legal clip 124-362 against
+all three ceilings: `9` and `17` produce byte-identical plans everywhere, and so
+do `26` and `34`. At the 4K ceiling the asked overlap does NOTHING at all
+(0/9/17/26/34 all give 20 windows of 39f sharing 22f) because the stride floors
+at 5 latent frames. Only `0` is genuinely different -- it can collapse to a
+5-frame fade. So a single widget at 17 covers all three tiers, and the number
+typed is never the fade obtained: real fade = `window - stride`, stride snapped
+down to a multiple of `grid`.
+
+**Fade width is not the seam lever.** 1K/243f ran as 3 windows of 107f sharing
+22f -- the NARROW bucket -- and came out with no visible seams. The 2K portrait
+seam had **56** shared frames, more than twice the fade, and seamed. Narrow-clean
+vs wide-seamed is close to the inverse of what a windowing bug looks like, which
+moves the still-open attribution further onto the generation.
+
+**THE `124` ROW IS MEASURED, NOT GUESSED.** Forced single pass
+(`window_frames` 100000) at 243 frames / 1344x768, turbo off, on the bench:
+stage 1 completed in ~27 min at a flat 11.9-12.0 GB, then stage 2 **OOMed on its
+first step**.
+
+- The wall is the **MLP**, not attention: `comfy_kitchen/backends/cuda`
+  `int8_linear` -> `torch.empty((m, n))`, **one 11.66 GiB allocation** against
+  11.70 GiB already resident and a 16 GB device.
+- That is the **4K wall, not the 2K wall**. 2K/107f died in
+  `prequantize_int8_attention`; 4K/T=12 and now 1K/T=72 both die in `int8_linear`.
+  So H3 on this card has TWO distinct ceilings and which one is hit depends on
+  the shape, not just the token count.
+- The MLP allocation is linear in latent frames -- 11.66 GiB at T=72 is
+  ~0.162 GiB per latent frame at 1K, which puts the shipped 107f window (T=32) at
+  ~5.2 GiB and matches the 11.1/16 GB observed during the 3-window run.
+  Unlike the attention wall, this one is predictable before sampling.
+
+**Post-pin-bump sweep is clean** (the MPI-498 class). Executed the engine's live
+`/object_info` -- not a source parse -- against every `Mpi*` node in every runtime
+graph: **1350 instances, 56 distinct classes, 54 graphs, zero missing required
+inputs.** `validate-injection-rules.mjs` and `verify-workflow.mjs` both green on
+the two H3 runtimes.
+
 ## Plan Drift
 
 - **2026-09-05 — `window` is a ceiling, not a target.** `plan_windows` pads the
