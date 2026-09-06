@@ -81,12 +81,43 @@ pass-through node untouched — shipped workflows reference it.
 
 ## Completed
 
-- [ ] Nothing yet.
+- [x] Node built, released as ComfyUi-MpiNodes v1.2.11 (`287edb8`), pinned in
+      `dev_configs/node_lock.json` (MPI-703, `ace2161e`).
+- [x] Wired into BOTH H3 raw templates and baked into both runtimes, with the
+      `Window Frames` tier MpiMath driving `window_frames`.
+- [x] Tier table measured and shipped; 1K ceiling raised `124 -> 243`.
+- [x] Two export defects found and fixed: fl2va's CLIPLoader still on the reverted
+      nvfp4 encoder, and `MpiMath` 620/621 exported at `mode: 4` (bypass), which
+      pruned the stage-1 halving out of the r2va runtime.
+- [x] Post-pin-bump `INPUT_TYPES` sweep clean; `npm test` 902/902; master CI green.
+- [x] Docs: `docs/models/h3/windowing.md` (new), h3/README.md, models/README.md,
+      workflow-authoring/bench-editing.md, and MPI-477's two corrections.
 
 ## Remaining Work
 
-- Build the node, ship it through the sibling-repo procedure, wire the workflows,
-  verify a 124-frame 2K render.
+- **One generation per H3 op THROUGH THE APP.** Everything measured so far came
+  from the bench or from a runtime graph read off disk; the app has never driven
+  the windowed sampler. That is the only thing between this card and `done`.
+- Free, no render: attribute the 2026-09-05 2K portrait seam by comparing its
+  frame number against the spans the node's `info` output prints.
+
+## Current State (2026-09-06, end of session)
+
+**Shipped and pushed through `97da8fe0`. Card is `doing` / `validating`.**
+Both runtimes carry `MpiWindowedSampler` (r2va 712, fl2va 532) with
+`overlap_frames` 17, `frame_grid` 5, and `window_frames` linked to the
+`Window Frames` MpiMath. Master CI is green on `550ea499`; the later pushes are
+clean.
+
+**The single next action is the app-level verify** — run one H3 generation per op
+in Vision and confirm the windowed sampler is driven end to end. Then the card
+closes and 1.5.0 can be cut.
+
+Two traps this session paid for, both the same shape — **the bench graph is not
+the repo graph, and a re-export carries whatever state the bench was left in**:
+a stale nvfp4 CLIPLoader, and a bypassed node that pruned a load-bearing
+transform out of a graph that still validated. Fabio has since closed the bench
+files and will reopen from `raw/`, which removes the divergence at the source.
 
 ## Session state (2026-09-05)
 
