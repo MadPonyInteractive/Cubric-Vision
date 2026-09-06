@@ -3,14 +3,13 @@
   "id": "MPI-704",
   "title": "H3 quality ladder re-tier: native drops to medium, a new 1664x960 high on top",
   "description": "The `high` tier was H3's native 1344x768, and at that size the model's output is draft-grade - only usable for extreme close-ups (user, 2026-09-06). Shift the whole 1K ladder down one rung so the labels describe the output: old `low` -> `very_low`, old `medium` -> `low`, native -> `medium`, and a NEW `high` at 1664x960 (1:1 960, 9:16 960x1664, 21:9 1792x768). Old `very_low` (320x576) falls off the bottom. Every value stays /64 so it is delivered at its labelled size. The stage-2 window band moves with it: 1664x960 is 1.60 MP and the 243-frame ceiling was only ever measured at 1.03 MP (91% of a 16 GB card), so the `< 1600000` boundary drops to `< 1100000` and the new tier takes the measured-safe 90 ceiling.",
-  "column": "doing",
-  "maturity": "validating",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-09-06T22:45:00+01:00",
-  "updated_at": "2026-09-06T23:30:00+01:00",
+  "updated_at": "2026-09-06T23:45:00+01:00",
   "links": {
     "files": "files.json",
     "events": "events.jsonl"
-  },
-  "activeSessionTitle": "H3 re-tier - native to medium, new 1664x960 high"
+  }
 }

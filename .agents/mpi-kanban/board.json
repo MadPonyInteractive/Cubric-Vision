@@ -65,8 +65,6 @@
       "MPI-259"
     ],
     "doing": [
-      "MPI-704",
-      "MPI-699",
       "MPI-694",
       "MPI-698",
       "MPI-687",
@@ -82,6 +80,8 @@
       "MPI-664"
     ],
     "done": [
+      "MPI-704",
+      "MPI-699",
       "MPI-703",
       "MPI-702",
       "MPI-701",
@@ -201,6 +201,24 @@
   },
   "updated_at": "2026-09-06T21:45:00Z",
   "events": [
+    {
+      "at": "2026-09-06T22:45:00Z",
+      "type": "task.moved",
+      "task": "MPI-704",
+      "actor": "claude",
+      "from": "doing",
+      "to": "done",
+      "note": "doing -> done. H3 ladder re-tiered (native to medium, new 1664x960 high), window boundary 1600000 -> 1100000, both runtimes baked, npm test 902/902. Verified through the app on BOTH ops against the shipped runtimes: 56f single-passes, 124f plans 2 windows of 73, and r2va with a reference image plans identically at 29% more wall time. Fabio judged the clips good. Two references still unmeasured and recorded as unknown in windowing.md."
+    },
+    {
+      "at": "2026-09-06T22:45:00Z",
+      "type": "task.moved",
+      "task": "MPI-699",
+      "actor": "claude",
+      "from": "doing",
+      "to": "done",
+      "note": "doing -> done. The last open item was one generation per H3 op through the APP rather than the bench, and MPI-704's verification supplied exactly that: fl2va t2v_ms and r2va ref2v_ms both dispatched against the shipped runtimes, both driving MpiWindowedSampler end to end with the span plan logged to app.log. Every validation.md box was already ticked including the user-ux seam check; the two Still open items say explicitly they do not block."
+    },
     {
       "at": "2026-09-06T21:45:00Z",
       "type": "task.created",
