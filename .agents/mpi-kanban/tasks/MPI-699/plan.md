@@ -536,22 +536,42 @@ seam had **56** shared frames, more than twice the fade, and seamed. Narrow-clea
 vs wide-seamed is close to the inverse of what a windowing bug looks like, which
 moves the still-open attribution further onto the generation.
 
-**THE `124` ROW IS MEASURED, NOT GUESSED.** Forced single pass
-(`window_frames` 100000) at 243 frames / 1344x768, turbo off, on the bench:
-stage 1 completed in ~27 min at a flat 11.9-12.0 GB, then stage 2 **OOMed on its
-first step**.
+**A BYPASSED NODE IN THE EXPORT SILENTLY REMOVED THE STAGE-1 HALVING.** The
+re-exported r2va template had `MpiMath` 620 and 621 -- the
+`floor(a / 64) * 32` pair that turns `Input_Width`/`Input_Height` into the
+stage-1 size -- at **`"mode": 4` (LiteGraph BYPASS)**. The converter resolves a
+bypass into a pass-through link and `orchestrate.py` then prunes the node, so the
+baked runtime had `Input_Width` feeding the stage-2 target MpiMath DIRECTLY:
+stage 1 ran at the user's full requested size and stage 2 doubled it. Nothing in
+the workflow pipeline objects -- `validate-injection-rules.mjs` passed,
+`verify-workflow.mjs` passed, the graph queues and runs. **The only thing that
+caught it was `tests/h3-two-pass-dimensions.test.cjs` (MPI-687), on CI, after the
+push.** A bypassed node is invisible in every check that looks at what the graph
+CONTAINS, because the pruned graph is internally consistent. Restored to
+`"mode": 0` in raw and rebaked (89 nodes, halving back). **The bench still has
+them bypassed** -- same class of root cause as the nvfp4 CLIPLoader.
 
+**THE `124` ROW IS STILL UNMEASURED -- the single-pass test was invalid.** It was
+queued as "243 frames at 1344x768", but the graph it ran was the bypassed bake
+above, so `Input_Width/Height` 1344x768 WAS the stage-1 size and stage 2 targeted
+`floor(1344*2/32+0.5)*32 x floor(768*2/32+0.5)*32` = **2688x1536** (4.13 MP).
+That is the 2K tier, not 1K. Re-run it against the fixed graph before trusting
+any conclusion about the `124` row.
+
+What the run does establish, at 2688x1536 / 243 frames / single pass:
+
+- Stage 1 completed in ~27 min at a flat 11.9-12.0 GB; stage 2 **OOMed on its
+  first step**.
 - The wall is the **MLP**, not attention: `comfy_kitchen/backends/cuda`
   `int8_linear` -> `torch.empty((m, n))`, **one 11.66 GiB allocation** against
   11.70 GiB already resident and a 16 GB device.
-- That is the **4K wall, not the 2K wall**. 2K/107f died in
-  `prequantize_int8_attention`; 4K/T=12 and now 1K/T=72 both die in `int8_linear`.
-  So H3 on this card has TWO distinct ceilings and which one is hit depends on
-  the shape, not just the token count.
-- The MLP allocation is linear in latent frames -- 11.66 GiB at T=72 is
-  ~0.162 GiB per latent frame at 1K, which puts the shipped 107f window (T=32) at
-  ~5.2 GiB and matches the 11.1/16 GB observed during the 3-window run.
-  Unlike the attention wall, this one is predictable before sampling.
+- That is the **4K wall, not the 2K wall** -- and it was hit at a 2K-tier size.
+  2K/107f died in `prequantize_int8_attention`; 4K/T=12 and this run both die in
+  `int8_linear`. So H3 on this card has TWO distinct ceilings and which one is
+  hit depends on the shape, not just the token count.
+- The MLP allocation is linear in latent frames: 11.66 GiB at T=72 is
+  ~0.162 GiB per latent frame at this size. Unlike the attention wall, this one
+  is predictable before sampling.
 
 **Post-pin-bump sweep is clean** (the MPI-498 class). Executed the engine's live
 `/object_info` -- not a source parse -- against every `Mpi*` node in every runtime
