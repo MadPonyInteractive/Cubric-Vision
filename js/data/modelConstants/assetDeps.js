@@ -1319,4 +1319,74 @@ export const assetDeps = {
             url: 'https://huggingface.co/MiniMaxAI/MiniMax-Music3',
         },
     },
+    // ── MPI-694 — Stable Audio 3, the `Sound & Music` flow ────────────────────────
+    // THREE weights, 11.81GB, from `Comfy-Org/stable-audio-3` (not gated), URLs baked
+    // into Stability's own blueprints. Every sha256 below was verified against the
+    // `X-Linked-ETag` the HF API returns on the resolve URL, and every `size` was
+    // derived by `computeDepHashes.py`'s own formatter from the measured `bytes` —
+    // 1024-based, which is why these read LOWER than the 9.22 / 2.27 / 1.19 GB
+    // HuggingFace displays. A truncated download exits 0 and this card was already
+    // bitten once (2.91GB of 4.55GB arrived, and curl's status died in a pipe), so the
+    // hash is the only thing standing between a user and a silently half-installed
+    // checkpoint.
+    //
+    // 🔴 BOTH CHECKPOINTS SHIP, and the flow's category dropdown picks between them in
+    // the graph behind a lazy `MpiIfElse` — the unpicked one is never loaded. They are
+    // NOT interchangeable: `small_sfx` made every sound effect and one-shot Fabio
+    // approved, Medium is what he judged the music on.
+    //
+    // NOT PULLED: the three `_base` variants and `small_music`. `medium_base` is
+    // byte-identical in size and is *"the base (pre-trained) model intended for
+    // fine-tuning"* — the adversarially post-trained Medium does 8 steps while beating
+    // the 50-step base. Base is worth its 9.22GB only to train on, never to hear.
+    'stable-audio-3-medium': {
+        id: 'stable-audio-3-medium',
+        name: 'Stable Audio 3 Medium',
+        origin: 'Comfy-Org/stable-audio-3',
+        filename: 'checkpoints/stable_audio_3_medium.safetensors',
+        url: 'https://huggingface.co/Comfy-Org/stable-audio-3/resolve/main/checkpoints/stable_audio_3_medium.safetensors',
+        size: '8.59GB',
+        bytes: 9222116660,
+        sha256: '48d9c65e290e7bcd5194e0633bfc2424a59ee9683f5c2d58762d997b7d8ce0b5',
+        // §3.1 attribution is a licence obligation under the Stability Community
+        // License, not a courtesy. MpiAbout groups by author, so both Stability
+        // entries render ONE row.
+        credit: {
+            author: 'Stability AI',
+            work: 'Stable Audio 3',
+            url: 'https://huggingface.co/stabilityai/stable-audio-3-medium',
+        },
+    },
+    'stable-audio-3-small-sfx': {
+        id: 'stable-audio-3-small-sfx',
+        name: 'Stable Audio 3 Small (SFX)',
+        origin: 'Comfy-Org/stable-audio-3',
+        filename: 'checkpoints/stable_audio_3_small_sfx.safetensors',
+        url: 'https://huggingface.co/Comfy-Org/stable-audio-3/resolve/main/checkpoints/stable_audio_3_small_sfx.safetensors',
+        size: '2.11GB',
+        bytes: 2270384940,
+        sha256: 'ed9cf1b6172f1a8c2921a9560c21109ff3239524563ced9dce6dcdef41e2f515',
+        credit: {
+            author: 'Stability AI',
+            work: 'Stable Audio 3',
+            url: 'https://huggingface.co/stabilityai/stable-audio-3-medium',
+        },
+    },
+    // The text encoder BOTH checkpoints share — loaded once, outside the lazy branch.
+    // Google's, under the Gemma Terms, and named in the Gemma Appendix.
+    't5gemma-b-b-ul2': {
+        id: 't5gemma-b-b-ul2',
+        name: 'T5Gemma B/B UL2 text encoder',
+        origin: 'Comfy-Org/stable-audio-3',
+        filename: 'text_encoders/t5gemma_b_b_ul2.safetensors',
+        url: 'https://huggingface.co/Comfy-Org/stable-audio-3/resolve/main/text_encoders/t5gemma_b_b_ul2.safetensors',
+        size: '1.11GB',
+        bytes: 1187264003,
+        sha256: '1e1eba25be8872edb0d3c6335c6658fd6388e7b14b60da6e454e404cfcd8150e',
+        credit: {
+            author: 'Google',
+            work: 'T5Gemma',
+            url: 'https://huggingface.co/google/t5gemma-b-b-ul2',
+        },
+    },
 };

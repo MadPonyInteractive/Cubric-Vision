@@ -1301,16 +1301,47 @@ export const commands = {
     // stays put — it is referenced in four registries plus `operation_registry.json`, and
     // a renamed op id is a tombstone problem (MPI-533), not a rename. So this joins
     // `flowExtendVideo` / `flowAddFoley` / `flowTTS`: an explicit `filePrefix` carries the
-    // title, and files land as `flowMusicMaker_001.wav`.
+    // title, and files land as `flowSong_001.wav`.
+    //
+    // 🔴 THE LABEL AND PREFIX TRACK THE TITLE; THE KEY NEVER DOES. Renamed twice now —
+    // "Text to Music" -> "Music Maker" (2026-09-01) -> "Song" (2026-09-05, when the
+    // instrumental half left for `Sound & Music`). `tests/flow-output-filename.test.cjs`
+    // is what enforces it: a saved card named after something the user cannot find in
+    // the Library fails there rather than shipping.
     flowTextToMusic: {
-        label: 'Flow: Music Maker',
-        filePrefix: 'flowMusicMaker',       // key says Text to Music; the Library says "Music Maker"
+        label: 'Flow: Song',
+        filePrefix: 'flowSong',             // key says Text to Music; the Library says "Song"
         progressLabel: 'Composing',
         mediaType: MEDIA_TYPE.AUDIO,        // OUTPUT type
         requiresImages: 0,
         // No `mediaInputs` — the flow takes no media. `inputSchema` has no `media`
         // group either, so step 0 renders its own "needs no input media" panel.
         promptRequired: true,               // the brief IS the input
+        universal: true,
+    },
+
+    // MPI-694 — Stable Audio 3, the second audio engine. `flowTextToMusic` above keeps
+    // the one thing Stable Audio does not claim (sung vocals); this op takes everything
+    // else: instrumentals, single instruments, sound effects and one-shots.
+    //
+    // ONE OP, TWO CHECKPOINTS. The flow's category dropdown routes `Music`/`Instrument`
+    // to `stable_audio_3_medium` and `SFX`/`One-shot` to `stable_audio_3_small_sfx`
+    // INSIDE the graph, through a lazy `MpiIfElse` — so the unpicked one is never
+    // loaded and this stays a single op with a single workflow.
+    //
+    // `progressLabel` is 'Generating' rather than 'Composing': the same press makes a
+    // door slam and a string quartet, and "Composing" is a lie about the door.
+    flowSoundAndMusic: {
+        label: 'Flow: Sound & Music',
+        // `flowSoundMusic`, not `flowSoundAndMusic` — the guard compacts the title to
+        // `soundmusic` (punctuation dropped), so spelling the ampersand out fails it.
+        filePrefix: 'flowSoundMusic',
+        progressLabel: 'Generating',
+        mediaType: MEDIA_TYPE.AUDIO,        // OUTPUT type
+        requiresImages: 0,
+        // No `mediaInputs`, no `inputSchema.media` — text is the whole input, exactly
+        // like the flow above, so step 0 renders its own "needs no input media" panel.
+        promptRequired: true,               // the description IS the input
         universal: true,
     },
 

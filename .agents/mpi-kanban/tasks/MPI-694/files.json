@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/data/flowsRegistry.js",
+    "js/data/commandRegistry.js",
+    "js/core/operationRegistry.js",
+    "operation_registry.json",
+    "js/data/modelConstants/universal_workflows.js",
+    "js/data/modelConstants/assetDeps.js",
+    "js/data/modelConstants/licences.js",
+    "comfy_workflows/raw/flow_stable_audio.json",
+    "comfy_workflows/flow_stable_audio.json",
+    "comfy_workflows/raw/flow_minimax_music.json",
+    "comfy_workflows/flow_minimax_music.json",
+    "tests/inject-params-titles.test.cjs"
+  ]
+}

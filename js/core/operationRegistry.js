@@ -92,6 +92,8 @@ export const OPERATION_REGISTRY = {
     flowStems: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
     // MPI-664 — MiniMax Music 3, the text-to-music flow. Same stamping reason.
     flowTextToMusic: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
+    // MPI-694 — Stable Audio 3: instrumentals, instruments, SFX and one-shots.
+    flowSoundAndMusic: { latestVersion: '1.0', appVersionIntroduced: '1.5.0' },
 };
 
 /**

@@ -133,6 +133,12 @@ export const UNIVERSAL_WORKFLOWS = {
     flowTextToMusic: {
         workflow: 'flow_minimax_music.json',
     },
+    // MPI-694 — Stable Audio 3. 19 nodes: two checkpoints behind a lazy gate, one
+    // T5Gemma encoder shared by both, and the plain/tiled decode pair Music Maker
+    // already uses. No reprompter — see the FlowDef.
+    flowSoundAndMusic: {
+        workflow: 'flow_stable_audio.json',
+    },
     // MPI-504 — Krea2 t2i, plus a SAM3 + Klein 4B pass that removes the head from the
     // front body panel. Both run on models the flow declares in `requiredModels`, so
     // this op adds no download of its own beyond the `face-yolov8n` dep.

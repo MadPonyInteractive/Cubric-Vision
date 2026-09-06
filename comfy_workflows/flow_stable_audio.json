@@ -1,0 +1,272 @@
+{
+  "1": {
+    "inputs": {
+      "string": ""
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Positive"
+    }
+  },
+  "2": {
+    "inputs": {
+      "string": "Music"
+    },
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Category"
+    }
+  },
+  "3": {
+    "inputs": {
+      "float": 10
+    },
+    "class_type": "MpiFloat",
+    "_meta": {
+      "title": "Input_Duration"
+    }
+  },
+  "4": {
+    "inputs": {
+      "int": 0
+    },
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    }
+  },
+  "6": {
+    "inputs": {
+      "words": "Music, Instrument",
+      "text": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "MpiTextContains",
+    "_meta": {
+      "title": "Is_Tonal"
+    }
+  },
+  "7": {
+    "inputs": {
+      "ckpt_name": "stable_audio_3_medium.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Ckpt_Tonal"
+    }
+  },
+  "8": {
+    "inputs": {
+      "ckpt_name": "stable_audio_3_small_sfx.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Ckpt_Sfx"
+    }
+  },
+  "9": {
+    "inputs": {
+      "boolean": [
+        "6",
+        0
+      ],
+      "true": [
+        "7",
+        0
+      ],
+      "false": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Model_Gate"
+    }
+  },
+  "10": {
+    "inputs": {
+      "boolean": [
+        "6",
+        0
+      ],
+      "true": [
+        "7",
+        2
+      ],
+      "false": [
+        "8",
+        2
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Vae_Gate"
+    }
+  },
+  "11": {
+    "inputs": {
+      "clip_name": "t5gemma_b_b_ul2.safetensors",
+      "type": "stable_audio",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "12": {
+    "inputs": {
+      "text": [
+        "1",
+        0
+      ],
+      "clip": [
+        "11",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Positive"
+    }
+  },
+  "13": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "11",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Negative"
+    }
+  },
+  "14": {
+    "inputs": {
+      "batch_size": 1,
+      "seconds": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "EmptyLatentAudio",
+    "_meta": {
+      "title": "Empty Latent Audio"
+    }
+  },
+  "15": {
+    "inputs": {
+      "steps": 8,
+      "cfg": 1,
+      "sampler_name": "lcm",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": [
+        "9",
+        0
+      ],
+      "seed": [
+        "4",
+        0
+      ],
+      "positive": [
+        "12",
+        0
+      ],
+      "negative": [
+        "13",
+        0
+      ],
+      "latent_image": [
+        "14",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "16": {
+    "inputs": {
+      "samples": [
+        "15",
+        0
+      ],
+      "vae": [
+        "10",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeAudio",
+    "_meta": {
+      "title": "VAE Decode Audio"
+    }
+  },
+  "17": {
+    "inputs": {
+      "tile_size": 1536,
+      "overlap": 64,
+      "samples": [
+        "15",
+        0
+      ],
+      "vae": [
+        "10",
+        0
+      ]
+    },
+    "class_type": "VAEDecodeAudioTiled",
+    "_meta": {
+      "title": "VAE Decode Audio (Tiled)"
+    }
+  },
+  "18": {
+    "inputs": {
+      "boolean": false,
+      "true": [
+        "17",
+        0
+      ],
+      "false": [
+        "16",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Input_Low_Vram"
+    }
+  },
+  "19": {
+    "inputs": {
+      "passthrough": [
+        "18",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "20": {
+    "inputs": {
+      "filename_prefix": "audio/ComfyUI",
+      "format": "flac",
+      "audio": [
+        "19",
+        0
+      ]
+    },
+    "class_type": "SaveAudioAdvanced",
+    "_meta": {
+      "title": "Output_Audio"
+    }
+  }
+}

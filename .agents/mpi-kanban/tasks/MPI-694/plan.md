@@ -1,220 +1,246 @@
-# MPI-694 — ONE FLOW, TWO MODELS, ONE ANNOUNCER, FIVE OUTCOMES
+# MPI-694 — TWO FLOWS, TWO ENGINES, TWO DEP SETS
 
-**The design is settled with Fabio, 2026-09-05.** Read `brief.md` first (licences + the
-measured VRAM fix), and `../MPI-664/research/stable-audio-3-bench.md` for every bench fact.
-Nothing here re-derives either.
+**The one-flow design was written on 2026-09-05 and REVERSED by Fabio the same day, before a
+line of it was built.** Read `brief.md` first (licences + the measured VRAM facts — unchanged
+and still binding), and `../MPI-664/research/stable-audio-3-bench.md` for every bench fact.
 
-## The decision
+## Current State — 2026-09-05, both flows BUILT and every gate green
 
-> *"Music with lyrics · Instrumentals · Instrument · One-shot · Sound effects. That's five."*
-> — Fabio, 2026-09-05, naming the two bullets he had left blank
->
-> *"we could perhaps, in stage 0, have a dropdown for the user to select what he wants to do,
-> and that will determine the other stages"*
->
-> *"all in one, bro, all in one. All weights, one flow."*
+**Fabio settled the names and the no-enhancer default in one line: "Song and Sound & Music,
+no announcer, go."** Both flows exist, `MPI-694` is in `doing`, nothing is committed yet.
 
-**Music Maker grows a stage 0 and a second engine. It does not become two flows, and it does
-not become two installs.**
+Done: Flow A stripped back to lyrics-only and retitled; Flow B's 19-node graph authored in
+`raw/`, converted against the live bench and installed; the op registered in all four files;
+the `FlowDef` written with no `steps` (intro + run slide is the whole flow); three dep
+entries with HF-verified hashes. 23/23 injection guard, 902/902 `npm test`, 13/13 desktop
+flow specs.
 
-## 🟢 Four of the five ARE Stability's own selector
+**THE ONE BUILD ITEM NOT DONE: the licence gate in `licences.js`.** It is not a stub-and-move
+job — the pattern is `licences/<id>/LICENSE.txt` + `NOTICE.txt` bundled verbatim plus a
+`sections` entry, and a paraphrased licence is worse than none. **A lookup miss is SILENT**,
+so until it lands this flow downloads 11.81 GB of licensed weights with no gate shown.
 
-Their blueprint carries a `CustomCombo` — `Music` · `Instrument` · `SFX` · `One-shot` — with a
-worked recipe per category baked into its `JsonExtractString`. Fabio's list is that combo plus a
-fifth arm for the one thing Stable Audio does not claim. **Stage 0 is their category selector
-with vocals bolted on the front.**
+**Next action:** wire the licence gate, then Fabio's first Generate.
 
-| stage 0 | engine | checkpoint | their category |
-|---|---|---|---|
-| **Music with lyrics** | MiniMax Music 3 | minimax-music3-dit | — |
-| **Instrumentals** | Stable Audio 3 | `stable_audio_3_medium` | `Music` |
-| **Instrument** | Stable Audio 3 | `stable_audio_3_medium` | `Instrument` |
-| **One-shot** | Stable Audio 3 | `stable_audio_3_small_sfx` | `One-shot` |
-| **Sound effects** | Stable Audio 3 | `stable_audio_3_small_sfx` | `SFX` |
+🔴 **FABIO CONFIRMED THE GATE, 2026-09-06: *"let's display it just like we're displaying
+other licences."*** So it is TWO entries, not one — the **Stability AI Community License**
+covers both checkpoints, and the **Gemma Terms of Use** covers `t5gemma_b_b_ul2` (T5Gemma is
+named in the Gemma Appendix). Follow `MINIMAX_MUSIC3` in `licences.js` exactly: a `licences/
+<id>/` folder holding `LICENSE.txt` + `NOTICE.txt` **verbatim**, a `sections` entry, a
+`poweredBy` string, and the map key. Every verbatim string and section is already
+transcribed in `brief.md` § GATE 1 — do not re-read the licences.
 
-🟡 **The checkpoint split is a recommendation, not a measurement.** `small_sfx` made the three
-clips Fabio approved first (door slam, 1.5 s dry stick, rain with thunder); Medium is what he
-judged the music on. **`Instrument` has not been A/B'd on either weight** — it is on Medium
-because it is tonal, and that is a guess. It is one switch-bank arm to change, so change it when
-someone listens rather than arguing it now.
+🟢 **THE GPU IS AVAILABLE (Fabio, 2026-09-06).** That clears the first real Generate on
+`Sound & Music`. It does NOT carry past this session — ask again next time.
 
-## Stage 0 costs ZERO new frame work
+Three facts found while building that are not obvious from the diff:
 
-A **step** takes the same `hiddenWhen` clause a field does, and MPI-664 shipped it. A hidden
-step is not an empty slide: *"it is not in the flow at all — the ticker never lists it, `›` never
-lands on it, and the numbering closes up behind it"*
-(`docs/playbooks/add-flow/ui/carousel-frame/steps.md` § A step may declare that it does not apply).
+1. 🟢 **Flow A needed NO graph edit.** The shipped graph already bakes
+   `Input_Instrumental: false` and `Input_Structure: ""`, so removing the two fields leaves
+   the false arm running and `Lyrics_Gate` in place. The injection guard runs field → node,
+   never node → field, so a graph node with no field is invisible to it.
+2. 🟢 **The category dropdown is ONE node.** `MpiTextContains` (whole-word,
+   case-insensitive) with `words: "Music, Instrument"` turns the four option strings into
+   the checkpoint decision — no switch bank, no index to drift.
+3. 🔴 **`tests/flow-output-filename.test.cjs` catches a retitle.** It compacts the title and
+   compares it to the file prefix, so `Music Maker` → `Song` forced `filePrefix` AND `label`
+   to move, and `Sound & Music` had to be `flowSoundMusic` (the guard drops punctuation, so
+   spelling the ampersand out fails). The op KEYS did not move — `flowTextToMusic` is a
+   tombstone.
 
-So stage 0 is one `select` field, `Input_Outcome`, and every later step carries a clause:
+## Plan Drift
 
-```js
-{ kind: 'fields', tickerLabel: 'Lyrics', title: 'Write the lyrics',
-  hiddenWhen: { field: 'Input_Outcome', isNot: 'lyrics' }, fields: [ … ] }
-```
+**2026-09-05 — the whole "one flow, five outcomes, one 30.92GB gate" design is SUPERSEDED.**
 
-🔴 **A skipped step KEEPS ITS VALUES.** The graph must re-test `Input_Outcome` itself rather
-than trusting a stage to be gone — the same rule `Input_Instrumental` already lives under, and
-the same trap that would otherwise splice a cast into a sound effect.
+> *"Right now, what we already have built, the flow that we have built for Music Maker, is
+> practically minimax… I think this could be two separate models… Let's do one flow that is
+> called something like 'lyrical song'… Another flow is called 'Music and SFX'… This way, we
+> keep dependencies separate as well, and we avoid complicated UIs. The user might just want to
+> do backing tracks and sound effects, and not do any songs… We drop the instrumental case for
+> Minimax, considering it's crap anyway."*
+> — Fabio, 2026-09-05
 
-### The stage map
+Nothing had been built, so this costs nothing but the plan. **Dead on arrival:** stage 0
+(`Input_Outcome`), the five-arm dropdown, the `hiddenWhen` cascade across stages, the single
+30.92GB `requiredDeps` gate, the fourth `CAPTION` marker in `enhance.to`, and the merged graph.
+Do not resurrect any of it.
 
-| stage | shown for | notes |
+**What survives, and is not re-derived:** the licence reading (`brief.md` § GATE 1), the
+measured VRAM arms, the three new dep ids and sizes, the checkpoint split, `MpiIfElse`'s
+laziness, and the bench's KSampler settings.
+
+## The two flows
+
+| | **Flow A — the song flow** | **Flow B — the sound flow** |
 |---|---|---|
-| **0 — What do you want to make?** | always | `Input_Outcome`, 5 options |
-| **1 — Describe it** | always | the prompt box. Its label and hint change per outcome |
-| **2 — Lyrics / Song structure** | `lyrics` only | already built (MPI-664); `Input_Instrumental` folds INTO stage 0 — an instrumental MiniMax run is now "Instrumentals" and goes to Stable Audio |
-| **3 — Cast the voices** | `lyrics` only | already built |
-| **4 — Style & tempo** | `lyrics`, `instrumentals` | style + BPM. Not for instrument/one-shot/SFX |
-| **run slide** | always | length slider for the four Stable Audio arms; `Input_Low_Vram`; Generate |
+| card | MPI-664 (shipped, `doing`) | **MPI-694 (this card)** |
+| id | `minimax-music` 🔴 UNCHANGED | new |
+| title | *TBD — "Song"?* | *TBD — "Music & SFX"?* |
+| engine | MiniMax Music 3 | Stable Audio 3 |
+| deps | 18.22 GB (3 MiniMax + enhancer) | **11.81 GB** (2 checkpoints + T5Gemma) |
+| length | a guillotine, not a control | **exact to ~80 ms** — a real slider |
+| stages | 1 step + run slide (shipped) | **intro + 1 step**, and that is all |
 
-🔴 **`Input_Instrumental` DIES as a control.** It is stage 0's `instrumentals` arm now. That
-retires `Lyrics_Gate`'s reason for existing on the MiniMax side too — but **do not delete
-`Lyrics_Gate`**: deleting it on 2026-09-02 was the defect that made a man sing Fabio's stage
-directions, and the MiniMax arm still needs an empty lyrics slot when nothing was written.
-Re-point it at `Input_Outcome`, do not remove it.
+🔴 **`minimax-music` STAYS `minimax-music`.** `licences.js` keys `MINIMAX_MUSIC3` on
+`flow:minimax-music` and **a lookup miss is SILENT** — a rename installs 13.3 GB of licensed
+weights with no gate shown. A retitle is a `title:` edit and nothing else.
 
-### The control MiniMax cannot have
+🟢 **Separate `requiredDeps` is the whole point of the split.** A user who only wants sound
+effects pays 12.68 GB, not 30.92. The enhancer (`qwen3vl-abliterated-clip`) is shared and the
+dep system dedupes, so a user with both pays for it once.
 
-Stable Audio's `duration` is **exact to ~80 ms across a 16× range** (measured, three points).
-MiniMax's AR decides its own length and the cut-off only ever shortens. So the four Stable Audio
-arms get a real length slider (`slider`, `format: 'duration'` — MPI-664 built that too) and the
-lyrics arm gets none. **This is a categorical difference, not a better number**, and it is the
-single most visible reason the two engines are not interchangeable.
+## Flow A — drop the instrumental case
 
-Sensible defaults per arm: one-shot ~2 s, SFX ~10 s, instrument ~15 s, instrumentals ~60 s.
+Scope on MPI-664, small and subtractive:
 
-## The graph — ONE workflow, and the idle model never loads
+1. **`Input_Instrumental` (toggle) and `Input_Structure` (Song structure box) leave the UI.**
+2. `enhance.from` drops both ids. `from` is the cache key, so this is a behaviour change, not
+   just a list edit.
+3. **Retitle** — `title:` only. `id`, `operation`, `workflow`, `filePrefix` all stay.
+4. **The graph is left wired.** `Lyrics_Gate`, `Instrumental_Clause`, `Bare_Tags` and the
+   `MpiSimpleBoolean Input_Instrumental` node stay in place with the boolean baked `false`;
+   with no field to inject, the false arm runs and the lyrics slot passes through.
+   🔴 **Do NOT delete `Lyrics_Gate`.** Deleting it on 2026-09-02 is what made a man sing
+   Fabio's stage directions. Dead-but-wired costs one unexecuted node; ripping it out costs a
+   defect that has already happened once.
+   🟢 **Checked: the guard runs field → node, never node → field.** It asserts every declared
+   `injectParams` title exists in the graph; a graph node with no field is invisible to it. So
+   dropping the two fields cannot break `tests/inject-params-titles.test.cjs`.
+5. **Fabio's bench verdict (`../MPI-664/validation.md` § FABIO'S VERDICT) is now moot for the
+   instrumental half** — the arm it judged no longer exists. The finding that *bare tags carry
+   order and count, and no content* stays true and stays written down; it just stops being a
+   thing to act on.
+6. The owed live Generate on MiniMax is now a **lyrics** run. Only Fabio can press it
+   (`_submitFlow` → `resolveFlowFieldValues` rejects the enhancer targets, so an
+   agent-dispatched flow gets an empty caption).
 
-A `FlowDef` has exactly one `operation` and one `workflow`
-(`docs/playbooks/add-flow/01-descriptor-and-ops.md`), so one flow is one graph. Both engines
-live in `flow_minimax_music.json`, gated on `Input_Outcome`.
+## Flow B — the new flow
 
-🟢 **`MpiIfElse` is genuinely lazy** — `if_else.py:18` declares both arms `"lazy": True` and
-implements `check_lazy_status`. The untaken branch's loaders never execute, so **the unused
-checkpoint is never allocated**. Same guarantee Stability lean on with `ComfySwitchNode`, and
-the same node `Lyrics_Gate` / `Bpm_Gate` / `Vocal_Gate` already use in this graph.
+**Two stages, and Fabio said so plainly: an intro, then one small step.**
 
-Three things the shipped graph ALREADY has, which the merge inherits rather than adds:
-
-1. 🟢 **VISION NEVER HAS THE ANNOUNCER AND THE AUDIO MODEL CO-RESIDENT — the architecture
-   already prevents it, and this is the real reason the fix is free.** The announcer is NOT in
-   the music graph. `enhance.op` is `promptEnhance`, a **separate dispatch** running
-   `qwen3vl_4b_prompt_enhancer.json`, which carries its own `MpiClearVram` (node 13) after its
-   `TextGenerate`. The music graph's own `MpiClearVram` (node 60) sits after the DECODE, before
-   `SaveAudio` — it is not the same node doing the same job.
-
-   So the **12.35 → 6.4 GB** measured on the bench is a fix for **Stability's single-subgraph
-   blueprint**, where the reprompter and the audio stage share one graph. Ours splits them
-   already. **The measurement's value here is a warning, not a patch: do NOT port their
-   subgraph shape.** If the Stable Audio arm is ever collapsed into one graph with the
-   announcer, it costs 5.9 GB — and the only reason it does not today is that nobody did.
-2. 🟢 **Both decoders are already in the graph** — `VAEDecodeAudio` (50) and
-   `VAEDecodeAudioTiled` (51), gated by `MpiIfElse` node 66, **`Input_Low_Vram`**. That is
-   exactly the "long-duration / small-card fallback, not the default" the measurement argued
-   for, and it already exists as a user-facing toggle. **The Stable Audio arm reuses the same
-   gate.** No new field, no new decision, and the +15 s tiled-decode cost is only ever paid by
-   someone who asked for it.
-3. 🟢 `MpiText` title-injection, the `Input_*` convention and the injection guard.
-
-New in the graph: a `CheckpointLoaderSimple` + `CLIPLoader(t5gemma, stable_audio)` +
-two `CLIPTextEncode` + `EmptyLatentAudio` + `KSampler(8, cfg 1.0, lcm/simple)` behind the
-outcome gate, and a switch bank selecting the checkpoint and the length. Settings are copied
-from Stability's own KSampler widgets — do not retune them.
-
-🔴 **NEVER hand-edit `comfy_workflows/flow_minimax_music.json`.** Edit `raw/`, re-convert with
-`COMFY_URL=http://127.0.0.1:48188 node scripts/workflow-to-api.mjs <raw>` to stdout, diff,
-install.
-
-## The announcer — ONE LLM, ONE recipe, zero app code
-
-Fabio's constraint: do **not** ship two prompt-enhancer LLMs. Keep ours
-(`qwen3vl-abliterated-clip`, 4.88 GB, already shipped, already shared with the Image Describer
-plugin at `pluginsRegistry.js:66`) and port Stability's four category recipes onto it. Theirs
-(`qwen3.5_2b_bf16`) is 4.55 GB — **330 MB apart, so this was never a VRAM decision**; the cost
-of two is users downloading both, 9.43 GB, and ours arrives free with Krea2/Qwen/Image Describer.
-
-`flow.enhance` is one object per flow with a fixed `to:` marker map, so five outcomes are served
-by **one recipe that branches**, exactly as `Input_Instrumental` already makes it branch:
-
-- **`Input_Outcome` joins `enhance.from`.** `from` is also the cache key, and the outcome is
-  precisely the field whose change makes a previous answer stale.
-- **Add a fourth marker** to `to:` — `CAPTION: 'Input_Caption'` — carrying the single prose
-  caption the Stable Audio arms want. The MiniMax arm ignores it; the Stable Audio arms ignore
-  MOOD/VOCAL/ARRANGEMENT. Extra markers cost nothing when the graph does not read them.
-- `Input_Instrumental` leaves `from` with the control.
-
-🟡 **Stability's recipes are example-dense — 47/80/58/36 worked examples per category, every one
-naming literal instruments.** This card banned examples after ONE leaked a lo-fi kit into
-Fabio's intro. It suggests the rule is about **salience, not presence**: one example is a
-template to copy, forty-seven are a distribution. **Test it before porting them wholesale** —
-and note this is a structural question, NOT permission to reopen recipe tuning.
-
-## The install gate — 30.92 GB, one list, decided
-
-`requiredDeps` is one flat list per flow and the gate is all-or-nothing
-(`MpiFlowLibrary.js:222`). Fabio chose that knowingly: **all weights, one flow, no per-outcome
-dep gating.**
-
-| dep | GB |
+| stage | contents |
 |---|---|
-| `minimax-music3-dit` | 4.58 |
-| `minimax-music3-text-encoder` | 8.57 |
-| `vae-minimax-music3-dav` | 0.21 |
-| `stable-audio-3-medium` *(new)* | 9.22 |
-| `stable-audio-3-small-sfx` *(new)* | 2.27 |
-| `t5gemma-b-b-ul2` *(new)* | 1.19 |
-| `qwen3vl-abliterated-clip` | 4.88 |
-| **total** | **30.92** |
+| **0 — intro** | the standard step-0 explainer. No input media (text is the whole input) |
+| **1 — the step** | the prompt box · a `select` for the category · a **length slider** · `Input_Low_Vram` · Generate |
 
-Up from 18.22 GB. 🟡 **The smoke volume fits this, but only just.** MPI-695 measured
-`cubric-smoke` (uebvm3350f, EU-RO-1) at **314.2 of 340.0 GB used — 25.8 GB free**, and
-`ensureVolume` refuses a run that does not fit with 5% headroom *after* the CPU Pod is already
-up. The three new deps are **12.68 GB** (9.22 + 2.27 + 1.19), so they fit — with ~13 GB to
-spare, and nothing else may land first. **Run `--plan` before renting anything; it prints the
-set and its GB and spends nothing.** Peer message `65ea3341`.
+### The category dropdown → the checkpoint
 
-**Never type these sizes** — `computeDepHashes.py --sizes`, because `size` is
-parsed 1024-based while HuggingFace displays decimal. The three new deps come from `Comfy-Org`
-(not gated), URLs baked into Stability's own blueprints, and **every one is sha256-verified
-against the `lfs.sha256` the HF API exposes** — a truncated download exits 0, and it already
-bit this card once.
+Stability's own `CustomCombo`, verbatim, minus the arm MiniMax keeps:
+
+| option | checkpoint |
+|---|---|
+| **Music** (backing tracks, instrumentals) | `stable_audio_3_medium` |
+| **Instrument** | `stable_audio_3_medium` 🟡 |
+| **Sound effect** | `stable_audio_3_small_sfx` |
+| **One-shot** | `stable_audio_3_small_sfx` |
+
+🟡 **`Instrument` on Medium is a guess, not a measurement** — it is there because it is tonal.
+`small_sfx` made the three clips Fabio approved first (door slam, 1.5 s dry stick, rain with
+thunder); Medium is what he judged music on. One switch arm to change; change it when someone
+listens rather than arguing it now.
+
+🟢 **`MpiIfElse` is genuinely lazy** (`if_else.py:18`, both arms `"lazy": True` +
+`check_lazy_status`), so **the unpicked checkpoint is never loaded**. Select the MODEL through
+`MpiIfElse`, never through `MpiAnySwitch` — a non-lazy switch would load both.
+`MpiCompare` takes `*` on `a` and `b`, so a string compare against an `MpiText` constant is the
+boolean that drives it.
+
+### The length slider — the control MiniMax cannot have
+
+Measured exact to ~80 ms across a 16× range, three points. Defaults by category are a nicety,
+not a requirement: **one slider, default 10 s**, and add per-category defaults only if the
+single default annoys someone.
+
+### 🔴 The announcer does NOT ship on Flow B (default, and cheap to reverse)
+
+Stability's blueprint carries a reprompter with 47/80/58/36 worked examples per category. Ours
+does not, for now: it would add 4.88 GB to a flow whose whole appeal is being small, and a 4B
+rewriting *"door slam"* is more likely to hurt than help. The prompt goes straight to
+`CLIPTextEncode`. **Add it when a listen shows the raw prompt falls short** — that is one
+`enhance:` block plus one dep line.
+
+🔴 **If it is ever added, it stays a SEPARATE `promptEnhance` dispatch.** Collapsing the
+announcer into the audio graph is Stability's single-subgraph shape and it costs **5.9 GB**
+(12.35 → 6.4 GB measured across four arms, `../MPI-664/bench/stable_audio_vram.mjs`). Our
+architecture already splits them; do not undo that by copying their blueprint.
+
+### The graph
+
+A NEW workflow file — a `FlowDef` has exactly one `operation` and one `workflow`
+(`docs/playbooks/add-flow/01-descriptor-and-ops.md`), so Flow B cannot share
+`flow_minimax_music.json`. Build it from Stability's blueprint:
+
+`CheckpointLoaderSimple` ×2 behind `MpiIfElse` · `CLIPLoader(t5gemma, type: stable_audio)` ·
+`CLIPTextEncode` ×2 (positive + negative) · `EmptyLatentAudio` · `KSampler(8 steps, cfg 1.0,
+lcm/simple — copied from their widgets, do not retune)` · `VAEDecodeAudio` /
+`VAEDecodeAudioTiled` behind an `MpiIfElse` on `Input_Low_Vram` · `MpiClearVram` ·
+`SaveAudioAdvanced` titled `Output_Audio`.
+
+🟢 The local bench (`:48188`) is up and its `CLIPLoader` already offers `type: stable_audio`, so
+the graph converts offline — **no GPU needed to build or convert it**.
+
+🔴 Author in `comfy_workflows/raw/`, then
+`COMFY_URL=http://127.0.0.1:48188 node scripts/workflow-to-api.mjs <raw>` to stdout, diff,
+install. Never hand-edit the built twin.
+
+### Registration
+
+- **The op in 4 files** — `commandRegistry.js` (`mediaType: MEDIA_TYPE.AUDIO`,
+  `requiresImages: 0`, `universal: true`, an explicit `filePrefix`), `operationRegistry.js`,
+  `operation_registry.json` (hand-maintained superset, NEVER regenerated),
+  `universal_workflows.js`.
+- **The `FlowDef`** in `flowsRegistry.js` — `requiredModels: []`, the three deps in
+  `requiredDeps`, `mediaType: 'audio'`, no `inputSchema.media`.
+- **Three dep entries** in `assetDeps.js` — `stable-audio-3-medium` (8.59GB),
+  `stable-audio-3-small-sfx` (2.11GB), `t5gemma-b-b-ul2` (1.11GB). From `Comfy-Org`, not
+  gated, URLs baked into Stability's own blueprints.
+  🟡 **Those are the app's own 1024-based figures**, derived by `computeDepHashes.py`'s
+  formatter from the measured `bytes`. HuggingFace displays the same three files as
+  9.22 / 2.27 / 1.19 GB decimal, which is where this plan's earlier "12.68 GB" came from.
+  Same bytes, different base — **11.81 GB is what the install gate will show.**
+  🔴 **Never type the sizes** — `computeDepHashes.py --sizes` (`size` is parsed 1024-based;
+  HuggingFace displays decimal). 🔴 **A truncated download exits 0** — verify every one against
+  the `lfs.sha256` the HF API exposes. It already bit this card once (2.91 of 4.55 GB).
+- **The licence gate** in `licences.js`, keyed on the new flow's `flowDepKey`. A lookup miss is
+  silent, so the gate simply never shows.
+
+## Verification
+
+**Verify mode:** `user-ux` — Fabio judges the audio and the two flow tiles.
+
+- `node --test tests/inject-params-titles.test.cjs` — every `Input_*` node has a field.
+- 🔴 `npx playwright test --config=playwright.desktop.config.js tests/desktop/flow-*.spec.js`
+  (13 tests, ~1.4 min) **before any push touching `flowsRegistry.js`**. `npm test` does NOT
+  cover `tests/desktop/`, so a collision surfaces as a red master on somebody else's card
+  (message `dc6b2779`; it cost four hours on 2026-09-02).
+- The smoke runner `--plan` FIRST — it prints the set and its GB and spends nothing. The smoke
+  volume has **25.8 GB free** and the new set is 12.68 GB (MPI-695, peer message `65ea3341`).
+- 🔴 **ASK FABIO BEFORE ANY GPU WORK.** `gpu_lease.py` is blind to generations he starts
+  himself; one measurement was already ruined that way.
 
 ## Before release — five licence obligations
 
-Full reading in `brief.md` § GATE 1. None blocks the build; all five block a release:
+Full reading in `brief.md` § GATE 1. None blocks the build; all five block a release: register
+with Stability (no revenue floor) · a `Notice` file with both verbatim strings · both licence
+copies bundled · **"Powered by Stability AI"** displayed · an enforceable Gemma §3.2 clause in
+our terms. End users are covered by us (§III, integrated end user product); neither licence
+restricts by territory and neither bars outputs.
 
-1. **Register with Stability** — mandatory for commercial use, **no revenue floor**.
-2. A `Notice` file with both verbatim strings (Stability's and Gemma's).
-3. Both licence copies bundled for recipients.
-4. **"Powered by Stability AI"** displayed in the UI, docs or about page.
-5. An **enforceable** Gemma §3.2 clause in our own terms, with notice to users.
+## Open
 
-Our end users need no licence of their own — §III exempts anyone receiving the weights as part
-of an integrated end user product. Outputs are the user's under both agreements, and neither
-licence restricts by territory. `flowLicences.js` / `licences.js` is the surface; `licences.js`
-keys `MINIMAX_MUSIC3` on `flow:minimax-music` and **a lookup miss is SILENT**.
-
-## Still open
-
-- 🔴 **The owed MiniMax Generate** — one run with Instrumental ON to judge whether bare tags put
-  the sections where Fabio asked. Only he can run it, and stage 0 changes where that control
-  lives, so do it before the merge or accept it moves.
-- 🟡 `Instrument` on Medium vs `small_sfx` — untested, one switch arm.
-- 🟡 The example-density question above.
-- 🟡 A direct A/B against MiniMax on one instrumental brief, before Stable Audio takes that arm
-  for good.
-- 🟡 Does the reprompter beat a hand-written prompt? Every clip judged good so far was made with
-  it **off**.
-- 🟡 Preview graphics (`/mpi-flow-graphics`) and
-  `docs/playbooks/add-flow/existing-flows/minimax-music.md`, which will need renaming.
-- 🟡 **An agent-dispatched flow gets no caption** — `agentDispatch.js:_submitFlow` calls
-  `submitFlowGeneration` directly while `_autoEnhance` lives in `MpiBaseFlow._run`, so
-  `/connector/generate` sends the enhancer fields EMPTY. Worth its own card; it is why the owed
-  run cannot be done by an agent.
+- 🔴 **The two titles.** Fabio offered "Song" / "lyrical song" / "song with lyrics" and
+  "Music and SFX" without picking. Flow A's `title` is currently `Music Maker`.
+- 🟡 `Instrument` on Medium vs `small_sfx` — one switch arm, untested.
+- 🟡 A direct A/B against MiniMax on one instrumental brief.
+- 🟡 Does the reprompter beat a hand-written prompt? Every clip judged good so far was made
+  with it **off** — which is the evidence behind shipping Flow B without one.
+- 🟡 Preview graphics for BOTH flows (`/mpi-flow-graphics`), and
+  `docs/playbooks/add-flow/existing-flows/minimax-music.md` needs renaming and a sibling.
+- 🟡 An agent-dispatched flow gets no caption (`agentDispatch.js:_submitFlow` vs
+  `MpiBaseFlow._run`) — worth its own card.
 
 ## Do NOT re-open
 
-Track length, the UI shape, the `@` picker, the enhancer recipe (Fabio's raw-ComfyUI control run
-proved the pipeline is not the ceiling), `medium_base` (it is the fine-tuning base, not the
-quality ceiling), or the MiniMax channel hierarchy (Lyrics ≫ Global Metadata ≈ Vocal Details >
-Arrangement, measured across seven runs).
+Track length, the `@` picker, the MiniMax enhancer recipe, `medium_base` (the fine-tuning base,
+not the quality ceiling), or the MiniMax channel hierarchy (Lyrics ≫ Global Metadata ≈ Vocal
+Details > Arrangement, measured across seven runs).

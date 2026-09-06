@@ -335,7 +335,7 @@ const MINIMAX_MUSIC_ENHANCE_PARAMS = {
         '<|im_start|>system',
         'You are a music producer writing three caption blocks for a text-to-music model, and nothing else.',
         '',
-        'The user message is a short brief, optionally followed by a "Style:" line, the word "Instrumental" on its own line, and a "Song structure:" section. Treat all of it as the description of one song.',
+        'The user message is a short brief, optionally followed by a "Style:" line. Treat all of it as the description of one song.',
         '',
         'REGISTER — this is a caption, not prose. Write comma-separated noun phrases and fragments, the way a producer labels a track: the instrument, then its qualities — register, articulation, tone, room. Name every instrument literally, and name it again in each section it plays. No similes, no metaphors, no "like a...", no scene-setting sentences, no sentences about what the music resembles or where it would be heard.',
         '',
@@ -344,16 +344,19 @@ const MINIMAX_MUSIC_ENHANCE_PARAMS = {
         'Output EXACTLY three blocks, in this order, each opening with its marker on the same line:',
         '[MOOD] Feel and listening occasion in a few phrases, then the production texture: mix, room, grain. Name no instruments here and do not describe the running order.',
         '[VOCAL] Timbre, delivery and backing vocals, as phrases.',
-        '[ARRANGEMENT] Open with the core instrument bed as one list. Then, ONLY when the user gave a Song structure, one line per section using that section\'s own name, naming just the instruments that play in it and what they do there — never the whole bed again, and never the same line twice. With no Song structure given, write no section lines at all: describe how the bed develops and what carries each part, in phrases, without naming or inventing sections.',
+        '[ARRANGEMENT] Open with the core instrument bed as one list, then describe how that bed develops and what carries each part, in phrases. Write no section lines and name no sections.',
         '',
         'Rules:',
         '- 250 to 450 words in total, weighted towards [ARRANGEMENT].',
         '- Do not invent a BPM, a time signature or a named artist. Do not name the genre — it is written for you. You MAY name a key and scale.',
-        '- Do not write lyrics, bracketed tags such as [Verse], or any text outside the three blocks. The section labels inside [ARRANGEMENT] are required and are written as plain "Name:" labels.',
-        '- If the brief is marked Instrumental, the track has NO singing at all: write [VOCAL] as one line naming which instrument carries the lead melodic line, mention no voices of any kind, and give that instrument its own entrances in [ARRANGEMENT].',
-        '- On an Instrumental brief a choir is an ENSEMBLE TEXTURE and nothing else. Describe it by register and blend — massed, sustained, wordless pad, back of the room. Never with soloist qualities: no lead, no solo voice, no operatic, no high-pitched or out-of-tune or exposed line, and no descriptor that would suit one singer.',
+        '- Do not write lyrics, bracketed tags such as [Verse], or any text outside the three blocks.',
+        // 🔴 THE RULE THAT FIXED A REAL DEFECT — keep it whatever else changes here. The
+        // 4B was writing a complete TIMED plan nobody asked for ("At 1:20, the strings
+        // enter… By 2:15, the full orchestra erupts") while the user's own sections sat in
+        // the lyrics slot. The caption OUTRANKS the lyrics slot, so the model played the
+        // 4B's song. The running order is the user's to state, in their lyrics, and the
+        // rewriter's job stops at texture.
         '- NEVER invent a running order, a section list or a timing of your own. No clock times such as "at 1:20" or "by 2:15", in any block.',
-        '- If a "Song structure:" section is given it is the user\'s own plan and it is final. Use its section names as the labels in [ARRANGEMENT], in the order written, and keep every instrument in the section it was named in — repeat its name there rather than referring back to it. Add only texture, register and detail. Do not add, remove, reorder or re-time a section, and do not move an instrument to a different one. THE INSTRUMENT LIST IS CLOSED: name no instrument the structure does not name, in any block — no flutes, no brass, no guitars, nothing "to fill it out". Where a structure is absent, describe the instrumentation without committing to a running order.',
         '<|im_end|>',
         '<|im_start|>user',
     ].join('\n'),
@@ -2183,8 +2186,15 @@ export const FLOWS = [
         // task, not the thing the user gets. "Music Maker" instead, the register Voice
         // Changer and Head Swap already set. The `id` does NOT follow: `licences.js` keys
         // MINIMAX_MUSIC3 on `flow:minimax-music` and a lookup miss is SILENT.
-        title: 'Music Maker',
-        description: 'Describe a song and hear it. Say what it should feel like, pick a style, write your own lyrics or leave it instrumental, and cast the voices that sing it — MiniMax Music 3 writes and performs the whole track.',
+        //
+        // 🔴 RETITLED AGAIN, "Music Maker" -> "Song" (Fabio, 2026-09-05), when the
+        // instrumental half split off into its own flow. "Music Maker" claimed the whole
+        // territory and this flow now owns exactly one part of it: songs, with words,
+        // sung. `Sound & Music` (MPI-694, Stable Audio 3) owns the rest. The `id`, the op
+        // key `flowTextToMusic` and the `filePrefix` all STAY — a renamed op id is a
+        // tombstone problem (MPI-533), not a rename.
+        title: 'Song',
+        description: 'Describe a song and hear it sung. Say what it should feel like, pick a style, write your own lyrics and cast the voices that perform them — MiniMax Music 3 writes and sings the whole track. For instrumentals, backing tracks and sound effects, use Sound & Music.',
         requiredModels: [],
         // FOUR weights, 18.22GB (the three MiniMax ones are 13.34GB measured — never
         // typed: `computeDepHashes.py --sizes`, because `size` is parsed 1024-based and
@@ -2225,12 +2235,13 @@ export const FLOWS = [
         // can only be automatic.
         //
         // `from` IS A LIST, and it is also the CACHE KEY. The enhancer writes an
-        // arrangement, so it has to know the genre; and it has to know about
-        // Instrumental or it writes vocal prose for a track the caption elsewhere tells
-        // to have no vocals — the same self-contradiction the graph used to build on
-        // its own. Those three are therefore exactly the fields whose change makes the
-        // previous answer stale, which is why the frame re-runs on a change to any of
-        // them and skips otherwise. Tempo is NOT here: the graph states the BPM
+        // arrangement, so it has to know the genre. Those three are therefore exactly
+        // the fields whose change makes the previous answer stale, which is why the
+        // frame re-runs on a change to any of them and skips otherwise.
+        //
+        // 🔴 `Input_Instrumental` AND `Input_Structure` LEFT `from` ON 2026-09-05, with
+        // the controls (see the step below). Tempo is NOT here either: the graph states
+        // the BPM
         // verbatim and a 4B asked to carry "78 BPM" through prose rounds it to "around
         // 80". Lyrics and the voice roster are not here either — they reach the caption
         // on their own wires and never through the rewriter.
@@ -2238,22 +2249,19 @@ export const FLOWS = [
         // 🔴 THIS IS WHY `qwen3vl-abliterated-clip` IS IN `requiredDeps` (see above).
         // While Enhance was a button, an install without the enhancer lost a button
         // that warned; now it would lose Generate.
-        // 🔴 `Input_Structure` JOINED `from` ON 2026-09-03, and it is the fix for the
-        // defect the first two live runs exposed. The enhancer was writing a complete
-        // TIMED plan nobody asked it for — *"opens with a single, pulsing sub-bass
-        // drone… At 1:20, the strings enter… By 2:15, the full orchestra erupts"* —
-        // while the user's own section plan sat in the lyrics slot. The caption outranks
-        // the lyrics slot, so the model played the 4B's song: Fabio asked for a single
-        // orchestral drum in the intro and got a drone and muted brass. The model was
-        // not disobeying, it was obeying the other plan in the same caption.
-        //
-        // So the structure is now an INPUT to the enhancer rather than a rival to it,
-        // and the recipe forbids inventing a sequence. Being in `from` also makes it
-        // part of the cache key, which is correct and has a cost: editing the structure
-        // invalidates the answer and the next Generate re-runs the 4B (~40s).
+        // 🔴 THE ONE RECIPE RULE THAT MUST SURVIVE ANY EDIT: *never invent a running
+        // order, a section list or a timing.* The first two live runs had the enhancer
+        // writing a complete TIMED plan nobody asked it for — *"opens with a single,
+        // pulsing sub-bass drone… At 1:20, the strings enter… By 2:15, the full
+        // orchestra erupts"* — while the user's own sections sat in the lyrics slot. The
+        // caption OUTRANKS the lyrics slot, so the model played the 4B's song: Fabio
+        // asked for a single orchestral drum in the intro and got a drone and muted
+        // brass. It was not disobeying; it was obeying the other plan in the same
+        // caption. The running order is the user's, stated in their lyrics, and the
+        // rewriter's job stops at texture.
         enhance: {
             op: 'promptEnhance',
-            from: ['positive', 'Input_Style', 'Input_Style_Custom', 'Input_Instrumental', 'Input_Structure'],
+            from: ['positive', 'Input_Style', 'Input_Style_Custom'],
             to: {
                 MOOD: 'Input_Mood',
                 VOCAL: 'Input_Vocal',
@@ -2275,12 +2283,10 @@ export const FLOWS = [
                 // THE SONG STAGE — cast on the LEFT, words on the RIGHT.
                 kind: 'fields',
                 tickerLabel: 'Song',
-                // Title and hint are MODE-NEUTRAL because the right-hand box is not:
-                // Lyrics with Instrumental off, Song structure with it on. The hint has
-                // to state the thing that cost two GPU runs to learn — text outside a
-                // tag is SUNG — because nothing on screen implies it.
+                // The hint has to state the thing that cost two GPU runs to learn — text
+                // outside a tag is SUNG — because nothing on screen implies it.
                 title: 'Write the song',
-                hint: 'Mark sections with [Intro] [Verse] [Pre-Chorus] [Chorus] [Post-Chorus] [Bridge] [Instrumental] [Solo] [Outro] — they steer the arrangement rather than guarantee it. Writing lyrics: every line outside a tag is sung, and to hand one to a voice put its name in angle brackets on its own line — <Singer A>. With Instrumental on: describe what each section should play. Nothing you write there is sung — it is rewritten into the arrangement.',
+                hint: 'Mark sections with [Intro] [Verse] [Pre-Chorus] [Chorus] [Post-Chorus] [Bridge] [Instrumental] [Solo] [Outro] — they steer the arrangement rather than guarantee it. Every line outside a tag is sung, and to hand one to a voice put its name in angle brackets on its own line — <Singer A>.',
                 fields: [
                     {
                         // The roster (MPI-664 tier 2). Its `v` values are the CAPTION
@@ -2293,15 +2299,6 @@ export const FLOWS = [
                         id: 'Input_Voices', type: 'voices', label: 'Voices',
                         namePlaceholder: 'Singer A',
                         default: [{ name: 'Singer A', type: 'Any' }],
-                        // GREYED, not hidden, on an instrumental run (Fabio,
-                        // 2026-09-02: "Instrumental will be below the voice controls.
-                        // When pressed, it greys out all the voice controls"). The
-                        // whole stage used to vanish instead, and that was the wrong
-                        // statement twice over: it hid the lyrics box, which an
-                        // instrumental track still uses (see `Input_Lyrics`), and it
-                        // made the toggle's own effect invisible — a control that
-                        // deletes the page it is on cannot show what it did.
-                        disabledWhen: { field: 'Input_Instrumental', is: true },
                         options: [
                             { v: 'Any', label: 'Any' },
                             { v: 'Female', label: 'Female' },
@@ -2317,44 +2314,18 @@ export const FLOWS = [
                         id: 'Input_Voice_Notes', type: 'text', rows: 4, label: 'Voice notes',
                         placeholder: 'Raspy and close-miked, conversational in the verses, layered harmonies on the chorus…',
                         default: '',
-                        disabledWhen: { field: 'Input_Instrumental', is: true },
                     },
                     {
-                        // BELOW THE CONTROLS IT GREYS (Fabio, 2026-09-02), which is what
-                        // makes it read as a switch over them rather than a peer of them.
-                        //
-                        // The GRAPH re-checks this flag itself rather than trusting the
-                        // UI: a greyed field KEEPS ITS VALUE, exactly as a hidden one
-                        // does, so an instrumental run would otherwise splice in a cast
-                        // that is merely greyed out.
-                        id: 'Input_Instrumental', type: 'toggle', label: 'Instrumental',
-                        icon: 'audio', default: false,
-                    },
-                    {
-                        // 🔴 HIDDEN ON AN INSTRUMENTAL RUN, and the box that replaces it
-                        // is `Input_Structure` below. This reverses what this card
-                        // believed until 2026-09-03, and it was disproved by two live
-                        // runs on Fabio's own GPU.
-                        //
-                        // THE BELIEF: the lyrics slot always reaches the encoder, and
-                        // `normalize_lyrics` keeps `[section]` tags verbatim, so this box
-                        // was read as the place to describe an instrumental track's
-                        // sections. THE FIRST HALF IS TRUE AND THE CONCLUSION IS NOT: the
-                        // tags survive, but the prose BETWEEN them is a lyric line, and
-                        // the model sings it. Run 1 (bare tags, prose underneath) put a
-                        // man singing the stage directions. Run 2 folded every direction
-                        // INSIDE the brackets, Suno-style — `_LYRIC_TAG_RE` is
-                        // `\[[^\]]+\]` so any bracketed run is a legal tag — and the
-                        // model sang those too from the verse on.
-                        //
-                        // MiniMax's own local guidance was in `research/` the whole time:
-                        // *"empty Lyrics AND an explicit 'instrumental, no vocals' in the
-                        // caption, or the model sneaks in humming and vocoder pads."*
-                        // `Lyrics_Gate` did exactly that and deleting it was the defect.
-                        // It is back (graph node 103), so the encoder now receives an
-                        // empty lyrics slot whenever Instrumental is on — this field's
-                        // value still injects (hiding is visual only) and the GRAPH is
-                        // what blanks it, the same belt-and-braces as the voice roster.
+                        // 🔴 EVERY LINE OUTSIDE A TAG IS SUNG, and that cost two live
+                        // runs on Fabio's own GPU to learn. `normalize_lyrics` keeps
+                        // `[section]` tags verbatim, so this box reads as a place to
+                        // describe a track — it is not. The tags survive, but the prose
+                        // BETWEEN them is a lyric line and the model sings it. Run 1
+                        // (bare tags, prose underneath) put a man singing the stage
+                        // directions. Run 2 folded the directions INSIDE the brackets,
+                        // Suno-style — `_LYRIC_TAG_RE` is `\[[^\]]+\]` so any bracketed
+                        // run is a legal tag — and the model sang those too. This is what
+                        // the step's `hint` is for; nothing on screen implies it.
                         //
                         // The markers are STRIPPED IN THE GRAPH before the encoder sees
                         // this (`Strip_Voice_Markers`), because `<Name>` is not in
@@ -2368,58 +2339,7 @@ export const FLOWS = [
                         // lyrics empty hears that song's words.
                         id: 'Input_Lyrics', type: 'text', rows: 16, label: 'Lyrics',
                         col: 'right',
-                        hiddenWhen: { field: 'Input_Instrumental', is: true },
                         placeholder: '[Verse]\nMidnight and the canvas glows…',
-                        default: '',
-                    },
-                    {
-                        // THE INSTRUMENTAL TWIN of the box above — same corner, same
-                        // size, different destination. Fabio, 2026-09-03: *"for
-                        // instrumentals, we need to provide whatever the user adds in
-                        // lyrics into the Enhancer so that they land in the correct
-                        // place, and lyrics probably need to go empty. So perhaps when we
-                        // press Instrumental, the UI lyrics label becomes a song
-                        // structure."*
-                        //
-                        // 🔴 IT REACHES THE MODEL TWICE, AND THAT IS THE POINT (MPI-664,
-                        // 2026-09-03). Its prose goes to the enhancer — it is in
-                        // `flow.enhance.from`, so the frame sends it as a `Song
-                        // structure:` line and the recipe expands it into
-                        // `[ARRANGEMENT]`, the heading MiniMax document for
-                        // instrumentation. Its SECTION NAMES also go, wordless, into the
-                        // lyrics slot: graph node `Input_Structure` feeds `Bare_Tags`,
-                        // one regex that keeps MiniMax's own nine tags and deletes
-                        // everything else, and that is what `Lyrics_Gate`'s true arm
-                        // carries instead of the empty string.
-                        //
-                        // WHY, measured across seven live runs: MiniMax honours its
-                        // inputs UNEQUALLY — Lyrics >> Global Metadata ~= Vocal Details >
-                        // Arrangement. An instrumental run used to leave the strongest
-                        // channel blank while posting 100% of the user's intent through
-                        // the weakest, so the model filled the blank from its prior: an
-                        // orchestral bed and a singer. Bare tags put the user's own
-                        // running order in the channel the model actually follows, and
-                        // nothing there can be sung because there are no words.
-                        //
-                        // This is why the field is no longer allow-listed in
-                        // `inject-params-titles.test.cjs` — it addresses a node now, and
-                        // the guard checks the wiring.
-                        //
-                        // WHY NOT WIRE IT STRAIGHT INTO THE CAPTION: the user writes ~40
-                        // words and MiniMax ask for 250-450, weighted to Arrangement. A
-                        // verbatim splice is thin where the model is most responsive, so
-                        // the 4B expands it — under a recipe rule that forbids reordering
-                        // or re-timing what the user wrote.
-                        //
-                        // TWO FIELDS RATHER THAN ONE RELABELLED: a `labelWhen` clause
-                        // would be new frame work in `MpiBaseFlow.js`, and `hiddenWhen`
-                        // already does this with no new machinery. It also means each
-                        // mode keeps its own text across a toggle, instead of one box
-                        // holding lyrics that read as an arrangement or vice versa.
-                        id: 'Input_Structure', type: 'text', rows: 16, label: 'Song structure',
-                        col: 'right',
-                        hiddenWhen: { field: 'Input_Instrumental', isNot: true },
-                        placeholder: '[Intro] single orchestral drum on the beat, long reverb tail\n[Verse] the drum loses its reverb, a viola section enters…',
                         default: '',
                     },
                 ],
@@ -2600,6 +2520,129 @@ export const FLOWS = [
             { id: 'Input_Mood', type: 'text', rows: 7, label: 'Mood', default: '', hidden: true },
             { id: 'Input_Vocal', type: 'text', rows: 7, label: 'Vocal', default: '', hidden: true },
             { id: 'Input_Arrangement', type: 'text', rows: 7, label: 'Arrangement', default: '', hidden: true },
+        ],
+    },
+    // MPI-694 — Stable Audio 3. The SECOND audio engine, and a deliberate SPLIT rather
+    // than a bigger Music Maker.
+    //
+    // 🔴 WHY TWO FLOWS AND NOT ONE (Fabio, 2026-09-05). This shipped for one day as a
+    // five-outcome dropdown on a single flow with one 30.92GB install gate, and he
+    // reversed it before a line was built: *"I think this could be two separate models…
+    // This way, we keep dependencies separate as well, and we avoid complicated UIs. The
+    // user might just want to do backing tracks and sound effects, and not do any
+    // songs."* Someone who never writes a song pays 11.81GB instead of 30.92, and neither
+    // flow grows a stage that exists to hide the other one. Do not re-merge them.
+    //
+    // THE SPLIT IS BY CAPABILITY, and it is his verdict after hearing all four modes:
+    // *"This model is good… I tried everything. Instrumental, effects, one-shot, and
+    // music: it's very good… We can use it for everything else but sung songs."* So
+    // MiniMax keeps the one thing Stable Audio does not claim — VOCALS — and this takes
+    // the rest. SFX and one-shots are a capability Vision had no route to at all.
+    //
+    // NO REPROMPTER, deliberately. Stability's blueprint carries one (Qwen3.5-2B, 4.55GB,
+    // with 47/80/58/36 worked examples per category behind a `JsonExtractString`) and we
+    // do not port it: it would add 4.88GB to the one flow whose whole appeal is being
+    // small, and every clip judged good so far was made with it OFF — the door slam, the
+    // 1.5s dry stick, the rain with two thunder rolls, first seed, no iteration. Adding
+    // it later is one `enhance:` block plus one dep line.
+    // ponytail: add it the first time a raw prompt audibly falls short.
+    //
+    // 🔴 IF IT IS EVER ADDED IT STAYS A SEPARATE `promptEnhance` DISPATCH. Collapsing an
+    // enhancer into the audio graph is Stability's single-subgraph shape and it was
+    // measured at 12.35GB -> 6.4GB once an unload is inserted: 5.9GB, 48%, for +0.7s. Our
+    // architecture already splits them. Do not undo that by copying their blueprint.
+    //
+    // NO MODEL and NO MEDIA — `requiredModels: []` with the weights in `requiredDeps` is
+    // the same FLOW-WITH-DEPS shape as Music Maker and Voice Changer, and text is the
+    // entire input, so step 0 renders its own "needs no input media" panel.
+    //
+    // ⚠️ NO PREVIEW ASSETS YET (`preview`/`video`) until `/mpi-flow-graphics` cuts them
+    // from a real run; both render sites guard on the key, so the tile falls back.
+    {
+        id: 'sound-and-music',
+        title: 'Sound & Music',
+        description: 'Describe a sound and hear it. Backing tracks and instrumentals, a single instrument, sound effects, or a one-shot hit — Stable Audio 3 makes it, at exactly the length you ask for. For songs with words that are sung, use Song.',
+        requiredModels: [],
+        // THREE weights, 11.81GB, all sha256-verified against HuggingFace's own
+        // `X-Linked-ETag` (see `assetDeps.js`). The enhancer is NOT here — this flow has
+        // no enhancer, which is the point.
+        requiredDeps: [
+            'stable-audio-3-medium',      // 8.59GB — Music and Instrument
+            'stable-audio-3-small-sfx',   // 2.11GB — SFX and One-shot
+            't5gemma-b-b-ul2',            // 1.11GB — the encoder BOTH share
+        ],
+        operation: 'flowSoundAndMusic',
+        workflow: 'flow_stable_audio.json',
+        mediaType: 'audio',
+        // NO `steps` AT ALL — the intro, then the run slide, and that is the whole flow
+        // (Fabio, 2026-09-05: *"it's going to have two stages: 1. The introduction 2. A
+        // small prompt box with a dropdown… and a slider for the length"*). `steps: []`
+        // is an ordinary shape here: ltx-upscale, voice-changer, chatter-box, drama-box
+        // and stems all ship without one.
+        fields: [
+            {
+                id: 'positive', type: 'text', rows: 4, label: 'Describe it',
+                // A SOUND, not a picture and not a song brief. The three clips Fabio
+                // approved were written this way — the thing itself, its material, its
+                // room.
+                placeholder: 'A heavy wooden door slamming shut in a stone corridor, long tail.',
+            },
+            {
+                // 🔴 THIS DROPDOWN IS THE CHECKPOINT SWITCH, and nothing else today.
+                // The four values are Stability's own `CustomCombo`, read out of their
+                // blueprint rather than a doc. In the graph they reach ONE
+                // `MpiTextContains` node (`Is_Tonal`, words "Music, Instrument") whose
+                // boolean drives two lazy `MpiIfElse` gates — so the option strings ARE
+                // the lookup table and there is no index to drift.
+                //
+                // 🟡 `Instrument` ON MEDIUM IS A GUESS, NOT A MEASUREMENT. It is there
+                // because it is tonal. `small_sfx` made every effect and one-shot Fabio
+                // approved; Medium is what he judged music on. Changing it is one word
+                // in the graph's `words` widget — change it when someone listens.
+                id: 'Input_Category', type: 'select', label: 'What is it',
+                default: 'Music',
+                options: [
+                    { v: 'Music', label: 'Music',
+                      info: 'A backing track or an instrumental piece. Uses the larger model.' },
+                    { v: 'Instrument', label: 'Instrument',
+                      info: 'A single instrument playing — a riff, a phrase, a texture.' },
+                    { v: 'SFX', label: 'Sound effect',
+                      info: 'A noise or an event: a door, rain, an engine, a room tone.' },
+                    { v: 'One-shot', label: 'One-shot',
+                      info: 'A single hit in near-silence — a stick, a snare, an impact.' },
+                ],
+            },
+            {
+                // 🔴 A REAL LENGTH, and it is the one control MiniMax cannot have.
+                // Measured off the decoded file with `ffprobe`, never trusted from the
+                // request: 1.5s -> 1.486s, 10s -> 10.031s, 25s -> 25.078s. Exact to
+                // ~80ms across a 16x range. Music Maker's `Input_Duration` is a
+                // GUILLOTINE by comparison — the AR decides its own length there and the
+                // cut-off only ever shortens. This is a categorical difference between
+                // the two flows, not a better number, and it is the clearest reason they
+                // are not interchangeable.
+                //
+                // Default 10s because that is where the approved clips sit; 190 is the
+                // longest duration this card has actually run, not a spec number.
+                // ponytail: step 1, so the bench's 1.5s one-shot rounds to 1 or 2.
+                // Drop to 0.5 if a one-shot ever needs the half second.
+                id: 'Input_Duration', type: 'slider', label: 'Length',
+                min: 1, max: 190, step: 1, default: 10, format: 'duration',
+            },
+            {
+                // Same machine fact, same wording as Music Maker, same gate in the graph
+                // (`Input_Low_Vram` -> plain vs tiled decode).
+                //
+                // 🔴 TILED IS THE FALLBACK, NEVER THE DEFAULT, and that reverses what
+                // this card first predicted. Measured 2026-09-05 across four arms: with
+                // nothing else resident, chunking saves nothing on peak (6.35 vs
+                // 6.19-6.44GB, inside the noise) and costs +15s at 60s, reproduced three
+                // times. Chunking ALONE peaks at 12.16GB, which is the proof — the
+                // decode was never what pinned the card.
+                id: 'Input_Low_Vram', type: 'toggle', label: 'Low VRAM',
+                icon: 'gpu', default: false,
+                note: 'Turn this on if you run out of memory, or if your card has little VRAM.',
+            },
         ],
     },
 ];
