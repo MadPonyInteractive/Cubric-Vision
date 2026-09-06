@@ -131,8 +131,15 @@ the verdict did.
   transformer, so the int8 pair sits at ~45 GB resident at peak — at any resolution,
   because it is weight staging and not activations. That SIGKILLed a 54 GB L4 Pod on
   `minimax-h3/t2v_ms` at 128px/1s (`code -9`, the Linux OOM killer) while the same op
-  passed on an 80 GB box. 14.61 GiB takes the pair to ~35 GB. Windows never showed this:
-  the pagefile absorbs the overshoot and a Pod has no swap.
+  passed on an 80 GB box. 14.61 GiB takes the pair to ~35 GB. **Those GB are HOST RAM,
+  not VRAM** — `code -9` is the Linux OOM killer, which only fires on system memory; a
+  VRAM exhaustion raises a CUDA error instead. So the "54 GB box" that failed was a RAM
+  ceiling and the L4's 24 GB of VRAM was never the issue. Windows never showed this
+  because the pagefile absorbs the overshoot and a Pod has no swap — **but do not read
+  that as "Linux does not offload"**, which is false and was the wrong lesson taken from
+  this line until 2026-09-06. Offloading to host RAM is ComfyUI's normal behaviour on
+  every platform; what a Pod lacks is the SECOND-level spill from RAM to disk. Size a Pod
+  by RAM: `docs/runpod-remote-engine.md` § 5, "Sizing a Pod: RAM, not VRAM".
 - **Why it was reverted: entity duplication.** Across ~10 further generations the nvfp4
   build repeatedly produced structural corruption — a third leg, a cup appearing from
   nowhere — where the int8_convrot build has a long clean baseline. Fabio's call, same

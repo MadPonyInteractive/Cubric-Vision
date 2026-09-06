@@ -1,0 +1,12 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "video.py",
+    "changelog.md",
+    "README.md",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/video.py",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/changelog.md",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/README.md"
+  ],
+  "note": "Sibling repo (ComfyUi-MpiNodes) only - bare names repeated because the guard matches on basename. No app-side edit: dev_configs/node_lock.json is NOT bumped, because the branch is deliberately unpushed - it carries two commits from a parallel session (5319ed9, e9e3633) that are not cleared for publication."
+}

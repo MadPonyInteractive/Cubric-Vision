@@ -1,0 +1,12 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "sampler.py",
+    "changelog.md",
+    "README.md",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/sampler.py",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/changelog.md",
+    "c:/AI/Mpi/ComfyUi-MpiNodes/README.md"
+  ],
+  "note": "Sibling repo only. sampler.py is MPI-699's file (unpushed commits 5319ed9, e9e3633) - edited here with Fabio's explicit go-ahead, 2026-09-06. Committed locally, NOT pushed: the branch still carries MPI-699's uncleared work."
+}

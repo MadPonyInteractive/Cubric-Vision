@@ -204,6 +204,44 @@ and the backend branches. Backend `_mode = { active, podId, deleteOnQuit }` is s
 
 ## 5. Volume / data center rules
 
+### Sizing a Pod: RAM, not VRAM
+
+**The card is rarely what fails. Host RAM is.** ComfyUI holds the weights in system memory
+and streams them to the GPU, so a big model's floor is a RAM floor — and a Pod has no swap
+to hide an overshoot, so exceeding it is a `code -9` SIGKILL from the Linux OOM killer, not
+a CUDA error. **If you see `code -9`, stop looking at the GPU.**
+
+Measured twice, on two unrelated models, with the GPU held constant (RTX 5090, 32 GB VRAM
+both times — only the host RAM differed):
+
+| workload | weights staged | 57 GB RAM | 90 GB RAM |
+|---|---|---|---|
+| H3 shipped (pruned DiT + int8 encoder), 15 s | 47.3 GB | **SIGKILL** | ✅ |
+| LTX-2.3 at 2K (~40 GB transformer) | ~40 GB + encoder | **SIGKILL** | ✅ |
+
+Same VRAM, opposite outcomes. That is the proof that the offload to host RAM is real and
+that RAM is the binding resource — if Linux were not offloading, more of it would change
+nothing. (A related myth, killed 2026-09-06: "offloading does not happen on Linux." It does,
+everywhere. What a Pod lacks is the SECOND-level spill from RAM to disk that Windows' pagefile
+provides.)
+
+**Rule of thumb: RAM ≈ 1.5 × the staged weight total.** Both rows above fit it — 47.3 GB
+wants ~71 GB and 57 did not do it. Read the staged figure off ComfyUI's own boot log rather
+than adding up file sizes; it prints one line per model:
+
+    Model MiniMaxH3        prepared for dynamic VRAM loading. 32427MB Staged.
+    Model MiniMaxH3TEModel_ prepared for dynamic VRAM loading. 25140MB Staged.
+
+Those are MiB and they equal the file sizes, so the pair above is **60.4 GB** — the unpruned
+H3 stack, which by this rule wants **~94 GB** and makes a 90 GB box marginal rather than
+comfortable.
+
+**The cheap fix is sequencing, not a bigger box.** The encoder finishes before sampling
+starts, so it does not need to be resident beside the transformer. An `MpiClearVram` on the
+conditioning wire — after the text encode, before the guider — drops the peak from
+`encoder + transformer` to `max(encoder, transformer)`: 60.4 GB becomes ~36 GB, which is the
+difference between hunting for a 96 GB instance and taking whatever is in stock.
+
 - Persistent state lives on a RunPod **network volume mounted at `/workspace`** (models +
   per-model custom nodes). One volume per data center; a volume is **locked to its DC**.
   Switching DC ⇒ delete + re-download.
