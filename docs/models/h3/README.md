@@ -120,11 +120,16 @@ ever observed at 56 frames, so it is NOT proven to persist on long clips. Re-tes
 a 32 GB re-download.
 
 **PRECISION is not the ceiling either — pruned BF16 matched the shipped int8 (2026-09-06).**
-A pruned **BF16** build of the same base was run against the shipped
-`pruned_int8_convrot` and produced the same result (user, during the ref2va
-native-quality investigation; observational, not a seeded A/B). So `int8_convrot` is not
-what makes native output draft-grade, and there is no quality argument left for carrying a
-larger quantisation.
+A pruned **BF16** build of the same base was A/B'd against the shipped
+`pruned_int8_convrot` at one seed and was indistinguishable — down to reproducing the same
+deformed hand on the same subject (user, during the ref2va native-quality investigation).
+Same base, quant the only variable, so read it as a **positive control on `int8_convrot`**:
+the quant is faithful to its BF16 source and nobody needs to re-litigate it. There is no
+quality argument left for carrying a larger quantisation of this base.
+
+What it does NOT probe is capability — both arms are the same pruned network. Its other
+use is diagnostic: a defect that survives a weight swap is not in the weights, so the
+deformed hand points at seed, conditioning or canvas, not at anything downloadable.
 
 That closes the second of the two weight axes, and it is worth knowing what it leaves. The
 only untested variant is upstream MiniMaxAI's ~60 GB unpruned BF16, which moves **both**
