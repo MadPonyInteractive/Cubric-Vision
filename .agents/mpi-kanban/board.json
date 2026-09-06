@@ -1,6 +1,6 @@
 {
   "schema": "mpi-kanban/board/v1",
-  "next_id": 704,
+  "next_id": 705,
   "columns": {
     "todo": [
       "MPI-688",
@@ -65,6 +65,7 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-704",
       "MPI-699",
       "MPI-694",
       "MPI-698",
@@ -198,8 +199,16 @@
       "MPI-683"
     ]
   },
-  "updated_at": "2026-09-05T09:11:05Z",
+  "updated_at": "2026-09-06T21:45:00Z",
   "events": [
+    {
+      "at": "2026-09-06T21:45:00Z",
+      "type": "task.created",
+      "task": "MPI-704",
+      "actor": "claude",
+      "to": "doing",
+      "note": "created -> doing. H3's `high` was native 1344x768 and the user calls that output draft-grade, so the 1K ladder shifts down one rung (old low -> very_low, old medium -> low, native -> medium) and a new high lands at 1664x960. 1664x928 was the user's first number and is NOT deliverable: 928 is not /64, so the two-pass floor renders it 896 while the label says 928 - the exact class of lie MPI-687 fixed. 960 was taken instead because it is both closer to true 16:9 (1.733 vs 1.857) and more pixels. The window band moves with the tier: 1.60 MP would otherwise inherit a 243-frame ceiling only ever measured at 1.03 MP."
+    },
     {
       "at": "2026-09-01T16:25:00Z",
       "type": "task.moved",

@@ -28,7 +28,7 @@ titled `Window Frames` that reads the two wires already feeding
 `MinimaxH3LatentUpscaler3D`:
 
 ```
-100000 if a * b < 850000 else (243 if a * b < 1600000 else (90 if a * b < 6000000 else 39))
+100000 if a * b < 850000 else (243 if a * b < 1100000 else (90 if a * b < 6000000 else 39))
 ```
 
 `a` and `b` are the **stage-2 target** dimensions, not `Input_Width`/`Input_Height`, so
@@ -39,8 +39,20 @@ portrait and a landscape 2K are the same token count and get the same plan).
 |---|---|---|---|---|
 | 832×448 | 0.37 | 100000 — never windows | single | single |
 | 1280×704 / 1344×768 | 0.90 / 1.03 | **243** | single | single |
+| 1664×960 | 1.60 | **90** | 2 win | 4 win |
 | 1920×1088 / 2560×1472 | 2.09 / 3.77 | **90** | 2 win, 1.19x | 4 win, 1.50x |
 | 3840×2176 | 8.36 | **39** | 6 win, 1.95x | 13 win, 2.17x |
+
+**The second boundary is 1100000, not 1600000, and that is deliberate** (MPI-704). It was
+1600000 while native 1344×768 was the largest 1K-class canvas the picker offered. The new
+`high` tier is 1664×960 — 1.60 MP, which the old boundary would have handed the **243**
+ceiling. That ceiling is not a formula: it was measured at 1344×768 (1.03 MP) and peaked
+at **14,945/16,380 MiB**, 91% of a 16 GB card. 1.55× the pixels at the same 243 frames is
+the MLP wall, not a margin. Dropping the boundary to 1100000 sends 1664×960 to the **90**
+ceiling instead, which is measured safe at 2.09 MP and therefore strictly safe at 1.60.
+Nothing else moved: 1344×768 is still 243, 1152×640 still never windows, and everything
+from `very_high` up is unchanged. **Raise it only on a measured run at 1664×960**, never
+by interpolating between two rows.
 
 **Because `window_frames` is a link, the app can never write it** and node 712 needs no
 `Input_Window` title. Re-title it only if an app-side override is ever wanted — and note

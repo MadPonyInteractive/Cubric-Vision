@@ -188,11 +188,11 @@
       "use_audio": true,
       "truncate_to_audio": false,
       "images": [
-        "424",
+        "541",
         0
       ],
       "audio": [
-        "425",
+        "542",
         0
       ]
     },
@@ -980,18 +980,6 @@
       "title": "Mpi Clear Vram"
     }
   },
-  "529": {
-    "inputs": {
-      "trigger": [
-        "530",
-        0
-      ]
-    },
-    "class_type": "MpiClearVramEnd",
-    "_meta": {
-      "title": "Mpi Clear Vram End"
-    }
-  },
   "530": {
     "inputs": {
       "source": [
@@ -1129,6 +1117,30 @@
     "class_type": "RandomNoise",
     "_meta": {
       "title": "RandomNoise"
+    }
+  },
+  "541": {
+    "inputs": {
+      "passthrough": [
+        "424",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "542": {
+    "inputs": {
+      "passthrough": [
+        "425",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
     }
   }
 }

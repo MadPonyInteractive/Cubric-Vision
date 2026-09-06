@@ -1043,11 +1043,11 @@
       "use_audio": true,
       "truncate_to_audio": false,
       "images": [
-        "605",
+        "861",
         0
       ],
       "audio": [
-        "606",
+        "862",
         0
       ]
     },
@@ -1392,18 +1392,6 @@
       "title": "Window Frames"
     }
   },
-  "764": {
-    "inputs": {
-      "trigger": [
-        "774",
-        0
-      ]
-    },
-    "class_type": "MpiClearVramEnd",
-    "_meta": {
-      "title": "Mpi Clear Vram End"
-    }
-  },
   "765": {
     "inputs": {
       "passthrough": [
@@ -1459,6 +1447,30 @@
     "class_type": "PreviewAny",
     "_meta": {
       "title": "Preview as Text"
+    }
+  },
+  "861": {
+    "inputs": {
+      "passthrough": [
+        "605",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "862": {
+    "inputs": {
+      "passthrough": [
+        "606",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
     }
   }
 }

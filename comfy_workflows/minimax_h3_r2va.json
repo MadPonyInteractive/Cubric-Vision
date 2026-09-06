@@ -1025,11 +1025,11 @@
       "use_audio": true,
       "truncate_to_audio": false,
       "images": [
-        "605",
+        "861",
         0
       ],
       "audio": [
-        "606",
+        "862",
         0
       ]
     },
@@ -1405,6 +1405,30 @@
     "class_type": "KSamplerSelect",
     "_meta": {
       "title": "KSamplerSelect"
+    }
+  },
+  "861": {
+    "inputs": {
+      "passthrough": [
+        "605",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "862": {
+    "inputs": {
+      "passthrough": [
+        "606",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
     }
   }
 }

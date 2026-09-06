@@ -1512,9 +1512,11 @@ export const MODELS = [
         // type drives the ratio ladder. 'h3' is NOT arbitrary: RATIO_MODES.h3,
         // BUILTIN_RATIOS.h3 and BUILTIN_QUALITY_TIERS.h3 were all authored against this
         // string in js/utils/ratios.js (MPI-449) and tests/ratio-modes-exhaustive.test.cjs
-        // guards the set. Native is `high` (768x1344); `very_high` (1088x1920) is above
-        // the trained canvas — a final-render tier, not an iterate tier, because 2x the
-        // pixels costs 3.3x the time.
+        // guards the set. Native is `medium` (768x1344) since MPI-704 — it was `high`
+        // until 2026-09-06, and moved because native output reads as draft grade under a
+        // label that promised otherwise. `high` (960x1664) and above extrapolate past the
+        // trained canvas — final-render tiers, not iterate tiers, because 2x the pixels
+        // costs 3.3x the time.
         type: 'h3',
         // Six flat user slots on MpiLoraModelClip, which exposes model AND clip strength.
         // The clip half matters here more than usual: H3's "clip" is the Qwen3-VL tower

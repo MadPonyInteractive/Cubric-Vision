@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/utils/ratios.js",
+    "js/data/modelConstants/models.js",
+    "comfy_workflows/raw/minimax_h3_r2va_template.json",
+    "comfy_workflows/raw/minimax_h3_fl2va_template.json",
+    "comfy_workflows/minimax_h3_r2va.json",
+    "comfy_workflows/minimax_h3_fl2va.json",
+    "comfy_workflows/scripts/workflow_generation/minimax_h3_r2va_template.json",
+    "comfy_workflows/scripts/workflow_generation/minimax_h3_fl2va_template.json",
+    "docs/models/h3/windowing.md",
+    "docs/models/h3/README.md",
+    ".agents/mpi-kanban/tasks/MPI-704/"
+  ]
+}

@@ -251,19 +251,29 @@ export const LTX_RATIOS = {
 // would ship a dozen unmeasured resolutions to answer a question nobody asked, and LTX
 // already sets the precedent of a single entry per class.
 //
-// LADDER SHAPE — native sits at `high`, NOT at the top (MPI-449, 2026-08-06). This
-// mirrors WAN_RATIOS exactly: WAN's documented ceiling (1280x720) sits at `high` and its
-// extrapolated detail tier (1920x1088) at `very_high`. So H3's native 1344x768 is `high`,
-// and `very_high` (1920x1088) is ABOVE the trained canvas — it works, but it is
-// extrapolated, so expect artifacts. Keeping native selectable is the point: overwriting
-// `very_high` with 1920x1088 would have dropped the only in-distribution canvas from the
-// picker. The old 416x736 tier was dropped to make room; the tiers below `high` are the
-// megapixel anchors Comfy's own templates use, resolved through ResolutionSelector at
-// multiple=32. `low` (864x480) is the DEFAULT the three shipped video_minimax_h3_*
-// templates open on, and the size the community's published timings are measured at.
-// Sub-native is NOT a degraded path — Comfy shipping 0.4 MP as the template default is
-// the evidence for that. Nothing stops a canvas above 0.98 MP: the cap is never enforced
-// on the output latent (adapt_canvas is only called to conform REFERENCE VIDEOS in r2v).
+// LADDER SHAPE — native sits at `medium` (MPI-704, 2026-09-06). It sat at `high` from
+// MPI-449 until then, mirroring WAN_RATIOS exactly: WAN's documented ceiling (1280x720)
+// at `high`, its extrapolated detail tier at `very_high`. That shape described the MODEL
+// correctly and the OUTPUT badly. Judged as a deliverable rather than as the
+// in-distribution canvas, native 1344x768 is draft grade — usable for extreme close-ups
+// and not much else (user, 2026-09-06) — and a tier named `high` should not mean that.
+//
+// So the whole 1K ladder moved down one rung: old `low` -> `very_low`, old `medium` ->
+// `low`, native -> `medium`. The old 320x576 `very_low` fell off the bottom, and a new
+// `high` (1664x960) sits above native. `very_high` (1920x1088), `2k` and `4k` are
+// untouched. Tier NAMES therefore shifted while every canvas below `high` kept its
+// pixels — a saved `qualityTier` string resolves to a different size than it did before
+// 2026-09-06, which is the same no-migration trade MPI-687 made.
+//
+// EVERYTHING FROM `high` UP IS EXTRAPOLATED past the trained canvas — it works, expect
+// artifacts. Nothing stops a canvas above 0.98 MP: the cap is never enforced on the
+// output latent (adapt_canvas is only called to conform REFERENCE VIDEOS in r2v).
+// Keeping native selectable is still the point; it is just no longer the top of the 1K
+// ladder. The tiers below it are the megapixel anchors Comfy's own templates use,
+// resolved through ResolutionSelector at multiple=32 (the old 416x736 tier was dropped
+// to make room). Sub-native is NOT a degraded path — Comfy ships 0.4 MP as the default
+// for the three video_minimax_h3_* templates, and that is the size the community's
+// published timings are measured at.
 //
 // very_high VERIFIED 2026-08-06 at 1088x1920 on a 4060 Ti, and it is a FINAL-RENDER tier,
 // not an iterate tier. Cost scales steeply superlinearly because attention is quadratic in
@@ -281,10 +291,12 @@ export const LTX_RATIOS = {
 //
 // The 'h3' key is no longer provisional: MPI-452 shipped it, and BOTH H3 cards
 // (minimax-h3, minimax-h3-ref2va) declare `type: 'h3'`, so a change here moves both.
-// 21:9 CINEMATIC (MPI-551) — USER-TESTED on this model. 1536x640 (high) beat
-// 1376x576 in a side-by-side, so the dead-on-2.39 1376x576 sits one rung lower at
-// medium. `high` is 0.98 MP, the same pixel budget as the native 16:9, though its
-// 640 short edge is below H3's 768 native — the A/B outranks that theory.
+// 21:9 CINEMATIC (MPI-551) — USER-TESTED on this model. 1536x640 beat 1376x576 in a
+// side-by-side, so the dead-on-2.39 1376x576 sits one rung lower (it is 1344x576 now, and
+// both cells moved down a tier name in MPI-704: they are `medium` and `low` today, and
+// were `high` and `medium` when the A/B was run). 1536x640 is 0.98 MP, the same pixel
+// budget as the native 16:9, though its 640 short edge is below H3's 768 native — the A/B
+// outranks that theory.
 //
 // H3's 2k/4k warning ("Experimental - High VRAM") lives on the QUALITY TIER
 // button, not here — see QUALITY_TIER_HINT in MpiOptionSelector.js. It is keyed
@@ -293,18 +305,12 @@ export const LTX_RATIOS = {
 // a 32GB RTX 5090, and each OOM restarts the Pod).
 export const MINIMAX_H3_RATIOS = {
     very_low: [
-        { label: "1:1", w: 320, h: 320, icon: "rect_1_1" },
-        { label: "9:16", w: 320, h: 576, icon: "rect_9_16" },
-        { label: "16:9", w: 576, h: 320, icon: "rect_16_9" },
-        { label: "21:9", w: 768, h: 320, icon: "rect_21_9" }
-    ],
-    low: [
         { label: "1:1", w: 448, h: 448, icon: "rect_1_1" },
         { label: "9:16", w: 448, h: 832, icon: "rect_9_16" },
         { label: "16:9", w: 832, h: 448, icon: "rect_16_9" },
         { label: "21:9", w: 1024, h: 448, icon: "rect_21_9" }
     ],
-    medium: [
+    low: [
         { label: "1:1", w: 640, h: 640, icon: "rect_1_1" },
         { label: "9:16", w: 640, h: 1152, icon: "rect_9_16" },
         { label: "16:9", w: 1152, h: 640, icon: "rect_16_9" },
@@ -344,6 +350,13 @@ export const MINIMAX_H3_RATIOS = {
     // it advertises. The six were all ODD multiples of 32 — precisely what /64 cannot
     // represent — so the repair was THIS TABLE, not the halving.
     //
+    // TIER NAMES BELOW THIS LINE ARE PRE-MPI-704. The MPI-687 record that follows was
+    // written against the old ladder, where native sat at `high`; every name in it is one
+    // rung lower today, and its `very_low` (320x576) no longer ships at all. The /64
+    // ARITHMETIC it establishes is unaffected — that is a property of the pipeline, not of
+    // the labels, and it is why the new 1664x960 `high` is 960 and not the 928 first asked
+    // for.
+    //
     // MOVED DOWN 2026-09-04 (MPI-687), on the user's call, onto the /64 grid: `very_low`
     // 352/608 -> 320/576, `low` 480/864 -> 448/832, `medium` 21:9 1376 -> 1344, `very_high`
     // 21:9 800 -> 768. DOWN rather than up because down is what the pipeline was already
@@ -368,11 +381,33 @@ export const MINIMAX_H3_RATIOS = {
     // MAX_PIXELS of 768*1344 (comfy_extras/nodes_minimax_h3.py:28) — which is a reason not
     // to want it, NOT the mechanism that removed it; that cap is never enforced on the
     // output latent, as the § note above says and `very_high` proves by running at 2.09 MP.
-    high: [
+    medium: [
         { label: "1:1", w: 768, h: 768, icon: "rect_1_1" },
         { label: "9:16", w: 768, h: 1344, icon: "rect_9_16" },
         { label: "16:9", w: 1344, h: 768, icon: "rect_16_9" },
         { label: "21:9", w: 1536, h: 640, icon: "rect_21_9" }
+    ],
+    // ABOVE native, and the first tier the user considers finished work (MPI-704).
+    // 1664x960 is 1.60 MP against native's 1.03 — the smallest step that visibly clears
+    // "draft grade", which is what native looked like once it was judged as a deliverable
+    // rather than as the in-distribution canvas.
+    //
+    // 960, NOT 928. 1664x928 was asked for first and cannot be delivered: 928 is not /64,
+    // so the two-pass floor renders it at 896 while the picker says 928 — the exact lie
+    // MPI-687 removed from six other cells, and `tests/h3-two-pass-dimensions.test.cjs`
+    // fails on it. Of the two /64 neighbours 960 wins twice over 896: 1.733 is closer to
+    // a true 16:9 (1.778) than 1.857 is, and it is the larger canvas, which is the whole
+    // reason the tier exists.
+    //
+    // 21:9 is 1792x768 (2.333) rather than a wider crop of the same 960 height: the
+    // cinematic guard needs 2.25-2.55 AND a 21:9 megapixel count that stays between
+    // `medium` (1536x640) and `very_high` (1920x768), and 1792x768 is the only /64 cell
+    // that satisfies both.
+    high: [
+        { label: "1:1", w: 960, h: 960, icon: "rect_1_1" },
+        { label: "9:16", w: 960, h: 1664, icon: "rect_9_16" },
+        { label: "16:9", w: 1664, h: 960, icon: "rect_16_9" },
+        { label: "21:9", w: 1792, h: 768, icon: "rect_21_9" }
     ],
     // ABOVE native — extrapolated detail tier, same role WAN's very_high plays.
     very_high: [
