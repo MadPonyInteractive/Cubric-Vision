@@ -119,6 +119,21 @@ one real difference is temporal — unpruned is slightly more expressive — and
 ever observed at 56 frames, so it is NOT proven to persist on long clips. Re-testing costs
 a 32 GB re-download.
 
+**PRECISION is not the ceiling either — pruned BF16 matched the shipped int8 (2026-09-06).**
+A pruned **BF16** build of the same base was run against the shipped
+`pruned_int8_convrot` and produced the same result (user, during the ref2va
+native-quality investigation; observational, not a seeded A/B). So `int8_convrot` is not
+what makes native output draft-grade, and there is no quality argument left for carrying a
+larger quantisation.
+
+That closes the second of the two weight axes, and it is worth knowing what it leaves. The
+only untested variant is upstream MiniMaxAI's ~60 GB unpruned BF16, which moves **both**
+axes at once — and each has now been measured separately as approximately nothing. It is
+also unshippable regardless of how it scored: `minimax-h3-ref2va` is `sizeTier: 'balanced'`
+with a 12 GB floor. Testing it could only locate the ceiling, never change what users get.
+Size alone would not block the test — Comfy streams per layer, so the cost is host RAM and
+PCIe seconds, not a bigger card (see the host-RAM discussion below) — but the prior does.
+
 **int4 encoders were rejected with evidence** (MPI-449 § 4/§ 5), and that verdict does NOT
 extend to the nvfp4_awq build — different quantisation, evaluated on its own A/B.
 Comfy-Org's own stock int8_convrot encoder is 27.14 GB.
