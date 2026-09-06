@@ -634,7 +634,7 @@
   "560": {
     "inputs": {
       "scheduler": "beta",
-      "steps": 8,
+      "steps": 10,
       "denoise": 1,
       "model": [
         "561",
@@ -748,7 +748,7 @@
   "567": {
     "inputs": {
       "is_continue": false,
-      "is_preview": true,
+      "is_preview": false,
       "save_path": "mpi_stage1",
       "load_path": "mpi_stage1",
       "latent": [
@@ -795,28 +795,6 @@
     "class_type": "VAEDecodeAudio",
     "_meta": {
       "title": "VAE Decode Audio"
-    }
-  },
-  "573": {
-    "inputs": {
-      "frame_rate": 24,
-      "loop_count": 0,
-      "filename_prefix": "AnimateDiff",
-      "format": "video/h264-mp4",
-      "pingpong": false,
-      "save_output": false,
-      "images": [
-        "570",
-        0
-      ],
-      "audio": [
-        "571",
-        0
-      ]
-    },
-    "class_type": "VHS_VideoCombine",
-    "_meta": {
-      "title": "Preview"
     }
   },
   "574": {
@@ -1065,41 +1043,17 @@
       "use_audio": true,
       "truncate_to_audio": false,
       "images": [
-        "788",
+        "605",
         0
       ],
       "audio": [
-        "789",
+        "606",
         0
       ]
     },
     "class_type": "MpiSaveVideo",
     "_meta": {
       "title": "Output_Video"
-    }
-  },
-  "616": {
-    "inputs": {
-      "source": [
-        "621",
-        0
-      ]
-    },
-    "class_type": "PreviewAny",
-    "_meta": {
-      "title": "Preview as Text"
-    }
-  },
-  "617": {
-    "inputs": {
-      "source": [
-        "620",
-        0
-      ]
-    },
-    "class_type": "PreviewAny",
-    "_meta": {
-      "title": "Preview as Text"
     }
   },
   "620": {
@@ -1130,7 +1084,7 @@
   },
   "622": {
     "inputs": {
-      "int": 768
+      "int": 1664
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -1139,7 +1093,7 @@
   },
   "623": {
     "inputs": {
-      "int": 1344
+      "int": 928
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -1423,7 +1377,7 @@
   },
   "739": {
     "inputs": {
-      "math_expression": "100000 if a * b < 850000 else (243 if a * b < 1600000 else (90 if a * b < 6000000 else 39))",
+      "math_expression": "100000 if a * b < 850000 else (243 if a * b < 1100000 else (90 if a * b < 6000000 else 39))",
       "a": [
         "582",
         0
@@ -1505,30 +1459,6 @@
     "class_type": "PreviewAny",
     "_meta": {
       "title": "Preview as Text"
-    }
-  },
-  "788": {
-    "inputs": {
-      "passthrough": [
-        "605",
-        0
-      ]
-    },
-    "class_type": "MpiClearVram",
-    "_meta": {
-      "title": "Mpi Clear Vram"
-    }
-  },
-  "789": {
-    "inputs": {
-      "passthrough": [
-        "606",
-        0
-      ]
-    },
-    "class_type": "MpiClearVram",
-    "_meta": {
-      "title": "Mpi Clear Vram"
     }
   }
 }

@@ -634,7 +634,7 @@
   "560": {
     "inputs": {
       "scheduler": "beta",
-      "steps": 8,
+      "steps": 10,
       "denoise": 1,
       "model": [
         "561",
@@ -1025,11 +1025,11 @@
       "use_audio": true,
       "truncate_to_audio": false,
       "images": [
-        "788",
+        "605",
         0
       ],
       "audio": [
-        "789",
+        "606",
         0
       ]
     },
@@ -1359,7 +1359,7 @@
   },
   "739": {
     "inputs": {
-      "math_expression": "100000 if a * b < 850000 else (243 if a * b < 1600000 else (90 if a * b < 6000000 else 39))",
+      "math_expression": "100000 if a * b < 850000 else (243 if a * b < 1100000 else (90 if a * b < 6000000 else 39))",
       "a": [
         "582",
         0
@@ -1405,30 +1405,6 @@
     "class_type": "KSamplerSelect",
     "_meta": {
       "title": "KSamplerSelect"
-    }
-  },
-  "788": {
-    "inputs": {
-      "passthrough": [
-        "605",
-        0
-      ]
-    },
-    "class_type": "MpiClearVram",
-    "_meta": {
-      "title": "Mpi Clear Vram"
-    }
-  },
-  "789": {
-    "inputs": {
-      "passthrough": [
-        "606",
-        0
-      ]
-    },
-    "class_type": "MpiClearVram",
-    "_meta": {
-      "title": "Mpi Clear Vram"
     }
   }
 }
