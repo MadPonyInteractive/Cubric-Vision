@@ -39,7 +39,7 @@ portrait and a landscape 2K are the same token count and get the same plan).
 |---|---|---|---|---|
 | 832×448 | 0.37 | 100000 — never windows | single | single |
 | 1280×704 / 1344×768 | 0.90 / 1.03 | **243** | single | single |
-| 1664×960 | 1.60 | **90** | 2 win | 4 win |
+| 1664×960 | 1.60 | **90** | 2 win, measured | untested |
 | 1920×1088 / 2560×1472 | 2.09 / 3.77 | **90** | 2 win, 1.19x | 4 win, 1.50x |
 | 3840×2176 | 8.36 | **39** | 6 win, 1.95x | 13 win, 2.17x |
 
@@ -53,6 +53,37 @@ ceiling instead, which is measured safe at 2.09 MP and therefore strictly safe a
 Nothing else moved: 1344×768 is still 243, 1152×640 still never windows, and everything
 from `very_high` up is unchanged. **Raise it only on a measured run at 1664×960**, never
 by interpolating between two rows.
+
+### 1664×960 is measured, through the APP, on both H3 ops
+
+Three runs on a 16 GB RTX 4060 Ti, 2026-09-06, dispatched through `/connector/generate`
+against the shipped runtimes — not the bench:
+
+| op | frames | plan | wall |
+|---|---|---|---|
+| `t2v_ms` (fl2va) | 56 | single pass — at or under the ceiling | 3m51s |
+| `t2v_ms` (fl2va) | 124 | **2 windows of 73**, sharing 22 | 8m22s |
+| `ref2v_ms` (r2va) **+ 1 reference image** | 124 | **2 windows of 73**, sharing 22 | 10m45s |
+
+All three delivered 1664×960 with audio and none came near an OOM. `MpiWindowedSampler`
+logs its plan to `app.log` — `spans=[(0, 22), (15, 37)]` in latent frames — so the plan is
+readable after the fact without instrumenting anything:
+
+```
+grep MpiWindowedSampler "%APPDATA%\Cubric Vision\logs\app.log"
+```
+
+**The reference run is the one that mattered.** Both `MpiH3References` nodes are live
+during stage 2 — `Input_Refs` at `ref_image_size: match` feeding stage 1 and `Refine_Refs`
+at `max` feeding the stage-2 guider — so the reference tower is resident *concurrently*
+with the windowed refine, and every earlier measurement behind these ceilings was taken
+without one. It cost 29% over the reference-free run at the same canvas and clip, and did
+not change the plan. One image; **2–3 references is the normal user load and is still
+unmeasured**, so treat the headroom above this as unknown rather than proven.
+
+The 56-frame run is worth keeping in mind for a different reason: a dispatch that does not
+set `Input_Duration` inherits the runtime's baked value, and fl2va bakes **2**, which is
+below H3's 124-frame trained minimum.
 
 **Because `window_frames` is a link, the app can never write it** and node 712 needs no
 `Input_Window` title. Re-title it only if an app-side override is ever wanted — and note
