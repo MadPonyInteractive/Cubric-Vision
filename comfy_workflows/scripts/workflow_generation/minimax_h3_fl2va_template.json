@@ -29,7 +29,7 @@
   },
   "130": {
     "inputs": {
-      "clip_name": "qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors",
+      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
       "type": "minimax",
       "device": "default"
     },
@@ -60,7 +60,7 @@
         0
       ],
       "conditioning": [
-        "472",
+        "528",
         0
       ]
     },
@@ -120,7 +120,7 @@
   },
   "167": {
     "inputs": {
-      "int": 1152
+      "int": 768
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -129,7 +129,7 @@
   },
   "168": {
     "inputs": {
-      "int": 640
+      "int": 1344
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -154,7 +154,7 @@
   },
   "195": {
     "inputs": {
-      "int": 354681360
+      "int": 354681361
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -168,7 +168,7 @@
       "use_audio": true,
       "truncate_to_audio": false,
       "images": [
-        "289",
+        "177",
         0
       ],
       "audio": [
@@ -188,7 +188,7 @@
       "use_audio": true,
       "truncate_to_audio": false,
       "images": [
-        "442",
+        "424",
         0
       ],
       "audio": [
@@ -203,7 +203,7 @@
   },
   "212": {
     "inputs": {
-      "int": 1
+      "int": 2
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -402,18 +402,6 @@
     "class_type": "MpiString",
     "_meta": {
       "title": "Input_End_Frame"
-    }
-  },
-  "289": {
-    "inputs": {
-      "passthrough": [
-        "177",
-        0
-      ]
-    },
-    "class_type": "MpiClearVram",
-    "_meta": {
-      "title": "Mpi Clear Vram"
     }
   },
   "320": {
@@ -628,7 +616,7 @@
   "420": {
     "inputs": {
       "av_latent": [
-        "320",
+        "524",
         0
       ]
     },
@@ -653,19 +641,10 @@
       "title": "Concat AV Latent"
     }
   },
-  "423": {
-    "inputs": {
-      "sigmas": "0.9231, 0.8780, 0.8000, 0.6316, 0.3158, 0.0000"
-    },
-    "class_type": "ManualSigmas",
-    "_meta": {
-      "title": "5 step Sigmas"
-    }
-  },
   "424": {
     "inputs": {
       "samples": [
-        "427",
+        "532",
         0
       ],
       "vae": [
@@ -681,7 +660,7 @@
   "425": {
     "inputs": {
       "samples": [
-        "427",
+        "532",
         0
       ],
       "vae": [
@@ -692,92 +671,6 @@
     "class_type": "VAEDecodeAudio",
     "_meta": {
       "title": "VAE Decode Audio"
-    }
-  },
-  "426": {
-    "inputs": {
-      "sigmas": "0.9035, 0.8000, 0.6316, 0.3158, 0.0000"
-    },
-    "class_type": "ManualSigmas",
-    "_meta": {
-      "title": "4 step Sigmas"
-    }
-  },
-  "427": {
-    "inputs": {
-      "noise": [
-        "435",
-        0
-      ],
-      "guider": [
-        "429",
-        0
-      ],
-      "sampler": [
-        "345",
-        0
-      ],
-      "sigmas": [
-        "428",
-        0
-      ],
-      "latent_image": [
-        "421",
-        0
-      ]
-    },
-    "class_type": "SamplerCustomAdvanced",
-    "_meta": {
-      "title": "SamplerCustomAdvanced"
-    }
-  },
-  "428": {
-    "inputs": {
-      "sigmas": "0.9035, 0.6316, 0.3158, 0.0000"
-    },
-    "class_type": "ManualSigmas",
-    "_meta": {
-      "title": "3 step Sigmas"
-    }
-  },
-  "429": {
-    "inputs": {
-      "model": [
-        "518",
-        0
-      ],
-      "conditioning": [
-        "485",
-        0
-      ]
-    },
-    "class_type": "BasicGuider",
-    "_meta": {
-      "title": "Basic Guider"
-    }
-  },
-  "435": {
-    "inputs": {
-      "noise_seed": [
-        "195",
-        0
-      ]
-    },
-    "class_type": "RandomNoise",
-    "_meta": {
-      "title": "RandomNoise"
-    }
-  },
-  "442": {
-    "inputs": {
-      "passthrough": [
-        "424",
-        0
-      ]
-    },
-    "class_type": "MpiClearVram",
-    "_meta": {
-      "title": "Mpi Clear Vram"
     }
   },
   "455": {
@@ -1049,6 +942,193 @@
     "class_type": "MiniMaxH3SigmaShift",
     "_meta": {
       "title": "ModelSamplingMiniMaxH3"
+    }
+  },
+  "524": {
+    "inputs": {
+      "passthrough": [
+        "320",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "527": {
+    "inputs": {
+      "passthrough": [
+        "485",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "528": {
+    "inputs": {
+      "passthrough": [
+        "472",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "529": {
+    "inputs": {
+      "trigger": [
+        "530",
+        0
+      ]
+    },
+    "class_type": "MpiClearVramEnd",
+    "_meta": {
+      "title": "Mpi Clear Vram End"
+    }
+  },
+  "530": {
+    "inputs": {
+      "source": [
+        "208",
+        0
+      ]
+    },
+    "class_type": "PreviewAny",
+    "_meta": {
+      "title": "Preview as Text"
+    }
+  },
+  "531": {
+    "inputs": {
+      "trigger": [
+        "207",
+        0
+      ]
+    },
+    "class_type": "MpiClearVramEnd",
+    "_meta": {
+      "title": "Mpi Clear Vram End"
+    }
+  },
+  "532": {
+    "inputs": {
+      "overlap_frames": 17,
+      "frame_grid": 5,
+      "noise": [
+        "539",
+        0
+      ],
+      "guider": [
+        "538",
+        0
+      ],
+      "sampler": [
+        "537",
+        0
+      ],
+      "sigmas": [
+        "536",
+        0
+      ],
+      "latent_image": [
+        "421",
+        0
+      ],
+      "window_frames": [
+        "535",
+        0
+      ]
+    },
+    "class_type": "MpiWindowedSampler",
+    "_meta": {
+      "title": "Mpi Windowed Sampler"
+    }
+  },
+  "533": {
+    "inputs": {
+      "sigmas": "0.9231, 0.8780, 0.8000, 0.6316, 0.3158, 0.0000"
+    },
+    "class_type": "ManualSigmas",
+    "_meta": {
+      "title": "5 step Sigmas"
+    }
+  },
+  "534": {
+    "inputs": {
+      "sigmas": "0.9035, 0.8000, 0.6316, 0.3158, 0.0000"
+    },
+    "class_type": "ManualSigmas",
+    "_meta": {
+      "title": "4 step Sigmas"
+    }
+  },
+  "535": {
+    "inputs": {
+      "math_expression": "100000 if a * b < 850000 else (124 if a * b < 1600000 else (90 if a * b < 6000000 else 39))",
+      "a": [
+        "493",
+        0
+      ],
+      "b": [
+        "497",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Window Frames"
+    }
+  },
+  "536": {
+    "inputs": {
+      "sigmas": "0.9035, 0.6316, 0.3158, 0.0000"
+    },
+    "class_type": "ManualSigmas",
+    "_meta": {
+      "title": "3 step Sigmas"
+    }
+  },
+  "537": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "538": {
+    "inputs": {
+      "model": [
+        "518",
+        0
+      ],
+      "conditioning": [
+        "527",
+        0
+      ]
+    },
+    "class_type": "BasicGuider",
+    "_meta": {
+      "title": "Basic Guider"
+    }
+  },
+  "539": {
+    "inputs": {
+      "noise_seed": [
+        "195",
+        0
+      ]
+    },
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RandomNoise"
     }
   }
 }
