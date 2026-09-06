@@ -502,8 +502,15 @@ The repo-side revert does not touch that bench graph.
 any change to `Upscale Factor` for free.
 
 ```
-100000 if a * b < 850000 else (124 if a * b < 1600000 else (90 if a * b < 6000000 else 39))
+100000 if a * b < 850000 else (243 if a * b < 1600000 else (90 if a * b < 6000000 else 39))
 ```
+
+| stage-2 output | MP | ceiling |
+|---|---|---|
+| 832x448 | 0.37 | 100000 (never windows) |
+| 1280x704 / 1344x768 | 0.90 / 1.03 | 243 |
+| 1920x1088 / 2560x1472 / 2688x1536 | 2.09 / 3.77 / 4.13 | 90 |
+| 3840x2176 | 8.36 | 39 |
 
 Because `window_frames` is a LINK, the app can never write it and node 712 does
 NOT need an `Input_Window` title. That dissolves the constraint recorded in the
@@ -551,14 +558,27 @@ CONTAINS, because the pruned graph is internally consistent. Restored to
 `"mode": 0` in raw and rebaked (89 nodes, halving back). **The bench still has
 them bypassed** -- same class of root cause as the nvfp4 CLIPLoader.
 
-**THE `124` ROW IS STILL UNMEASURED -- the single-pass test was invalid.** It was
-queued as "243 frames at 1344x768", but the graph it ran was the bypassed bake
-above, so `Input_Width/Height` 1344x768 WAS the stage-1 size and stage 2 targeted
-`floor(1344*2/32+0.5)*32 x floor(768*2/32+0.5)*32` = **2688x1536** (4.13 MP).
-That is the 2K tier, not 1K. Re-run it against the fixed graph before trusting
-any conclusion about the `124` row.
+**THE `124` ROW WAS WRONG AND IS NOW `243`.** Measured against the FIXED graph:
+1344x768, 243 frames, forced single pass (`window_frames` 100000), turbo off.
 
-What the run does establish, at 2688x1536 / 243 frames / single pass:
+    status=success   12 min   peak 14,945 MiB / 16,380 (91%)
+    MpiVideo_00122.mp4 -- 1344x768, 243 frames, 24 fps, 10.125 s, aac stereo
+
+So 10 s at 1K refines in ONE pass on a 16 GB 4060 Ti, and a `124` ceiling was
+buying nothing while costing 1.33x on the commonest case. The row is now `243`,
+which keeps a real guard -- 5 s and 10 s single-pass, 12 s and 15 s still window
+-- rather than going to `100000`. Fabio's call, taken on the 91% peak: an OOM
+there is recoverable, and slow-by-default is not.
+
+**The FIRST single-pass attempt was invalid and its OOM must not be read as a 1K
+result.** It ran on the bypassed bake above, so `Input_Width/Height` 1344x768 WAS
+the stage-1 size and stage 2 targeted `floor(1344*2/32+0.5)*32` x
+`floor(768*2/32+0.5)*32` = **2688x1536** (4.13 MP) -- the 2K tier. By the same
+arithmetic, the 3-window run Fabio watched earlier that day (10.4 -> 11.1 GB, "no
+seams visible") was very likely also 2688x1536, not 1K, which means the node
+cleared that seam check at a HARDER size than it was credited with.
+
+What the failed run does establish, at 2688x1536 / 243 frames / single pass:
 
 - Stage 1 completed in ~27 min at a flat 11.9-12.0 GB; stage 2 **OOMed on its
   first step**.
