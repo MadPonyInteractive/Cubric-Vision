@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-700", "at": "2026-09-06T14:26:48+01:00", "actor": "claude", "from": "doing", "to": "done", "reason": "video_path output wired to MpiClearVramEnd and confirmed working by Fabio, 2026-09-06."}

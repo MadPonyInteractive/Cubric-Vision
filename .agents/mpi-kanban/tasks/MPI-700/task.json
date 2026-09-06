@@ -3,11 +3,11 @@
   "id": "MPI-700",
   "title": "MpiSaveVideo returns the written file path, so one MpiClearVramEnd can close the chain",
   "description": "MpiSaveVideo is OUTPUT_NODE with RETURN_TYPES = (), so nothing downstream can be ordered after the mp4 is written. That forces an MpiClearVramEnd on every terminal branch (video decode, audio decode, latent) and puts the multi-second VRAM clear INSIDE render time. Returning the output path gives MpiClearVramEnd a trigger that fires after the file exists, so the user gets their output first and one terminal clear replaces the per-branch ones. Image workflows already end in a preview node that has an output, so they benefit without a change. Requested by Fabio, 2026-09-06.",
-  "column": "doing",
-  "maturity": "in-progress",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-09-06T12:05:00Z",
-  "updated_at": "2026-09-06T12:05:00Z",
+  "updated_at": "2026-09-06T14:26:48+01:00",
   "links": {
     "files": "files.json"
   }

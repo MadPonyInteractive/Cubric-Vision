@@ -3,11 +3,11 @@
   "id": "MPI-701",
   "title": "MpiWindowedSampler: slice the audio to the window, or lip-sync breaks at every seam",
   "description": "Each window is handed the sliced video but the WHOLE soundtrack (sampler.py:294, _rejoin_av(seg_video, audio)). H3 indexes audio tokens temporally - MiniMaxH3AV.fix_empty_latent sizes them round(frame_count * 5/3) - so a window starting at latent frame 15 is matched against audio from t=0 and its mouth runs ~2s early. Observed on a 124-frame clip planned as spans [(0,22),(15,37)]: window 1 lip-syncs, window 2 does not, and the mouth visibly sticks at the boundary. Reproduces on BOTH the VDN and the plain refine path, so it is the windowing and not the model. Fix: slice audio and its noise to the matching span for conditioning; the audio OUTPUT is already discarded and the original restored, so the 'never stitch audio across seams' intent is untouched. Blocks the 2K/4K tier, where windowing is the only way the canvas fits a consumer card. Found with Fabio, 2026-09-06.",
-  "column": "doing",
-  "maturity": "in-progress",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-09-06T13:40:00Z",
-  "updated_at": "2026-09-06T13:40:00Z",
+  "updated_at": "2026-09-06T14:27:36+01:00",
   "links": {
     "files": "files.json"
   }

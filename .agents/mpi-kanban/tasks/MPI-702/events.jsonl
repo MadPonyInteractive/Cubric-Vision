@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-702", "at": "2026-09-06T15:46:26+01:00", "actor": "claude", "column": "doing", "title": "VDN-H3: record the mechanics, and test whether the retention knobs raise its resolution ceiling"}

@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-702",
+  "title": "VDN-H3: record the mechanics, and test whether the retention knobs raise its resolution ceiling",
+  "description": "VDN-H3 (OpenVDN/vdn-minimax-h3 + Saganaki22/ComfyUI-VDN-H3) evaluated on the bench 2026-09-06. Two halves. (1) Record what was learned about how the node behaves on a pruned base - the three lora_mode configs, the e-grid correction, the S-to-canvas mapping, the retention knobs and the OOM ceiling - in docs/models/h3/vdn.md, so it is not re-derived. (2) Open experiment: VDN OOM'd on the windowed refine at 1920x1088 (S=2040) by only 557 MiB while holding 2.15 GiB of retained buffers plus branch weights on the GPU (branch_weights=auto chose cache_gpu, retain_buffers=auto chose retained). Forcing branch_weights=stream + retain_buffers=off may put that canvas back inside VDN's range and move the tier threshold. Blocked on the ship/no-ship call - if VDN is dropped, this closes as rejected.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "created_at": "2026-09-06T15:46:26+01:00",
+  "updated_at": "2026-09-06T15:46:26+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

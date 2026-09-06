@@ -375,6 +375,11 @@ Performance levers already tested and REJECTED — the KJNodes H3 VRAM patches (
 +13.8% for nothing on both cards that matter) and the Sage attention patch — are in
 [performance.md](performance.md). Read it before wiring an optimisation into either graph.
 
+**VDN-H3** (hybrid attention, a runtime patch rather than a new transformer) is under
+evaluation and ships nothing yet: [vdn.md](vdn.md). Read it before touching `lora_mode` on
+a pruned base, before quoting a VDN timing (they were named by base pass, not deliverable),
+or before believing VDN needs the unpruned base — it does not.
+
 ## Sources
 
 - <https://huggingface.co/Comfy-Org/MiniMax-H3> — both transformers, both VAEs, stock encoders

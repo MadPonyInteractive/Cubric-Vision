@@ -1,0 +1,9 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "docs/models/h3/vdn.md",
+    "docs/models/h3/README.md",
+    "docs/models/h3/turbo.md"
+  ],
+  "note": "Docs only. The VDN node and weights are third-party and live outside the repo (G:/ComfyUi/ComfyUI/custom_nodes/ComfyUI-VDN-H3, weights at C:/AI/vdn) - nothing here edits them. The retention experiment is a bench run, not a code change."
+}
