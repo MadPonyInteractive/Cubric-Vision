@@ -65,6 +65,31 @@ the one the measurements were made against.
   deliberate sub-step precision needs that noted next to the value, or the next Save undoes it.
   `comfy_workflows/raw/flow_draw_it_in.json` is one such file (nodes 150 / 151).
 
+### 🔴 A BYPASSED node exports as a pass-through, and every containment check passes
+
+Found 2026-09-06 (MPI-699). A node left at LiteGraph **`"mode": 4` (Bypass)** on the bench
+is not a disabled node in the export — the converter resolves it into a pass-through link
+and `orchestrate.py` then PRUNES it. What ships is a graph with the transform silently
+removed and its input wired straight to its consumer.
+
+Measured: `MpiMath` 620/621 in `minimax_h3_r2va_template.json` — the `floor(a / 64) * 32`
+pair that halves `Input_Width`/`Input_Height` into the stage-1 size — were exported
+bypassed. The baked runtime fed `Input_Width` directly into the stage-2 target expression,
+so stage 1 would have rendered at the user's full requested size and stage 2 doubled it.
+
+**Nothing that inspects what the graph CONTAINS can see this**, because the pruned graph is
+internally consistent: `validate-injection-rules.mjs` passed, `verify-workflow.mjs` passed,
+the graph queues and runs. It was caught by `tests/h3-two-pass-dimensions.test.cjs`, on CI,
+after the push — an assertion on the EXPRESSION being present, not on the graph validating.
+
+- **Diff `mode` per node id against the previously committed raw** after any re-export.
+  A mode change is one field and invisible in a 7000-line reformat diff.
+- `mode` 2 is Never/mute, 4 is Bypass. Bench-only preview and note nodes
+  (`VHS_VideoCombine`, `MarkdownNote`) legitimately sit muted and are pruned anyway — the
+  ones to look at are nodes that carry a TRANSFORM.
+- A transform the runtime depends on wants a test asserting its expression is present in
+  every twin, the way `TWO_PASS_FILES` does. Graph validation will never cover it.
+
 ## Prove a graph correct without spending a generation — three checks, in this order
 
 **There is NO validate-only endpoint.** `/prompt` validates and then QUEUES, so it is not a dry

@@ -77,3 +77,25 @@ cheap runs; they decide whether this card is worth opening at all.
 Native 2560×1472 is already clean and now ships as the `2k` tier (`6dd921a3`).
 If the reference-cost test says the saving is small, **close this card as
 `rejected`** and keep the tier. That is a legitimate outcome, not a failure.
+
+## Two corrections from MPI-699 (2026-09-05/06) — read before building anything
+
+**1. The "latent upscaling disproven" verdict above does NOT reach the shipped
+two-stage.** This card tested an INTERPOLATED upscale (`nearest-exact`, `bicubic`,
+×1.9 → hard horizontal banding) applied to an UNDERCOOKED latent. Both variables
+have since changed: a **LEARNED** upscaler with its own weights
+(`MinimaxH3LatentUpscaler3D`), and a well-cooked latent. Give stage 1 enough steps
+and the upscaled run **beats native at matched output size** — swept 8/10/12 steps
+at 1344×768 against a matched run. The table at the top of this brief remains true
+of what it tested; it is not a verdict on latent upscaling in general. See
+[docs/models/h3/README.md](../../../../docs/models/h3/README.md) § "The refine was
+STARVED, not broken".
+
+**2. That same result argues AGAINST the pixel-space route this card proposes.**
+Fabio's reading is that the cleanup works BECAUSE it happens in latent space, and
+would not survive a pixel-space round trip. This card's whole proposal is
+decode → pixel upscale → VAE-encode → partial re-denoise. **Settle that before
+anyone builds the encode node** — the node is small, but it is the wrong thing to
+build if the premise is inverted. The cheapest check is still the reference-cost
+experiment above; add to it a matched comparison of the shipped latent two-stage
+against a hand-run pixel round trip at the same output size.

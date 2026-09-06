@@ -185,6 +185,23 @@ That is `PROGRESS_STAGES['minimax_h3_fl2va.json'] = { single: 2, preview: 1, sta
 **When re-counting: tqdm prints each finished bar TWICE**, so a raw grep of `100%` lines
 reads 4 for the single run.
 
+Above a certain canvas the stage-2 sampler runs in temporal WINDOWS rather than one pass,
+driven off the stage-2 target size. Which canvases, why, and which of the numbers are
+measured: [windowing.md](windowing.md).
+
+### The refine was STARVED, not broken — give stage 1 more steps
+
+Settled 2026-09-05, and it reverses the direction the two-stage work was heading in
+("maybe only upscale at 2K/4K"). Swept 8/10/12 steps at 1344x768 against a matched
+upscaled run: **the upscaled run WON at matched output size**, and beat native 8-step by
+a lot. What was wrong was never the upscaler — the latent reaching it lacked detail.
+
+**An 8-step distill is not capped at 8 steps.** 4-step LoRAs run well at 6–8 and 8-step
+at 10–12, and this project already adds turbo steps to the slow path for detail. So when
+a two-stage result looks soft, raise stage 1 before blaming stage 2. The corollary is
+that "the two-pass costs extra" is the wrong frame: at matched output size it is the
+cheaper route, not overhead.
+
 ### The latent handshake (ComfyUi-MpiNodes a6e5d5e)
 
 H3 packs video AND audio into ONE `NestedTensor` latent, which crashes core `SaveLatent`
@@ -370,6 +387,11 @@ for activations). Do not use it to predict anything about this model.
 Related: `execution_cached` listing a node is NOT evidence it was needed — leaf constant
 nodes cache per value, so booleans show cached whichever way they are flipped. To tell
 pruned from cached, vary an input nothing has ever sampled.
+
+And there is not ONE ceiling to predict. Stage 2 has **two distinct walls** — attention
+(`prequantize_int8_attention`) and the MLP (`int8_linear`) — and which one a run hits
+depends on the shape, not the token count. Only the MLP one is linear and therefore
+computable in advance. Measurements and the tier table they feed: [windowing.md](windowing.md).
 
 Performance levers already tested and REJECTED — the KJNodes H3 VRAM patches (measured
 +13.8% for nothing on both cards that matter) and the Sage attention patch — are in
