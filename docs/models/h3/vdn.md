@@ -184,16 +184,47 @@ WDDM, and Task Manager's figure is whole-desktop. Ask the engine instead —
 `GET /system_stats` returns `torch_vram_total` (allocator reserved) and `torch_vram_free`
 (free within that reserve); live bytes are the difference.
 
-## Verdict — OPEN
+## The balanced tier CANNOT show VDN — the refine erases it
 
-What is settled: VDN runs on the shipped pruned base with `merge`, needs no new
-transformer, needs no unpruned download, and has a hard VRAM ceiling below 1920×1088 on
-16 GB.
+Before reading the verdict, understand why most of the evaluation could not have worked.
+Per-stage trace of the bench graph, 2026-09-06:
 
-What is not: whether it is worth shipping at all — **and every quality comparison run on
-2026-09-06 is confounded by the double-turbo trap above**, so none of it decides the
-question. The observations below are kept because the *behaviour* they describe is real;
-the *attribution to VDN* is not established.
+```
+[565] base      VDN YES   turbo YES   25 steps  res_multistep
+[712] refine    VDN NO    turbo YES    3 steps  euler, sigmas 0.9035 -> 0
+```
+
+**VDN touches only the base stage.** The balanced tier then upscales and runs a
+turbo-only refine that VDN never sees, restarting at sigma 0.9035 — a substantial rewrite,
+not a polish. Whatever VDN did to the base is re-sampled away by a pass it is not part of.
+
+That is why `turbo@8`, `VDN@10`, clean `VDN@25` and `non-turbo@25` all converged. Those
+runs were not measuring their base configs; they were measuring the shared refine. **No
+amount of testing on the balanced tier could ever have answered the VDN question.**
+
+Two consequences worth keeping even though VDN was rejected:
+
+- **The OOM ceiling only binds when VDN is wired into the refine.** The S=2040 failure came
+  from such a graph. Base-stage VDN runs at S=252–510, nowhere near it.
+- **The upscale+refine pays for itself — tested, 2026-09-06.** Single-stage sampling
+  directly at the multi-stage output resolution gives a very similar result and takes
+  **longer**. So base-at-low-res plus 3D upscale plus a short refine is the *cheaper* route
+  to that canvas, not overhead: a brief refine over an upscaled latent costs less than
+  paying full resolution on every step. The two-stage pipeline is justified on speed at its
+  own quality.
+
+## Verdict — REJECTED (2026-09-06)
+
+**VDN-H3 was evaluated and declined.** Same output quality as the turbo LoRA, slower, and
+more VRAM. Nothing about it is broken — it simply does not buy anything this app needs.
+
+What was settled along the way, and would still hold if it were revisited: VDN runs on the
+shipped pruned base with `merge`, needs no new transformer, and needs no unpruned download.
+
+What could never be settled from the balanced tier is above. The observations below are
+kept because the *behaviour* they describe is real, but they were gathered under the
+double-turbo trap and the refine confound, so **none of them is evidence about VDN**.
+Re-derive rather than cite them if VDN-H3 v2 ever makes this worth reopening.
 
 Against the turbo LoRA, at near-identical wall clock, two seeds split — seed 1 to turbo (VDN varied object placement more
 and morphed the subject's teeth), seed 2 to VDN, **both by a small margin**. Opposite
@@ -223,7 +254,9 @@ that cannot be seen does not justify 5.46 GB, a publisher-hosted territory-gated
 hard ceiling below 1920×1088 — against a turbo LoRA that already ships, costs nothing
 extra, and has no ceiling.
 
-If VDN is dropped, MPI-702 closes as `rejected` and this file stays as the record of why.
+MPI-702 closed as `rejected` on the above. This file stays as the record of why, and of the
+two traps (double turbo, the erasing refine) that any future evaluation of a base-stage
+model patch on this app will hit again.
 
 ## Sources
 
