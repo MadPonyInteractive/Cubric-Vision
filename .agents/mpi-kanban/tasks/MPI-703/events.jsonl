@@ -1,1 +1,2 @@
 {"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-703", "at": "2026-09-06T18:05:01+01:00", "actor": "claude", "column": "doing", "title": "Release ComfyUi-MpiNodes v1.2.11 and pin it in node_lock.json"}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-703", "at": "2026-09-06T18:15:18+01:00", "actor": "claude", "from": "doing", "to": "done", "reason": "v1.2.11 pushed, registry publish workflow succeeded, changelog PUT returned HTTP 200, pin bumped to 287edb8 and pushed as ace2161e."}
