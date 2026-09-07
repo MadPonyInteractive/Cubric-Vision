@@ -9,16 +9,54 @@ the 1.5.0 stamp is deliberately the LAST step, after the smoke.
 **Read `## The five facts` below before doing anything.** Four of them were rediscovered
 the hard way in the 2026-09-07 session because an earlier handoff had lost them.
 
-Gate 1 (release notes) is done — `f9566b6f`. Branch head is `f8a3096e`, all pushed.
+Gate 1 (release notes) is done — `f9566b6f`. Branch head is `4fb37af2`, all pushed.
+666/666 tests, 260/260 dep URLs, eslint 0 errors.
 
 **NEXT ACTION IS THE RELEASE IMAGE REBUILD, and it is a blocker, not a chore.** The stable
 Pod image is `v0.21.0` = ComfyUI **0.31.0**, while this release's graphs need 0.34.0 core
 nodes. Fabio hit it live on 2026-09-07 — `Node 'ModelAttentionBackend' not found` — and
 `24d4905f` fixed only the DEV pins. A released 1.5.0 would ship the same failure to every
-remote user. Rebuild at 0.34.0, both legs, THEN smoke on that image, then stamp, then ship.
+remote user. It is ONE CI dispatch and needs no prep — see `## The image rebuild` below.
 
-Also open: the smoke is TWO runs (the dedupe hides Klein 9B behind the cheaper 4B), MPI-556
-is owed, and the RAM floor needs deciding against real stock. All four are on the checklist.
+**CORRECTION to the old plan text, which said to rebuild BEFORE the smoke "so the smoke
+runs on the image users get".** That is not achievable and the ordering buys nothing: the
+smoke drives the app FROM SOURCE, so `BUILD_HASH === 'dev'`, `_devMode` is true, and
+`remotePodLifecycle.js:457` resolves `POD_IMAGE_VERSION_DEV` — the smoke runs on
+`v0.23.0-dev` whatever the stable pin says. The only way to smoke what ships is to point
+the DEV pins at the stable tag for the run. Either order is otherwise fine.
+
+Also open: the smoke is TWO runs (the dedupe hides Klein 9B behind the cheaper 4B) and
+MPI-556 is owed. The RAM floor is DECIDED (56, `4fb37af2`) and the master fix sweep is
+EXHAUSTED — both closed on the checklist with their evidence.
+
+## The image rebuild — no prep needed, and that is measured
+
+mpi-ci HEAD `b3d2434` is ALREADY the right build context, and it is the exact tree the
+`v0.23.0-dev` image was built from (commit 21:18:43Z, CI run 33920557736 started 21:19:27Z,
+both legs green). Checked against `checkPodLock`'s real rules, not by eye:
+
+- core `v0.34.0` / `12d52794` and both frontend pins — identical to this branch's lock
+- `python_deps.txt` — **125/125 covered** by the image's 150 (a superset is explicitly
+  allowed since MPI-698; only a package WE ship that the image LACKS is drift)
+- every baked (`installRequirements: true`) pack commit-identical
+- the only two deltas are non-blocking by design: `MpiNodes` `85057698` vs this line's
+  `287edb83` (code-only → volume, reported not enforced) and 5 extra master packs
+
+So: **no sync commit, no `cp` into mpi-ci.** One `workflow_dispatch` of
+`cubric-vision-pod-image.yml` on `main`:
+
+    manifest_version = 0.23.0     (tags become v0.23.0-cu130 + v0.23.0-cpu)
+    comfyui_ref      = v0.34.0
+    wrapper_version  = 0.2.44     (matches wrapper.py in that tree)
+    push_latest      = false
+    only_profile     = <blank>    (BOTH legs — a GPU-only bump is the v0.10.3-cpu 404 trap)
+
+~24 min. **Then** bump `POD_IMAGE_VERSION` + `POD_IMAGE_VERSION_CPU` off `v0.21.0` — not
+before: the file's own rule is that a tag only lands in these constants once it exists,
+because an unbuilt tag 404s on pull and the Pod exits at boot. And it must be a CLEAN
+REBUILD at the release tag, not the dev tag renamed — `remotePodLifecycle.js:153-156`
+records that the v0.21.0 pair's layer digests genuinely diverged from v0.21.0-dev, so the
+dev image's live proof does not transfer.
 
 ## The five facts
 
