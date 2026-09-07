@@ -1335,7 +1335,15 @@ export const assetDeps = {
     },
     // ── MPI-694 — Stable Audio 3, the `Sound & Music` flow ────────────────────────
     // THREE weights, 11.81GB, from `Comfy-Org/stable-audio-3` (not gated), URLs baked
-    // into Stability's own blueprints. Every sha256 below was verified against the
+    // into Stability's own blueprints.
+    //
+    // R2 IS THE PRIMARY ROUTE AND HF IS THE MIRROR (MPI-705, uploaded 2026-09-07). The
+    // first real install measured ~1%/min off huggingface.co — about 2 MB/s, ~100 minutes
+    // for the flow whose whole appeal is being small. Both licences grant redistribution
+    // outright (Stability §§II/III subject to §IV(a), Gemma §3.1), and MPI-694 already
+    // discharges the conditions, so the mirror carries no new obligation. All three
+    // objects verified byte-exact on the public route before the swap.
+    // Every sha256 below was verified against the
     // `X-Linked-ETag` the HF API returns on the resolve URL, and every `size` was
     // derived by `computeDepHashes.py`'s own formatter from the measured `bytes` —
     // 1024-based, which is why these read LOWER than the 9.22 / 2.27 / 1.19 GB
@@ -1358,7 +1366,8 @@ export const assetDeps = {
         name: 'Stable Audio 3 Medium',
         origin: 'Comfy-Org/stable-audio-3',
         filename: 'checkpoints/stable_audio_3_medium.safetensors',
-        url: 'https://huggingface.co/Comfy-Org/stable-audio-3/resolve/main/checkpoints/stable_audio_3_medium.safetensors',
+        url: 'https://models.cubric.studio/vision/models/checkpoints/stable_audio_3_medium.safetensors',
+        mirrorUrl: 'https://huggingface.co/Comfy-Org/stable-audio-3/resolve/main/checkpoints/stable_audio_3_medium.safetensors',
         size: '8.59GB',
         bytes: 9222116660,
         sha256: '48d9c65e290e7bcd5194e0633bfc2424a59ee9683f5c2d58762d997b7d8ce0b5',
@@ -1376,7 +1385,8 @@ export const assetDeps = {
         name: 'Stable Audio 3 Small (SFX)',
         origin: 'Comfy-Org/stable-audio-3',
         filename: 'checkpoints/stable_audio_3_small_sfx.safetensors',
-        url: 'https://huggingface.co/Comfy-Org/stable-audio-3/resolve/main/checkpoints/stable_audio_3_small_sfx.safetensors',
+        url: 'https://models.cubric.studio/vision/models/checkpoints/stable_audio_3_small_sfx.safetensors',
+        mirrorUrl: 'https://huggingface.co/Comfy-Org/stable-audio-3/resolve/main/checkpoints/stable_audio_3_small_sfx.safetensors',
         size: '2.11GB',
         bytes: 2270384940,
         sha256: 'ed9cf1b6172f1a8c2921a9560c21109ff3239524563ced9dce6dcdef41e2f515',
@@ -1393,7 +1403,8 @@ export const assetDeps = {
         name: 'T5Gemma B/B UL2 text encoder',
         origin: 'Comfy-Org/stable-audio-3',
         filename: 'text_encoders/t5gemma_b_b_ul2.safetensors',
-        url: 'https://huggingface.co/Comfy-Org/stable-audio-3/resolve/main/text_encoders/t5gemma_b_b_ul2.safetensors',
+        url: 'https://models.cubric.studio/vision/models/text_encoders/t5gemma_b_b_ul2.safetensors',
+        mirrorUrl: 'https://huggingface.co/Comfy-Org/stable-audio-3/resolve/main/text_encoders/t5gemma_b_b_ul2.safetensors',
         size: '1.11GB',
         bytes: 1187264003,
         sha256: '1e1eba25be8872edb0d3c6335c6658fd6388e7b14b60da6e454e404cfcd8150e',
