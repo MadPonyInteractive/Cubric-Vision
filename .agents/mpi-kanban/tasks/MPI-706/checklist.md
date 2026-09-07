@@ -43,8 +43,17 @@
       over LanPaint)
 
 ## Phase 3 — the gates
-- [ ] Release notes rewritten (drop "10 GB less"; keep the R2-hosting half; 62 → 64; add
-      re-tier, windowed sampler, thumbnails, uninstall, remote-download trio, Phase 2)
+- [x] Release notes rewritten — `f9566b6f`. "10 GB less" deleted, 62 → 64, and the new
+      bullets Gate 0'd against v1.4.4 one by one: Klein 9B, inpaint on SDXL/Krea 2, the
+      tier RENAME (Important change — a saved project reopens at a different canvas),
+      faster long LTX clips, uninstall, video posters, the LTX preview flash, the
+      remote-download trio. Still marked *agent draft, NOT approved copy*.
+      **The R2-hosting half was FALSE and is now true.** The handoff said to keep it as
+      "still true and verified" — it was not: MPI-653 moved the encoder to R2 on MASTER
+      only, and Phase 1's revert restored the ethanfel HuggingFace url with no mirror,
+      byte-identical to v1.4.4. Ported `9d724386`'s dep half (R2 primary, HF fallback,
+      0.66 MB/s → 35.7-37.4 MB/s) so the sentence describes what ships. `release:deps`
+      is 260/260
 - [ ] Fabio's own H3 tests on the 5090, **app launched from the worktree**
 - [ ] Full smoke on 0.34 from the branch, Klein 9B included in the matrix
 - [ ] `npm run release:check` green

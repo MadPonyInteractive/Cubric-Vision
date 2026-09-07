@@ -9,9 +9,9 @@ the 1.5.0 stamp is deliberately the LAST step, after the smoke.
 **Read `## The five facts` below before doing anything.** Four of them were rediscovered
 the hard way in the 2026-09-07 session because an earlier handoff had lost them.
 
-Next action: **the four gates in `## Phase 3`**, in this order — release notes, then
-Fabio's own 5090 H3 runs (app launched FROM THE WORKTREE), then the full 0.34 smoke with
-Klein 9B in the matrix, then stamp and release. Nothing in Phase 2 remains.
+Gate 1 (release notes) is also done — `f9566b6f`. Next action: **Fabio's own 5090 H3 runs,
+with the app launched FROM THE WORKTREE**, then the full 0.34 smoke with Klein 9B in the
+matrix, then stamp and release. Nothing in Phase 2 remains.
 
 ## The five facts
 
@@ -86,13 +86,19 @@ points rather than shipped with master's claims.
 ## Remaining Work
 
 ### Phase 3 — the four gates
-1. **Release notes.** Drafted in `docs/releases/UNRELEASED.md` on the branch, still marked
-   *"agent draft, NOT approved copy — Fabio rewrites this before it ships."*
-   Corrections owed: drop **"downloads about 10 GB less"** (that was the NVFP4 saving,
-   now moot — but KEEP the "from our own servers rather than HuggingFace" half, which is
-   still true and verified); change **"at least 62 GB"** to **64**; ADD the quality-tier
-   re-tier, the windowed sampler, the gallery video thumbnails, the uninstall fix, the
-   remote-download trio, and everything Phase 2 brings.
+1. ~~**Release notes.**~~ DONE, `f9566b6f`. Still marked *agent draft, NOT approved copy*
+   — Fabio's rewrite is the gate, not the writing.
+   **One correction the handoff got wrong, and it would have shipped:** it said to KEEP
+   the "from our own servers rather than HuggingFace" half as "still true and verified".
+   It was false on this branch. MPI-653 moved the encoder to R2 on MASTER only; Phase 1's
+   revert restored the Heretic build with its ethanfel HF url and no mirror, byte-identical
+   to v1.4.4. Fixed by porting `9d724386`'s dep half rather than by deleting the sentence —
+   the R2 object already existed (Phase 0 verified 200), master had already taken the
+   decision, and the measured gain is 0.66 MB/s → 35.7-37.4 MB/s on a 24.55GB file. The
+   licence walk that permits the upload is unchanged and does NOT generalise to the
+   transformers. `release:deps` 260/260.
+   Also written: the quality-tier RENAME as an *Important change* — a saved project reopens
+   at a different canvas, which no earlier draft said out loud.
 2. **Full smoke on 0.34, run FROM THE BRANCH.** See `## Decisions` for why master's
    smoke does not substitute.
 3. **Stamp 1.4.4 → 1.5.0** (`/mpi-version-bump`).
