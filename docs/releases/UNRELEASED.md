@@ -88,7 +88,7 @@ Gate 0 re-run per bullet against v1.4.4 on 2026-09-07:
 - Rented GPUs are now chosen with enough memory to actually run H3. Renting a remote GPU
   used to place you on whatever machine was free, including ones with too little system
   memory for a video model, where a generation could be killed partway through with no
-  explanation. New Pods now ask for at least 64 GB. You can change that figure in
+  explanation. New Pods now ask for at least 56 GB. You can change that figure in
   settings, and should raise it for anything heavier than H3.
 
 ## What's new
@@ -176,7 +176,10 @@ Gate 0 re-run per bullet against v1.4.4 on 2026-09-07:
 
 <!--
 Remote Pod RAM floor — WRITTEN. Fabio set 62 in a92a89a1; corrected to 64 in 365476d7
-after the encoder revert took the staging pair back to ~45GB. See the Gate 0 block above.
+after the encoder revert took the staging pair back to ~45GB; then to 56 on 2026-09-07
+against REAL STOCK — at 64 no 5090 was offered at all, and 20 consecutive H3 runs passed
+on a host advertising 60 that delivers 55.88 GiB. Full reasoning, including why an L4 OOM
+is not a release blocker, is in the js/core/storage.js comment. See Gate 0 below.
 
 Gate 0: this line really did ship `minRamGb: 0` (js/core/storage.js on v1.4.4), i.e. no
 floor at all, so "used to place you on whatever machine was free" is accurate rather than

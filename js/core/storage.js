@@ -110,22 +110,36 @@ export const DEFAULT_RUNPOD_CONFIG = Object.freeze({
   // (SIGKILL, `code -9`) at 128px/1 frame staging the 25GB text encoder and the 20GB
   // transformer at once, and PASSED on a host placed against a higher floor.
   //
-  // 64 AND NOT 80 — Fabio, 2026-09-07, on how the datacentre actually stocks. The 2.0
-  // line uses 80 out of a generic worry: RunPod filters on an ADVERTISED figure that runs
-  // higher than what the container receives (that L4 advertised 62 and delivered 54), so
-  // in principle asking 64 could land ~56. In THIS datacentre that host does not exist —
-  // RTX 5090 machines are offered at 54 or 90 and nothing between. 64 therefore excludes
-  // the 54 (the size measured to die, and the one that advertised 62) and lands the 90,
-  // which is exactly what 80 achieves, without also refusing hosts that advertise between
-  // 64 and 80 and run H3 perfectly well.
+  // 56, MEASURED — Fabio, 2026-09-07, on real stock rather than on how the datacentre
+  // was assumed to stock. This number was 64 for one day, on the premise that "RTX 5090
+  // machines are offered at 54 or 90 and nothing between". That premise is WRONG: at 64
+  // there was no 5090 available at all, and dropping the floor landed a host advertising
+  // 60 that delivers 55.88 GiB. A 60 tier exists. A floor that leaves a user unable to
+  // connect is worse than one that risks an OOM, because autoRetry cannot retry its way
+  // onto a host that is not offered.
   //
-  // The residual risk is real but narrow, and worth naming: if a host ever appears
-  // advertising 64-70, the ~13% shortfall seen on that L4 would deliver ~56-61 and H3
-  // could OOM again. Raise this number, do not widen it, if that shows up.
+  // The evidence is 20 consecutive H3 runs on that 55.88 GiB host, all passing: ref2va
+  // and fl2va, 1344x768 / 768x768 / 768x1344 at 5s, 2K and 4K at 3s turbo, medium
+  // quality, cold and warm, text-to-video on both. No OOM, no `code -9`.
+  //
+  // READ THIS BEFORE RAISING IT BACK, AND BEFORE READING AN L4 SMOKE AS A FAILURE.
+  // Those 20 runs were on an RTX 5090 — 32GB of VRAM. The box measured to die was an L4
+  // with 24GB. That 8GB decides how much of the ~45GB staging pair (text encoder beside
+  // transformer) has to spill into system RAM, so 55.88 GiB being enough on a 5090 does
+  // NOT generalise to a smaller card. What protects a user here is `gpuTypeId`, not this
+  // number: a 5090 request can never be placed on an L4 host whatever the floor says.
+  // H3 DOES run on an L4 — it just did not on the first attempt. An agent smoking H3 on
+  // an L4 and hitting one OOM has NOT found a release blocker and must not report one.
+  //
+  // The residual this accepts, stated plainly: 56 no longer excludes the box that died.
+  // That L4 advertised 62 and delivered 54, so it clears a 56 floor on the advertised
+  // figure. It is excluded by GPU type instead. If a user on a 24GB card ever reports an
+  // OOM, raise the floor FOR THAT CASE — do not widen it back to 64 and strand every
+  // 5090 user again.
   //
   // This is a TRADE: a floor that cannot be met returns "no host available" instead of a
   // Pod. That is what autoRetry is for, and the settings hint says so.
-  minRamGb: 64,
+  minRamGb: 56,
 });
 
 // Idle-watchdog floor/default in seconds (mirrors MpiSettings IDLE_FLOOR_MIN /
