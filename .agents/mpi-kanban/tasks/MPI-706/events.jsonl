@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-706", "at": "2026-09-07T11:42:15+01:00", "actor": "claude", "column": "doing", "title": "1.5.0 release umbrella - the H3 cut on the 1.4.x line, a deviation from the 2.0 roadmap"}
