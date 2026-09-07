@@ -42,6 +42,34 @@
       rebuild for `installRequirements:false` nodes — without it the Phase 3 smoke refuses
       over LanPaint)
 
+## Phase 2b — live findings + the master fix sweep (2026-09-07 PM)
+- [x] **`24d4905f` — DEV Pod image was still v0.21.0-dev = ComfyUI 0.31.0.** Caught live on
+      Fabio's 5090 run: `Node 'ModelAttentionBackend' not found`. It is a CORE node absent
+      from 0.31.0, so all four graphs carrying it ran locally and rejected on the Pod.
+      Ported `d3a10f15` + `ced5253f` → v0.23.0-dev. Confirmed in his Pod log. The network
+      volume is NOT the cause and reusing it is right — core ships in the IMAGE, only
+      weights and code-only nodes live on the volume.
+- [ ] **RELEASE BLOCKER — the STABLE image is still `v0.21.0` (ComfyUI 0.31.0).**
+      `_devMode` is false in every released portable, so a 1.5.0 user gets a 0.34.0 local
+      engine against a 0.31.0 Pod and hits the same rejection. Needs a clean
+      release-version rebuild at 0.34.0, BOTH legs (GPU + CPU in lockstep, or CPU download
+      Pods 404 at boot and the app blames a bad host). Master carries the same note; this
+      is the release that has to act on it. Do it BEFORE the smoke — the smoke should run
+      on the image users get.
+- [x] `f8a3096e` — twelve master fixes swept in, none touching `node_lock`, a graph or a
+      dep set, so smoke evidence stays valid: MPI-576 (the toast storm Fabio hit),
+      MPI-637 + MPI-651 (console windows), MPI-655, MPI-654, MPI-657, MPI-650,
+      MPI-670 ×2, MPI-660 ×2, MPI-523, MPI-570, MPI-597
+- [ ] **MPI-556 owed** — the sidecar recording the run's controls rather than the
+      project's. Fix is wanted; its test loads MpiButton, which imports
+      `/js/utils/icons.js` root-absolute and resolves to `C:\js\...` under this line's
+      harness. Port it WITH a working check, never with the check disabled.
+- [ ] **Decide the RAM floor on real stock (Fabio, 2026-09-07).** At 64 there was NO 5090
+      available at all; he dropped it to 50 and landed a host advertising 60 that delivers
+      55.88 GiB. The plan's premise — "5090s come at 54 or 90, nothing between" — is wrong:
+      a 60 tier exists. A floor that leaves a user unable to connect is worse than one that
+      risks an OOM. If his run survives on ~56 GiB, that is the argument for ~56.
+
 ## Phase 3 — the gates
 - [x] Release notes rewritten — `f9566b6f`. "10 GB less" deleted, 62 → 64, and the new
       bullets Gate 0'd against v1.4.4 one by one: Klein 9B, inpaint on SDXL/Krea 2, the

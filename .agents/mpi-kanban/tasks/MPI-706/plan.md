@@ -9,9 +9,16 @@ the 1.5.0 stamp is deliberately the LAST step, after the smoke.
 **Read `## The five facts` below before doing anything.** Four of them were rediscovered
 the hard way in the 2026-09-07 session because an earlier handoff had lost them.
 
-Gate 1 (release notes) is also done — `f9566b6f`. Next action: **Fabio's own 5090 H3 runs,
-with the app launched FROM THE WORKTREE**, then the full 0.34 smoke with Klein 9B in the
-matrix, then stamp and release. Nothing in Phase 2 remains.
+Gate 1 (release notes) is done — `f9566b6f`. Branch head is `f8a3096e`, all pushed.
+
+**NEXT ACTION IS THE RELEASE IMAGE REBUILD, and it is a blocker, not a chore.** The stable
+Pod image is `v0.21.0` = ComfyUI **0.31.0**, while this release's graphs need 0.34.0 core
+nodes. Fabio hit it live on 2026-09-07 — `Node 'ModelAttentionBackend' not found` — and
+`24d4905f` fixed only the DEV pins. A released 1.5.0 would ship the same failure to every
+remote user. Rebuild at 0.34.0, both legs, THEN smoke on that image, then stamp, then ship.
+
+Also open: the smoke is TWO runs (the dedupe hides Klein 9B behind the cheaper 4B), MPI-556
+is owed, and the RAM floor needs deciding against real stock. All four are on the checklist.
 
 ## The five facts
 
