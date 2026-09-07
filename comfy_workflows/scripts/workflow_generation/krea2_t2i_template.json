@@ -95,7 +95,7 @@
       "sampler_mode": "standard",
       "bongmath": true,
       "model": [
-        "440",
+        "683",
         0
       ],
       "positive": [
@@ -156,7 +156,7 @@
   },
   "112": {
     "inputs": {
-      "string": "a nude woman laying in bed with spread legs"
+      "string": "add a red bikini"
     },
     "class_type": "MpiText",
     "_meta": {
@@ -320,7 +320,7 @@
       "sampler_mode": "standard",
       "bongmath": true,
       "model": [
-        "440",
+        "683",
         0
       ],
       "positive": [
@@ -947,7 +947,7 @@
       "sampler_mode": "standard",
       "bongmath": true,
       "model": [
-        "440",
+        "683",
         0
       ],
       "positive": [
@@ -970,20 +970,6 @@
     "class_type": "ClownsharKSampler_Beta",
     "_meta": {
       "title": "ClownsharKSampler"
-    }
-  },
-  "440": {
-    "inputs": {
-      "lora_name": "krea-2\\extra\\krea2_turbo_distill_r128.safetensors",
-      "strength_model": 1,
-      "model": [
-        "77",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Accelerator Lora"
     }
   },
   "468": {
@@ -1111,7 +1097,7 @@
         0
       ],
       "any_5": [
-        "623",
+        "576",
         0
       ],
       "any_6": [
@@ -1134,7 +1120,7 @@
   },
   "496": {
     "inputs": {
-      "int": 1
+      "int": 5
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -1360,6 +1346,10 @@
         "572",
         0
       ],
+      "any_5": [
+        "572",
+        0
+      ],
       "select": [
         "496",
         0
@@ -1442,7 +1432,7 @@
         0
       ],
       "false": [
-        "619",
+        "677",
         0
       ],
       "boolean": [
@@ -1462,7 +1452,7 @@
         0
       ],
       "inpainted_image": [
-        "619",
+        "677",
         0
       ]
     },
@@ -1588,7 +1578,7 @@
   "602": {
     "inputs": {
       "model": [
-        "612",
+        "688",
         0
       ],
       "clip": [
@@ -1626,7 +1616,7 @@
     },
     "class_type": "CLIPTextEncode",
     "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
+      "title": "pos"
     }
   },
   "609": {
@@ -1642,7 +1632,7 @@
     },
     "class_type": "CLIPTextEncode",
     "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
+      "title": "neg"
     }
   },
   "610": {
@@ -1708,36 +1698,6 @@
     "class_type": "MpiMath",
     "_meta": {
       "title": "Mpi Math"
-    }
-  },
-  "612": {
-    "inputs": {
-      "lora_name": "krea-2\\extra\\krea2_turbo_distill_r128.safetensors",
-      "model": [
-        "303",
-        0
-      ],
-      "strength_model": [
-        "613",
-        0
-      ]
-    },
-    "class_type": "MpiLoraModel",
-    "_meta": {
-      "title": "Accelerator Lora"
-    }
-  },
-  "613": {
-    "inputs": {
-      "math_expression": "1.0 if a else 0.0",
-      "a": [
-        "617",
-        0
-      ]
-    },
-    "class_type": "MpiMath",
-    "_meta": {
-      "title": "ac lora"
     }
   },
   "617": {
@@ -1986,7 +1946,7 @@
       "sampler_mode": "standard",
       "bongmath": true,
       "model": [
-        "652",
+        "683",
         0
       ],
       "positive": [
@@ -2109,12 +2069,215 @@
       "title": "Input_Auto_Grid"
     }
   },
-  "652": {
+  "654": {
+    "inputs": {
+      "true": [
+        "683",
+        0
+      ],
+      "false": [
+        "303",
+        0
+      ],
+      "boolean": [
+        "617",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "664": {
+    "inputs": {
+      "image": [
+        "589",
+        1
+      ],
+      "vae": [
+        "668",
+        2
+      ],
+      "mask": [
+        "589",
+        2
+      ]
+    },
+    "class_type": "LanPaint_ImageEncode",
+    "_meta": {
+      "title": "LanPaint Image Encode"
+    }
+  },
+  "665": {
+    "inputs": {
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1,
+      "LanPaint_NumSteps": 5,
+      "LanPaint_PromptMode": "Image First",
+      "LanPaint_Info": "LanPaint KSampler.",
+      "Inpainting_mode": "🖼️ Image Inpainting",
+      "model": [
+        "680",
+        0
+      ],
+      "positive": [
+        "668",
+        3
+      ],
+      "negative": [
+        "668",
+        4
+      ],
+      "latent_image": [
+        "664",
+        0
+      ],
+      "seed": [
+        "503",
+        0
+      ],
+      "steps": [
+        "669",
+        0
+      ],
+      "cfg": [
+        "671",
+        0
+      ]
+    },
+    "class_type": "LanPaint_KSampler",
+    "_meta": {
+      "title": "LanPaint KSampler"
+    }
+  },
+  "666": {
+    "inputs": {
+      "blend_overlap": 9,
+      "samples": [
+        "665",
+        0
+      ],
+      "vae": [
+        "668",
+        2
+      ],
+      "image": [
+        "589",
+        1
+      ],
+      "mask": [
+        "589",
+        2
+      ]
+    },
+    "class_type": "LanPaint_ImageDecode",
+    "_meta": {
+      "title": "LanPaint Image Decode"
+    }
+  },
+  "668": {
+    "inputs": {
+      "basic_pipe": [
+        "621",
+        0
+      ]
+    },
+    "class_type": "FromBasicPipe",
+    "_meta": {
+      "title": "FromBasicPipe"
+    }
+  },
+  "669": {
+    "inputs": {
+      "math_expression": "8 if a else 15",
+      "a": [
+        "617",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "671": {
+    "inputs": {
+      "math_expression": "1.0 if a else 2.0",
+      "a": [
+        "617",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Mpi Math"
+    }
+  },
+  "674": {
+    "inputs": {
+      "operator": "==",
+      "b_value": 5,
+      "a": [
+        "496",
+        0
+      ]
+    },
+    "class_type": "MpiCompare",
+    "_meta": {
+      "title": "Mpi Compare"
+    }
+  },
+  "677": {
+    "inputs": {
+      "true": [
+        "666",
+        0
+      ],
+      "false": [
+        "619",
+        0
+      ],
+      "boolean": [
+        "674",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "680": {
+    "inputs": {
+      "true": [
+        "683",
+        0
+      ],
+      "false": [
+        "668",
+        0
+      ],
+      "boolean": [
+        "617",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "683": {
     "inputs": {
       "lora_name": "krea-2\\extra\\krea2_turbo_distill_r128.safetensors",
-      "strength_model": 1,
       "model": [
         "303",
+        0
+      ],
+      "strength_model": [
+        "686",
         0
       ]
     },
@@ -2123,10 +2286,23 @@
       "title": "Accelerator Lora"
     }
   },
-  "654": {
+  "686": {
+    "inputs": {
+      "math_expression": "0.7 if a else 1.0",
+      "a": [
+        "674",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "is inpaint"
+    }
+  },
+  "688": {
     "inputs": {
       "true": [
-        "652",
+        "683",
         0
       ],
       "false": [

@@ -167,7 +167,7 @@ REPLACES rather than merges when a model declares `opInject`:
 | 2 | `i2i` |
 | 3 | `control` |
 | 4 | `krea2Edit` |
-| 5 | *(unused — edit takes an optional mask, so there is no separate inpaint branch)* |
+| 5 | `inpaint` |
 | 6 | `detail` |
 | 7 | `upscale` |
 

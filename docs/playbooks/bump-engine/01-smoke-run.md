@@ -399,3 +399,84 @@ session proved `nvidia_pid` returns a *cropped* image (a second defect underneat
 validation fix), so a matrix run before that fix would spend a GPU re-recording a broken PiD as
 PASS — media count and wall-clock both look healthy. Fix the graph, re-export through
 `sync-raw-workflows.mjs`, let gate 9 re-verify for free on `--plan`, then rent.
+
+---
+
+## Seventh pass — 2026-08-22. A scoped run was the ONLY run that proved anything.
+
+Klein 9B (MPI-598), `--models klein-9b --volume 88oys2kpie --keep-volume`. **PASS 7 · SKIP 0 ·
+FAIL 0** on an L4, engine proven `0.31.0`. Nothing here was found by running — all of it came out
+of `--plan`, for free, and the first one would have wasted a whole matrix.
+
+### 1. A full matrix does not EXECUTE every model, and for a NEW model that matters
+
+**This is the dedupe working as designed, not a defect** — it is the same reduction that
+collapses five SDXL models to one, and for the job this gate exists to do (catch a core/node
+bump breaking a *node*) covering a sibling is exactly right. What follows is only about the
+second job the runner gets used for: **proving a model that has never executed anywhere.**
+
+The `--models` section above argues one direction: *a scoped run still covers its family.* The
+inverse is equally true and is the one that costs money. `resolveSmokeSet` fingerprints by
+class_type set and keeps the **lowest `sizeTier`** member. `klein_t2i.json` and
+`klein_9b_t2i.json` are byte-identical at 56 class_types (the 9B swap is loader VALUES, not node
+classes), and each model maps all seven ops to its one file — so a full matrix resolves
+
+```
+12.7 GB  klein-4b  tier=low  ops=7  covers klein-9b
+```
+
+and lists every 9B weight under *NOT loaded by this set* — which the runner already prints
+honestly, per "What the dedupe gives up" above. So a 288 GB matrix would have gone green having
+executed klein-9b zero times, and MPI-598's acceptance ("a real generation per supported op")
+would still have been unmet. The dedupe's own documented residual risk — "a break tied to the
+weight FORMAT under the same loader node" — IS this case: 9B is int8 **tensorwise**, 4B
+**rowwise**, same `UNETLoader`.
+
+**The rule:** before smoking a NEW model, run `--plan` and read whether it appears as a set MEMBER
+or only inside a `covers` list. In a `covers` list, only `--models <id>` executes it. The dedupe
+premise is about a broken NODE; it was never a claim about weights, and it does not need to
+become one — a new model is simply a different question, asked with `--models`.
+
+### 2. A covered model is invisible to the coverage warning too
+
+`scope.unproven` lists models "in no family this run touches". A covered model IS in a family the
+run touches, so it never appears there — while still never executing. Both reports are correct and
+together read as coverage. Only the `covers` line tells them apart.
+
+### 3. `checkPodLock()` demanded a rebuild for nodes that are never baked — FIXED
+
+It refused this run with `POD LOCK IS BEHIND — ComfyUI-MpiNodes, LanPaint` and printed the
+`/build-pod-image` recipe. **No rebuild was needed.** It compared the two lock files wholesale on
+`commit`, without the discriminator MPI-222 introduced: the Dockerfile bakes **only**
+`installRequirements: true` entries, and both drifted nodes are `false`. All seven baked packs were
+already byte-identical and `python_deps.txt` was in sync. Code-only nodes install to the
+/workspace volume at connect from the **app's** pin — `start.sh` says it directly: *"A MpiNodes
+commit bump in node_lock therefore triggers a normal volume reinstall … with NO image rebuild."*
+Confirmed at the source: **nothing reads `/opt/node_lock.json` at runtime**; the wrapper takes the
+commit from `body.get("commit")` per install, so the pod repo's copy is documentation for these.
+
+Syncing the lock into the pod repo was the whole fix (mpi-ci `72451ef`), and `inpaint` passing on
+the LanPaint path is the positive proof the volume install works.
+
+**The gate now makes the split** (`classifyLockDrift`): a baked pack or a core-tag move still
+hard-blocks, code-only drift prints a `⚠` that says *not a blocker and not a rebuild*, names the
+sync commands without `/build-pod-image`, and lets the run proceed. Reported rather than enforced
+— the two locks are still meant to converge, and a silent skip would be the "guard that reads as
+coverage" this file keeps relearning. Covered by four `--self-check` assertions built on this
+exact shape, mutation-verified (swap the two buckets → RED).
+
+### 4. `--plan` is NOT free when it is scoped and the evidence file is stale
+
+`main()` resolves the merge base at the `--models` branch **before** the `PLAN_ONLY` return, so
+`--plan --models <id>` dies on the same staleness guard as a real scoped run — the free dry run is
+unavailable exactly when you most want it. Move `dev_configs/smoke-evidence.json` aside first:
+`loadMergeBase()` returns null when the file is absent, and the old matrix is in git anyway.
+
+### 5. The gate-9 transcript dies if you restore the pin before the paid run
+
+Gate 9 refuses unless the local `ComfyUi-MpiNodes` checkout equals the `node_lock` pin, so it runs
+in its own `--plan` with that repo detached. Restore `main`, run the matrix, and `_transcribe`'s
+mode-`'w'` truncation replaces the green gate-9 transcript with one reading `NOT CHECKED` — which
+a later auditor correctly reports as a FALSE claim, because the surviving artifact contradicts the
+write-up. **Copy the gate-9 `--plan` transcript out before the paid run**, or record its stdout in
+the evidence and say plainly that the artifact is missing rather than the check.

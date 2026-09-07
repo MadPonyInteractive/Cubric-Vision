@@ -227,6 +227,37 @@ export const nodesDeps = {
         installRequirements: false,
         size: '200KB',
     },
+    // LanPaint (MPI-598) — `LanPaint_KSampler` + `SetLatentNoiseMask` give Klein REAL
+    // mask-conditioned sampling. It replaced the fake-inpaint workaround the Klein graph
+    // used to carry (regenerate the whole crop via InpaintCrop → sample → InpaintStitch),
+    // which is why the template lost ~78 nodes: duplicated per-branch sampler chains
+    // collapsed into one. Proven on Klein 4B DISTILLED — the checkpoint we actually ship —
+    // so the README's distillation caveat did not bite.
+    // Declared on Klein 4B AND 9B, and expected to spread: any model adopting mask-
+    // conditioned inpainting lists it. `comfyui-inpaint-cropandstitch` STAYS — the graph
+    // still uses one InpaintCropImproved/StitchImproved pair.
+    //
+    // GPL-3.0, pinned UPSTREAM at tag v2.1.0, deliberately NOT forked and NOT vendored.
+    // Vendoring would relicence a first-party repo permanently; a fork earns its keep only
+    // when we need to change the code. The bench copy was verified identical to this exact
+    // commit (git blob SHA-1 on pyproject.toml + __init__.py) before pinning, so the pin is
+    // the thing that was proven, not a near-neighbour.
+    //
+    // SIZE IS THE WHOLE REPO, and it is nearly all `examples/` (177MB of media against
+    // ~200KB of actual code). LanPaint IS on the Comfy registry as scraed/LanPaint 2.1.0,
+    // whose MANIFEST.in excludes `examples/` — but `source: 'registry'` is UNREACHABLE in
+    // this app today: _runCustomNodeInstall scans for a GitHub-shaped `<name>-<branch>/`
+    // folder and `continue`s on any directory with no dash, so a flat registry node.zip
+    // fails as "extracted folder not found". Fixing that is its own card, not this one.
+    'LanPaint': {
+        id: 'LanPaint',
+        name: 'LanPaint',
+        type: 'custom_nodes',
+        filename: 'LanPaint',
+        url: lockUrl('LanPaint'),
+        installRequirements: false,
+        size: '186MB',
+    },
     // Preprocessors (DepthAnythingV2Preprocessor via AIO_Preprocessor) for the Krea2
     // depth ControlNet (MPI-242). HAS a requirements.txt ⇒ installRequirements:true
     // ⇒ BAKED into the Pod image (needs POD_IMAGE_VERSION bump + rebuild).

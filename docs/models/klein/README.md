@@ -2,7 +2,12 @@
 
 Settled facts for the Klein wiring (MPI-354); raw eval history in MPI-353. The
 model-agnostic *how* lives in `docs/playbooks/add-model/`. Siblings:
-`removal.md`, `refcontrol.md`, `licences.md`.
+`9b.md`, `removal.md`, `refcontrol.md`, `licences.md`.
+
+> **Klein ships at TWO sizes; this is the 4B half.** 9B (MPI-598) is the SAME graph — one
+> template, `generate_klein.py` bakes both runtimes — so everything below applies to both.
+> **`9b.md` holds every difference, AND what is now 4B-history here** (inpaint is LanPaint;
+> the outpaint LoRA has left both graphs but its dep and R2 object stay — MPI-603).
 
 ## What it is
 
@@ -27,7 +32,7 @@ and the only proven path to **object removal**.
 | `flux2_klein_4b_refcontrol_depth.safetensors` | 0.092 GB | `loras/flux2-klein/` | `klein-lora-refcontrol-depth` |
 | `flux2-klein-4b-outpaint.safetensors` | 0.076 GB | `loras/flux2-klein/` | `klein-lora-outpaint` |
 | `NSFW_party_time_v2.0_klein4b.safetensors` | 0.18 GB | `loras/flux2-klein/` | `klein-lora-nsfw` |
-| 8 style LoRAs | 0.77 GB | `loras/flux2-klein/styles/` | `klein-style-*` |
+| 8 style LoRAs | 0.77 GB | `loras/flux2-klein/styles/4b/` | `klein-style-*` |
 
 Total **+13.6 GB** (14 deps). Two more weights the graph loads are NOT Klein deps:
 `4x_NMKD-Siax_200k.pth` is the shared `4x-NMKD-Siax` engineAsset (already hosted, also

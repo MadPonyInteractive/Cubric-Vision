@@ -125,7 +125,7 @@
   },
   "14": {
     "inputs": {
-      "clip_name": "qwen_3_4b.safetensors",
+      "clip_name": "qwen_3_8b_int8_convrot.safetensors",
       "type": "flux2",
       "device": "default"
     },
@@ -211,7 +211,7 @@
   },
   "27": {
     "inputs": {
-      "unet_name": "flux-2-klein-4b-int8-convrot.safetensors",
+      "unet_name": "flux-2-klein-9b-int8-convrot.safetensors",
       "weight_dtype": "default"
     },
     "class_type": "UNETLoader",
@@ -318,7 +318,7 @@
   },
   "38": {
     "inputs": {
-      "lora_name": "flux2-klein\\NSFW_party_time_v2.0_klein4b.safetensors",
+      "lora_name": "flux2-klein\\NSFW_party_time_v2.0_klein9b.safetensors",
       "model": [
         "27",
         0
@@ -471,9 +471,9 @@
   },
   "101": {
     "inputs": {
-      "lora_1": "flux2-klein\\styles\\4b\\Doodle.safetensors",
-      "lora_2": "flux2-klein\\styles\\4b\\Vintage.safetensors",
-      "lora_3": "flux2-klein\\styles\\4b\\Aesthetic.safetensors",
+      "lora_1": "flux2-klein\\styles\\9b\\Vintage.safetensors",
+      "lora_2": "flux2-klein\\styles\\9b\\Watercolour.safetensors",
+      "lora_3": "None",
       "lora_4": "None",
       "lora_5": "None",
       "style": [
@@ -488,11 +488,11 @@
   },
   "102": {
     "inputs": {
-      "lora_1": "flux2-klein\\styles\\4b\\Muppets.safetensors",
-      "lora_2": "flux2-klein\\styles\\4b\\Cartoon.safetensors",
-      "lora_3": "flux2-klein\\styles\\4b\\Jojo.safetensors",
-      "lora_4": "flux2-klein\\styles\\4b\\Anime.safetensors",
-      "lora_5": "flux2-klein\\styles\\4b\\Chibi.safetensors",
+      "lora_1": "flux2-klein\\styles\\9b\\Storybook.safetensors",
+      "lora_2": "flux2-klein\\styles\\9b\\Comic.safetensors",
+      "lora_3": "flux2-klein\\styles\\9b\\Anime.safetensors",
+      "lora_4": "flux2-klein\\styles\\9b\\Chibi.safetensors",
+      "lora_5": "flux2-klein\\styles\\9b\\Doodle.safetensors",
       "style": [
         "103",
         0
@@ -506,7 +506,7 @@
   "103": {
     "inputs": {
       "selector": 0,
-      "triggers": "display the characters as Muppets, muppetshow style\ncartoon illustration, Fluxtoon Style\nJojosoStyle\nAn anime-style digital illustration\nchibi style\nRedraw this image in the most clumsy, scribbly, and utterly pathetic way possible.\nvintage photo 1920's style\nArtistic and aesthetic composition",
+      "triggers": "Disney Mid-Century Animation\nvintage comic illustration, PULPKHOR style, distressed paper textures, scratches, and faint halftone printing dots\nAn anime-style digital illustration\nchibi style\nRedraw this image in the most clumsy, scribbly, and utterly pathetic way possible.\nvintage photo, 1960's style\namano watercolor and ink sketch with loose, gestural brushwork",
       "strength_model": 1,
       "strength_clip": 0,
       "model": [
@@ -841,7 +841,7 @@
   },
   "143": {
     "inputs": {
-      "lora_name": "flux2-klein\\flux2_klein_4b_refcontrol_depth.safetensors",
+      "lora_name": "flux2-klein\\flux2_klein_9b_refcontrol_depth.safetensors",
       "model": [
         "100",
         0

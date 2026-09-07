@@ -60,10 +60,14 @@ because past ~0.5 this ControlNet artefacts. The app's slider is the plain 0-1.
 ## The branch selector, and what MPI-365 changed underneath it
 
 The old three-file era (`sdxl_t2i_template` + `sdxl_upscaler_template` +
-`sdxl_detailer_template`, 15 runtime files) is gone. One master template now serves all five
+`sdxl_detailer_template`, 15 runtime files) is gone. One master template now serves all six
 ops through `Input_wf_type`:
 
-    1 = t2i   2 = i2i   3 = control   4 = ---   5 = ---   6 = detail   7 = upscale
+    1 = t2i   2 = i2i   3 = control   4 = ---   5 = inpaint   6 = detail   7 = upscale
+
+Slot 5 filled in MPI-615 (the LanPaint branch, shared with Klein and Krea 2 —
+[../lanpaint-inpaint.md](../lanpaint-inpaint.md)). 4 is still unused on SDXL, kept numbered
+so every master template reads the same way.
 
 `Input_depth_reference` and `Input_Is_i2i` went with it — both were `MpiIfElse` booleans the
 shared ops injected, and SDXL was the last model holding either. **Two behaviours inverted

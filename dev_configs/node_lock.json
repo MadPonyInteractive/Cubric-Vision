@@ -117,6 +117,13 @@
       "commit": "d7c01b9011f2e8439493f6c02c29995a27df276f",
       "filename": "Comfyui_Minimax_h3_latent_Upscaler",
       "installRequirements": false
+    },
+    "LanPaint": {
+      "source": "git-commit",
+      "repo": "scraed/LanPaint",
+      "commit": "9fe919558f3ff085daca921ee8401dc1832a1258",
+      "filename": "LanPaint",
+      "installRequirements": false
     }
   }
 }

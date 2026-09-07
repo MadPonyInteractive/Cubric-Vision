@@ -563,6 +563,47 @@ export const loraDeps = {
         bytes: 188756968,
         sha256: '0c4aea1ba041985d2d7e6ce655b865e0fe22ea37575b3310c4619ad57dc80a00',
     },
+    // ── Klein 9B baked LoRAs (MPI-598) ─────────────────────────────────────────
+    // The 9B twins of the two entries above. 4B and 9B LoRAs are NOT interchangeable —
+    // the rank dims differ (lora_A [.,4096] on 9B vs [.,3072] on 4B), which is also the
+    // proof each file really is 9B. Both keep the SAME key prefix as their 4B twin
+    // (`diffusion_model.*` for depth, `transformer.*` for NSFW), so neither needs the
+    // comfy-conversion step the outpaint LoRA did.
+    // Hashes verified three ways 2026-08-22: local sha256, the HF `lfs.oid` from
+    // `POST /api/models/{repo}/paths-info/main`, and MPI-598's research file. Read the
+    // oid, never a `resolve/` ETag — that is a CDN etag and makes a good download look
+    // corrupt.
+    // NOTE there is NO 9B outpaint LoRA. The 4B one is deprecated under MPI-603 and must
+    // not be deleted or stripped here — it has a shipped second consumer in the Character
+    // Sheet flow (flow_character_sheet.json #708).
+    'klein-9b-lora-refcontrol-depth': {
+        id: 'klein-9b-lora-refcontrol-depth',
+        name: 'FLUX.2 Klein 9B Depth RefControl LoRA (baked)',
+        origin: 'thedeoxen/refcontrol-FLUX.2-klein-9B-reference-depth-lora (Apache-2.0)',
+        filename: 'loras/flux2-klein/flux2_klein_9b_refcontrol_depth.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/flux2_klein_9b_refcontrol_depth.safetensors',
+        mirrorUrl: 'https://huggingface.co/thedeoxen/refcontrol-FLUX.2-klein-9B-reference-depth-lora/resolve/main/flux2_klein_9b_refcontrol_depth.safetensors',
+        size: '158.03MB',
+        bytes: 165704480,
+        sha256: 'd627631d39a6a7c7b2951b029a1a0c72b40809b27d4049b708129e1832c9bb8d',
+    },
+    // Same creator as the 4B depth LoRA (CivitAI 2657241, already cleared in
+    // docs/models/klein/licences.md) but published to Hugging Face under Apache-2.0 —
+    // so this one needs no VPN and carries no credit obligation.
+    // The NSFW twin below is CivitAI-only (model 2458332, version 3028788, creator
+    // `whoforscuba`, licence badge NONE — cleared on creator flags alone, the identical
+    // posture to the 4B weight we already ship). CivitAI region-blocks the UK, so it has
+    // no mirrorUrl, exactly like its 4B twin; Fabio pulled it over the VPN 2026-08-22.
+    'klein-9b-lora-nsfw': {
+        id: 'klein-9b-lora-nsfw',
+        name: 'FLUX.2 Klein 9B NSFW LoRA (prompt-gated)',
+        origin: 'CivitAI 2458332 v3028788 (Party Time, v2.0_klein9b)',
+        filename: 'loras/flux2-klein/NSFW_party_time_v2.0_klein9b.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/NSFW_party_time_v2.0_klein9b.safetensors',
+        size: '304.02MB',
+        bytes: 318784864,
+        sha256: 'cc369cda4370cde8244e5934ac7323b9d39f0797d729c1931c8c0621692ce91c',
+    },
     // ── Klein style LoRAs (MPI-354) ────────────────────────────────────────────
     // 8 style LoRAs behind Input_Style_Selector 1..8 (index 0 = No Style, model passes through).
     // Same runtime shape as the Krea2 rack above: MUTUALLY EXCLUSIVE, an MpiMath
@@ -584,8 +625,8 @@ export const loraDeps = {
         id: 'klein-style-muppets',
         name: 'Klein Style — Muppets',
         origin: 'CivitAI (FLUX.2 Klein 4B Muppet Show style)',
-        filename: 'loras/flux2-klein/styles/flux2-klein-4b-lora-muppetshow-style.safetensors',
-        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/flux2-klein-4b-lora-muppetshow-style.safetensors',
+        filename: 'loras/flux2-klein/styles/4b/Muppets.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/4b/Muppets.safetensors',
         size: '88.15MB',
         bytes: 92426832,
         sha256: 'd75818b477b4e852eeb862d03e92bcf61ef72326f8e7f0de1bebda38596fab7a',
@@ -594,8 +635,8 @@ export const loraDeps = {
         id: 'klein-style-cartoon',
         name: 'Klein Style — Cartoon',
         origin: 'CivitAI (FLUX.2 Klein 4B Fluxtoon style)',
-        filename: 'loras/flux2-klein/styles/flux2-klein-4b-lora-Fluxtoon-Style.safetensors',
-        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/flux2-klein-4b-lora-Fluxtoon-Style.safetensors',
+        filename: 'loras/flux2-klein/styles/4b/Cartoon.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/4b/Cartoon.safetensors',
         size: '88.15MB',
         bytes: 92426824,
         sha256: 'fd308c80f8801626bc0eb53f778ded7f5ae162c7c6b334f82a263ac5033d1354',
@@ -604,8 +645,8 @@ export const loraDeps = {
         id: 'klein-style-jojo',
         name: 'Klein Style — Jojo',
         origin: 'CivitAI (FLUX.2 Klein 4B Jojoso style)',
-        filename: 'loras/flux2-klein/styles/flux2-klein-4b-lora-Jojoso-Style_000002000.safetensors',
-        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/flux2-klein-4b-lora-Jojoso-Style_000002000.safetensors',
+        filename: 'loras/flux2-klein/styles/4b/Jojo.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/4b/Jojo.safetensors',
         size: '88.15MB',
         bytes: 92426808,
         sha256: 'dd021028b403a3760776b04e2e9c3e23551cc9fdce939e2d49c6e31d5f3d860d',
@@ -619,8 +660,8 @@ export const loraDeps = {
         id: 'klein-style-anime',
         name: 'Klein Style — Anime',
         origin: 'CivitAI (Anime new mecha, klein4b)',
-        filename: 'loras/flux2-klein/styles/Anime_new_mecha_klein4b.safetensors',
-        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/Anime_new_mecha_klein4b.safetensors',
+        filename: 'loras/flux2-klein/styles/4b/Anime.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/4b/Anime.safetensors',
         size: '88.14MB',
         bytes: 92426264,
         sha256: '2ca647f74ca265fa3e1c22084b78006662bf0c38cf70418b1e798b25971147a0',
@@ -634,8 +675,8 @@ export const loraDeps = {
         id: 'klein-style-chibi',
         name: 'Klein Style — Chibi',
         origin: 'CivitAI (Roblox chibi doll, klein4b)',
-        filename: 'loras/flux2-klein/styles/robloxchibidoll_lora_klein4b_000002200.safetensors',
-        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/robloxchibidoll_lora_klein4b_000002200.safetensors',
+        filename: 'loras/flux2-klein/styles/4b/Chibi.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/4b/Chibi.safetensors',
         size: '88.14MB',
         bytes: 92426632,
         sha256: 'e809c8257a5f58eee14d3ab55a0f8f8b81a41f33eb1f5a3eb79f964cdcc6b7de',
@@ -644,8 +685,8 @@ export const loraDeps = {
         id: 'klein-style-doodle',
         name: 'Klein Style — Doodle',
         origin: 'CivitAI (klein4b doodle v1)',
-        filename: 'loras/flux2-klein/styles/klein4b-doodle_v1.safetensors',
-        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/klein4b-doodle_v1.safetensors',
+        filename: 'loras/flux2-klein/styles/4b/Doodle.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/4b/Doodle.safetensors',
         size: '22.05MB',
         bytes: 23122832,
         sha256: '5ad2d907fcaee23ae2f7b2a9bb125774cb3013d57b0a966fd050271825bdba67',
@@ -654,8 +695,8 @@ export const loraDeps = {
         id: 'klein-style-vintage',
         name: 'Klein Style — Vintage',
         origin: 'CivitAI (vintage photo, klein4b)',
-        filename: 'loras/flux2-klein/styles/vintage_photo.safetensors',
-        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/vintage_photo.safetensors',
+        filename: 'loras/flux2-klein/styles/4b/Vintage.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/4b/Vintage.safetensors',
         size: '88.15MB',
         bytes: 92427896,
         sha256: '727ade732ac509d6cd2de73b21458973878bd8057851c70bd3aec0b337934c1b',
@@ -664,11 +705,138 @@ export const loraDeps = {
         id: 'klein-style-aesthetic',
         name: 'Klein Style — Aesthetic',
         origin: 'CivitAI (Flux Klein 4B Art)',
-        filename: 'loras/flux2-klein/styles/Flux-Klein-4B-Art_10.safetensors',
-        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/Flux-Klein-4B-Art_10.safetensors',
+        filename: 'loras/flux2-klein/styles/4b/Aesthetic.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/4b/Aesthetic.safetensors',
         size: '183.78MB',
         bytes: 192702824,
         sha256: '7243d2664fa35beff2cc43e3e4073d98dfaef1ed16f8a462f3a7a6547c8cf98b',
+    },
+    // ── Klein 9B style LoRAs (MPI-598) ─────────────────────────────────────────
+    // SEVEN styles, not eight, and NOT a 9B rebuild of the 4B rack. Only three are the
+    // same creator's 9B build of the weight 4B ships — anime, chibi and doodle, each
+    // hash-verified by its 4B sibling in the same repo being byte-identical to ours.
+    // Muppets and JoJo have NO 9B weight in existence: searched CivArchive's full
+    // 1,179-record Klein-9B catalogue, Hugging Face, and CivitAI's own API. The other
+    // three are substitutes by DIFFERENT creators, so their label says what the weight
+    // actually does — 'Comic' is a pulp/vintage comic LoRA, not JoJo, and 'Cartoon' is
+    // Disney mid-century, not Fluxtoon. Naming them after the 4B slot they fill would be
+    // a lie the picker tells the user.
+    //
+    // Index alignment is the same contract as 4B: dep ↔ styleLoraLabels[i] ↔
+    // styleLoraImages[i] ↔ the trigger line ↔ the Nth lora slot walking the bank chain.
+    // Both halves are BAKED per size by generate_klein.py from the one template, so a
+    // slot and its trigger cannot drift apart without failing the build.
+    //
+    // LICENCES verified 2026-08-22 against the CivitAI API (flags) and the model page
+    // (badge), the method in docs/models/klein/licences.md. ALL SEVEN grant `Image` — the
+    // flag that decides it for us, since Vision is local and the user owns the output.
+    // That is a cleaner set than 4B's, where chibi and doodle withhold it and ship on a
+    // decision. Two require attribution and carry a `credit` block below; MpiAbout renders
+    // the Credits list from those, so the obligation is discharged in data.
+    // Research, hashes and download provenance:
+    // .agents/mpi-kanban/tasks/MPI-598/research/klein9b-style-loras.md
+    'klein-9b-style-storybook': {
+        id: 'klein-9b-style-storybook',
+        name: 'Klein 9B Style — Storybook',
+        origin: 'CivitAI 2001580 (Disney Mid-Century Animation, Klein9B)',
+        filename: 'loras/flux2-klein/styles/9b/Storybook.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/9b/Storybook.safetensors',
+        mirrorUrl: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/loras/flux2-klein/styles/9b/Storybook.safetensors',
+        size: '79.03MB',
+        bytes: 82866728,
+        sha256: '6a34fc3fc973a0cf052f3fd215cc916a804acf7c3456113429e10b636abd1a90',
+        // allowNoCredit: false — attribution is obligatory, same mechanism as the 4B
+        // anime LoRA. It also withholds allowDerivatives, which costs us nothing: we
+        // ship it as-is and never merge it.
+        credit: {
+            author: 'ArsMachina',
+            work: 'Disney Mid-Century Animation',
+            url: 'https://civitai.com/models/2001580',
+        },
+    },
+    'klein-9b-style-comic': {
+        id: 'klein-9b-style-comic',
+        name: 'Klein 9B Style — Comic',
+        origin: 'CivitAI 2413450 (Retro comic PULPKHOR, Klein9B)',
+        filename: 'loras/flux2-klein/styles/9b/Comic.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/9b/Comic.safetensors',
+        mirrorUrl: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/loras/flux2-klein/styles/9b/Comic.safetensors',
+        size: '79.03MB',
+        bytes: 82866728,
+        sha256: '52f4a77c051ad349a71bc6174983f0bdc25e10a19fecc82e6a874b578953705e',
+    },
+    // The 9B twin of `klein-style-anime` — same creator, same CivitAI model page (2227157),
+    // so the SAME licence and the SAME credit obligation apply. Model-level flags do not
+    // vary by version; the page carries an Apache-2.0 badge and allowNoCredit: false.
+    'klein-9b-style-anime': {
+        id: 'klein-9b-style-anime',
+        name: 'Klein 9B Style — Anime',
+        origin: 'CivitAI 2227157 (New Mecha style, Flux2_klein_9B_V0.1)',
+        filename: 'loras/flux2-klein/styles/9b/Anime.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/9b/Anime.safetensors',
+        mirrorUrl: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/loras/flux2-klein/styles/9b/Anime.safetensors',
+        size: '158.03MB',
+        bytes: 165703960,
+        sha256: 'da507ff8b28be59d74d65c5898b4d65d7fe3bb4a58ddf0ec847fa3a68f5375ba',
+        credit: {
+            author: 'n_Arno',
+            work: 'New Mecha style',
+            url: 'https://civitai.com/models/2227157',
+        },
+    },
+    // OVERFITTED by its creator's own warning: recommended 0.7-0.95, "body horror" above.
+    // The rack applies ONE global strength_model to whichever slot is selected, so this is
+    // the style most likely to want the Stylization slider pulled down.
+    'klein-9b-style-chibi': {
+        id: 'klein-9b-style-chibi',
+        name: 'Klein 9B Style — Chibi',
+        origin: 'CivitAI 400063 (Roblox Chibi Doll bundle, klein9b-v1.0)',
+        filename: 'loras/flux2-klein/styles/9b/Chibi.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/9b/Chibi.safetensors',
+        mirrorUrl: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/loras/flux2-klein/styles/9b/Chibi.safetensors',
+        size: '158.03MB',
+        bytes: 165704264,
+        sha256: '478a610ba6061da7b554f5df5c33b8750a9178dfe9825e14c68c2b97f82baaa2',
+    },
+    // The creator ships TWO 9B versions at identical size (v1 and v2). v1 is wired; v2 is
+    // on the authoring bench as the A/B alternate. Swapping means the dep filename, the
+    // sha256 and the baked graph string all move together.
+    'klein-9b-style-doodle': {
+        id: 'klein-9b-style-doodle',
+        name: 'Klein 9B Style — Doodle',
+        origin: 'CivitAI 2593550 (Elusarca\'s Scribbly Doodle, V1 - Klein 9B)',
+        filename: 'loras/flux2-klein/styles/9b/Doodle.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/9b/Doodle.safetensors',
+        mirrorUrl: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/loras/flux2-klein/styles/9b/Doodle.safetensors',
+        size: '39.53MB',
+        bytes: 41448432,
+        sha256: '45c82f5e593f77e1cb56a5de539834ab11ae46361ccc1be6869eaae940a9ee6f',
+    },
+    // RENAMED from the upstream `Vintage.safetensors` — a name that generic could not be
+    // baked into a graph string and a dep filename permanently. Same bytes. NOTE the era
+    // differs from 4B's vintage slot: this is 1960s-80s, 4B's is 1920s, which is why the
+    // trigger text differs rather than being copied across.
+    'klein-9b-style-vintage': {
+        id: 'klein-9b-style-vintage',
+        name: 'Klein 9B Style — Vintage',
+        origin: 'CivitAI 2608763 (Real Vintage Photo, Flux9B)',
+        filename: 'loras/flux2-klein/styles/9b/Vintage.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/9b/Vintage.safetensors',
+        mirrorUrl: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/loras/flux2-klein/styles/9b/Vintage.safetensors',
+        size: '667.95MB',
+        bytes: 700395928,
+        sha256: '7ec32ba728ee4b42fb68074e8da5f8d965813c2ff3f17186141257a265d32d92',
+    },
+    'klein-9b-style-watercolour': {
+        id: 'klein-9b-style-watercolour',
+        name: 'Klein 9B Style — Watercolour',
+        origin: 'CivitAI 2600302 (Amano Watercolor Sketch Style, Klein 9B)',
+        filename: 'loras/flux2-klein/styles/9b/Watercolour.safetensors',
+        url: 'https://models.cubric.studio/vision/models/loras/flux2-klein/styles/9b/Watercolour.safetensors',
+        mirrorUrl: 'https://huggingface.co/Mad-Pony-Interactive/cubric-studio/resolve/main/loras/flux2-klein/styles/9b/Watercolour.safetensors',
+        size: '260.05MB',
+        bytes: 272684752,
+        sha256: 'ea12b579b3c461438e644085d1c723c7ea9ce93e03eb4436c302ddc47b4ce875',
     },
     // ── Chroma style LoRAs (MPI-365) ───────────────────────────────────────────
     // Four styles on ONE MpiStyleLoras bank, index-aligned with the graph's trigger
