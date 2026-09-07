@@ -176,6 +176,12 @@ test('the shared licence module still performs the lookup and renders every way 
     assert.match(s, /licence\.report\.label/, 'the misuse-report channel is no longer rendered (H3 §V.5)');
     // Deduped by descriptor id, not by key: H3 ships as two ModelDefs under one agreement.
     assert.match(s, /seen\.has\(licence\.id\)/, 'licence dedupe is keyed on something other than the descriptor id');
+    // MPI-694 — a descriptor can carry a SECOND agreement when one install pulls weights
+    // from two licensors (Stable Audio: Stability's checkpoints, Google's encoder). Drop
+    // this loop and the drawer silently renders one licence of the two, which is the same
+    // failure as not rendering either: a copy that cannot be opened was never provided.
+    assert.match(s, /licence\.alsoLicensed \|\| \[\]/,
+        'the second agreement is no longer rendered — one licensor goes unlinked');
 });
 
 test('both Flow surfaces consume the shared module', () => {

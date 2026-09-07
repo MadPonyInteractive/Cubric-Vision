@@ -181,6 +181,19 @@ test('every descriptor carries what the gate renders', async () => {
     }
 });
 
+test('the dialog links every agreement the descriptor carries, not just the first', () => {
+    // MPI-694 — Stable Audio installs weights from two licensors under ONE key, so one
+    // descriptor holds both agreements and the dialog has to open both. Anchored on
+    // SOURCE because the component mounts a real modal; the data half above only proves
+    // the second copy EXISTS on disk, not that anything offers it. Losing this loop is
+    // silent and is a breach: a copy nobody can open was never provided.
+    const src = fs.readFileSync(
+        path.join(__dirname, '..', 'js/components/Compounds/MpiLicenceGate/MpiLicenceGate.js'), 'utf8');
+    assert.match(src, /licence\.licenceUrl/, 'the primary licence link is gone');
+    assert.match(src, /licence\.alsoLicensed \|\| \[\]/,
+        'the second agreement is no longer linked from the gate — one licensor goes unread');
+});
+
 // ── MPI-357 — the proof half ─────────────────────────────────────────────────
 //
 // A `verify` descriptor says the licensor grants access to a PERSON, on their own model
