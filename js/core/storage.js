@@ -95,17 +95,29 @@ export const DEFAULT_RUNPOD_CONFIG = Object.freeze({
   //
   // Why a floor exists at all (MPI-698): it used to be 0, i.e. none, so a Pod could land
   // on a 30-31GB 3090/4090 host. MiniMax H3 stages its text encoder BESIDE the
-  // transformer, and that pair is ~35GB even after the nvfp4 encoder cut it from ~45GB —
-  // at ANY resolution, because it is weight staging and not activations. On a host that
-  // small the Linux OOM killer takes ComfyUI (`code -9`) mid-generation. Windows never
-  // shows this: the pagefile absorbs the overshoot and a Pod has no swap.
+  // transformer, and that pair is ~45GB — at ANY resolution, because it is weight staging
+  // and not activations. On a host that small the Linux OOM killer takes ComfyUI
+  // (`code -9`) mid-generation. Windows never shows this: the pagefile absorbs the
+  // overshoot and a Pod has no swap.
   //
-  // Why 62 and not 80: 80 was set on the 2.0 line against the OLD ~45GB pair and would
-  // now refuse L4 hosts that run H3 perfectly well. And why not 35, the actual need —
-  // THE ASK IS NOT THE READ: RunPod filters on an advertised figure that runs higher than
-  // the container receives (an L4 advertises 62 and delivers 54), so the number here has
-  // to sit above the requirement, not on it.
-  minRamGb: 62,
+  // WAS 62 UNTIL 2026-09-07, AND THAT NUMBER IS NOW WRONG ON THIS LINE. 62 was chosen
+  // against the nvfp4 encoder, which cut the staging pair from ~45GB to ~35GB. That swap
+  // was REVERTED on output quality (MPI-698), so the pair is ~45GB again and the floor
+  // has to go back up with it. Leaving 62 would keep placing users on the size of box
+  // that is measured to die.
+  //
+  // 80 is the measured number, not a guess: on 2026-09-05 minimax-h3/t2v_ms OOM-KILLED a
+  // 54GB L4 (SIGKILL, `code -9`) at 128px/1 frame staging the 25GB text encoder and the
+  // 20GB transformer at once, and PASSED on a host placed against an 80GB floor.
+  //
+  // 80 and not 64 because THE ASK IS NOT THE READ: RunPod filters on an advertised figure
+  // that runs higher than what the container actually gets (that L4 advertised 62 and
+  // delivered 54). Asking 64 can therefore land ~56 — two GB above the box that died, on
+  // the SMALLEST job the runner can build. A real 768p generation has less room, not more.
+  //
+  // This is a TRADE: a floor that cannot be met returns "no host available" instead of a
+  // Pod. That is what autoRetry is for, and the settings hint says so.
+  minRamGb: 80,
 });
 
 // Idle-watchdog floor/default in seconds (mirrors MpiSettings IDLE_FLOOR_MIN /
