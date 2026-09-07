@@ -1583,16 +1583,35 @@ async function main() {
             + ` now PASS ${final.counts.pass} · SKIP ${final.counts.skip} · FAIL ${final.counts.fail} across ${final.results.length} ops.`);
     }
 
-    if (!flag('keep-volume')) {
-        log(`\nVolume ${volume.id} (${volume.size} GB): keep ≈ $20/month · delete = ~${set.totalGb.toFixed(0)} GB re-downloaded next run (hours, pennies).`);
-        const rl = createInterface({ input: process.stdin, output: process.stdout });
-        const ans = (await rl.question('Delete the volume? [y/N] ')).trim().toLowerCase();
-        rl.close();
-        if (ans === 'y') { await app(`/runpod/volumes/${volume.id}`, { method: 'DELETE' }); log('  deleted.'); }
-        else log('  kept.');
-    }
+    // THE POD DIES FIRST, BEFORE ANY PROMPT. It used to be the other way round, and that
+    // ordering leaked two GPU Pods on 2026-09-07: run the smoke as a background/headless
+    // job — which is the documented way to run it, because guard-gpu wants it wrapped in
+    // gpu_lease and waiting should cost no tokens — and `rl.question` below never returns,
+    // so execution simply stopped at the prompt and the delete never ran. The process
+    // still exited 0, so nothing anywhere said a rental had been left billing.
+    //
+    // The Pod is pure cost with no keep-case, so it needs no question and must not sit
+    // behind one. The volume is the only real decision here, and a decision is allowed to
+    // block; a rented GPU is not.
     await app('/remote/pod/delete-active', { method: 'POST' }).catch(() => log('  ⚠ could not delete the Pod — check RunPod.'));
     _podLive = false;
+
+    if (!flag('keep-volume')) {
+        // Non-interactive is the NORMAL case, not the exception. Without a TTY there is
+        // nobody to answer, so keep the volume and say so rather than hanging on a
+        // question no one will read.
+        if (!process.stdin.isTTY) {
+            log(`\nVolume ${volume.id} (${volume.size} GB) kept — no TTY to ask on.`);
+            log(`  Delete it yourself if you want it gone, or re-run with --keep-volume to silence this.`);
+        } else {
+            log(`\nVolume ${volume.id} (${volume.size} GB): keep ≈ $20/month · delete = ~${set.totalGb.toFixed(0)} GB re-downloaded next run.`);
+            const rl = createInterface({ input: process.stdin, output: process.stdout });
+            const ans = (await rl.question('Delete the volume? [y/N] ')).trim().toLowerCase();
+            rl.close();
+            if (ans === 'y') { await app(`/runpod/volumes/${volume.id}`, { method: 'DELETE' }); log('  deleted.'); }
+            else log('  kept.');
+        }
+    }
 
     // The MERGED counts, not this run's: the exit code answers "is the recorded matrix
     // green?", which is the same question release:check asks of the file just written.
