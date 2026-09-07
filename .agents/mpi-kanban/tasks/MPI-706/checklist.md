@@ -49,13 +49,21 @@
       Ported `d3a10f15` + `ced5253f` → v0.23.0-dev. Confirmed in his Pod log. The network
       volume is NOT the cause and reusing it is right — core ships in the IMAGE, only
       weights and code-only nodes live on the volume.
-- [ ] **RELEASE BLOCKER — the STABLE image is still `v0.21.0` (ComfyUI 0.31.0).**
-      `_devMode` is false in every released portable, so a 1.5.0 user gets a 0.34.0 local
-      engine against a 0.31.0 Pod and hits the same rejection. Needs a clean
-      release-version rebuild at 0.34.0, BOTH legs (GPU + CPU in lockstep, or CPU download
-      Pods 404 at boot and the app blames a bad host). Master carries the same note; this
-      is the release that has to act on it. Do it BEFORE the smoke — the smoke should run
-      on the image users get.
+- [x] **RELEASE BLOCKER CLEARED** - the stable Pod image was `v0.21.0` (ComfyUI 0.31.0)
+      while 1.5.0 ships graphs carrying `ModelAttentionBackend`, a CORE node absent from
+      0.31.0. `_devMode` is false in every released portable, so a 1.5.0 user would have
+      hit the exact rejection Fabio hit live. Rebuilt at 0.34.0, BOTH legs in one dispatch
+      (CI 34163882224); pins bumped v0.21.0 -> v0.23.0 in `18a9b921`.
+      **No prep was needed and that was measured, not assumed:** mpi-ci HEAD `b3d2434`
+      was already the right context - core `v0.34.0`/`12d52794`, python_deps 125/125
+      covered by the image 150, every baked pack commit-identical - and it is the exact
+      tree the proven `v0.23.0-dev` tag was built from.
+      **The plan's "rebuild BEFORE the smoke" reasoning was WRONG** and is corrected in
+      plan.md: the smoke runs the app from source, so `_devMode` is true and it resolves
+      `POD_IMAGE_VERSION_DEV` - it can never exercise the stable tag by ordering alone.
+      **Verifying a pushed tag: do NOT use an anonymous GHCR pull probe.** It 404s the
+      production `v0.21.0-cpu` too. Use `gh api user/packages/container/cubric-vision-pod`
+      (visibility) and `.../versions` (tag list).
 - [x] `f8a3096e` — twelve master fixes swept in, none touching `node_lock`, a graph or a
       dep set, so smoke evidence stays valid: MPI-576 (the toast storm Fabio hit),
       MPI-637 + MPI-651 (console windows), MPI-655, MPI-654, MPI-657, MPI-650,
@@ -99,6 +107,27 @@
       present in `.preview-assets`). Both toast paths would have fired, so it needs the
       live `includes` value. The playwright probe was blocked by the auto-mode classifier.
 
+- [x] **Two blockers found by accident, both would have shipped.**
+      (1) `getFilePrefix` was imported by `generationService.js` and never exported by
+      `commandRegistry.js` - broken since the `f8a3096e` sweep, which ported MPI-660's
+      consumer without its producer. **The app did not boot**: the renderer threw
+      SyntaxError and died, leaving a landing page whose spinner never resolved. It hid
+      for hours because a RUNNING renderer already holds its modules, so only the next
+      restart pays - and a shipped 1.5.0 would have failed on first launch for every
+      user. Neither `npm test` (never loads the renderer graph) nor eslint (does not
+      resolve cross-module exports) could see it. Fixed + gated in `5b607418` by
+      `tests/named-imports-resolve.test.cjs`: ~1300 named imports checked in ~290ms,
+      negative-controlled.
+      (2) The smoke runner died on the FIRST create refusal whenever the caller passed no
+      `nextGpu` - which the CPU download Pod always does - so a capacity blip aborted a
+      37-op run and the `attempt 1/3` banner was a lie on that path. Fixed `3d1126f9`.
+- [x] **Two GPU Pods were leaked, and the teardown ordering is fixed** (`4ba6241c`). The
+      runner asked "Delete the volume? [y/N]" and deleted the Pod on the NEXT line, so a
+      headless run - the documented way to run it - stopped at the prompt and never
+      deleted the Pod, while still exiting 0. Fabio found them on RunPod. The Pod now
+      dies FIRST, and a no-TTY run keeps the volume with a printed note.
+      **The 340GB `cubric-smoke` volume is now DISPOSABLE** (Fabio, 2026-09-08, reversing
+      the old never-delete rule): he rebuilds an 80GB one when filming.
 ## Phase 3 — the gates
 - [x] Release notes rewritten — `f9566b6f`. "10 GB less" deleted, 62 → 64, and the new
       bullets Gate 0'd against v1.4.4 one by one: Klein 9B, inpaint on SDXL/Krea 2, the
@@ -111,9 +140,17 @@
       byte-identical to v1.4.4. Ported `9d724386`'s dep half (R2 primary, HF fallback,
       0.66 MB/s → 35.7-37.4 MB/s) so the sentence describes what ships. `release:deps`
       is 260/260
-- [ ] Fabio's own H3 tests on the 5090, **app launched from the worktree**
-- [ ] Full smoke on 0.34 from the branch, Klein 9B included in the matrix
-- [ ] `npm run release:check` green
-- [ ] Stamp 1.4.4 → 1.5.0 (`/mpi-version-bump`)
-- [ ] Build + GitHub release (`/mpi-release`)
-- [ ] Push the branch (5 commits unpushed as of 2026-09-07)
+- [x] Fabio's own H3 tests on the 5090, **app launched from the worktree**
+- [x] Full smoke on 0.34 from the branch, Klein 9B included - 44 ops, 0 FAIL (9a978c56)
+- [x] `npm run release:check` green
+- [x] Stamp 1.4.4 → 1.5.0 - `aa57e379`. Notes APPROVED by Fabio, token `a8691834`.
+- [x] Tag `v1.5.0` -> `a8691834`, portable built (CI 34168398093 at ref=v1.5.0), all six
+      artifacts downloaded to `D:/CubricStudio/Vision/Builds/v1.5.0/`. A duplicate build
+      was cancelled: the tag push fires the Vision repo’s own dispatcher, so a manual
+      mpi-ci dispatch is redundant.
+- [ ] **DRAFT the GitHub release** - body ready at `release-body-1.5.0.md`. Gate 2 NOT
+      signed off; Fabio has not read it.
+- [ ] **Install the built Windows portable on Fabio’s box and test LOCALLY.** Everything
+      verified so far was REMOTE - Pod-green is not Windows-green (playbook gate 5).
+- [ ] Publish, then the reachability check (mpi-release step 7).
+- [x] Push the branch (5 commits unpushed as of 2026-09-07)

@@ -2,11 +2,42 @@
 
 ## Current State
 
-1.5.0 is **built and pushed through Phase 2**. It lives on branch `1.4.2`, worktree
-`C:/AI/Mpi/Cubric-Vision-1.4.x`, now at `2603f668`. Version is still stamped **1.4.4** —
-the 1.5.0 stamp is deliberately the LAST step, after the smoke.
+**1.5.0 IS BUILT, TAGGED AND STAGED. Two things are left: the public publish, and a
+LOCAL install test on Fabio's Windows box.** Branch `1.4.2`, worktree
+`C:/AI/Mpi/Cubric-Vision-1.4.x`, head `4ba6241c`, all pushed. Tag `v1.5.0` -> `a8691834`.
 
-**Read `## The five facts` below before doing anything.** Four of them were rediscovered
+**Read `## The five facts` below before doing anything.**
+
+Every gate is GREEN and every artifact exists:
+- Release notes written and APPROVED by Fabio - `docs/releases/.approved-1.5.0.json`
+  committed (`a8691834`), verified with the real build-time `assertApproved('1.5.0')`
+  rather than a lookalike. **Do NOT touch `releaseNotes.js` again** - any edit re-drifts
+  the hash and the build re-blocks until `release:approve` is re-run, and only Fabio can
+  run it (agents are classifier-blocked on that prompt).
+- Pod image rebuilt at ComfyUI 0.34.0, BOTH legs - CI 34163882224. Stable pins bumped
+  v0.21.0 -> v0.23.0 (`18a9b921`), tags verified present BEFORE the pins moved.
+- Smoke: **44 ops, 0 FAIL**, engine proven 0.34.0 (`9a978c56`), two merged runs.
+- `release:check` green - `npm test` 667/667 - `test:desktop` 20/20 - `release:deps` 260/260.
+- Version stamped 1.4.4 -> 1.5.0 (`aa57e379`); UNRELEASED.md folded AND cleared.
+
+**The six artifacts are already downloaded** to `D:/CubricStudio/Vision/Builds/v1.5.0/`,
+from CI run 34168398093 at `ref=v1.5.0` - provenance matches the tag exactly. Canonical
+names; win 523MB / linux 502MB / macos 472MB plus three ~2.6MB update bundles.
+
+**NEXT ACTION, in order (Fabio, 2026-09-08):**
+1. Draft the GitHub release. Body is already written at
+   `.agents/mpi-kanban/tasks/MPI-706/release-body-1.5.0.md`. Stage as a DRAFT with all
+   six assets. Do NOT publish yet.
+2. **Install the built Windows portable on this box and test it locally.** This is the
+   gap nobody has closed - everything verified so far was REMOTE. The smoke runner says
+   it itself: "Pod-green is NOT Windows-green". That is playbook gate 5.
+3. Only then publish, and run the reachability check in `mpi-release` step 7.
+
+Gate 2 (release body copy) is NOT signed off - Fabio has not read it. Two open questions
+for him: draft-then-publish vs straight to published, and the opening one-liner, which is
+agent-written and is the sentence most people will read.
+
+## The five facts` below before doing anything.** Four of them were rediscovered
 the hard way in the 2026-09-07 session because an earlier handoff had lost them.
 
 Gate 1 (release notes) is done — `f9566b6f`. Branch head is `4fb37af2`, all pushed.
