@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-705", "at": "2026-09-07T11:08:52+01:00", "actor": "claude", "column": "doing", "title": "Rehost the three Stable Audio 3 weights on R2"}

@@ -208,45 +208,10 @@
       "title": "VAE Decode Audio"
     }
   },
-  "17": {
-    "inputs": {
-      "tile_size": 1536,
-      "overlap": 64,
-      "samples": [
-        "15",
-        0
-      ],
-      "vae": [
-        "10",
-        0
-      ]
-    },
-    "class_type": "VAEDecodeAudioTiled",
-    "_meta": {
-      "title": "VAE Decode Audio (Tiled)"
-    }
-  },
-  "18": {
-    "inputs": {
-      "boolean": false,
-      "true": [
-        "17",
-        0
-      ],
-      "false": [
-        "16",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Input_Low_Vram"
-    }
-  },
   "19": {
     "inputs": {
       "passthrough": [
-        "18",
+        "16",
         0
       ]
     },

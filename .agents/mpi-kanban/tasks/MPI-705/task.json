@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-705",
+  "title": "Rehost the three Stable Audio 3 weights on R2",
+  "description": "Sound & Music is the only flow whose 11.81GB pulls entirely from huggingface.co, and it measured ~1%/min (about 2 MB/s) on Fabio's line during the first real install on 2026-09-07 - roughly 100 minutes for a flow whose whole appeal is being small. 122 deps already serve from models.cubric.studio and 52 still sit on HF; these three are simply un-uploaded. Both licences permit it outright: the Stability AI Community License grants distribution in SS II/III subject to SS IV(a), which MPI-694 already discharges (Agreement bundled, NOTICE.txt shipped, 'Powered by Stability AI' displayed), and the Gemma Terms grant it in SS 3.1 on four conditions, three of which are met (copy provided, nothing modified, Notice file) with the fourth - SS 3.2 as an enforceable provision in our own terms - already open as a release blocker on MPI-694. The upstream repo Comfy-Org/stable-audio-3 is ungated and carries license: other / stable-audio-community. Upload stable_audio_3_medium.safetensors, stable_audio_3_small_sfx.safetensors and t5gemma_b_b_ul2.safetensors from the bench store at C:/AI (all three byte-exact against assetDeps.js) to cubric-models under vision/models/<comfy-relative filename>, then swap each dep's url to models.cubric.studio and keep the HF url as mirrorUrl.",
+  "column": "doing",
+  "maturity": "in-progress",
+  "status": "active",
+  "created_at": "2026-09-07T11:08:52+01:00",
+  "updated_at": "2026-09-07T11:08:52+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/data/modelConstants/assetDeps.js"
+  ],
+  "note": "One file. The upload itself touches no repo file - it is an rclone copy from the bench store at C:/AI to cubric-models. assetDeps.js is shared with MPI-694 (same session, same agent, sequential edits) and the change here is three url/mirrorUrl swaps on entries MPI-694 created; no other card claims it."
+}

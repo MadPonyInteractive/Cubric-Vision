@@ -2194,7 +2194,11 @@ export const FLOWS = [
         // key `flowTextToMusic` and the `filePrefix` all STAY — a renamed op id is a
         // tombstone problem (MPI-533), not a rename.
         title: 'Song',
-        description: 'Describe a song and hear it sung. Say what it should feel like, pick a style, write your own lyrics and cast the voices that perform them — MiniMax Music 3 writes and sings the whole track. For instrumentals, backing tracks and sound effects, use Sound & Music.',
+        // NO "for instrumentals, use Sound & Music" TAIL, same reason as its twin
+        // (Fabio, 2026-09-07): naming the other flow from INSIDE this one reads as an
+        // option on this one. Each description says what its own flow makes; the Flow
+        // Library is where the choice between them is made.
+        description: 'Describe a song and hear it sung. Say what it should feel like, pick a style, write your own lyrics and cast the voices that perform them — MiniMax Music 3 writes and sings the whole track.',
         requiredModels: [],
         // FOUR weights, 18.22GB (the three MiniMax ones are 13.34GB measured — never
         // typed: `computeDepHashes.py --sizes`, because `size` is parsed 1024-based and
@@ -2367,7 +2371,14 @@ export const FLOWS = [
                 // for an image?"). The old line was a visual scene borrowed from the
                 // image flows' register, and it taught the wrong thing on the one
                 // control that sets the tone for the rest.
-                placeholder: 'Dark heavy soundtrack for a horror movie trailer.',
+                //
+                // AND IT MUST NAME A SUNG SONG (Fabio, 2026-09-07). Its replacement was
+                // "Dark heavy soundtrack for a horror movie trailer" — a fine brief while
+                // this flow still owned instrumentals, and wrong the moment MPI-694 split
+                // them out: a soundtrack has no singer, so the placeholder was teaching a
+                // brief this flow no longer serves and Sound & Music does. A voice, and
+                // words to sing, are what this flow is now the only route to.
+                placeholder: 'A soaring pop-rock anthem about leaving a small town behind, big chorus, female lead vocal.',
             },
             {
                 // 18 families, and the option's `v` IS THE GENRE PHRASE — the same
@@ -2561,7 +2572,12 @@ export const FLOWS = [
     {
         id: 'sound-and-music',
         title: 'Sound & Music',
-        description: 'Describe a sound and hear it. Backing tracks and instrumentals, a single instrument, sound effects, or a one-shot hit — Stable Audio 3 makes it, at exactly the length you ask for. For songs with words that are sung, use Song.',
+        // NO "for sung songs, use Song" TAIL (Fabio, 2026-09-07): naming the other flow
+        // on this screen reads as an option ON this one — the user is standing inside
+        // Sound & Music, and a sentence about songs there hints the flow might do them.
+        // The description says what this flow makes; the Flow Library is where a user
+        // chooses between the two.
+        description: 'Describe a sound and hear it. Backing tracks and instrumentals, a single instrument, sound effects, or a one-shot hit — Stable Audio 3 makes it, at exactly the length you ask for.',
         requiredModels: [],
         // THREE weights, 11.81GB, all sha256-verified against HuggingFace's own
         // `X-Linked-ETag` (see `assetDeps.js`). The enhancer is NOT here — this flow has
@@ -2629,20 +2645,18 @@ export const FLOWS = [
                 id: 'Input_Duration', type: 'slider', label: 'Length',
                 min: 1, max: 190, step: 1, default: 10, format: 'duration',
             },
-            {
-                // Same machine fact, same wording as Music Maker, same gate in the graph
-                // (`Input_Low_Vram` -> plain vs tiled decode).
-                //
-                // 🔴 TILED IS THE FALLBACK, NEVER THE DEFAULT, and that reverses what
-                // this card first predicted. Measured 2026-09-05 across four arms: with
-                // nothing else resident, chunking saves nothing on peak (6.35 vs
-                // 6.19-6.44GB, inside the noise) and costs +15s at 60s, reproduced three
-                // times. Chunking ALONE peaks at 12.16GB, which is the proof — the
-                // decode was never what pinned the card.
-                id: 'Input_Low_Vram', type: 'toggle', label: 'Low VRAM',
-                icon: 'gpu', default: false,
-                note: 'Turn this on if you run out of memory, or if your card has little VRAM.',
-            },
+            // 🔴 NO `Input_Low_Vram` HERE, and it is not an oversight — it was built,
+            // measured, and REMOVED (Fabio, 2026-09-07: *"I don't think sound and music
+            // need that"*). Music Maker keeps its copy; 13.3GB of MiniMax weights make
+            // the toggle real there. This flow's whole graph stages ~6.5GB (Medium 2771MB
+            // + VAE 3243MB + the 537MB encoder, read off the engine log on the first real
+            // run), and the four-arm bench on 2026-09-05 found chunked decode saves
+            // NOTHING on peak once nothing else is resident — 6.35 vs 6.19-6.44GB, inside
+            // the noise — while costing +15s at 60s, reproduced three times. A control
+            // that buys no memory and spends a whole generation's worth of time is worse
+            // than absent. `VAEDecodeAudioTiled` and its `MpiIfElse` gate came out of the
+            // graph with it, so the plain decode feeds `MpiClearVram` directly.
+            // ponytail: wire it back only if a real card is measured falling over.
         ],
     },
 ];

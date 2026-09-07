@@ -830,7 +830,7 @@
           "name": "AUDIO",
           "type": "AUDIO",
           "links": [
-            22
+            23
           ]
         }
       ],
@@ -838,127 +838,6 @@
         "cnr_id": "comfy-core",
         "Node name for S&R": "VAEDecodeAudio"
       }
-    },
-    {
-      "id": 17,
-      "type": "VAEDecodeAudioTiled",
-      "pos": [
-        1680,
-        520
-      ],
-      "size": [
-        300,
-        100
-      ],
-      "flags": {},
-      "order": 15,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "samples",
-          "name": "samples",
-          "type": "LATENT",
-          "link": 19
-        },
-        {
-          "localized_name": "vae",
-          "name": "vae",
-          "type": "VAE",
-          "link": 20
-        },
-        {
-          "localized_name": "tile_size",
-          "name": "tile_size",
-          "type": "INT",
-          "link": null,
-          "widget": {
-            "name": "tile_size"
-          }
-        },
-        {
-          "localized_name": "overlap",
-          "name": "overlap",
-          "type": "INT",
-          "link": null,
-          "widget": {
-            "name": "overlap"
-          }
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "AUDIO",
-          "name": "AUDIO",
-          "type": "AUDIO",
-          "links": [
-            21
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "comfy-core",
-        "Node name for S&R": "VAEDecodeAudioTiled"
-      },
-      "widgets_values": [
-        1536,
-        64
-      ]
-    },
-    {
-      "id": 18,
-      "type": "MpiIfElse",
-      "pos": [
-        2100,
-        520
-      ],
-      "size": [
-        300,
-        100
-      ],
-      "flags": {},
-      "order": 16,
-      "mode": 0,
-      "inputs": [
-        {
-          "localized_name": "boolean",
-          "name": "boolean",
-          "type": "BOOLEAN",
-          "link": null,
-          "widget": {
-            "name": "boolean"
-          }
-        },
-        {
-          "localized_name": "true",
-          "name": "true",
-          "type": "*",
-          "link": 21
-        },
-        {
-          "localized_name": "false",
-          "name": "false",
-          "type": "*",
-          "link": 22
-        }
-      ],
-      "outputs": [
-        {
-          "localized_name": "output",
-          "name": "output",
-          "type": "*",
-          "links": [
-            23
-          ]
-        }
-      ],
-      "properties": {
-        "cnr_id": "ComfyUi-MpiNodes",
-        "Node name for S&R": "MpiIfElse"
-      },
-      "title": "Input_Low_Vram",
-      "widgets_values": [
-        false
-      ]
     },
     {
       "id": 19,
@@ -1202,40 +1081,8 @@
       "VAE"
     ],
     [
-      19,
-      15,
-      0,
-      17,
-      0,
-      "LATENT"
-    ],
-    [
-      20,
-      10,
-      0,
-      17,
-      1,
-      "VAE"
-    ],
-    [
-      21,
-      17,
-      0,
-      18,
-      1,
-      "AUDIO"
-    ],
-    [
-      22,
-      16,
-      0,
-      18,
-      2,
-      "AUDIO"
-    ],
-    [
       23,
-      18,
+      16,
       0,
       19,
       0,
