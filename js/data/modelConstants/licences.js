@@ -442,6 +442,16 @@ const STABLE_AUDIO_3 = {
             items: [
                 'for the restricted uses set forth in the Gemma Prohibited Use Policy at ai.google.dev/gemma/prohibited_use_policy (“Prohibited Use Policy”), which is hereby incorporated by reference into this Agreement; or',
                 'in violation of applicable laws and regulations.',
+            ],
+        },
+        {
+            // ITS OWN SECTION, and that is a correction rather than a flourish: §3.2 ends
+            // with Google's reservation of rights, which is not a prohibited use. Left as
+            // a third bullet under "You must not use any of the Gemma Services:" it read
+            // as a rule the user could break, which is the one thing a consent pane must
+            // not get wrong. Same text, verbatim, under a heading that says what it is.
+            heading: 'Gemma Terms of Use — Section 3.2: Google’s right to restrict',
+            items: [
                 'To the maximum extent permitted by law, Google reserves the right to restrict (remotely or otherwise) usage of any of the Gemma Services that Google reasonably believes are in violation of this Agreement.',
             ],
         },
