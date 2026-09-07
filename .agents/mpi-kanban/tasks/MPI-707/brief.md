@@ -52,6 +52,37 @@ This is the same lever as the video-inpaint mask work.
 tokens 17 → 37, 22 of 56 frames held). 12 steps at 768×1344 took **16m23s** for the de-RoPE
 pass alone; 21m28s for the whole prompt. Not shippable at that price.
 
+## The third clip settled it: aim is everything
+
+Runner on a bridge, tracking camera, cityscape behind, 672×1216, economy oracle, turbo
+8-step distill at `total_steps 10 / inject 0.5` (5 steps). Compared frame-for-frame against
+stage 1:
+
+| what | result |
+|---|---|
+| Background buildings | **Much better.** Hazy mush → sharp windows, structure, elevated rail. |
+| Trailing foot | **Better.** A white blur in stage 1 resolves into a recognisable shoe. |
+| Jeans | **Torn.** Rips appear at knee and thigh that stage 1 does not have, from frame 8 on. |
+| Face | **Softer** than stage 1; the upscale re-sharpens it but drifts the identity. |
+| Stride | **Re-choreographed.** At frame 8 the two versions are at different points in the gait — the "speed-up" seen on playback. |
+
+One sentence covers it: **every improvement landed where the oracle aimed, and every
+regression landed where nothing protected the subject.** Buildings and feet got attention
+and improved. Jeans, face and stride were re-diffused for no reason and degraded.
+
+That makes the drift a *governed* cost rather than a mystery. It appears on every clip
+tested (two cups → one cup on the boat; torn jeans and a drifting face here), it is
+proportional to `inject` × step budget, and it applies to whatever the mask does not
+protect. An under-driven distill makes it worse: 5 steps against an 8-step distill lets the
+model snap to its own motion prior instead of tracking the init, which is precisely what
+re-choreography is. `total_steps 16 @ inject 0.5` = 8 steps is the matched setting and
+should be the baseline for any future run.
+
+Correction to an earlier assumption on this card: a running gait is **not** uniformly the
+"drifter" class. Foot strike is a sharp deceleration and therefore a real jerk event, which
+is why the feet genuinely improved. Steady periodic motion is the drifter case; impacts
+inside it are not.
+
 ## Targeting is the real constraint — and it decides the product shape
 
 Two clips, two backgrounds, the same failure: **the oracle aimed at the background both
