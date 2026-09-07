@@ -1090,9 +1090,22 @@ export const assetDeps = {
     // difference between running and not running on a small box. Wiring that tier is not
     // done — until it is, this entry earns its place by keeping the file sweepable.
     //
-    // THE R2 OBJECT IS NOT TO BE DELETED (Fabio, 2026-09-05, reversing the earlier
-    // authorisation). `release:deps` HEADs every URL in DEPS and both of this entry's
-    // URLs must stay live.
+    // ── DEPRECATED (MPI-698). THE R2 OBJECT IS GONE — deleted 2026-09-07 on Fabio's
+    // authorisation, superseding his 2026-09-05 "not to be deleted" call: the low tier
+    // was dropped from 1.5.0, so nothing is waiting on this build, and it never appeared
+    // in a released version (it landed 2026-09-05; v1.4.4 shipped 09-03), so no install
+    // can 404 on it. Verified: HEAD 404 on the R2 URL, the int8_convrot encoder beside
+    // it still 200.
+    //
+    // THE ENTRY STAYS, BUT WITHOUT `url`/`mirrorUrl`, AND THAT PAIR IS THE POINT.
+    // `_orphanedDepIds` (downloadManager.js:307) keys off `filename` and never reads a
+    // URL, so the entry still lets an uninstall reclaim the 14.61GB from a dev box that
+    // already pulled it — the usual keep-the-entry reason. `check-dep-urls.mjs:52`
+    // (`release:deps`) skips any dep with no `url`, so the deleted object cannot fail
+    // the release gate. Dropping the URLs is what satisfies both at once; deleting the
+    // entry would blind the sweep, and keeping the URLs would redden `release:deps`.
+    // Re-adding it means re-uploading from Comfy-Org/MiniMax-H3 (upstream still has it —
+    // there is NO local copy in G:\CubricModels) and restoring both URL lines.
     'h3-qwen3vl-32b-clip-nvfp4': {
         id: 'h3-qwen3vl-32b-clip-nvfp4',
         name: 'Qwen3-VL 32B text encoder for MiniMax H3 (nvfp4_awq, not currently referenced)',
@@ -1135,14 +1148,15 @@ export const assetDeps = {
         // repo-label caveat there before citing this as precedent for anything else in
         // that repo.
         //
-        // The explicit `mirrorUrl` is LOAD-BEARING, not decoration: `_mirrorUrlsFor`
-        // short-circuits on it (downloadManager.js:1156) and returns it as the ONLY
-        // alternate, which suppresses the generic /vision/models/ -> our-HF rewrite. So
-        // this dep implies NO second re-host into Mad-Pony-Interactive/cubric-studio;
-        // failover goes straight back to Comfy-Org. Byte-identical upstream, verified
-        // 2026-09-05: HF's `lfs.oid` for that path IS the sha256 below.
-        url: 'https://models.cubric.studio/vision/models/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors',
-        mirrorUrl: 'https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors',
+        // NO `url`/`mirrorUrl` — see the DEPRECATED note above. They were:
+        //   url:       https://models.cubric.studio/vision/models/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors  (deleted 2026-09-07)
+        //   mirrorUrl: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors
+        // Kept as text so a re-upload does not have to reconstruct them. The mirror was
+        // LOAD-BEARING while it existed: `_mirrorUrlsFor` short-circuits on an explicit
+        // `mirrorUrl` (downloadManager.js:1156) and returns it as the ONLY alternate,
+        // suppressing the generic /vision/models/ -> our-HF rewrite, so this dep implied
+        // NO second re-host into Mad-Pony-Interactive/cubric-studio. Byte-identical
+        // upstream, verified 2026-09-05: HF's `lfs.oid` for that path IS the sha256 below.
         // Apache-2.0 attribution (§4). No repo in the chain ships a LICENSE or NOTICE
         // file, so §4(c) does not bite — what remains is naming the authors, which
         // MpiAbout renders from this block. Not a gated model: no `licences/` folder and
