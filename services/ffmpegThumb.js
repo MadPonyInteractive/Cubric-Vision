@@ -4,10 +4,11 @@
  * ffmpegThumb.js — Extract a single JPG thumbnail from a video, or downscale
  * an image to a gallery-sized JPG thumbnail.
  *
- * Uses bundled ffmpeg (see ffmpegBinary.js). Video thumbs are 256-wide JPGs
- * (height auto, preserves aspect) at the given timestamp (default 0s). Image
- * thumbs are 512-wide (sharp enough at the biggest gallery card, ~50x cheaper
- * to decode than a raw 4K PNG — the whole point of MPI-319).
+ * Uses bundled ffmpeg (see ffmpegBinary.js). Video posters and image thumbs are
+ * both 512-wide JPGs (height auto, preserves aspect); a video's frame is taken at
+ * the given timestamp (default 0s). 512 is sharp enough at the biggest gallery card
+ * and ~50x cheaper to decode than a raw 4K PNG — the whole point of MPI-319. Video
+ * posters were 256 until MPI-689, which is why they read soft beside images.
  *
  * Returns outPath on success, null on failure (logs warning).
  */
@@ -19,14 +20,28 @@ const logger = require('../routes/logger');
 
 const execFileP = promisify(execFile);
 
-async function extractVideoThumb(inputPath, outPath, { atSeconds = 0 } = {}) {
+/**
+ * A video's poster frame, at the SAME width as an image thumb (MPI-689).
+ *
+ * It was 256 until 2026-09-07, sized for a gallery card that no longer exists, so
+ * every video read as soft next to an image on the same row — and the poster is not
+ * a brief flash, it is what a video card shows for the whole of a generation.
+ *
+ * This is the CHEAP half of MPI-689. The full fix puts video posters on the image
+ * rendition ladder (small + a 1280 proxy) and needs MPI-633's ladder, which is not on
+ * this branch — that pair lands in 2.0. Matching the image width is the part that can
+ * ship here, and it is a strict improvement: same encoder, same quality setting, one
+ * number.
+ */
+async function extractVideoThumb(inputPath, outPath, { atSeconds = 0, width = 512 } = {}) {
     try {
         const args = [
             '-y',
             '-ss', String(atSeconds),
             '-i', inputPath,
             '-frames:v', '1',
-            '-vf', 'scale=256:-2',
+            // Downscale only — never upscale a small source; -2 keeps height even.
+            '-vf', `scale='min(${width},iw)':-2`,
             '-q:v', '4',
             outPath,
         ];
