@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-707",
+  "title": "De-RoPE temporal super-resolution as an optional final pass (H3, later LTX 2.5 / WAN 2.2)",
+  "description": "Fix fast-motion smearing by dilating time and re-diffusing, not by adding pixels. Bench-proven on H3; parked behind the 1.5 release and video inpaint.",
+  "column": "todo",
+  "maturity": "deferred",
+  "status": "active",
+  "created_at": "2026-09-07T22:16:59+01:00",
+  "updated_at": "2026-09-07T22:16:59+01:00",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  }
+}
