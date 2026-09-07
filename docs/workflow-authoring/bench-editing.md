@@ -78,3 +78,26 @@ Getting this wrong turns a six-node change into a 2400-line diff that no one can
 - **Node ids in a ported graph are meaningless to the app.** Injection matches on
   `_meta.title` ([injection.md](injection.md)); apply the `Input_*` / `Output_*` law as part
   of the same pass, because a title that matches no node is skipped in silence.
+
+### 🔴 A TERMINAL sink node never reaches the runtime — the prune keeps only what is UPSTREAM
+
+Found 2026-09-06 (MPI-704). Every `generate_*.py` handler runs `_prune_to_captures`, which
+walks the input links backwards from the capture titles (`Output_Video`, `Output_Preview`,
+`Input_Video_Latent` on H3) and deletes everything it did not reach. A node hung off the
+END of a branch is downstream by construction, so it is deleted from every baked runtime —
+however correct it is on the bench, and whatever its `OUTPUT_NODE` flag says. The prune
+reads API JSON, which carries no such flag.
+
+Measured: `MpiClearVramEnd` exists precisely to be a terminal sink — the node's own
+docstring calls for "one per terminal branch". Both H3 graphs carried two. **Neither has
+ever appeared in a shipped runtime**, on any model. The two `MpiClearVram` pass-throughs
+spliced between the final decodes and `Output_Video` were the only VRAM clear on the
+output branch that survived the build, so removing them as "redundant with the terminal
+node" — true on the bench — silently dropped the app's post-decode clear.
+
+- **A behaviour you want in the app must sit UPSTREAM of a capture title.** For a clear,
+  that means the pass-through `MpiClearVram` spliced into a link, not `MpiClearVramEnd`.
+- `MpiClearVramEnd` is a bench convenience. It is not wrong, it is just invisible past
+  `orchestrate.py`, and the `[PRUNE] dropped N bench node(s)` line is the only trace.
+- **Count the node types in the BAKED file, not the raw one**, after any change to a
+  terminal branch. The raw graph and the runtime disagree here by design.

@@ -1,7 +1,7 @@
 {
   "195": {
     "inputs": {
-      "int": 684846897
+      "int": 684848341
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -10,7 +10,7 @@
   },
   "212": {
     "inputs": {
-      "int": 4
+      "int": 2
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -44,7 +44,7 @@
   },
   "232": {
     "inputs": {
-      "string": "The woman from <Picture 1> is sitting in a yacht, outside while the yacht is moving at high speed, she is wearing a bikini and drinking a tequila. The camera approaches from the side she looks at the camera and winks, She then stands up and starts walking inside the yacht. The camera follows her from behind.  "
+      "string": "The woman from <Picture 1> is sitting in a yacht, outside while the yacht is moving at high speed, she is wearing a bikini and drinking a tequila. The camera approaches from the side and she looks at the camera and says \"Follow me\", she then gets up and starts walking inside the boat and the camera follows"
     },
     "class_type": "MpiText",
     "_meta": {
@@ -343,7 +343,7 @@
   },
   "518": {
     "inputs": {
-      "clip_name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+      "clip_name": "qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors",
       "type": "minimax",
       "device": "default"
     },
@@ -356,7 +356,7 @@
     "inputs": {
       "attention": "comfy kitchen attention",
       "model": [
-        "517",
+        "538",
         0
       ]
     },
@@ -418,26 +418,6 @@
       "title": "Load VAE"
     }
   },
-  "525": {
-    "inputs": {
-      "true": [
-        "521",
-        0
-      ],
-      "false": [
-        "523",
-        0
-      ],
-      "boolean": [
-        "444",
-        0
-      ]
-    },
-    "class_type": "MpiIfElse",
-    "_meta": {
-      "title": "Mpi If Else"
-    }
-  },
   "527": {
     "inputs": {
       "vae_name": "minimax_h3_audio_vae_fp32.safetensors"
@@ -453,7 +433,7 @@
       "strength_model": 1,
       "strength_clip": 1,
       "model": [
-        "525",
+        "517",
         0
       ],
       "clip": [
@@ -575,7 +555,7 @@
       "lora_name": "minimax-h3\\minimax_h3_ref2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors",
       "strength_model": 1,
       "model": [
-        "538",
+        "521",
         0
       ]
     },
@@ -654,7 +634,7 @@
   "560": {
     "inputs": {
       "scheduler": "beta",
-      "steps": 8,
+      "steps": 10,
       "denoise": 1,
       "model": [
         "561",
@@ -673,7 +653,7 @@
         0
       ],
       "false": [
-        "538",
+        "523",
         0
       ],
       "boolean": [
@@ -693,7 +673,7 @@
         0
       ],
       "conditioning": [
-        "330",
+        "765",
         0
       ]
     },
@@ -817,18 +797,6 @@
       "title": "VAE Decode Audio"
     }
   },
-  "572": {
-    "inputs": {
-      "passthrough": [
-        "570",
-        0
-      ]
-    },
-    "class_type": "MpiClearVram",
-    "_meta": {
-      "title": "Mpi Clear Vram"
-    }
-  },
   "574": {
     "inputs": {
       "fps": 24,
@@ -836,7 +804,7 @@
       "use_audio": true,
       "truncate_to_audio": false,
       "images": [
-        "572",
+        "570",
         0
       ],
       "audio": [
@@ -852,7 +820,7 @@
   "575": {
     "inputs": {
       "av_latent": [
-        "567",
+        "711",
         0
       ]
     },
@@ -934,7 +902,7 @@
   "586": {
     "inputs": {
       "true": [
-        "538",
+        "523",
         0
       ],
       "false": [
@@ -988,7 +956,7 @@
         0
       ],
       "conditioning": [
-        "688",
+        "766",
         0
       ]
     },
@@ -1018,38 +986,10 @@
       "title": "RandomNoise"
     }
   },
-  "602": {
-    "inputs": {
-      "noise": [
-        "601",
-        0
-      ],
-      "guider": [
-        "597",
-        0
-      ],
-      "sampler": [
-        "563",
-        0
-      ],
-      "sigmas": [
-        "600",
-        0
-      ],
-      "latent_image": [
-        "588",
-        0
-      ]
-    },
-    "class_type": "SamplerCustomAdvanced",
-    "_meta": {
-      "title": "SamplerCustomAdvanced"
-    }
-  },
   "605": {
     "inputs": {
       "samples": [
-        "602",
+        "712",
         0
       ],
       "vae": [
@@ -1065,7 +1005,7 @@
   "606": {
     "inputs": {
       "samples": [
-        "602",
+        "712",
         0
       ],
       "vae": [
@@ -1078,18 +1018,6 @@
       "title": "VAE Decode Audio"
     }
   },
-  "609": {
-    "inputs": {
-      "passthrough": [
-        "605",
-        0
-      ]
-    },
-    "class_type": "MpiClearVram",
-    "_meta": {
-      "title": "Mpi Clear Vram"
-    }
-  },
   "610": {
     "inputs": {
       "fps": 24,
@@ -1097,11 +1025,11 @@
       "use_audio": true,
       "truncate_to_audio": false,
       "images": [
-        "609",
+        "861",
         0
       ],
       "audio": [
-        "606",
+        "862",
         0
       ]
     },
@@ -1381,6 +1309,126 @@
     "class_type": "MpiUnpacker",
     "_meta": {
       "title": "Mpi Unpacker"
+    }
+  },
+  "711": {
+    "inputs": {
+      "passthrough": [
+        "567",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "712": {
+    "inputs": {
+      "overlap_frames": 17,
+      "frame_grid": 5,
+      "noise": [
+        "601",
+        0
+      ],
+      "guider": [
+        "597",
+        0
+      ],
+      "sampler": [
+        "770",
+        0
+      ],
+      "sigmas": [
+        "600",
+        0
+      ],
+      "latent_image": [
+        "588",
+        0
+      ],
+      "window_frames": [
+        "739",
+        0
+      ]
+    },
+    "class_type": "MpiWindowedSampler",
+    "_meta": {
+      "title": "Mpi Windowed Sampler"
+    }
+  },
+  "739": {
+    "inputs": {
+      "math_expression": "100000 if a * b < 850000 else (243 if a * b < 1100000 else (90 if a * b < 6000000 else 39))",
+      "a": [
+        "582",
+        0
+      ],
+      "b": [
+        "583",
+        0
+      ]
+    },
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Window Frames"
+    }
+  },
+  "765": {
+    "inputs": {
+      "passthrough": [
+        "330",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "766": {
+    "inputs": {
+      "passthrough": [
+        "688",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "770": {
+    "inputs": {
+      "sampler_name": "euler"
+    },
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "KSamplerSelect"
+    }
+  },
+  "861": {
+    "inputs": {
+      "passthrough": [
+        "605",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
+    }
+  },
+  "862": {
+    "inputs": {
+      "passthrough": [
+        "606",
+        0
+      ]
+    },
+    "class_type": "MpiClearVram",
+    "_meta": {
+      "title": "Mpi Clear Vram"
     }
   }
 }

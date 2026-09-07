@@ -271,7 +271,15 @@ frame 0.
   onto that grid (nearest, not up) and reports the true seconds.
 - **Trained range is 124–362 frames** (5.2–15 s). 56 frames works but is below it, so the
   UI default should sit near 5 s, not 2 s.
-- Ratio ladder: native is `high` (768x1344). Everything above it — `very_high` (1088x1920)
+- Ratio ladder: native is **`medium`** (768x1344) since MPI-704 (2026-09-06). It was
+  `high` until then; the whole 1K ladder shifted down one rung (old `low` → `very_low`,
+  old `medium` → `low`, native → `medium`) because native output is draft grade — good for
+  extreme close-ups, not for a deliverable — and a tier called `high` should not mean that.
+  The new `high` is **1664x960** (1.60 MP), chosen over the 1664x928 first asked for
+  because 928 is not /64 and would render 896 under a label saying 928. Its stage-2 window
+  ceiling is **90**, not 243: see [windowing.md](windowing.md) § the 1100000 boundary.
+  Tier names below in this file that predate MPI-704 are one rung lower today.
+  Everything from `high` up — `very_high` (1088x1920)
   and `2k` (1472x2560, added 2026-08-07) — is ABOVE the trained canvas: **final-render**
   tiers, not iterate tiers, because 2x the pixels costs 3.3x the time (attention is
   quadratic in token count), so 1088x1920 is ~25.6 min for a 2.33 s clip and roughly an

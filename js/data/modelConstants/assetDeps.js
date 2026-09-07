@@ -639,7 +639,7 @@ export const assetDeps = {
     // That is not a duplicate: dropping either loses half the output.
     'h3-qwen3vl-32b-clip-nvfp4': {
         id: 'h3-qwen3vl-32b-clip-nvfp4',
-        name: 'Qwen3-VL 32B text encoder for MiniMax H3 (nvfp4_awq)',
+        name: 'Qwen3-VL 32B text encoder for MiniMax H3 (nvfp4_awq, not currently referenced)',
         origin: 'Comfy-Org/MiniMax-H3 text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors (Apache-2.0 via Qwen/Qwen3-VL-32B-Instruct)',
         filename: 'text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors',
         // WHY THIS REPLACED THE 24.55GB int8_convrot BUILD (MPI-698). H3 stages the text
@@ -677,8 +677,17 @@ export const assetDeps = {
         // into Mad-Pony-Interactive/cubric-studio; failover goes straight back to
         // Comfy-Org. Byte-identical upstream, verified 2026-09-05: HF's `lfs.oid` for that
         // path IS the sha256 below.
-        url: 'https://models.cubric.studio/vision/models/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors',
-        mirrorUrl: 'https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors',
+        // ── DEPRECATED (MPI-698). NO `url`/`mirrorUrl`, DELIBERATELY. The R2 object was
+        // deleted 2026-09-07 on Fabio's authorisation: the NVFP4 swap was reverted on
+        // output quality (entity duplication), the low tier that would have used this
+        // build is out of 1.5.0, and it never appeared in a released version, so no
+        // install can 404 on it. They were:
+        //   url:       https://models.cubric.studio/vision/models/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors  (deleted)
+        //   mirrorUrl: https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors
+        // Kept as text so a re-upload need not reconstruct them. The entry itself STAYS:
+        // `_orphanedDepIds` keys off `filename` and never reads a URL, so an uninstall can
+        // still reclaim the 14.61GB; `check-dep-urls.mjs` skips a dep with no `url`, so the
+        // deleted object cannot redden `release:deps`.
         // Apache-2.0 attribution (§4). No repo in the chain ships a LICENSE or NOTICE
         // file, so §4(c) does not bite — what remains is naming the authors, which
         // MpiAbout renders from this block. Not a gated model: no `licences/` folder and
@@ -692,7 +701,10 @@ export const assetDeps = {
         bytes: 15687142551,
         sha256: '35a88d51044231fe332301d7a62aa81e3f2cba62febeb446e2c1e3e0ef76f2c6',
     },
-    // SUPERSEDED by `h3-qwen3vl-32b-clip-nvfp4` (MPI-698) and referenced by NO model.
+    // THE LIVE H3 TEXT ENCODER, referenced by both H3 models. It was briefly replaced
+    // by `h3-qwen3vl-32b-clip-nvfp4` (MPI-698) and RESTORED the same day on output
+    // quality — the nvfp4 build produced repeated entity duplication against a long
+    // clean int8 baseline. The int8 pair staging ~45GB is a known open cost.
     //
     // KEPT ANYWAY, ON PURPOSE — the same orphan-sweep rule spelled out on
     // `vae-minimax-h3-video` below. `_orphanedDepIds` (routes/downloadManager.js) walks
@@ -704,11 +716,9 @@ export const assetDeps = {
     // here is what RECLAIMS the bytes on the next uninstall sweep.
     //
     // Its URL stays live and correct on purpose: `release:deps` HEADs every URL in DEPS.
-    //
-    // Delete only once no plausible installed base still holds the int8_convrot file.
     'h3-qwen3vl-32b-clip': {
         id: 'h3-qwen3vl-32b-clip',
-        name: 'Qwen3-VL 32B text encoder for MiniMax H3 (uncensored, int8_convrot, superseded)',
+        name: 'Qwen3-VL 32B text encoder for MiniMax H3 (uncensored, int8_convrot)',
         origin: 'ethanfel/Qwen3-VL-32B-Ultra-Heretic-H3-ComfyUI-INT8-ConvRot',
         filename: 'text_encoders/qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors',
         url: 'https://huggingface.co/ethanfel/Qwen3-VL-32B-Ultra-Heretic-H3-ComfyUI-INT8-ConvRot/resolve/main/qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors',
