@@ -154,7 +154,19 @@ const POD_IMAGE_BASE = 'docker.io/madponyinteractive/cubric-vision-pod';
 // not ceremonial: the two images' layer digests genuinely diverge (cu130 from index 11,
 // cpu from index 4) because the rebuild resolved fresh apt/pip bits, so the dev image's
 // live Pod proof does NOT transfer to this one.
-const POD_IMAGE_VERSION = 'v0.21.0';
+// v0.23.0 (MPI-706): ComfyUI 0.31.0 -> 0.34.0 — the 1.5.0 engine bump, and MANDATORY for
+// the same reason v0.21.0 was: 1.5.0's graphs carry `ModelAttentionBackend`, a CORE node
+// absent from 0.31.0, so shipping the app at 0.34.0 against a v0.21.0 image rejects every
+// remote H3 and LTX run. Fabio hit exactly that live on a 5090, 2026-09-07 —
+// `Node 'ModelAttentionBackend' not found` — when only the DEV pins had moved (24d4905f).
+// Clean release-version rebuild of the proven v0.23.0-dev context (mpi-ci b3d2434, the
+// same tree that built the dev tag): CI run 34163882224, BOTH legs green.
+// Verified before this pin moved, because an unbuilt tag 404s and the Pod exits at boot:
+// Docker Hub v0.23.0-cu130 present (9.65 GB, pushed 21:54:54Z) and GHCR v0.23.0-cpu listed
+// on a package whose visibility reads `public`. NOTE the anonymous-pull curl probe is NOT
+// a valid check — it 404s v0.21.0-cpu too, which users demonstrably pull; use
+// `gh api user/packages/container/cubric-vision-pod/versions`.
+const POD_IMAGE_VERSION = 'v0.23.0';
 // The CPU image stays on GHCR (not moved to Docker Hub — MPI-189 only repointed
 // the GPU image whose cold-start pull is being measured).
 const POD_IMAGE_BASE_CPU = 'ghcr.io/madponyinteractive/cubric-vision-pod';
@@ -188,7 +200,11 @@ const POD_IMAGE_BASE_CPU = 'ghcr.io/madponyinteractive/cubric-vision-pod';
 // 0.31.0 wave), pushed to GHCR and pull-verified public. Kept in lockstep with the GPU
 // pin — a GPU-only bump is the v0.10.3-cpu 404 trap, where CPU download Pods pull a tag
 // that does not exist and the Pod exits at boot while the app blames a bad host.
-const POD_IMAGE_VERSION_CPU = 'v0.21.0';
+// v0.23.0-cpu (MPI-706): rebuilt in the SAME CI dispatch as the GPU image (34163882224,
+// the 0.34.0 wave), pushed to GHCR and listed on a `public` package. The -cpu image bakes
+// no ComfyUI at all, so the engine bump changes nothing in it — it is rebuilt and pinned
+// in lockstep purely to stay out of the v0.10.3-cpu 404 trap above.
+const POD_IMAGE_VERSION_CPU = 'v0.23.0';
 // MPI-340: DEV-ONLY image pins. _devMode (BUILD_HASH === 'dev') is false in every
 // released portable, so a shipped app can NEVER resolve these — the stable pins above
 // stay frozen while Pod-image work iterates. Bump these (not the stable pair) after a
