@@ -101,6 +101,11 @@ export function buildLicenceRows(flow, unsubs) {
             return b;
         };
         links.append(linkTo('Read the licence', licence.licenceUrl));
+        // MPI-694 — a descriptor can carry a SECOND agreement when one install pulls
+        // weights from two licensors (Stable Audio: Stability's checkpoints, Google's
+        // encoder). One dialog, one receipt, but both copies have to be reachable here
+        // too — this drawer is the only licence surface a Flow-only user ever opens.
+        for (const extra of licence.alsoLicensed || []) links.append(linkTo(`Read the ${extra.name}`, extra.url));
         // The link a BARRED user needs. Until MPI-666 it existed only inside the gate
         // dialog and in the Model Library drawer, so a Flow-only user who cancelled
         // the dialog had no standing route to it (MPI-591 puts territory-restricted

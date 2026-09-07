@@ -142,6 +142,20 @@ test('every descriptor carries what the gate renders', async () => {
         } else {
             assert.match(l.licenceUrl, /^https:\/\//, `${modelId}: licenceUrl`);
         }
+        // MPI-694 — a SECOND agreement on the same descriptor, for an install pulling
+        // weights from two licensors (Stable Audio: Stability's checkpoints, Google's
+        // T5Gemma encoder). Both oblige us to provide a copy, and a copy that 404s
+        // discharges nothing, so it gets exactly the licenceUrl treatment above.
+        for (const extra of l.alsoLicensed || []) {
+            assert.ok(extra.name, `${modelId}: an alsoLicensed entry needs a name to link`);
+            if (extra.url.startsWith('/')) {
+                const onDisk = path.join(__dirname, '..', extra.url);
+                assert.ok(fs.existsSync(onDisk), `${modelId}: bundled ${extra.name} missing on disk (${extra.url})`);
+                assert.ok(fs.statSync(onDisk).size > 0, `${modelId}: bundled ${extra.name} is empty`);
+            } else {
+                assert.match(extra.url, /^https:\/\//, `${modelId}: ${extra.name} url`);
+            }
+        }
         // Attribution is optional (most licences want none), but an empty string would
         // render a blank row that looks like a layout bug rather than a missing notice.
         if ('poweredBy' in l) {

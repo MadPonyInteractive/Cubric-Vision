@@ -193,6 +193,11 @@ export const MpiLicenceGate = ComponentFactory.create({
         // ── Links ────────────────────────────────────────────────────────────
         const linksSlot = qs('#links-slot', el);
         linksSlot.append(_link('Read the full licence', licence.licenceUrl));
+        // A second agreement covering a different weight in the same install (MPI-694 —
+        // Stable Audio's two checkpoints are Stability's, its encoder is Google's). Both
+        // oblige us to PROVIDE a copy, so both get a link; naming the second one in prose
+        // would discharge nothing.
+        for (const extra of licence.alsoLicensed || []) linksSlot.append(_link(`Read the ${extra.name}`, extra.url));
         if (licence.report) linksSlot.append(_link(licence.report.label, licence.report.url));
 
         // ── Actions ──────────────────────────────────────────────────────────

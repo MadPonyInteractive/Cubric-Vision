@@ -38,6 +38,13 @@
  *                                  us to PROVIDE a copy rather than merely name one: a link
  *                                  to the licensor's server is not a copy, and it dies when
  *                                  they move the file or the user is offline.
+ * @property {Array<{name: string, url: string}>} [alsoLicensed]
+ *   A SECOND agreement covering a DIFFERENT weight in the same install, rendered as its
+ *   own "Read the …" link beside `licenceUrl` in the gate and in the flow drawer. It
+ *   exists because the gate fires per install KEY, and a flow whose weights come from two
+ *   licensors installs all of them under one key — so one descriptor has to carry both
+ *   agreements, and "provide a copy" is not discharged by naming the second one. Same
+ *   rule as `licenceUrl`: a root-relative path must resolve to a real bundled file.
  * @property {string} [poweredBy] - Attribution the licence requires on the surface where the
  *                                  model is presented (H3 §III.3.a / §IV.2). Rendered in the
  *                                  Model Library detail drawer, next to the licence name —
@@ -353,6 +360,102 @@ const MINIMAX_MUSIC3 = {
     report: CUBRIC_DISCORD,
 };
 
+// Stable Audio 3 — TWO agreements behind ONE gate, the `Sound & Music` flow (MPI-694).
+//
+// ONE DESCRIPTOR, NOT TWO, and the architecture forces that rather than preferring it:
+// the gate fires per INSTALL KEY, and all three weights install under the single
+// `flow:sound-and-music` dep key (`requiredModels: []`, the Music Maker shape). A second
+// descriptor could not be keyed there — it would be dead data and its agreement would
+// never be shown. Binding both in one dialog is also the only honest reading: every arm
+// of the flow loads a Stability checkpoint AND the Gemma encoder, so there is no install
+// that touches one licensor and not the other.
+//
+// WHICH AGREEMENT COVERS WHAT. Both read end to end 2026-09-05, along with both policies
+// they incorporate by reference (Stability AUP effective 2026-09-30, Gemma PUP 2024-02-21):
+//   - Stability AI Community License (Last Updated 2024-07-05) — BOTH checkpoints.
+//     Stability's Core Models list (2026-05-20) names Stable Audio 3.0 Small and Medium
+//     explicitly. A FOURTH Stable Audio weight is NOT covered until that page names it —
+//     check the list before adding one, or it falls back to its own licence.
+//   - Gemma Terms of Use (Last modified 2026-04-01) — `t5gemma_b_b_ul2`, the encoder every
+//     arm needs. T5Gemma is named in the Gemma Appendix. Confirmed against the text, not
+//     assumed from the name.
+//
+// NO `territory` BLOCK, and that is a finding rather than an omission: neither agreement
+// restricts by territory, and neither puts a bar on outputs — Stability §IV(c)(iii) gives
+// outputs to the user outright and §V excludes them from "Derivative Work", Gemma §3.3
+// claims no rights in them. Our USERS also need no licence of their own: §III's last
+// sentence exempts anyone receiving the Materials "as part of an integrated end user
+// product", which is exactly what Vision is.
+//
+// 🔴 TWO OBLIGATIONS THIS FILE DOES NOT DISCHARGE. Both block a RELEASE, not a build:
+//   1. REGISTRATION WITH STABILITY — §III, mandatory for any Commercial Purpose and with
+//      NO revenue floor: https://stability.ai/community-license. Shipping Vision is a
+//      Commercial Purpose. (Use stays free under USD $1M annual revenue across us and
+//      affiliates; crossing it terminates the licence on that date.)
+//   2. THE EULA CLAUSE — Gemma §3.1 requires §3.2's use restrictions to appear as an
+//      ENFORCEABLE PROVISION in our own terms, not only in a dialog. The acknowledgements
+//      below are the notice half; the terms half is a document edit.
+//
+// What IS discharged here: a copy of each agreement PROVIDED rather than named (both
+// bundled under `licences/stable-audio-3/`, both linked — `licenceUrl` + `alsoLicensed`),
+// the `Notice` text file (NOTICE.txt beside them, carrying BOTH required strings
+// verbatim), and the attribution string in `poweredBy`.
+//
+// PROVENANCE OF THE BUNDLED COPIES. `LICENSE.txt` is byte-identical to what
+// stabilityai/stable-audio-3-medium serves as LICENSE.md (11,852 bytes, fetched
+// 2026-09-07). `GEMMA-TERMS.txt` is the text of ai.google.dev/gemma/terms, same fetch —
+// Google publish it as a web page and no repo we pull from carries a LICENSE file, so
+// this one is a text rendering, not a byte-identical copy. Re-fetch both if either
+// licensor revises, and bump `version` when they do.
+/** @type {LicenceDescriptor} */
+const STABLE_AUDIO_3 = {
+    id: 'stable-audio-3-stability-gemma-2026-09-05',
+    version: 1,
+    name: 'Stability AI Community License + Gemma Terms of Use',
+    modelName: 'Stable Audio 3',
+    summary: 'Sound & Music installs weights from two licensors: Stability AI’s two Stable '
+           + 'Audio 3 checkpoints, and Google’s T5Gemma text encoder. Both are free to use, '
+           + 'including commercially, and neither restricts where you are or what you do with '
+           + 'the audio. Both set out how the models may not be used, and this step shows you '
+           + 'those terms before the download starts.',
+    licenceUrl: '/licences/stable-audio-3/LICENSE.txt',
+    alsoLicensed: [
+        { name: 'Gemma Terms of Use', url: '/licences/stable-audio-3/GEMMA-TERMS.txt' },
+    ],
+    // §IV(a)(iii) — "prominently display “Powered by Stability AI” on a related website,
+    // user interface, blogpost, about page, or product documentation". That exact string
+    // IS the obligation and is not paraphrasable. It renders on both Flow surfaces via
+    // buildLicenceRows (MPI-666), which is where a user of this flow actually looks —
+    // there is no model card, deliberately. The Gemma Terms ask for no such string; their
+    // attribution is the NOTICE file and the About-page credit on the t5gemma dep.
+    poweredBy: 'Powered by Stability AI',
+    sections: [
+        {
+            heading: 'Stability AI Community License — Section IV(b): Use Restrictions',
+            items: [
+                'Your use of the Stability AI Materials and Derivative Works, including any output or results of the Stability AI Materials or Derivative Works, must comply with applicable laws and regulations (including Trade Control Laws and equivalent regulations) and adhere to the Documentation and Stability AI’s AUP, which is hereby incorporated by reference. Furthermore, You will not use the Stability AI Materials or Derivative Works, or any output or results of the Stability AI Materials or Derivative Works, to create or improve any foundational generative AI model (excluding the Models or Derivative Works).',
+            ],
+        },
+        {
+            heading: 'Gemma Terms of Use — Section 3.2: Use Restrictions',
+            intro: 'You must not use any of the Gemma Services:',
+            items: [
+                'for the restricted uses set forth in the Gemma Prohibited Use Policy at ai.google.dev/gemma/prohibited_use_policy (“Prohibited Use Policy”), which is hereby incorporated by reference into this Agreement; or',
+                'in violation of applicable laws and regulations.',
+                'To the maximum extent permitted by law, Google reserves the right to restrict (remotely or otherwise) usage of any of the Gemma Services that Google reasonably believes are in violation of this Agreement.',
+            ],
+        },
+    ],
+    acknowledgements: [
+        // Gemma §3.1 obliges us to "provide notice to subsequent users you Distribute to
+        // that Gemma or Model Derivatives are subject to the use restrictions in Section
+        // 3.2". This checkbox is that notice, and it names both policies because both are
+        // incorporated by reference and neither is reproduced above.
+        'I accept the use restrictions in both licences above, including the Stability AI Acceptable Use Policy and the Gemma Prohibited Use Policy they incorporate, and understand they apply to me and to any audio I generate.',
+        'I understand the audio I generate is mine to use commercially, and that these weights come under two separate agreements — Stability AI’s for the two Stable Audio 3 checkpoints, and Google’s Gemma Terms for the text encoder.',
+    ],
+};
+
 /** @type {Record<string, LicenceDescriptor>} */
 export const MODEL_LICENCES = {
     'minimax-h3':        MINIMAX_H3,   // first/last-frame to video+audio
@@ -366,6 +469,11 @@ export const MODEL_LICENCES = {
     // it does. When it lands its `id` must be `minimax-music` or this gate never fires and
     // 13.3GB of licensed weights install with nothing shown.
     'flow:minimax-music': MINIMAX_MUSIC3,
+    // Same shape, same trap — `flowDepKey('sound-and-music')` (MPI-694). The flow ships
+    // with `requiredModels: []`, so this key is the ONLY one its 11.81GB installs under
+    // and the only place a gate can hang. Rename the flow's `id` without moving this key
+    // and the lookup misses SILENTLY: three licensed weights land with nothing shown.
+    'flow:sound-and-music': STABLE_AUDIO_3,
 };
 
 /** Where a user requests access to a `verify` licence — the licensor's own model page. */
