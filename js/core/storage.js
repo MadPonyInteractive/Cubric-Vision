@@ -106,18 +106,26 @@ export const DEFAULT_RUNPOD_CONFIG = Object.freeze({
   // has to go back up with it. Leaving 62 would keep placing users on the size of box
   // that is measured to die.
   //
-  // 80 is the measured number, not a guess: on 2026-09-05 minimax-h3/t2v_ms OOM-KILLED a
-  // 54GB L4 (SIGKILL, `code -9`) at 128px/1 frame staging the 25GB text encoder and the
-  // 20GB transformer at once, and PASSED on a host placed against an 80GB floor.
+  // The measurement behind it: on 2026-09-05 minimax-h3/t2v_ms OOM-KILLED a 54GB L4
+  // (SIGKILL, `code -9`) at 128px/1 frame staging the 25GB text encoder and the 20GB
+  // transformer at once, and PASSED on a host placed against a higher floor.
   //
-  // 80 and not 64 because THE ASK IS NOT THE READ: RunPod filters on an advertised figure
-  // that runs higher than what the container actually gets (that L4 advertised 62 and
-  // delivered 54). Asking 64 can therefore land ~56 — two GB above the box that died, on
-  // the SMALLEST job the runner can build. A real 768p generation has less room, not more.
+  // 64 AND NOT 80 — Fabio, 2026-09-07, on how the datacentre actually stocks. The 2.0
+  // line uses 80 out of a generic worry: RunPod filters on an ADVERTISED figure that runs
+  // higher than what the container receives (that L4 advertised 62 and delivered 54), so
+  // in principle asking 64 could land ~56. In THIS datacentre that host does not exist —
+  // RTX 5090 machines are offered at 54 or 90 and nothing between. 64 therefore excludes
+  // the 54 (the size measured to die, and the one that advertised 62) and lands the 90,
+  // which is exactly what 80 achieves, without also refusing hosts that advertise between
+  // 64 and 80 and run H3 perfectly well.
+  //
+  // The residual risk is real but narrow, and worth naming: if a host ever appears
+  // advertising 64-70, the ~13% shortfall seen on that L4 would deliver ~56-61 and H3
+  // could OOM again. Raise this number, do not widen it, if that shows up.
   //
   // This is a TRADE: a floor that cannot be met returns "no host available" instead of a
   // Pod. That is what autoRetry is for, and the settings hint says so.
-  minRamGb: 80,
+  minRamGb: 64,
 });
 
 // Idle-watchdog floor/default in seconds (mirrors MpiSettings IDLE_FLOOR_MIN /
