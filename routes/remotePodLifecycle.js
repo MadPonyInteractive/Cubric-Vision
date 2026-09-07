@@ -368,6 +368,33 @@ async function _volumeMatchedDiskGb(key, volumeId) {
 // are the create spec and the generation gate.
 const CPU_SENTINEL = '__cpu__';
 
+// MPI-667: the CPU flavors a download-mode Pod may land on, in preference order.
+// This used to be the single hardcoded `cpu3c`, so that ONE flavor going out of stock
+// in the volume's data center refused Connect outright — RunPod answers "There are no
+// longer any instances available with the requested specifications" and download mode
+// is simply unreachable (live 2026-08-31 in EU-RO-1; the byte-identical spec created
+// fine on 2026-07-29, so it was pure supply, not drift). The create retries down this
+// list rather than surfacing the first refusal. `cpu3c` stays first: it is the cheapest
+// and the only one proven against the REST enum. A flavor RunPod does not recognise
+// costs one rejected request and nothing else, which is why the rest can sit here
+// unproven — a model download is network/disk-bound, so the CPU class does not matter,
+// only that SOMETHING is free.
+const CPU_FLAVORS = ['cpu3c', 'cpu3g', 'cpu5c', 'cpu5g'];
+
+// MPI-690: how many vCPUs to ask for on a CPU download Pod. Omitting this lands
+// the flavor family's MINIMUM instance, and `cpu3c` is compute-optimised at 2GB
+// RAM per vCPU with a 2-vCPU floor — a 4GB box (observed 3.725GiB live). The
+// 1.4.5 smoke matrix (102 deps, 340GB) OOM-killed it twice: `exit code 137 ...
+// triggered memory limits`, visible ONLY in the RunPod *System* log, never the
+// container log. 8 vCPU puts `cpu3c` at 16GB — real headroom over the capped
+// three concurrent aria2 streams (downloadManager REMOTE_DOWNLOAD_CONCURRENCY)
+// plus their writeback page cache, which is charged to the container's cgroup.
+// The extra cores are not waste either: 2 vCPU also throttled the fan-out.
+// The note above — "a model download is network/disk-bound, so the CPU class
+// does not matter" — was right about CPU and wrong about MEMORY; a bigger flavor
+// on the MPI-667 walk (cpu3g is 4GB/vCPU) simply gets more headroom, not less.
+const CPU_DOWNLOAD_VCPUS = 8;
+
 // MPI-189: SINGLE cu130 image for ALL GPU cards. The old cu124/cu128 per-arch
 // branching is GONE — torch 2.10+cu130 carries both Ada sm_89 (4090) and Blackwell
 // sm_120 (5090/PRO 6000/B200) in one wheel, so one tag runs every card we deploy
@@ -730,7 +757,8 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, contai
   // aria2c only, no torch/ComfyUI) is REQUIRED — the full GPU image's entrypoint
   // inits CUDA and won't run on a CPU Pod (verified: 0 processes, eternal
   // "connecting"). /health + /wrapper/models/install work for downloads with no GPU
-  // bill. cpu3c = cheapest flavor; a model download is network/disk-bound.
+  // bill. cpu3c = cheapest flavor, sized by CPU_DOWNLOAD_VCPUS (MPI-690: the flavor
+  // family MINIMUM is a 4GB box and the matrix OOM-killed it).
   const imageName = podImageForCard(gpuTypeId);
   logger.info('runpod', `Pod image for ${noGpu ? 'CPU (download mode)' : gpuTypeId}: ${imageName}`);
   // MPI-329: a volume GPU Pod mirrors its container disk to the network-volume size
@@ -777,7 +805,8 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, contai
   }
   if (noGpu) {
     spec.computeType = 'CPU';
-    spec.cpuFlavorIds = ['cpu3c'];
+    spec.cpuFlavorIds = [CPU_FLAVORS[0]];
+    spec.vcpuCount = CPU_DOWNLOAD_VCPUS; // MPI-690 — see CPU_DOWNLOAD_VCPUS
     // Belt-and-braces: the -cpu image's start-cpu.sh already exports this, but set
     // it on the Pod env too so the wrapper reports /health ready (no ComfyUI probe)
     // even if the image is ever launched with a different entrypoint.
@@ -859,7 +888,19 @@ async function _createPodInternal(key, { gpuTypeId, volumeId, datacenter, contai
     return { ok: false, message: reason || 'No host met the requested system-RAM floor', ramFloorMissed: true };
   }
 
-  const created = await client.createPod(key, spec);
+  let created = await client.createPod(key, spec);
+  // MPI-667: a refused CPU create walks the rest of CPU_FLAVORS before giving up, so a
+  // stock-out on one flavor no longer blocks download mode. GPU creates keep the single
+  // attempt — their out-of-stock answer is the shell's retry/DC-steering signal, and the
+  // card is the user's choice, not ours to substitute.
+  if (!created.ok && noGpu) {
+    for (const flavor of CPU_FLAVORS.slice(1)) {
+      logger.warn('runpod', `CPU flavor ${spec.cpuFlavorIds[0]} refused (http ${created.status}); retrying on ${flavor}`);
+      spec.cpuFlavorIds = [flavor];
+      created = await client.createPod(key, spec);
+      if (created.ok) break;
+    }
+  }
   const podId = created.json && created.json.id;
   if (!created.ok || !podId) {
     // Surface RunPod's actual reject reason (L2). _rest parses the body into
@@ -1093,8 +1134,12 @@ router.post('/remote/pod/reconnect', async (req, res) => {
 
     // 1. Availability pre-check — a STOPPED Pod can only resume where its GPU type
     //    is free; if the saved GPU is gone, recreating on it would also fail. A CPU
-    //    "download mode" Pod (MPI-88) has no GPU type to check — CPU capacity is
-    //    effectively always available, so skip the GPU availability gate for it.
+    //    "download mode" Pod (MPI-88) has no GPU type to check, so the gate is skipped
+    //    for it. It used to be skipped on the stronger claim that CPU capacity is
+    //    effectively always available — MPI-667 disproved that (a cpu3c stock-out in
+    //    EU-RO-1 refused Connect outright, which is why the create now walks
+    //    CPU_FLAVORS). There is still nothing to gate on: dataCenters() reports GPU
+    //    availability only, and a CPU refusal is only knowable by asking for the Pod.
     //    An ephemeral no-volume Pod (MPI-78) has no datacenter to scope the check to
     //    (it was auto-placed); skip the gate and let startPod try — if the host is
     //    full, the start-fail path below deletes + recreates fresh (auto-placed again).
@@ -1692,4 +1737,4 @@ router.post('/remote/pod/cleanup-orphans', async (req, res) => {
   }
 });
 
-module.exports = { router, remoteVolumeFreeBytes, resolveDiskTotalBytes, _isPodDead, _clampVolumeDisk, compareVolumeAccounting };
+module.exports = { router, remoteVolumeFreeBytes, resolveDiskTotalBytes, _isPodDead, _clampVolumeDisk, compareVolumeAccounting, _createPodInternal, CPU_FLAVORS };
