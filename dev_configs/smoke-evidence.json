@@ -1,15 +1,15 @@
 {
-  "at": "2026-08-10T15:19:44.217Z",
+  "at": "2026-09-07T22:42:12.056Z",
   "engine": {
-    "want": "0.31.0",
-    "got": "0.31.0",
+    "want": "0.34.0",
+    "got": "0.34.0",
     "proven": true
   },
   "datacenter": "EU-RO-1",
   "gpu": "L4",
   "volume": {
-    "id": "aghcuvg7nl",
-    "size": 450
+    "id": "uebvm3350f",
+    "size": 340
   },
   "budget": {
     "steps": 1,
@@ -22,76 +22,17 @@
       "model": "sdxl-nsfw",
       "op": "t2i",
       "status": "PASS",
-      "secs": 8,
-      "media": 1,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "sdxl-nsfw",
-      "op": "i2i",
-      "status": "PASS",
-      "secs": 4,
-      "media": 2,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "sdxl-nsfw",
-      "op": "control",
-      "status": "PASS",
-      "secs": 17,
-      "media": 2,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "sdxl-nsfw",
-      "op": "upscale",
-      "status": "PASS",
-      "secs": 8,
-      "media": 2,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "sdxl-nsfw",
-      "op": "detail",
-      "status": "PASS",
-      "secs": 4,
-      "media": 2,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "chroma-hyper",
-      "op": "t2i",
-      "status": "PASS",
       "secs": 13,
       "media": 1,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
     },
     {
-      "model": "chroma-hyper",
+      "model": "sdxl-nsfw",
       "op": "i2i",
       "status": "PASS",
       "secs": 8,
@@ -100,11 +41,25 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
     },
     {
-      "model": "chroma-hyper",
+      "model": "sdxl-nsfw",
       "op": "control",
+      "status": "PASS",
+      "secs": 34,
+      "media": 2,
+      "budget": [
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
+    },
+    {
+      "model": "sdxl-nsfw",
+      "op": "inpaint",
       "status": "PASS",
       "secs": 21,
       "media": 2,
@@ -112,19 +67,86 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
     },
     {
-      "model": "chroma-hyper",
+      "model": "sdxl-nsfw",
       "op": "upscale",
       "status": "PASS",
-      "secs": 8,
+      "secs": 9,
       "media": 2,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
+    },
+    {
+      "model": "sdxl-nsfw",
+      "op": "detail",
+      "status": "PASS",
+      "secs": 4,
+      "media": 2,
+      "budget": [
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
+    },
+    {
+      "model": "chroma-hyper",
+      "op": "t2i",
+      "status": "PASS",
+      "secs": 17,
+      "media": 1,
+      "budget": [
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
+    },
+    {
+      "model": "chroma-hyper",
+      "op": "i2i",
+      "status": "PASS",
+      "secs": 13,
+      "media": 2,
+      "budget": [
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
+    },
+    {
+      "model": "chroma-hyper",
+      "op": "control",
+      "status": "PASS",
+      "secs": 43,
+      "media": 2,
+      "budget": [
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
+    },
+    {
+      "model": "chroma-hyper",
+      "op": "upscale",
+      "status": "PASS",
+      "secs": 13,
+      "media": 2,
+      "budget": [
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
     },
     {
       "model": "chroma-hyper",
@@ -136,72 +158,92 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
     },
     {
       "model": "krea2-nsfw",
       "op": "t2i",
       "status": "PASS",
-      "secs": 13,
+      "secs": 17,
       "media": 1,
       "budget": [
         "Input_is_Turbo=true",
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
-      ]
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
     },
     {
       "model": "krea2-nsfw",
       "op": "i2i",
       "status": "PASS",
-      "secs": 9,
+      "secs": 13,
       "media": 2,
       "budget": [
         "Input_is_Turbo=true",
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
-      ]
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
     },
     {
       "model": "krea2-nsfw",
       "op": "control",
       "status": "PASS",
-      "secs": 17,
+      "secs": 39,
       "media": 2,
       "budget": [
         "Input_is_Turbo=true",
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
-      ]
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
     },
     {
       "model": "krea2-nsfw",
       "op": "krea2Edit",
       "status": "PASS",
-      "secs": 21,
+      "secs": 65,
       "media": 2,
       "budget": [
         "Input_is_Turbo=true",
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
-      ]
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
+    },
+    {
+      "model": "krea2-nsfw",
+      "op": "inpaint",
+      "status": "PASS",
+      "secs": 78,
+      "media": 2,
+      "budget": [
+        "Input_is_Turbo=true",
+        "Input_Height=128",
+        "Input_Width=128",
+        "Input_Seed=42"
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
     },
     {
       "model": "krea2-nsfw",
       "op": "upscale",
       "status": "PASS",
-      "secs": 8,
+      "secs": 13,
       "media": 2,
       "budget": [
         "Input_is_Turbo=true",
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
-      ]
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
     },
     {
       "model": "krea2-nsfw",
@@ -214,77 +256,84 @@
         "Input_Height=128",
         "Input_Width=128",
         "Input_Seed=42"
-      ]
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
     },
     {
       "model": "nvidia-pid",
       "op": "pid",
       "status": "PASS",
-      "secs": 21,
+      "secs": 47,
       "media": 2,
       "budget": [
         "Input_Seed=42"
-      ]
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
     },
     {
       "model": "klein-4b",
       "op": "t2i",
       "status": "PASS",
-      "secs": 8,
+      "secs": 9,
       "media": 1,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
     },
     {
       "model": "klein-4b",
       "op": "i2i",
       "status": "PASS",
-      "secs": 8,
+      "secs": 9,
       "media": 2,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
     },
     {
       "model": "klein-4b",
       "op": "control",
       "status": "PASS",
-      "secs": 12,
+      "secs": 17,
       "media": 2,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
     },
     {
       "model": "klein-4b",
       "op": "kleinEdit",
       "status": "PASS",
-      "secs": 8,
+      "secs": 13,
       "media": 2,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
     },
     {
       "model": "klein-4b",
       "op": "inpaint",
       "status": "PASS",
-      "secs": 4,
-      "media": 1,
+      "secs": 13,
+      "media": 2,
       "budget": [
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
     },
     {
       "model": "klein-4b",
@@ -296,121 +345,12 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
     },
     {
       "model": "klein-4b",
       "op": "upscale",
-      "status": "PASS",
-      "secs": 4,
-      "media": 2,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "boogu-edit-balanced",
-      "op": "edit",
-      "status": "PASS",
-      "secs": 17,
-      "media": 2,
-      "budget": [
-        "Input_Seed=42"
-      ]
-    },
-    {
-      "model": "wan-22",
-      "op": "i2v_ms",
-      "status": "PASS",
-      "secs": 17,
-      "media": 2,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "ltx-23-balanced",
-      "op": "t2v_ms",
-      "status": "PASS",
-      "secs": 34,
-      "media": 1,
-      "budget": [
-        "Input_Duration=1",
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "ltx-23-balanced",
-      "op": "i2v_ms",
-      "status": "PASS",
-      "secs": 21,
-      "media": 2,
-      "budget": [
-        "Input_Duration=1",
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "minimax-h3",
-      "op": "t2v_ms",
-      "status": "PASS",
-      "secs": 124,
-      "media": 1,
-      "budget": [
-        "Input_Width=128",
-        "Input_Height=128",
-        "Input_seed=42",
-        "Input_Duration=1"
-      ]
-    },
-    {
-      "model": "minimax-h3",
-      "op": "i2v_ms",
-      "status": "PASS",
-      "secs": 124,
-      "media": 2,
-      "budget": [
-        "Input_Width=128",
-        "Input_Height=128",
-        "Input_seed=42",
-        "Input_Duration=1"
-      ]
-    },
-    {
-      "model": "minimax-h3-ref2va",
-      "op": "ref2v_ms",
-      "status": "PASS",
-      "secs": 120,
-      "media": 1,
-      "budget": [
-        "Input_Width=128",
-        "Input_Height=128",
-        "Input_seed=42"
-      ]
-    },
-    {
-      "model": "wan22-5b",
-      "op": "t2v",
-      "status": "PASS",
-      "secs": 12,
-      "media": 1,
-      "budget": [
-        "Input_Seed=42",
-        "Input_Width=128",
-        "Input_Height=128"
-      ]
-    },
-    {
-      "model": "wan22-5b",
-      "op": "i2v",
       "status": "PASS",
       "secs": 8,
       "media": 2,
@@ -418,39 +358,256 @@
         "Input_Seed=42",
         "Input_Width=128",
         "Input_Height=128"
-      ]
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
+    },
+    {
+      "model": "boogu-edit-balanced",
+      "op": "edit",
+      "status": "PASS",
+      "secs": 43,
+      "media": 2,
+      "budget": [
+        "Input_Seed=42"
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
+    },
+    {
+      "model": "wan-22",
+      "op": "i2v_ms",
+      "status": "PASS",
+      "secs": 30,
+      "media": 2,
+      "budget": [
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
+    },
+    {
+      "model": "ltx-23-balanced",
+      "op": "t2v_ms",
+      "status": "PASS",
+      "secs": 70,
+      "media": 1,
+      "budget": [
+        "Input_Duration=1",
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
+    },
+    {
+      "model": "ltx-23-balanced",
+      "op": "i2v_ms",
+      "status": "PASS",
+      "secs": 38,
+      "media": 2,
+      "budget": [
+        "Input_Duration=1",
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
+    },
+    {
+      "model": "minimax-h3",
+      "op": "t2v_ms",
+      "status": "PASS",
+      "secs": 252,
+      "media": 1,
+      "budget": [
+        "Input_is_Turbo=true",
+        "Input_Width=128",
+        "Input_Height=128",
+        "Input_seed=42",
+        "Input_Duration=1"
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
+    },
+    {
+      "model": "minimax-h3",
+      "op": "i2v_ms",
+      "status": "PASS",
+      "secs": 249,
+      "media": 2,
+      "budget": [
+        "Input_is_Turbo=true",
+        "Input_Width=128",
+        "Input_Height=128",
+        "Input_seed=42",
+        "Input_Duration=1"
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
+    },
+    {
+      "model": "minimax-h3-ref2va",
+      "op": "ref2v_ms",
+      "status": "PASS",
+      "secs": 246,
+      "media": 1,
+      "budget": [
+        "Input_is_Turbo=true",
+        "Input_seed=42",
+        "Input_Duration=1",
+        "Input_Height=128",
+        "Input_Width=128"
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
+    },
+    {
+      "model": "wan22-5b",
+      "op": "t2v",
+      "status": "PASS",
+      "secs": 21,
+      "media": 1,
+      "budget": [
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
+    },
+    {
+      "model": "wan22-5b",
+      "op": "i2v",
+      "status": "PASS",
+      "secs": 13,
+      "media": 2,
+      "budget": [
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
     },
     {
       "model": "qwen-edit",
       "op": "qwenEdit",
       "status": "PASS",
-      "secs": 21,
+      "secs": 55,
       "media": 2,
       "budget": [
         "Input_Tier=3",
         "Input_Seed=42"
-      ]
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
     },
     {
       "model": "qwen-edit",
       "op": "control",
       "status": "PASS",
-      "secs": 30,
+      "secs": 60,
       "media": 2,
       "budget": [
         "Input_Tier=3",
         "Input_Seed=42"
-      ]
+      ],
+      "run": "2026-09-07T22:29:58.802Z"
+    },
+    {
+      "model": "klein-9b",
+      "op": "t2i",
+      "status": "PASS",
+      "secs": 13,
+      "media": 1,
+      "budget": [
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ],
+      "run": "2026-09-07T22:42:12.056Z"
+    },
+    {
+      "model": "klein-9b",
+      "op": "i2i",
+      "status": "PASS",
+      "secs": 13,
+      "media": 2,
+      "budget": [
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ],
+      "run": "2026-09-07T22:42:12.056Z"
+    },
+    {
+      "model": "klein-9b",
+      "op": "control",
+      "status": "PASS",
+      "secs": 21,
+      "media": 2,
+      "budget": [
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ],
+      "run": "2026-09-07T22:42:12.056Z"
+    },
+    {
+      "model": "klein-9b",
+      "op": "kleinEdit",
+      "status": "PASS",
+      "secs": 17,
+      "media": 2,
+      "budget": [
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ],
+      "run": "2026-09-07T22:42:12.056Z"
+    },
+    {
+      "model": "klein-9b",
+      "op": "inpaint",
+      "status": "PASS",
+      "secs": 17,
+      "media": 2,
+      "budget": [
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ],
+      "run": "2026-09-07T22:42:12.056Z"
+    },
+    {
+      "model": "klein-9b",
+      "op": "detail",
+      "status": "PASS",
+      "secs": 4,
+      "media": 1,
+      "budget": [
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ],
+      "run": "2026-09-07T22:42:12.056Z"
+    },
+    {
+      "model": "klein-9b",
+      "op": "upscale",
+      "status": "PASS",
+      "secs": 8,
+      "media": 2,
+      "budget": [
+        "Input_Seed=42",
+        "Input_Width=128",
+        "Input_Height=128"
+      ],
+      "run": "2026-09-07T22:42:12.056Z"
     }
   ],
   "counts": {
-    "pass": 35,
+    "pass": 44,
     "skip": 0,
     "fail": 0,
-    "opsPlanned": 35
+    "opsPlanned": 44
   },
   "scope": {
-    "requested": "all",
+    "requested": "merged",
     "modelsRun": [
       "sdxl-nsfw",
       "chroma-hyper",
@@ -463,7 +620,8 @@
       "minimax-h3",
       "minimax-h3-ref2va",
       "wan22-5b",
-      "qwen-edit"
+      "qwen-edit",
+      "klein-9b"
     ],
     "covers": [
       "sdxl-realistic",
@@ -472,11 +630,13 @@
       "pony-mix",
       "chroma-flash",
       "krea2",
+      "klein-9b",
       "boogu-edit-high",
-      "ltx-23"
+      "ltx-23",
+      "klein-4b"
     ],
     "unproven": [],
-    "modelsInRegistry": 20
+    "modelsInRegistry": 21
   },
   "limits": [
     "Pod-green is not Windows-green: different OS, python, torch, CUDA.",
@@ -493,5 +653,9 @@
     "boogu-edit-transformer-high(19.17GB)",
     "ltx23-transformer-bf16(39.13GB)",
     "4x-AnimeSharp(63.91MB)"
+  ],
+  "runs": [
+    "2026-09-07T22:29:58.802Z",
+    "2026-09-07T22:42:12.056Z"
   ]
 }
