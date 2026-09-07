@@ -2,14 +2,16 @@
 
 ## Current State
 
-1.5.0 is **built and pushed as far as the H3 work goes**, plus a set of small fixes. It
-lives on branch `1.4.2`, worktree `C:/AI/Mpi/Cubric-Vision-1.4.x`. Version is still
-stamped **1.4.4** — the 1.5.0 stamp is deliberately the LAST step, after the smoke.
+1.5.0 is **built and pushed through Phase 2**. It lives on branch `1.4.2`, worktree
+`C:/AI/Mpi/Cubric-Vision-1.4.x`, now at `2603f668`. Version is still stamped **1.4.4** —
+the 1.5.0 stamp is deliberately the LAST step, after the smoke.
 
 **Read `## The five facts` below before doing anything.** Four of them were rediscovered
 the hard way in the 2026-09-07 session because an earlier handoff had lost them.
 
-Next action: port the non-Flow image-model work (`## Phase 2`), then the four gates.
+Next action: **the four gates in `## Phase 3`**, in this order — release notes, then
+Fabio's own 5090 H3 runs (app launched FROM THE WORKTREE), then the full 0.34 smoke with
+Klein 9B in the matrix, then stamp and release. Nothing in Phase 2 remains.
 
 ## The five facts
 
@@ -56,24 +58,32 @@ Next action: port the non-Flow image-model work (`## Phase 2`), then the four ga
 
 State: **644/644 tests**, **236/236 dep URLs reachable**, 5 commits unpushed.
 
-## Remaining Work
-
 ### Phase 2 — the non-Flow image-model port (Fabio, 2026-09-07: "B")
-Five cards, seven commits. NOT "three weeks of master" — an early estimate in that
-session said so and was wrong; the file diffs look huge (`klein_t2i.json` 1243 lines)
-because whole graphs were regenerated.
+`2603f668`, pushed. Five cards in one commit: MPI-598 (Klein 9B — new model, 9 display
+webps, `klein_9b_t2i.json`, the seven-slot style rack), MPI-615 (SDXL/Illustrious/Pony/
+Krea 2 inpaint on the LanPaint path + `krea2Turbo` on the op), MPI-609 (style LoRAs named
+for their labels), MPI-575 (LTX preview ring, non-Flow half) and MPI-605 (both LTX
+runtimes take `ModelAttentionBackend`). LanPaint added to `node_lock` — 16 packs.
 
-| Card | What | Port state |
-|---|---|---|
-| MPI-615 | SDXL family + Krea 2 gain LanPaint inpainting; LTX stage 2 stops running bare | 12 workflow/template files apply CLEAN; `models.js` (+115), `commandRegistry.js` (+7) and one krea2 doc conflict |
-| MPI-598 | **Klein 9B ships** — new model, own weights, deps, LoRA rack | not yet assessed |
-| MPI-609 | Klein style LoRAs renamed after the styles they produce | not yet assessed |
-| MPI-575 | LTX preview flashes junk frames on the audio-carrying flows | not yet assessed |
-| MPI-605 | LTX takes comfy kitchen attention (`52beb732`) | `ModelAttentionBackend` is ALREADY on the branch in both H3 graphs, so this is the same node applied to LTX — consistent, not new risk. **Card is still `doing`/in-progress** |
+**659/659 tests, 259/259 dep URLs, eslint clean, smoke `--self-check` OK.**
 
-Also needed: the **LanPaint** node pack in `node_lock.json`, and whatever packs MPI-598
-requires. Do NOT bring the other five master packs (ChatterBox, audio-separation,
-MelodramaBox, SplatKit, Mickmumpitz) — those are Flows and 3D scene.
+**Method that worked, and is worth repeating for any later port.** Classify each file by
+its whole history since the merge-base: a file touched ONLY by the cards being ported was
+`cp`'d from master's working tree (bytes intact, CRLF/LF preserved — 38 files); everything
+shared with out-of-scope work went through `git apply --3way` per commit, in master's own
+order. The mixed set is exactly the registries the Flow work also lives in — `models.js`,
+`assetDeps.js`, `loraDeps.js`, `commandRegistry.js` — which is why a wholesale copy of any
+of them would have dragged Flows across.
+
+Two things rode along, both deliberate and both recorded in `## Plan Drift`: **MPI-619**
+and **`c4208de8`**.
+
+Not ported: MPI-575's `flow_ltx_extend`/`flow_ltx_foley` half (absent here) and MPI-603's
+outpaint-LoRA retirement (4B keeps its LoRA on this line — the Character Sheet Flow that
+blocks the retirement does not exist here). `docs/models/klein/9b.md` was corrected on both
+points rather than shipped with master's claims.
+
+## Remaining Work
 
 ### Phase 3 — the four gates
 1. **Release notes.** Drafted in `docs/releases/UNRELEASED.md` on the branch, still marked
@@ -123,6 +133,26 @@ MelodramaBox, SplatKit, Mickmumpitz) — those are Flows and 3D scene.
 
 ## Plan Drift
 
+- **2026-09-07 (Phase 2):** two commits outside the five-card list were ported, each because
+  leaving it out would have shipped a defect rather than saved scope.
+  **MPI-619** (`dbf00cf4`, two string literals) — both Klein cards were named "FLUX.2
+  Klein", so the app told them apart with an L/B size letter, and that is exactly how a 9B
+  style LoRA got picked for a 4B run (MPI-614). 9B reaches a user for the first time in
+  1.5.0, so shipping the shared name would ship that bug on its debut.
+  **`c4208de8`** (the pod-lock gate) — `checkPodLock` compared the two node locks wholesale
+  and hard-blocked on any difference. LanPaint is `installRequirements: false`, a pack the
+  Dockerfile never bakes, so without this fix the Phase 3 smoke refuses to start over a
+  node that cannot affect the image. THIS branch's newer python_deps check (coverage, not
+  equality — MPI-698) was kept over master's older byte-compare.
+- **2026-09-07 (Phase 2):** the Phase 2 table said MPI-605's node was "ALREADY on the
+  branch". It was not — only the two H3 graphs carried `ModelAttentionBackend`; both LTX
+  runtimes had zero. Ported for real.
+- **2026-09-07 (board):** the `doing` column was 14 cards and is now 9. Fabio's rule —
+  only Flow work, or work meant to become a Flow, stays ongoing. MPI-605, MPI-662, MPI-687
+  and MPI-500 closed `complete` on their commits (each gained a `validation.md` written
+  from those commits); MPI-367 went back to `todo`, unstarted rather than done. MPI-678 is
+  the one non-Flow card left in `doing`, and only because it has uncommitted work in the
+  master tree.
 - **2026-09-07:** scope widened from "H3 + small fixes" to include the non-Flow
   image-model work and Klein 9B, at Fabio's request ("B"). He accepted that this may mean
   a larger smoke, including adding Klein 9B to the matrix. Klein 9B shipped to master

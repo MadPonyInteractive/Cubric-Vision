@@ -1,1 +1,2 @@
 {"schema":"mpi-kanban/event/v1","id":"42221e7d-2c73-456c-b60a-d12208a03dc0","type":"task.moved","at":"2026-08-30T12:20:00+01:00","task":"MPI-662","from":"todo","to":"doing"}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-662", "at": "2026-09-07T12:11:41+01:00", "actor": "claude", "from": "doing", "to": "done", "reason": "Checklist 7/7, no open item: H3 turbo takes the v1.0 LoRA and kitchen attention (4eda8c6b), ref2va gets its own LoRA at its own strength (fae92d80), R2 upload verified, 14 tests pass."}

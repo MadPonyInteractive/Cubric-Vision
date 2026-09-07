@@ -17,18 +17,30 @@
 - [x] Pod RAM floor → 64
 - [x] `npm test` 644/644 · `npm run release:deps` 236/236
 
-## Phase 2 — non-Flow image models (Fabio: "B", 2026-09-07)
-- [ ] MPI-615 — SDXL family + Krea 2 inpaint, LTX stage 2. 12 graph files clean;
-      hand-merge `models.js`, `commandRegistry.js`, krea2 README
-- [ ] MPI-598 — Klein 9B ships (new model: weights, deps, LoRA rack)
-- [ ] MPI-609 — Klein style LoRA renames
-- [ ] MPI-575 — LTX preview junk frames
-- [ ] MPI-605 — LTX comfy kitchen attention (card still `doing`; node already on branch)
-- [ ] `node_lock`: add LanPaint + whatever MPI-598 needs. NOT ChatterBox,
-      audio-separation, MelodramaBox, SplatKit, Mickmumpitz
-- [ ] Confirm no Flow deps came across (`chatterbox-*`, `dramabox-*`, `minimax-music3-*`,
-      `stable-audio-*`)
-- [ ] `npm test` + `release:deps` green from the worktree
+## Phase 2 — non-Flow image models (Fabio: "B", 2026-09-07) — DONE, `2603f668`
+- [x] MPI-615 — SDXL family + Krea 2 inpaint, LTX stage 2. Graphs copied whole;
+      `commandRegistry.js` hand-merged (took 615's text + `krea2Turbo`), krea2 README
+      resolved to 615's seven-op table
+- [x] MPI-598 — Klein 9B ships (new model, `klein_9b_t2i.json`, 9 display webps, weights,
+      deps, the seven-slot LoRA rack)
+- [x] MPI-609 — Klein style LoRA renames (`loraDeps.js`, both Klein graphs, generator)
+- [x] MPI-575 — LTX preview ring, **non-Flow half only**: `flow_ltx_extend`/`flow_ltx_foley`
+      do not exist on this line. Its `node_lock` hunk was correctly REJECTED by the 3-way —
+      it would have moved MpiNodes backwards to `5e07043`; the pin holds at `287edb83`
+- [x] MPI-605 — LTX kitchen attention. **The checklist note was wrong**: the branch's LTX
+      graphs had NO `ModelAttentionBackend` (only the H3 pair did). Node 641 is in both
+      runtimes now
+- [x] `node_lock`: LanPaint added, 16 packs. NOT ChatterBox, audio-separation,
+      MelodramaBox, SplatKit, Mickmumpitz
+- [x] Confirm no Flow deps came across — grep for `chatterbox-`, `dramabox-`,
+      `minimax-music3-`, `stable-audio-` in `js/data/modelConstants/` returns nothing
+- [x] `npm test` **659/659** (644 + 15 new) · `release:deps` **259/259** · eslint clean ·
+      smoke runner `--self-check` OK
+- [x] Rode along, both deliberate: **MPI-619** (Klein 4B/9B carry their size in the name —
+      without it 9B ships under a shared name and the L/B letter, which is how a 9B style
+      LoRA got picked for a 4B run) and **`c4208de8`** (the pod-lock gate stops demanding a
+      rebuild for `installRequirements:false` nodes — without it the Phase 3 smoke refuses
+      over LanPaint)
 
 ## Phase 3 — the gates
 - [ ] Release notes rewritten (drop "10 GB less"; keep the R2-hosting half; 62 → 64; add
