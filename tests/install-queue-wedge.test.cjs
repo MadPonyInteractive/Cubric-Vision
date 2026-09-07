@@ -55,13 +55,54 @@ test('the terminal listener is armed BEFORE the POST, not after it', async () =>
 
 test('the 30-minute safety ceiling is not silent', async () => {
     const code = stripComments(await fs.readFile(DL_SERVICE, 'utf8'));
-    const ceilingAt = code.indexOf('30 * 60 * 1000');
-    assert.ok(ceilingAt > -1, 'expected the 30-minute safety ceiling');
+    assert.match(code, /const IDLE_CEILING_MS = 30 \* 60 \* 1000;/,
+        'expected the 30-minute safety ceiling');
     // It firing means every queued install was frozen for half an hour. Recovering
     // silently is what made this undiagnosable from a log.
-    const window = code.slice(Math.max(0, ceilingAt - 400), ceilingAt);
+    const armAt = code.indexOf('IDLE_CEILING_MS);');
+    assert.ok(armAt > -1, 'expected the ceiling to be armed from a timer');
+    const window = code.slice(Math.max(0, armAt - 400), armAt);
     assert.match(window, /clientLogger\.warn/,
         'the safety ceiling must log when it releases the queue (MPI-395)');
+});
+
+test('the safety ceiling measures SILENCE, not total download time (MPI-657)', async () => {
+    // A flat ceiling "longer than any single model download" stopped being true at
+    // 20GB+ deps: it fired on minimax-h3-ref2va at 07:57:06Z on 2026-08-29 while its
+    // 24.55GB clip was still streaming, releasing the chain early. The dep's size must
+    // not be able to trip it — only silence — so the timer re-arms on every progress
+    // tick for this model.
+    const code = stripComments(await fs.readFile(DL_SERVICE, 'utf8'));
+    // The method DEFINITION, not the call site in _start() that precedes it.
+    const fn = code.slice(code.indexOf('_awaitDownloadDone(modelId) {'));
+    const body = fn.slice(0, fn.indexOf('return { promise, cancel };'));
+    assert.ok(body.length > 0, 'expected to find the _awaitDownloadDone body');
+
+    // Re-arming must CLEAR the previous timer, or every tick leaks one and the first
+    // one still fires on schedule — the bug, plus a pile of dead timers.
+    assert.match(body, /const arm = \(\) => \{\s*clearTimeout\(timer\);\s*timer = setTimeout\(/,
+        'arm() must clear the outstanding timer before setting the next one (MPI-657)');
+
+    // The progress handler is what makes it idle-based. Without this call the ceiling
+    // is a flat total-time budget again.
+    const progressAt = body.indexOf("Events.on('download:progress'");
+    assert.ok(progressAt > -1, 'expected a download:progress listener');
+    const handler = body.slice(progressAt, body.indexOf("Events.on('download:complete'"));
+    assert.match(handler, /arm\(\)/,
+        'a progress tick must re-arm the ceiling, or a slow big dep trips it (MPI-657)');
+    // The remote path's download-done signal still has to resolve the chain.
+    assert.match(handler, /phase === 'verifying'[\s\S]*finish\(\)/,
+        'the verifying phase must still finish the wait — it is a download-done signal');
+
+    // Nothing size-derived: a bytes budget just relocates the guess into an assumed
+    // transfer rate, and slows a genuinely lost signal in proportion to the dep.
+    assert.doesNotMatch(body, /\bbytes\b|totalBytes|dependencies/,
+        'the ceiling must not be derived from the dep size (MPI-657)');
+
+    // The ceiling is a chain release, not a canceller: it must not touch job state or
+    // files. The partial that vanished on 2026-08-29 went to a user cancel 52min later.
+    assert.doesNotMatch(body, /this\.cancel\(|downloadJobs|job\.status/,
+        'the safety ceiling releases the chain only — it must not cancel or restate a job');
 });
 
 test('the backend really does start the job before responding', async () => {
@@ -75,17 +116,57 @@ test('the backend really does start the job before responding', async () => {
         'the route starts the job before it responds — register-before-respond (MPI-395)');
 });
 
-test('engine:assets installs silently — the job id must never reach the user', async () => {
+/**
+ * MPI-576 — the internal heals install SILENTLY, by construction.
+ *
+ * Two of them run on the first remote connect: the node-drift re-clone
+ * (`engine:node-drift`) and the engine-asset install (`engine:assets`). Neither is
+ * user-initiated and neither may be announced. This was an id ALLOWLIST in
+ * notificationService holding one literal ('engine:assets', MPI-395) — and the very
+ * next `engine:*` id escaped it, announcing its raw job id to the user as
+ * "engine:node-drift installed." on every connect. So the assertion is no longer
+ * "the list contains the id"; it is "the caller declares the job silent and the
+ * announcement sites read that", which a third id cannot escape.
+ */
+test('internal heal jobs are started silent, and both toast sites honour it', async () => {
     const notif = stripComments(
         await fs.readFile(path.join(__dirname, '..', 'js', 'shell', 'notificationService.js'), 'utf8'));
-    const shell = await fs.readFile(path.join(__dirname, '..', 'js', 'shell.js'), 'utf8');
+    const shell = stripComments(await fs.readFile(path.join(__dirname, '..', 'js', 'shell.js'), 'utf8'));
+    const dl = stripComments(await fs.readFile(DL_SERVICE, 'utf8'));
 
-    // shell.js owns the id; notificationService carries the literal to keep shell's
-    // deliberately-lazy downloadService import out of boot. Pin them in sync.
-    const owned = /ENGINE_ASSETS_JOB_ID = '([^']+)'/.exec(shell);
-    assert.ok(owned, 'expected ENGINE_ASSETS_JOB_ID in shell.js');
-    assert.ok(notif.includes(`'${owned[1]}'`),
-        `notificationService must suppress '${owned[1]}' — the engine-asset heal runs on `
-        + 'every first connect and announced a raw job id as a toast and an OS '
-        + 'notification (MPI-395)');
+    // 1. Every internal job id shell.js owns is started with { silent: true }.
+    const ids = [...shell.matchAll(/^const (\w*JOB_ID) = '(engine:[^']+)';/gm)];
+    assert.ok(ids.length >= 2,
+        'expected shell.js to own both internal job ids (engine:node-drift, engine:assets)');
+    for (const [, constName, id] of ids) {
+        assert.match(shell, new RegExp(`downloadService\\.start\\(${constName}, \\w+, \\{ silent: true \\}\\)`),
+            `${id} (${constName}) must be started with { silent: true } — an internal heal `
+            + 'that announces itself is MPI-395 and MPI-576 all over again');
+    }
+
+    // 2. downloadService marks the job and stamps the flag onto the completion event.
+    assert.match(dl, /_silentJobs\.add\(modelId\)/, 'start() must record a silent job');
+    assert.match(dl, /const silent = _silentJobs\.delete\(data\.modelId\)/,
+        'the complete handler must resolve (and clear) the silent mark');
+    assert.match(dl, /data\.silent = silent;/,
+        'the flag must be stamped onto download:complete — notificationService reads it there');
+
+    // 3. The cascade toast is skipped for a silent job. It fires off a registry diff
+    //    ("absent before the re-sync, present after"), and the drift heal makes that
+    //    diff huge and legitimate: a drifted volume node reports installed:false for
+    //    EVERY model whose dep universe holds it, so one KB-scale re-clone flips the
+    //    whole sharing set — six models announced as fresh installs, nothing downloaded.
+    const syncAt = dl.indexOf('reSyncInstalledModels().then(() => {');
+    const toastAt = dl.indexOf('installed.`', syncAt);
+    assert.ok(syncAt > -1 && toastAt > syncAt, 'expected the cascade toast after the re-sync');
+    assert.match(dl.slice(syncAt, toastAt), /if \(silent\) return;/,
+        'the cascade toast must bail on a silent job — the re-sync still runs, only the '
+        + 'announcement is suppressed (MPI-576)');
+
+    // 4. notificationService gates on the FACT, not on a list of ids it has to maintain.
+    assert.match(notif, /data\.silent === true\) return;/,
+        'notificationService must suppress a silent job by its flag');
+    assert.doesNotMatch(notif, /'engine:/,
+        'no engine job-id literal may come back here — the allowlist is what leaked '
+        + 'engine:node-drift in the first place (MPI-576)');
 });

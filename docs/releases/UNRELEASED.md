@@ -129,6 +129,36 @@ Gate 0 re-run per bullet against v1.4.4 on 2026-09-07:
   not be removed at all, and the app told you the files were being kept deliberately.
   They are properly removed now, and the space comes back.
 
+- A half-installed model can give its disk space back. If a model lost one of its files —
+  you tidied the models folder by hand, or an install stopped near the end — the library
+  showed it as not installed and offered no way to remove what was still there, so the
+  bytes were stranded.
+
+- Connecting to a rented GPU no longer announces every model already on it. A connect
+  quietly repairs the remote engine, and that repair was being reported as though each
+  model had just been downloaded — a stack of toasts, plus one naming a raw internal job
+  id.
+
+- Around ten console windows no longer flash open behind the app on startup, and the same
+  flash is gone from video trimming, cropping, reversing and GIF export.
+
+- Media you drag in is imported from disk instead of being copied through memory first,
+  which stops a large video from stalling or failing outright. A rotated video also
+  reports the size you actually see rather than its pre-rotation one.
+
+- Applying an update leaves the install describing itself correctly, instead of reporting
+  the version it replaced.
+
+- Video crop and reverse name their output like every other tool, and the prompt box files
+  its result under the operation you picked.
+
+- Two model-library defects: the Frame Interpolation download showed another pack's name,
+  and a model whose files sit outside the usual folder could read as installed to the
+  installer and not-installed to the library — badge stuck, Install downloading nothing.
+
+- The gallery no longer keeps playing a hovered clip underneath an overlay that just
+  opened, and a canvas hidden behind another panel is no longer mistaken for a resize.
+
 - Videos in the gallery looked softer than the images sitting next to them. Their preview
   frames were being generated at half the width of image thumbnails; both are the same
   size now.

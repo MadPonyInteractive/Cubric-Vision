@@ -8,20 +8,20 @@
  * connect. Best-effort: returns null on any failure, Vision stays standalone.
  *
  * ── brokerCommand decision ──────────────────────────────────────────────────
- * The command is `['node', cliPath]`. Reasoning:
- *   - server.js is a forked Node child process. In dev, `node` is always in
- *     PATH (the same toolchain that runs Electron dev mode). This is the
- *     simplest, most predictable option.
- *   - Using `process.execPath` (Electron binary) would require
- *     ELECTRON_RUN_AS_NODE=1 to be present in the inherited env. While Electron
- *     sets it when forking via child_process.fork(), the explicit `env:` option
- *     passed to fork() (buildServerEnv) spreads process.env of the PARENT (Electron
- *     main), which does NOT carry ELECTRON_RUN_AS_NODE. So execPath is unreliable
- *     without explicit env injection, which ensureBroker's spawn doesn't support.
- *   - Production portable: Vision ships no standalone Node binary. If/when a
- *     portable build needs to boot the broker, the brokerCommand here would
- *     need updating (options: ship Node alongside, or use the Electron binary
- *     with ELECTRON_RUN_AS_NODE injected via a wrapper shim). Deferred.
+ * The command is `[process.execPath, cliPath]` — OUR OWN Electron binary run as
+ * Node — with ELECTRON_RUN_AS_NODE injected through ensureBroker's `env` option.
+ * Three reasons, in order of how much they cost when ignored:
+ *   - `node` is a CONSOLE-subsystem binary, and ensureBroker spawns detached.
+ *     On Windows DETACHED_PROCESS makes CreateProcess IGNORE the CREATE_NO_WINDOW
+ *     that `windowsHide` sets, so `['node', cliPath]` popped a real terminal
+ *     window on every single app boot — one of the ~10 that read as malware
+ *     (MPI-637). electron.exe is GUI-subsystem: it never gets a console at all,
+ *     detached or not. Do not go back to bare `node` to "simplify" this.
+ *   - Production portable ships no standalone Node binary, so `node` only ever
+ *     worked in dev, on a machine that happened to have it on PATH.
+ *   - `env` was NOT always available on ensureBroker — the earlier version of
+ *     this comment rejected execPath because of that, and it is now wrong:
+ *     EnsureBrokerOptions.env exists and documents this exact Electron case.
  *
  * ── sourceDir decision ──────────────────────────────────────────────────────
  * Vision ships no broker binary in its own resources. The dev sibling path
@@ -74,8 +74,11 @@ async function ensureFamilyBroker() {
   try {
     const { cliPath } = await ensureBrokerBinary({ sourceDir });
 
+    // Outside Electron (unit tests, a bare-node harness) execPath IS node and the
+    // extra env var is inert, so one command covers both.
     const result = await ensureBroker({
-      brokerCommand: ['node', cliPath],
+      brokerCommand: [process.execPath, cliPath],
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
       readyTimeoutMs: 8000,
     });
 

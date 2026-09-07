@@ -339,6 +339,7 @@ async function runPipCommand(args) {
     return new Promise((resolve, reject) => {
         const pip = spawn(pythonPath, ['-m', 'pip', ...args], {
             env: { ...process.env, PIP_CACHE_DIR: pipCacheDir() },
+            windowsHide: true,
         });
         pip.stdout.on('data', (data) => logger.info('system', `[pip] ${data.toString().trim()}`));
         pip.stderr.on('data', (data) => logger.warn('system', `[pip-err] ${data.toString().trim()}`));
@@ -488,7 +489,7 @@ async function runCustomCommand(commandStr, cwd) {
     const args = parts.slice(1);
     logger.info('system', `Running custom command: ${commandStr} (cwd: ${cwd})`);
     return new Promise((resolve, reject) => {
-        const proc = spawn(exe, args, { cwd });
+        const proc = spawn(exe, args, { cwd, windowsHide: true });
         proc.stdout.on('data', (d) => logger.info('system', `[custom-cmd] ${d.toString().trim()}`));
         proc.stderr.on('data', (d) => logger.warn('system', `[custom-cmd-err] ${d.toString().trim()}`));
         proc.on('close', (code) => {

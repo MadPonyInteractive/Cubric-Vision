@@ -29,6 +29,10 @@ const _installEngine = () => (remoteEngineClient.isRemote() ? 'remote' : 'local'
 // MPI-276 G2 — how long an optimistic 'pending' click waits for a backend ack
 // before it reverts the card to Install + a warning toast.
 const PENDING_ACK_MS = 10_000;
+// MPI-657 — how long the serial install chain tolerates SILENCE from a model
+// before assuming its terminal event was lost and releasing (see
+// _awaitDownloadDone). Idle time, never total download time.
+const IDLE_CEILING_MS = 30 * 60 * 1000;
 
 function _isOutOfSpaceError(error) {
     const s = String(error || '').toLowerCase();
@@ -84,19 +88,28 @@ const downloadService = {
     // tile and flip the detail footer to Cancel, and every existing model must keep it.
     // A GATED model necessarily goes async (the user has to read something), so its tile
     // stays on Install until the dialog is accepted, which is the correct reading.
-    start(modelId, dependencies) {
+    //
+    // MPI-576 — `opts.silent` marks an INTERNAL job whose completion must never reach
+    // the user (the remote node-drift heal, the engine-asset heal). It is recorded in
+    // `_silentJobs` and stamped onto the completion event as `data.silent`, so every
+    // consumer reads it as a fact about the job instead of matching a job id. That
+    // replaces the id allowlist in notificationService, which two `engine:*` ids in a
+    // row have now escaped: 'engine:assets' was allowlisted for MPI-395,
+    // 'engine:node-drift' was never added and leaked its raw id to the user as
+    // "engine:node-drift installed."
+    start(modelId, dependencies, opts = {}) {
         const licence = getModelLicence(modelId);
         if (licence && !hasAcceptedLicence(modelId)) {
             return showLicenceGate(licence).then((accepted) => {
                 if (!accepted) return undefined;
                 recordLicenceAcceptance(modelId);
-                return this._start(modelId, dependencies);
+                return this._start(modelId, dependencies, opts);
             });
         }
-        return this._start(modelId, dependencies);
+        return this._start(modelId, dependencies, opts);
     },
 
-    _start(modelId, dependencies) {
+    _start(modelId, dependencies, opts = {}) {
         // Ensure SSE is connected BEFORE the POST to avoid missing backend broadcasts
         // (download:started, download:progress) that fire before the SSE open event.
         this._ensureSSE();
@@ -110,6 +123,7 @@ const downloadService = {
         // still-queued job (no POST fired yet) drops its job so its turn is skipped.
         const willQueue = this._inFlight > 0;
         this._inFlight += 1;
+        if (opts.silent === true) _silentJobs.add(modelId);
         const job = _createJob(modelId, dependencies);
         // MPI-276 G2: optimistic client-only 'pending' state — "Starting…",
         // indeterminate — until the backend acks. A queued install (something ahead
@@ -193,6 +207,7 @@ const downloadService = {
         let cancel = () => {};
         const promise = new Promise((resolve) => {
             let done = false;
+            let timer;
             const finish = () => {
                 if (done) return;
                 done = true;
@@ -202,24 +217,41 @@ const downloadService = {
             };
             cancel = finish;
             const match = (d) => !d || d.modelId === modelId;
+            // MPI-657 — the ceiling is IDLE time, not total time. It used to be a flat
+            // 30 minutes "longer than any single model download", which stopped being
+            // true the moment we shipped 20GB+ deps: a healthy 24.55GB clip at the
+            // 0.66-2.8 MB/s node-downloader-helper manages against HF needs 2.5-10h, so
+            // the net fired on a download that was still streaming and released the
+            // chain early — the opposite of its job. Deriving a budget from the dep's
+            // bytes only moves the guess into an assumed transfer rate (measured 0.66-5
+            // MB/s, an 8x spread) AND makes a genuinely lost signal take proportionally
+            // longer to release. Progress ticks carry modelId, so silence is the honest
+            // signal: re-arm on every tick and the size of the dep stops mattering.
+            const arm = () => {
+                clearTimeout(timer);
+                timer = setTimeout(() => {
+                    clientLogger.warn('downloadService',
+                        `no progress for ${modelId} within 30min — releasing the install queue on the safety ceiling`);
+                    finish();
+                }, IDLE_CEILING_MS);
+            };
             // Download-done signals — network idle, verify/extract now runs:
             const offInstalling = Events.on('download:installing', (d) => match(d) && finish());
-            const offProgress = Events.on('download:progress', (d) =>
-                match(d) && d && d.phase === 'verifying' && finish());
+            const offProgress = Events.on('download:progress', (d) => {
+                if (!match(d)) return;
+                if (d && d.phase === 'verifying') return finish();
+                arm();
+            });
             // Terminal signals — fast install with no separate verify phase, or end:
             const offComplete = Events.on('download:complete', (d) => match(d) && finish());
             const offFailed = Events.on('download:failed', (d) => match(d) && finish());
             const offCancelled = Events.on('download:cancelled', (d) => match(d) && finish());
-            // 30 min ceiling — longer than any single model download; a lost signal
-            // releases the queue instead of stalling it. MPI-395: say so. This firing
-            // means every install queued behind it has been frozen for half an hour,
-            // which is exactly what made the wedge above impossible to diagnose from a
-            // log — it recovered silently, so it read as "install just never started".
-            const timer = setTimeout(() => {
-                clientLogger.warn('downloadService',
-                    `no terminal event for ${modelId} within 30min — releasing the install queue on the safety ceiling`);
-                finish();
-            }, 30 * 60 * 1000);
+            // The safety net itself (MPI-395): a LOST terminal event must release the
+            // chain rather than wedge it. This firing means every install queued behind
+            // it has been frozen for half an hour, which is exactly what made the wedge
+            // above impossible to diagnose from a log — it recovered silently, so it
+            // read as "install just never started".
+            arm();
         });
         return { promise, cancel };
     },
@@ -598,9 +630,23 @@ const downloadService = {
             // flickered back. Per-dep completes carry no modelId, so gate the sync on it and
             // emit only the model-level event downstream. (fixes the install-flash storm)
             if (!isUW) {
+                // MPI-576 — a SILENT job (the first-connect node-drift heal, the
+                // engine-asset heal) re-syncs the registry but announces nothing. The
+                // cascade toast below reads "was absent before the re-sync, present
+                // after" as "it was just installed", and on the drift heal that
+                // inference is true-but-unwanted: a drifted volume node reports
+                // `installed:false` for EVERY model whose dep universe contains it
+                // (routes/remoteModels.js — `d.installed = false; d.drifted = true`),
+                // so re-cloning that one KB-scale node flips the whole sharing set back
+                // to installed at once. Fabio's connect announced six models that way,
+                // with nothing downloaded. MPI-230 required that heal to be silent —
+                // "no prompt, no toast" — and this is the site that broke it.
+                const silent = _silentJobs.delete(data.modelId);
+                data.silent = silent;
                 // Capture installed IDs before re-sync to detect cascade installs
                 const preSync = new Set(MODELS.filter(m => m.installed).map(m => m.id));
                 reSyncInstalledModels().then(() => {
+                    if (silent) return;
                     // Toast any model that became installed as a side-effect (shared deps)
                     // Skip the primary modelId — already toasted above
                     for (const m of MODELS) {
@@ -623,6 +669,7 @@ const downloadService = {
         this._eventSource.addEventListener('download:failed', (e) => {
             const data = JSON.parse(e.data);
             _speedSamples.delete(data.modelId); // MPI-94 L4 — drop the speed sample
+            _silentJobs.delete(data.modelId);   // MPI-576 — terminal: drop the silent mark
             // UW dep failures are surfaced through engine:error / install modal — skip toast here
             if (data.modelId === '__universal_workflow__') {
                 Events.emit('download:failed', data);
@@ -820,6 +867,15 @@ function _parseSizeToBytes(sizeStr) {
     const multipliers = { 'GB': 1024 ** 3, 'MB': 1024 ** 2, 'KB': 1024, 'B': 1 };
     return val * (multipliers[unit] || 0);
 }
+
+// MPI-576 — job ids started with { silent: true }: the internal heals (the remote
+// node-drift re-clone, the engine-asset install). Their completion is not announced —
+// not by notificationService, not by the cascade toast in the download:complete
+// handler, which stamps `data.silent` off this set. Deliberately NOT a field
+// on the job: the /download/jobs snapshot handler replaces state.downloadJobs wholesale
+// with SERVER-built jobs, which carry no client-side fields, so a snapshot landing
+// mid-heal would strip the flag and re-open the leak. Cleared on the terminal event.
+const _silentJobs = new Set();
 
 // MPI-94 L4 — client-side download-speed derivation for remote (wrapper aria2c)
 // progress, which arrives without a speed string. Keyed by modelId; holds the

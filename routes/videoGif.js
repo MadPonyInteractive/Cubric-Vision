@@ -34,6 +34,10 @@ const { v4: uuidv4 } = require('uuid');
 const logger = require('./logger');
 const { ffmpegPath } = require('../services/ffmpegBinary');
 
+// windowsHide on EVERY execFileP call below: the forked server.js owns no console,
+// so a console-subsystem ffmpeg/ffprobe gets its own conhost - a terminal that flashes
+// open on the user's desktop. /backfill-media-derivatives fires one per missing
+// rendition, so a project open popped ~20 of them (MPI-651, the tail of MPI-637).
 const execFileP = promisify(execFile);
 
 // sizePreset → ffmpeg scale expression. `-2` keeps aspect + forces an even
@@ -111,7 +115,7 @@ router.post('/api/video/gif', async (req, res) => {
         );
 
         logger.info('project', `video-gif ffmpeg: ${ffmpegPath} ${args.join(' ')}`);
-        await execFileP(ffmpegPath, args, { maxBuffer: 8 * 1024 * 1024 });
+        await execFileP(ffmpegPath, args, { maxBuffer: 8 * 1024 * 1024, windowsHide: true });
 
         const stat = await fs.stat(outputPath);
         // Cache-bust on mtime so a re-run overwriting a reused name plays fresh bytes.

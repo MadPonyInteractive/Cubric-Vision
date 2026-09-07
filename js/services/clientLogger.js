@@ -20,7 +20,7 @@ function _send(level, category, message, err) {
     // Also mirror to browser console for dev convenience
     const detail = err ? (err.stack || String(err)) : '';
     if (level === 'error') console.error(`[${category}] ${message}`, err || '');
-    else if (level === 'warn') console.warn(`[${category}] ${message}`);
+    else if (level === 'warn') console.warn(`[${category}] ${message}`, err || '');
 
     fetch('/log', {
         method: 'POST',
@@ -31,6 +31,8 @@ function _send(level, category, message, err) {
 
 export const clientLogger = {
     info  : (category, message)      => _send('info',  category, message),
-    warn  : (category, message)      => _send('warn',  category, message),
+    // `warn` took only two args until MPI-670, so a passed err was silently dropped
+    // and `Media save failed:` reached app.log with nothing after the colon.
+    warn  : (category, message, err) => _send('warn',  category, message, err),
     error : (category, message, err) => _send('error', category, message, err),
 };

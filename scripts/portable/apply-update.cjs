@@ -14,6 +14,8 @@ process.noAsar = true;
 const fs = require('fs');
 const path = require('path');
 
+const UPDATE_MANIFEST_REL = 'resources/cubric/update-manifest.json';
+
 function parseArgs(argv) {
   const opts = { root: '', bundle: '' };
   for (let i = 0; i < argv.length; i += 1) {
@@ -83,7 +85,7 @@ function evictBusyFile(target) {
 }
 
 function findManifestRoot(dir, depth = 0) {
-  const candidate = path.join(dir, 'resources', 'cubric', 'update-manifest.json');
+  const candidate = path.join(dir, ...UPDATE_MANIFEST_REL.split('/'));
   if (fs.existsSync(candidate)) return dir;
   if (depth > 2) return null;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -239,7 +241,7 @@ async function main() {
   if (!bundleRoot) {
     throw new Error('Update bundle does not contain resources/cubric/update-manifest.json');
   }
-  const manifestPath = path.join(bundleRoot, 'resources', 'cubric', 'update-manifest.json');
+  const manifestPath = path.join(bundleRoot, ...UPDATE_MANIFEST_REL.split('/'));
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8').replace(/^\uFEFF/, ''));
   if (manifest.appId !== 'cubric.vision') {
     throw new Error(`Wrong update appId: ${manifest.appId}`);
@@ -256,6 +258,13 @@ async function main() {
     if (!file || typeof file.path !== 'string') continue;
     copyManifestFile(bundleRoot, opts.root, rollbackRoot, file.path);
   }
+  // The manifest is not in its own files[]: createUpdateManifest builds the file
+  // list and only then writes the manifest into the same stage root, so a bundle
+  // ships N+1 members for N entries. Copy it explicitly, or the install keeps the
+  // manifest the last FULL extract left there and goes on reporting the version it
+  // was BEFORE the update (MPI-523). Same copy path as every other file, so it is
+  // backed up into the rollback root too.
+  copyManifestFile(bundleRoot, opts.root, rollbackRoot, UPDATE_MANIFEST_REL);
   applyDeletes(opts.root, rollbackRoot, manifest);
   // Only remove the scratch dir WE created from a zip. A user-supplied
   // already-extracted directory (MPI-62 Safari case) is left untouched.

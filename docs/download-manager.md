@@ -122,6 +122,36 @@ store, never the dead flag:
   the check throws. Plus any dep held by a live in-flight job (`_inFlightDepIds`,
   store SOT — MPI-276).
 
+**One resolver answers "where does this dep live?" — `resolveComfyPath`
+(`routes/shared.js`), MPI-654.** The download manager, the uninstall delete loop,
+the engine boot gate and `localModelsCheck` all call it; nothing re-implements the
+targetPath → custom_nodes → custom-root → default-root ladder. Two copies existed
+until MPI-654 and both drifts they produced were invisible: MPI-607 (the library
+copy lacked the `targetPath` branch — flow deps read not-installed forever) and
+MPI-654 itself (the copies searched different scopes, so a same-named weight in
+another bucket read installed to the installer and not-installed to the library —
+badge stuck, Install downloading nothing). **The search is scoped to the dep's own
+bucket** — the first segment of `filename` IS the ComfyUI folder-type key
+(`yamlHelper.js` derives the yaml from it), so a same-named file in another bucket
+is a different weight the consuming node can never load. Recursive INSIDE the
+bucket stays (users nest). Widening it back to the whole custom root also aims the
+uninstall delete at a user's unrelated same-named file. Pinned by
+`tests/dep-path-agreement.test.cjs`.
+
+**The `models:checked` emit gate is keyed on the dep caches too, not just the model
+set (MPI-681).** `syncModelInstalled` writes three things — `MODELS[].installed`, the
+flow dep-status cache and the plugin dep-status cache — and only emits on a real diff,
+because the remote heartbeat re-syncs every ~5s and a no-change re-emit tore down open
+op dropdowns and slider drags (MPI-326). The gate was keyed on the installed MODEL set
+alone, so a **deps-only** install (every flow with `requiredDeps` and no
+`requiredModels` — the whole audio section) changed neither key and the fan-out never
+fired. `models:checked` is the only signal MpiFlowLibrary has for that install, so the
+drawer sat frozen at 100% with Cancel showing until the app restarted (the keys start
+`null`, so the first sync of a session always emits). Same stuck-at-100% symptom as
+MPI-607 above, different cause: there the disk read lied, here the read was right and
+nobody was told. Pinned by `tests/deps-only-install-fanout.test.cjs`, which asserts
+both directions — the deps-only edge fires, and a steady-state re-sync stays silent.
+
 **"Is this model installed?" is answered from its EXCLUSIVE deps (MPI-310).**
 A model protects every dep it *declares*, and it counts as installed when any dep
 that **no other model declares** is on disk. Both earlier rules conflated shared
@@ -438,12 +468,49 @@ In `js/state.js`:
 | --- | --- | --- |
 | `download:started` | Backend→SSE→Frontend | Model job enqueued and downloading begins |
 | `download:progress` | Backend→SSE→Frontend | Per-dep bytes/speed updated, throttled 1/sec on backend |
-| `download:complete` | Backend→SSE→Frontend | Fires PER-DEP with `{depId, modelId:null}` as each file lands, then ONCE model-level with a real `modelId` when the whole dep set is done (`_checkModelJobsComplete`). Frontend consumers doing expensive work (registry re-sync, grid rebuild) MUST gate on `data.modelId` — running per-dep re-synced the registry N× and flashed the Model Library grid (see [model-library.md](model-library.md) § Library flash on install). |
+| `download:complete` | Backend→SSE→Frontend | Fires PER-DEP with `{depId, modelId:null}` as each file lands, then ONCE model-level with a real `modelId` when the whole dep set is done (`_checkModelJobsComplete`). Frontend consumers doing expensive work (registry re-sync, grid rebuild) MUST gate on `data.modelId` — running per-dep re-synced the registry N× and flashed the Model Library grid (see [model-library.md](model-library.md) § Library flash on install). The frontend stamps **`silent: true`** on the model-level event when the job was started with `{ silent: true }` — see § Internal heal jobs are silent by construction. |
 | `download:failed` | Backend→SSE→Frontend | SHA256 mismatch or network error. Fires per-dep (`{depId}`, **silent client-side** — MPI-97) and model-level (`{modelId}`) from `_checkModelJobsComplete`; only the model-level one surfaces. Its payload FLAGS pick the surface — see § Failed is not one thing |
 | `download:cancelled` | Backend→SSE→Frontend | User cancelled or shutdown |
 | `download:uninstalled` | Backend→SSE→Frontend | Model uninstalled |
 | `download:installing` | Backend→SSE→Frontend | Custom-node install phase in progress — since MPI-413 that is the one curated `python_deps.txt` pip pass plus the node extractions, not a per-node `requirements.txt` |
 | `comfy:needs-restart` | Backend→SSE→Frontend | Custom node install done; ComfyUI needs auto-restart |
+
+## Internal heal jobs are silent by construction (MPI-576)
+
+Two jobs run on the first remote connect with no user behind them — the node-drift
+re-clone (`engine:node-drift`, `shell.js _healRemoteNodeDrift`) and the engine-asset
+install (`engine:assets`, `_installRemoteEngineAssets`). Neither may be announced.
+
+The caller declares it: `downloadService.start(id, deps, { silent: true })`. The id goes
+into the module-level `_silentJobs` set — **not** onto the job object, because the
+`download:jobs` snapshot handler replaces `state.downloadJobs` wholesale with
+SERVER-built jobs and would strip a client-side field. The model-level
+`download:complete` handler resolves and clears the mark, stamps `data.silent` onto the
+event, and both announcement sites read it:
+
+- `notificationService.js` returns early → no toast, no OS notification.
+- The **cascade toast** in `downloadService.js` returns early → the registry re-sync
+  still runs, only the announcement is suppressed.
+
+**Why this is a flag and not a list of job ids.** It WAS a list: MPI-395 added the single
+literal `'engine:assets'` to notificationService's allowlist. The very next `engine:*` id
+escaped it — MPI-576, where a connect announced `engine:node-drift installed.` (a raw
+internal job id) plus **one "installed." toast per model already on the volume**, six of
+them, with nothing downloaded. That storm is the cascade toast, whose heuristic is "absent
+before the re-sync, present after → just installed". On a drift heal that inference is
+true but unwanted: a drifted volume node reports `installed:false` for EVERY model whose
+dep universe contains it (`routes/remoteModels.js` — `d.installed = false; d.drifted =
+true`), so re-cloning one KB-scale node flips the whole sharing set at once. MPI-230 had
+required that heal to be silent — "no prompt, no toast" — and these were the two sites
+that broke it.
+
+A genuine shared-dep cascade (install model A, model B's dep set completes) still toasts:
+that job is not silent. Verified live by an A/B on a local instance — same job, same
+faked registry flip, `{ silent: true }` produced no toast and the control produced both
+the raw-id toast and `Krea 2 installed.`
+
+Pinned by `tests/install-queue-wedge.test.cjs` § *internal heal jobs are started silent*,
+which also asserts no `'engine:` literal returns to `notificationService.js`.
 
 ## Failed is not one thing — the payload carries the verdict (MPI-480)
 
