@@ -7,6 +7,7 @@
     "comfy_workflows/ltx_i2v_t2v_int8.json",
     "comfy_workflows/scripts/workflow_generation/ltx_i2v_t2v_template.json",
     "docs/models/ltx/workflow-authoring.md",
-    "docs/builder/05-author-and-test.md"
+    "docs/builder/05-author-and-test.md",
+    "docs/models/h3/performance.md"
   ]
 }

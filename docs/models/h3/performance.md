@@ -106,6 +106,59 @@ and WAN only, with no LTX path.
 
 Reopen SolAttn only if it gains a licence AND an LTX branch. Do not re-test SageAttention.
 
+## H3 SLA Attention (PlagueKind) — rejected on the same Triton line (2026-09-07)
+
+`PlagueKind/ComfyUI-PlagueKind-Nodes/ComfyUI-H3-SLA-Attention` is block-sparse attention for
+H3 — each query block scored against pooled key blocks, only the top `1 - sparsity_ratio`
+attended. Third node in this family, and it fails on the same clause as the two above: its
+own kernel is **Triton**, which is engine-owned and cannot enter the curated pip set.
+
+The user's call, and it is the general rule rather than a fact about this node: we ship a
+product that has to work everywhere, so a speed lever that adds a platform-specific wheel to
+the user's Python loses to one that does not.
+
+Measured on disk 2026-09-07, because the bench is NOT evidence about a user's machine:
+
+| | shipped engine (`engine/`) | authoring bench (`G:/ComfyUi`) |
+|---|---|---|
+| torch | 2.13.0+cu130 | 2.12.0+cu130 |
+| **triton** | **absent** | triton-windows 3.7.0.post26 |
+| sageattention | absent | 2.2.0 |
+| comfy_kitchen | 0.2.31 | 0.2.31 |
+
+The pack registered and its kernel module imported cleanly on the bench. **No kernel was
+launched** — nothing here says Triton JIT works under embedded Python, and the ~2x Windows
+JIT tax above is still the only measurement we have on that.
+
+### The Triton-free path exists, and it is the worse half
+
+The node's `engine` widget can call `comfy_kitchen.sol_attn` (Comfy-Org/ComfyUI PR #16072)
+instead of its own kernel — zero new packages. It needs **comfy-kitchen >= 0.2.32**; core
+`v0.34.0` hard-pins `comfy-kitchen==0.2.31` (`requirements.txt:25`) and `sol_attn` is absent
+from the installed module (checked, both engines). A core bump past that pin makes this path
+free.
+
+**That is not "revisit when the pin moves".** `sol_attn` expresses only ONE contiguous
+protected range, so the node silently disables `reference_protection`, multi-span
+`protect_audio` and `stabilize_motion` there rather than approximating them — one log line
+each. Audio is the axis H3 breaks on first (`turbo.md`), so the free path carries the
+weakest audio protection and the full-audio path is the one that costs a Triton wheel.
+
+### The SLA turbo LoRA is a separate artefact — and it is a v0.1
+
+`lightx2v/Minimax-h3-Turbo-SLA` (`..._4step_v0.1_768p_sla_comfyui_bf16`, 1.96GB, 624 tensors,
+rank/alpha 128, `training_scale 1.0`) holds no kernel and, per the node's own docstring,
+**produces no speedup on its own** — sparsity is decided at runtime from q and k, and the
+LoRA only makes the model tolerate it. So the node runs against any LoRA including ours, but
+`sparsity_ratio 0.85` is the value THIS weight was distilled to, and it is v0.1 lineage,
+which `turbo.md` records losing to the shipped v1.0 768p. Any future test is a three-way
+(shipped v1.0 dense / v1.0 + SLA / SLA v0.1 + SLA), never a swap.
+
+Upstream's headline **2.5x is an eight-GPU number**. The node author's own end-to-end figure
+is 1.4-1.75x on a 5090 at 768p/15s, attention being ~30s of a 44s step (Amdahl ceiling 3.17x).
+Two of his defaults independently match findings already in `turbo.md`: 6 steps not 4, and a
+small `block_size` because H3 packs audio at 80 rows/second.
+
 ## EasyCache — free, already installed, non-turbo only
 
 `comfy_extras/nodes_easycache.py` is **core ComfyUI** (node id `EasyCache`) - no pip dep,
