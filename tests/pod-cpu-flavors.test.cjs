@@ -44,9 +44,13 @@ function record(answer) {
 
 const CPU_ARGS = { gpuTypeId: '__cpu__', volumeId: 'vol1', datacenter: 'EU-RO-1', wait: false };
 
-test('a refused CPU create walks every flavor, cpu3c first', async () => {
+test('a refused CPU create walks every flavor, cheapest sized id first', async () => {
   assert.ok(CPU_FLAVORS.length > 1, 'CPU_FLAVORS must offer more than one flavor');
-  assert.equal(CPU_FLAVORS[0], 'cpu3c', 'cpu3c is the cheapest and the enum-proven id — keep it first');
+  // A RunPod CPU flavor id is `family-vcpu-ram`. A bare family resolves to no instance and
+  // is refused in the same words as a stock-out, which is the whole bug — so the list must
+  // LEAD with a sized id, and the cheapest one at that.
+  assert.match(CPU_FLAVORS[0], /^cpu\d[a-z]-\d+-\d+$/, 'the first flavor must be a sized id, not a bare family');
+  assert.equal(CPU_FLAVORS[0], 'cpu3c-2-4', 'cheapest first — 2 vCPU / 4 GB is ample for wrapper + aria2c');
 
   const seen = record(() => REFUSED);
   const out = await _createPodInternal('key', CPU_ARGS);
