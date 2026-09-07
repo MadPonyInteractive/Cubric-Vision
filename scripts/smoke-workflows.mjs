@@ -527,6 +527,11 @@ async function waitReady(what, probe, timeoutMs, o = {}) {
  * @param {(refusedId: string) => Promise<{id:string,displayName?:string}|null>} [nextGpu]
  *   called on a refusal to choose another card; omit for a Pod with no alternative (CPU).
  */
+// A create REFUSAL rents nothing, so it is capped on its own clock rather than against
+// the billed attempts. ~10 minutes of patience for a spec with no alternative card.
+const CPU_REFUSAL_LIMIT = 10;
+const CPU_REFUSAL_BACKOFF_MS = 60 * 1000;
+
 async function createPodWithRetry(spec, label, readyMs, attempts = 3, nextGpu = null) {
     _podLive = false;
     let cur = { ...spec };
@@ -543,8 +548,24 @@ async function createPodWithRetry(spec, label, readyMs, attempts = 3, nextGpu = 
         }
         if (made && made.error) {
             log(`  ⚠ create refused: ${made.message || made.error}`);
-            if (!nextGpu || ++refusals > GPU_ORDER.length) {
-                die(`${label}: ${refusals > GPU_ORDER.length ? 'every preferred card refused a create' : 'create refused'} — ${made.message || made.error}`);
+            // No alternative card for this spec — the CPU download Pod passes no
+            // `nextGpu` because CPU_SENTINEL is the only "card" it can ask for. Dying on
+            // the FIRST refusal was wrong twice over: a refusal rents nothing (the loop
+            // already says so below), and a datacenter capacity blip is transient, so the
+            // useful move is to wait and re-ask. It also made the `attempt 1/3` banner a
+            // lie on this path — the retries could never be reached. A transient EU-RO-1
+            // CPU stock-out aborted a whole 37-op smoke this way, 2026-09-07, before a
+            // single byte was rented.
+            if (!nextGpu) {
+                if (++refusals > CPU_REFUSAL_LIMIT) {
+                    die(`${label}: refused ${refusals} times over ~${Math.round(CPU_REFUSAL_LIMIT * CPU_REFUSAL_BACKOFF_MS / 60000)} min — ${DATACENTER} has no capacity for this spec right now. Nothing was rented.`);
+                }
+                log(`  no other card exists for this spec — waiting ${CPU_REFUSAL_BACKOFF_MS / 1000}s for capacity (refusal ${refusals}/${CPU_REFUSAL_LIMIT}; nothing rented, no attempt spent)`);
+                await sleep(CPU_REFUSAL_BACKOFF_MS);
+                continue;
+            }
+            if (++refusals > GPU_ORDER.length) {
+                die(`${label}: every preferred card refused a create — ${made.message || made.error}`);
             }
             const g = await nextGpu(cur.gpuTypeId);
             if (!g) die(`${label}: create refused and no other preferred card is available — ${made.message || made.error}`);
