@@ -52,6 +52,57 @@ This is the same lever as the video-inpaint mask work.
 tokens 17 → 37, 22 of 56 frames held). 12 steps at 768×1344 took **16m23s** for the de-RoPE
 pass alone; 21m28s for the whole prompt. Not shippable at that price.
 
+## Targeting is the real constraint — and it decides the product shape
+
+Two clips, two backgrounds, the same failure: **the oracle aimed at the background both
+times.** On a boat clip (rocking hull, panning horizon) the jerk heat pooled in sky and
+water. On a tracking shot of a runner against a cityscape it pooled in the buildings.
+
+The second case explains the first. `H3JerkOracle` measures jerk in **latent/frame
+coordinates**. When the camera follows the subject, the subject is close to *stationary* in
+those coordinates and the entire background sweeps — so the oracle sees the background as
+the fast thing and the subject as the slow one. **A tracking shot inverts the targeting.**
+A cityscape is the worst case for it: hard vertical edges, high-contrast windows, parallax
+between near and far buildings, all maximal `|d3|`.
+
+So the automatic path only aims correctly on a **locked-off camera**. Any pan, track or
+handheld and the background wins the jerk contest. Most footage worth fixing has camera
+movement.
+
+**Therefore `H3V2VInit.mask` is the primary interface, not an optimisation.** Auto-oracle
+is the narrow case. This is a design constraint, not an open question.
+
+Related: what needs fixing is not what moves most. Measured by eye on the runner, the feet
+read as ordinary motion blur (fast but periodic — high velocity, low jerk) while the
+**hands and face** carry the actual smear, because they change direction. The pack has a
+name for the first class: `H3JerkHeatmap.show_drift` paints it blue — *"the drifter class
+that time warping mishandles and background freezing protects."* So masking to hands/face
+is right on both counts: it is where the defect is, and it avoids the class the technique
+handles badly.
+
+### We already ship the mask source
+
+No new dependency needed to generate a subject mask per frame. The stage-1 decode is
+already an IMAGE batch, so any of these can run over it directly.
+
+**Prefer SAM3** (`SAM3_Detect`, already in `comfy_workflows/img_auto_mask.json` alongside
+`UltralyticsDetectorProvider` / `ImpactSimpleDetectorSEGS` / `GrowMaskWithBlur`). It is one
+prompt-driven node that covers the whole range this card needs — isolate the person
+(equivalent to a background removal), or go straight to "hands" / "face" when the budget
+should land only where the smear actually is. That range is the point: the useful mask here
+is usually tighter than "not the background".
+
+`comfy_workflows/remove_background.json` (`LoadBackgroundRemovalModel` + `RemoveBackground`)
+is the cruder fallback — subject-vs-background only, no way to ask for a sub-region.
+
+**Trap when wiring it:** `H3V2VInit.time_varying` defaults to **false**, which unions the
+mask over time and gives a static boundary. For a subject crossing frame that union is the
+whole path she travels — which re-wastes the budget the mask was meant to save. A moving
+subject needs `time_varying: true`, and the docs warn that a moving boundary **can pop**,
+quantized as it is to the `(1,4,4,4,4)` token grid; intended transitions want to sit on
+17-frame phase. `mask_feather` / `freeze_grow` are the softening knobs, and
+`GrowMaskWithBlur` upstream does the same job.
+
 ## Traps paid for, worth not re-paying
 
 - `H3InjectSchedule` and `H3JerkOracle` both have a `preset` widget that **silently
@@ -86,15 +137,20 @@ sitting beside them, and it becomes cheaper than what we ship today rather than 
 
 ## Open questions before this can be planned
 
-1. Does it clearly win on a clip whose failure actually is fast subject motion? Everything
-   so far was tested on mostly-static footage. If it cannot win there, stop.
+1. Does it clearly win when the budget actually lands on the defect? Neither clip tested
+   that — the first was mostly static, the second was a tracking shot whose oracle aimed at
+   the buildings. The decisive test is a masked run (SAM3 → hands/face) or a locked-off
+   camera. If it cannot win there, stop.
 2. Does the one-step upscale+de-RoPE shape reproduce on `ref2va` with our 8-step distill?
    (The reference is `fl2va` with a 4-step lightx2v LoRA; the pack calls injection under
    heavy distillation experimental.)
-3. Masked to the subject, does the cost come down far enough to ship?
+3. Masked to hands/face, does the cost come down far enough to ship? (The mask does not
+   reduce token count — it rides the noise mask, so the model still evaluates the whole
+   dilated latent. It buys correctness and control. Token savings need temporal scoping:
+   `H3WindowPlan` or `H3SegmentCrop`.)
 4. Integration shape: an optional stage on the H3 graph, or a Flow over a finished video?
    It has to run **last**, which rules out the "extra stage before the upscaler" placement
-   originally assumed.
+   originally assumed. Whatever the shape, it needs a mask input on the user-facing surface.
 5. Portability. `model_profile` on the oracle already lists `ltx-2.5` and
    `wan-2.2 (unmeasured)`, and the pack ships `derope_any.py` + `DEROPE_ANY_MODEL.md` plus
    working LTX 2.5 examples, so this is a technique to port rather than reinvent.
