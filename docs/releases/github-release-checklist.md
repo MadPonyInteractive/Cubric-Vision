@@ -32,9 +32,9 @@ created at that moment, on the `--target` SHA.
 
 ```sh
 gh release create v<ver> -R MadPonyInteractive/Cubric-Vision \
-  --target <sha> --draft --title "Cubric Vision <ver>" \
+  --target <sha> --draft --title "v<ver>" \
   --notes-file <body.md> <6 assets>
-gh release edit <id> --draft=false          # publishes; creates the tag
+gh release edit <id> --draft=false --latest   # publishes; uses the tag, or creates it
 git fetch origin --tags && git rev-parse "v<ver>^{}"   # must equal <sha>
 ```
 
