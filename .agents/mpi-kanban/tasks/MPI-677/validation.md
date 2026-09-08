@@ -191,6 +191,12 @@ the model's fields"). Splitting it silently here would pre-empt a UX decision th
 Fabio's: which channel the negative block lands in is something the user should see and
 approve in the overlay, not something the control does behind them.
 
+Corroborated independently and already written down: `pony.recipe.js:216-227`
+reached the same conclusion from the other side while deciding not to emit a
+negative block at all, and named `sdxl` as carrying the same defect. Its pointer
+said "fixing the split is MPI-27's" — a card in the repo this work retires — and
+has been repointed at step 1c.
+
 ### The scope call worth recording
 
 **"Fold in the two Flow-internal enhance buttons" was read as ONE DISPATCH, not one

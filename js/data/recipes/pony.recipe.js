@@ -217,14 +217,18 @@ export const pony = {
       //     score_3, score_4, score_5, score_6". A string that is identical on
       //     every run does not need an LLM to produce it; it belongs in Vision's
       //     negative-prompt default.
-      //  2. Prompt's `prompt.enhance` responder returns only `{ prompt, backend,
-      //     model, recipeId, note }` (`src/main/connector.ts`) and never sets
-      //     `negativePrompt`, though Vision reads `data.output.negativePrompt`
-      //     (`js/shell/connectorOps.js`). So a two-block output lands WHOLE in
-      //     Vision's positive box — which for this recipe would put score_1..6,
-      //     an explicit request for the worst quality band, into the positive
+      //  2. Nothing splits a two-block output, so it lands WHOLE in Vision's
+      //     positive box — which for this recipe would put score_1..6, an
+      //     explicit request for the worst quality band, into the positive
       //     prompt. `sdxl` has the same defect today with milder consequences.
-      //     Fixing the split is MPI-27's; until then, not emitting is correct.
+      //     STILL TRUE AFTER MPI-677 STEP 1B, and re-measured there rather than
+      //     assumed: the broker responder never set `negativePrompt` either
+      //     (no splitter exists anywhere in Cubric-Prompt's `src/main/`), so the
+      //     local call is at PARITY, not a regression. Fixing the split is
+      //     MPI-677 step 1c's — the overlay mirrors the model's fields, so the
+      //     user sees which channel the negative block lands in and approves it.
+      //     (The old pointer here named Cubric-Prompt MPI-27, which is a card in
+      //     the repo this work retires.) Until then, not emitting is correct.
       negativeHandling: 'separate-field',
       examplePrompts: [
         'score_9, score_8_up, score_7_up, source_anime, 1girl, solo, magical-girl, long hair, pink hair, blue eyes, victorian dress, jewelry, posing, dynamic pose, looking at viewer, smile, outdoors, night, lantern light, detailed background, portrait, vibrant, illustration, 1990s',
