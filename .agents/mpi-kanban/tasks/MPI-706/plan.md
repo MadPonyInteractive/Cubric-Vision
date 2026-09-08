@@ -2,6 +2,21 @@
 
 ## Current State
 
+> **1.5.0 SHIPPED — 2026-09-08 09:03:51Z.**
+> https://github.com/MadPonyInteractive/Cubric-Vision/releases/tag/v1.5.0
+> `releases/latest` reports `v1.5.0` / `draft: false` / `prerelease: false`, and a real
+> 1.4.0 install was watched raising the update prompt. Baselines restamped, maintenance
+> branch `1.5.0` cut. Everything below is the road that got here — read § "The five facts"
+> before touching the 1.4.x line again. Close-out is `mpi-end-session`.
+>
+> Left owed, neither blocking and both pre-existing: **MPI-556** (needs a test that can
+> resolve `/js/utils/icons.js` under this line's harness) and the **two reuse-chip bugs**
+> Fabio deferred on 2026-09-07. Unobserved, worth one cheap run: pressing Update on the
+> 1.4.0 install at `D:\cubric-install-test\CubricVision-windows-x64-v1.3.0` to watch the
+> in-place apply + relaunch, which 1.4.0 -> 1.5.0 is the first transition to exercise.
+
+## How it got here
+
 **1.5.0 IS BUILT, TAGGED AND STAGED. Two things are left: the public publish, and a
 LOCAL install test on Fabio's Windows box.** Branch `1.4.2`, worktree
 `C:/AI/Mpi/Cubric-Vision-1.4.x`, head `4ba6241c`, all pushed. Tag `v1.5.0` -> `a8691834`.
@@ -24,18 +39,30 @@ Every gate is GREEN and every artifact exists:
 from CI run 34168398093 at `ref=v1.5.0` - provenance matches the tag exactly. Canonical
 names; win 523MB / linux 502MB / macos 472MB plus three ~2.6MB update bundles.
 
-**NEXT ACTION, in order (Fabio, 2026-09-08):**
-1. Draft the GitHub release. Body is already written at
-   `.agents/mpi-kanban/tasks/MPI-706/release-body-1.5.0.md`. Stage as a DRAFT with all
-   six assets. Do NOT publish yet.
-2. **Install the built Windows portable on this box and test it locally.** This is the
-   gap nobody has closed - everything verified so far was REMOTE. The smoke runner says
-   it itself: "Pod-green is NOT Windows-green". That is playbook gate 5.
-3. Only then publish, and run the reachability check in `mpi-release` step 7.
+**UPDATED 2026-09-08 AM — the draft EXISTS and the local test is 90% done.**
 
-Gate 2 (release body copy) is NOT signed off - Fabio has not read it. Two open questions
-for him: draft-then-publish vs straight to published, and the opening one-liner, which is
-agent-written and is the sentence most people will read.
+1. DONE - draft staged, 6 assets, target pinned to `a8691834`:
+   `https://github.com/MadPonyInteractive/Cubric-Vision/releases/tag/untagged-667d383aca975d05f7a1`
+   (a draft's id changes on every edit - re-read it from the edit output before verifying).
+   Body changed twice, both GitHub-only, `releaseNotes.js` untouched so the approval hash
+   still holds: opening line -> "Klein 9B", and a `## First launch` section added because
+   `github-release-checklist.md` requires it in every body and it was missing.
+2. DONE - **gate 5 is CLOSED.** The Windows portable is installed at
+   `D:\CVTest\CubricVision-v1.5.0` and every gate passed: artifact provenance
+   (`BUILD_HASH` == the tag), engine in-place 0.29.2 -> 0.34.0 with HEAD == the pin, 16
+   node packs 0 IMPORT FAILED, floor check 0 missing class_types, and a real generation
+   whose pixels were opened and checked (`sdxl-realistic` t2i, 768x1024, 72.5s, a coherent
+   photograph, real card + sidecar + thumb). Instance torn down, no orphans, lease
+   released. Full table in `validation.md`.
+
+**THE ONLY THING LEFT IS FABIO.** Gate 2: read the draft body, then authorize publish.
+
+3. Publish: `gh release edit <id> --draft=false --latest` (re-read the id first - it
+   changes on every edit). Then `mpi-release` step 7: `releases/latest` must report
+   `v1.5.0` / `prerelease: false` / `draft: false`, because `check-for-update` reads that
+   endpoint and a slip leaves every install silently on the old version.
+4. Post-publish: restamp `release-baselines/*.json` from the published FULL manifests, and
+   `git branch 1.5.0 v1.5.0`.
 
 ## The five facts` below before doing anything.** Four of them were rediscovered
 the hard way in the 2026-09-07 session because an earlier handoff had lost them.

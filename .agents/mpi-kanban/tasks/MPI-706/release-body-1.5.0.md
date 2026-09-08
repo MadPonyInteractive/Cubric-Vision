@@ -1,4 +1,4 @@
-Faster, sharper MiniMax H3 video, a second FLUX.2 Klein, and inpainting on the SDXL family and Krea 2.
+Faster, sharper MiniMax H3 video, Klein 9B, and inpainting on the SDXL family and Krea 2.
 
 ## Important changes
 
@@ -37,16 +37,28 @@ The generation engine moves from ComfyUI 0.31.0 to 0.34.0. Rented GPUs move with
 ## Platform status
 
 - **Windows** — tested locally on the maintainer's Windows development machine. Not yet validated on a separate clean Windows host.
-- **Linux** — install and launch validation only, on the maintainer's weak Ubuntu laptop. Generation support is unvalidated.
-- **macOS** — artifacts are produced mechanically and are maintainer-untested. Community validation is needed.
-
-An artifact existing is not the same as a platform being supported. If you run one of these, a validation report is genuinely useful — please include your OS version, CPU architecture, GPU and driver stack, the artifact name, whether you did a clean install or an update, and whether generation worked.
+- **Linux** — not tested on this version.
+- **macOS** — not tested on this version.
 
 ## Updating
 
-Existing installs can update in place with the online `update` script — the update bundles attached here are what it pulls, so you do not re-download the whole app.
+The app checks for a new version when it starts and offers to update itself. One click downloads only what changed — the update bundles attached here — applies it, and reopens the app. There is nothing to run by hand.
 
-**Windows installs older than v1.3.0 cannot update this way.** Smart App Control blocks the update scripts on those builds. Download the full `CubricVision-windows-x64-v1.5.0.zip` instead.
+**Windows installs older than v1.3.0 cannot update this way.** The updater that runs is the one already on your disk, and Smart App Control blocks it on those builds. Download the full `CubricVision-windows-x64-v1.5.0.zip` instead.
+
+## First launch
+
+These builds are **not code-signed**, so both desktop platforms show a security prompt the first time. This is expected.
+
+**Windows.** Extract the zip anywhere and run `CubricVision.exe`. Windows may show *"Windows protected your PC"* — click **More info**, then **Run anyway**.
+
+**macOS.** A downloaded build is quarantined. Clear it, then launch:
+
+```
+xattr -dr com.apple.quarantine "<extracted folder>"
+```
+
+then double-click `start.command`.
 
 ## Downloads
 

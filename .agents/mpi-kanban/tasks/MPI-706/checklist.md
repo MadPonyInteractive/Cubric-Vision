@@ -148,9 +148,30 @@
       artifacts downloaded to `D:/CubricStudio/Vision/Builds/v1.5.0/`. A duplicate build
       was cancelled: the tag push fires the Vision repo’s own dispatcher, so a manual
       mpi-ci dispatch is redundant.
-- [ ] **DRAFT the GitHub release** - body ready at `release-body-1.5.0.md`. Gate 2 NOT
-      signed off; Fabio has not read it.
-- [ ] **Install the built Windows portable on Fabio’s box and test LOCALLY.** Everything
-      verified so far was REMOTE - Pod-green is not Windows-green (playbook gate 5).
-- [ ] Publish, then the reachability check (mpi-release step 7).
+- [x] **DRAFT the GitHub release** - created 2026-09-08, 6 assets, `isDraft: true`,
+      target pinned to `a8691834`. Body gained the mandatory `## First launch` block
+      (checklist says it must appear in EVERY body; it was missing) and the opening line
+      is now "Klein 9B" per Fabio. Gate 2 still HIS - he reads it in the draft.
+      Evidence + URL: `validation.md`.
+- [x] **Install the built Windows portable on Fabio's box and test LOCALLY - PASSED.**
+      Extract, launch, version, artifact provenance (`BUILD_HASH` == tag), engine in-place
+      0.29.2 -> 0.34.0 with HEAD == the pin, 16 node packs 0 IMPORT FAILED, ComfyUI
+      0.34.0 serving, floor check 42 workflows / 194 class_types / 0 missing, and a
+      **generate smoke whose PIXELS were opened and checked** - `sdxl-realistic` t2i,
+      768x1024 in 72.5s, a coherent photograph, landed as a real card with sidecar and
+      thumbnail. Instance torn down, no orphans. Full evidence: `validation.md`.
+      Untested here and stated as such: SAC is OFF on this box and the exe has no MOTW;
+      `git` is on PATH so the git-less path never ran; GPU is a 4060 Ti, not the 5090.
+- [x] **PUBLISHED 2026-09-08 09:03:51Z** —
+      https://github.com/MadPonyInteractive/Cubric-Vision/releases/tag/v1.5.0
+      Reachability check green: `releases/latest` reports `v1.5.0` / `draft: false` /
+      `prerelease: false`. The update prompt was OBSERVED firing on a real 1.4.0 install
+      (`update available: v1.4.0 -> v1.5.0, prompting`); Update was NOT pressed, so the
+      in-place apply + relaunch leg is still unobserved.
+- [x] Post-publish: `release-baselines/*.json` restamped 1.4.4 -> 1.5.0 on BOTH branches
+      from the published full builds; maintenance branch `1.5.0` cut at `v1.5.0`, pushed.
+- [x] The boilerplate that produced the false Linux/macOS claims is fixed AT SOURCE:
+      `docs/releases/github-release-checklist.md` § Platform Disclosure is a RULE now, the
+      Contributor Validation Request section is deleted, and the two mpi-release pointers
+      say "follow the rule" not "include the block". Both branches.
 - [x] Push the branch (5 commits unpushed as of 2026-09-07)
