@@ -85,7 +85,6 @@
       "MPI-662",
       "MPI-605",
       "MPI-698",
-      "MPI-704",
       "MPI-699",
       "MPI-703",
       "MPI-702",
@@ -97,30 +96,14 @@
       "MPI-697",
       "MPI-682",
       "MPI-673",
-      "MPI-658",
       "MPI-655",
       "MPI-657",
-      "MPI-643",
       "MPI-638",
       "MPI-596",
-      "MPI-573",
-      "MPI-618",
-      "MPI-565",
-      "MPI-554",
-      "MPI-550",
-      "MPI-450",
-      "MPI-442",
-      "MPI-490",
-      "MPI-482",
-      "MPI-461",
-      "MPI-479",
-      "MPI-432",
-      "MPI-463",
-      "MPI-449",
-      "MPI-471"
+      "MPI-573"
     ]
   },
-  "updated_at": "2026-09-08T10:51:48Z",
+  "updated_at": "2026-09-08T10:58:09Z",
   "events": [
     {
       "at": "2026-09-06T22:45:00Z",
@@ -4655,6 +4638,125 @@
       "task": "MPI-683",
       "actor": "session:540f1f45",
       "note": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-683/ (workspace preserved intact). mpi-archive run 2026-09-08."
+    },
+    {
+      "at": "2026-09-08T10:58:09Z",
+      "type": "task.deleted",
+      "task": "MPI-704",
+      "actor": "session:540f1f45",
+      "note": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-704/ (workspace preserved intact). mpi-archive run 2026-09-08."
+    },
+    {
+      "at": "2026-09-08T10:58:09Z",
+      "type": "task.deleted",
+      "task": "MPI-658",
+      "actor": "session:540f1f45",
+      "note": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-658/ (workspace preserved intact). mpi-archive run 2026-09-08."
+    },
+    {
+      "at": "2026-09-08T10:58:09Z",
+      "type": "task.deleted",
+      "task": "MPI-643",
+      "actor": "session:540f1f45",
+      "note": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-643/ (workspace preserved intact). mpi-archive run 2026-09-08."
+    },
+    {
+      "at": "2026-09-08T10:58:09Z",
+      "type": "task.deleted",
+      "task": "MPI-618",
+      "actor": "session:540f1f45",
+      "note": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-618/ (workspace preserved intact). mpi-archive run 2026-09-08."
+    },
+    {
+      "at": "2026-09-08T10:58:09Z",
+      "type": "task.deleted",
+      "task": "MPI-565",
+      "actor": "session:540f1f45",
+      "note": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-565/ (workspace preserved intact). mpi-archive run 2026-09-08."
+    },
+    {
+      "at": "2026-09-08T10:58:09Z",
+      "type": "task.deleted",
+      "task": "MPI-554",
+      "actor": "session:540f1f45",
+      "note": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-554/ (workspace preserved intact). mpi-archive run 2026-09-08."
+    },
+    {
+      "at": "2026-09-08T10:58:09Z",
+      "type": "task.deleted",
+      "task": "MPI-550",
+      "actor": "session:540f1f45",
+      "note": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-550/ (workspace preserved intact). mpi-archive run 2026-09-08."
+    },
+    {
+      "at": "2026-09-08T10:58:09Z",
+      "type": "task.deleted",
+      "task": "MPI-490",
+      "actor": "session:540f1f45",
+      "note": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-490/ (workspace preserved intact). mpi-archive run 2026-09-08."
+    },
+    {
+      "at": "2026-09-08T10:58:09Z",
+      "type": "task.deleted",
+      "task": "MPI-482",
+      "actor": "session:540f1f45",
+      "note": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-482/ (workspace preserved intact). mpi-archive run 2026-09-08."
+    },
+    {
+      "at": "2026-09-08T10:58:09Z",
+      "type": "task.deleted",
+      "task": "MPI-479",
+      "actor": "session:540f1f45",
+      "note": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-479/ (workspace preserved intact). mpi-archive run 2026-09-08."
+    },
+    {
+      "at": "2026-09-08T10:58:09Z",
+      "type": "task.deleted",
+      "task": "MPI-471",
+      "actor": "session:540f1f45",
+      "note": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-471/ (workspace preserved intact). mpi-archive run 2026-09-08."
+    },
+    {
+      "at": "2026-09-08T10:58:09Z",
+      "type": "task.deleted",
+      "task": "MPI-463",
+      "actor": "session:540f1f45",
+      "note": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-463/ (workspace preserved intact). mpi-archive run 2026-09-08."
+    },
+    {
+      "at": "2026-09-08T10:58:09Z",
+      "type": "task.deleted",
+      "task": "MPI-461",
+      "actor": "session:540f1f45",
+      "note": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-461/ (workspace preserved intact). mpi-archive run 2026-09-08."
+    },
+    {
+      "at": "2026-09-08T10:58:09Z",
+      "type": "task.deleted",
+      "task": "MPI-450",
+      "actor": "session:540f1f45",
+      "note": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-450/ (workspace preserved intact). mpi-archive run 2026-09-08."
+    },
+    {
+      "at": "2026-09-08T10:58:09Z",
+      "type": "task.deleted",
+      "task": "MPI-449",
+      "actor": "session:540f1f45",
+      "note": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-449/ (workspace preserved intact). mpi-archive run 2026-09-08."
+    },
+    {
+      "at": "2026-09-08T10:58:09Z",
+      "type": "task.deleted",
+      "task": "MPI-442",
+      "actor": "session:540f1f45",
+      "note": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-442/ (workspace preserved intact). mpi-archive run 2026-09-08."
+    },
+    {
+      "at": "2026-09-08T10:58:09Z",
+      "type": "task.deleted",
+      "task": "MPI-432",
+      "actor": "session:540f1f45",
+      "note": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-432/ (workspace preserved intact). mpi-archive run 2026-09-08."
     }
   ]
 }
