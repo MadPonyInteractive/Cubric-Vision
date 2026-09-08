@@ -5,8 +5,8 @@ Step 1d is Fabio's measurement on the GPU and gates nothing.
 
 ## Step 1a — the enhance service (2026-09-08)
 
-Built. **Four of the five bullets are verified live or by test; one is owed a
-GPU run and is recorded as owed, not rounded up.**
+Built. **Both backends are now proven live; one bullet is owed a GPU run and is
+recorded as owed, not rounded up.**
 
 ### What ran
 
@@ -38,6 +38,25 @@ POST /llm/enhance (abliterated model,
                    backend=deepinfra) -> {"ok":false,"error":"\"Gemma 4 Abliterated 12B (Uncensored, local only)\" has no deepinfra variant."}
 ```
 
+### The cloud path, live (2026-09-08, second boot)
+
+Fabio supplied a key. Re-booted on 3199 with `DEEPINFRA_API_KEY` exported from
+that file — **the key is not in this repo, not in `.env`, and must never be
+committed**; its location is in the handoff, not here:
+
+```
+GET  /llm/status  -> {"deepinfra":{"hasKey":true},"ollama":{"running":true},"defaultBackend":"deepinfra"}
+POST /llm/enhance -> {"ok":true,"text":"A solitary lighthouse stands sentinel against the bruised
+                      purples and burning ambers of a dying twilight.",
+                      "backend":"deepinfra","model":"google/gemma-4-26B-A4B-it"}
+```
+
+So the whole decision chain runs end to end: a key exists → `defaultBackend`
+resolves to `deepinfra` → the request goes to the cloud with no `backend` named →
+the reply carries the model that actually answered. **Ollama was running at the
+same time and was not used**, which is the point — the default is the cloud when
+a key is present, not "whatever is reachable".
+
 ### The VRAM release, measured rather than asserted
 
 `GET /api/ps` immediately after that enhance returned **`[]`** — the `keep_alive:0`
@@ -57,11 +76,11 @@ sub-10-second render past three minutes.
   1b**. It also needs the GPU: the lease was held by MPI-591's bench at the time
   (`gpu_lease.py status` → `GPU 0 busy … pid 23504`), and loading an encoder
   alongside a live generation is the exact contention this repo documents.
-- **No live DeepInfra call.** There is no key on this machine — not in
-  `secretsStore` and not `DEEPINFRA_API_KEY` in `.env`. The cloud path is
-  exercised only as far as "no key → the default resolves to `ollama`" and "a
-  local-only model on the cloud backend is refused by name". **Fabio: a key is
-  what unblocks that one.**
+- ~~No live DeepInfra call.~~ **Closed the same day** — see "The cloud path,
+  live" above. What is still untested on that path is the key coming from
+  `secretsStore` rather than the environment: the fork-bridge round trip is unit
+  tested (`testForkBridgeAnswersDeepInfraRequests`), but no one has yet typed a
+  key into a settings field, because there is no field until step 1b/1c.
 
 ### Recorded for step 1d, because it changes what that measurement means
 

@@ -19,7 +19,9 @@ in the card description are retired; `plan.md` carries the mapping note.
   - [ ] **The ComfyUI-encoder backend end to end** — written, not yet run: the
         verify needs the button (step 1b) and the GPU, which was leased by
         MPI-591 at the time
-  - [ ] **A live DeepInfra call** — blocked, no key on this machine (Fabio)
+  - [x] **A live DeepInfra call** — Fabio supplied a key; `hasKey:true` →
+        `defaultBackend:deepinfra` → a real cloud completion echoing
+        `google/gemma-4-26B-A4B-it`, with Ollama up and deliberately unused
 - [ ] Step 1b — the control (one button, `resolveRecipe()` locally,
       `Input_enhance_prompt` forced false, settings toggle removed)
 - [ ] Step 1c — the overlay *(verify mode: `user-ux`)*
