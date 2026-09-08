@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-710", "at": "2026-09-08T12:49:48+01:00", "actor": "claude", "column": "todo", "title": "The top-level update-manifest.json reads stale on a real install"}
+{"schema": "mpi-kanban/event/v1", "type": "task.updated", "id": "MPI-710", "at": "2026-09-08T12:50:57+01:00", "actor": "claude", "detail": "spun out of MPI-709; brief.md written, maturity set to research"}

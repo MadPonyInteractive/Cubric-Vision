@@ -29,13 +29,42 @@ and re-cut carrying this fix, rather than issuing a 1.5.1 — no phantom version
 - [ ] Delete `refs/tags/v1.5.0` on origin — the release deletion does not remove it, and the
       version cannot be re-cut while it exists.
 - [ ] Delete or re-point `refs/heads/1.5.0` (currently `a8691834`).
-- [ ] **Remove the three `release-baselines/*.json` before the re-cut.** They say
+- [x] **Remove the three `release-baselines/*.json` before the re-cut.** They say
       `toVersion: 1.5.0` (commit `22239f5e`). If 1.5.0 never shipped, the newest version any
       user holds is 1.4.4, so that baseline makes the next build emit a `1.5.0 -> next` delta
       no user can apply. An absent baseline makes mpi-ci ship a FULL bundle, which serves
       1.4.4 and everything older. Restamp from the published full build afterwards.
-- [ ] Fold in MPI-708's updater-bridge tasks (widened asset pattern, relaunch resolution,
-      appId acceptance) — same cut, see that card's Phase 0b.
+- [x] Fold in MPI-708's updater-bridge tasks (widened asset pattern, relaunch resolution,
+      appId acceptance) — same cut, see that card's Phase 0b. **All three landed here**, with
+      `tests/updater-rename-bridge.test.cjs` covering each of that phase's Verify clauses.
+      Phase 0b's own fourth item ("cut and publish 1.5.1") is superseded: 1.5.1 merges into
+      the 1.5.0 re-cut, so there is no separate bridge release.
+
+## The release gate was red for a reason that was not true — DONE
+
+`npm run release:check` refused the re-cut on stale smoke evidence. The staleness rule was
+"node_lock.json changed after the evidence -> every row is stale", and node_lock had changed:
+`ace2161e` moved the MpiNodes pin to v1.2.11. But that hop changed **four** classes out of
+~120, and the blunt rule condemned all 37 rows, demanding a 290 GB full matrix to re-prove
+image ops the pin cannot reach.
+
+- [x] `scripts/engine-drift.mjs` — narrow the rule to the graphs a changed class can actually
+      reach. Per-CLASS source comparison, not per-module: `MpiClearVramEnd` landing in
+      `vram.py` must not condemn `MpiClearVram`, which nearly every graph loads. A changed
+      module *shell* still condemns every class in that module, since a shared helper moving
+      can carry behaviour with it. Every unanswerable question — core bump, third-party pin,
+      missing checkout — returns the blunt refusal.
+- [x] Both twins call it, so they cannot disagree about what "stale" means:
+      `release-health-check.mjs` (the gate) and `smoke-workflows.mjs` `loadMergeBase` (which
+      refused to merge a scoped run into stale evidence, i.e. "run the FULL matrix").
+- [x] `dev_configs/engine-attestation.json` — where a human records that a changed class
+      cannot affect a shipped graph, per class, with the reason. **Pinned to the exact
+      `from`/`to` hop**: the moment either pin moves it stops applying, so it can wave through
+      one reviewed hop and never becomes a standing `--allow-unproven-engine`.
+- [x] No smoke run, and none needed: of the four changed classes, `MpiClearVram` is a pure
+      extract-method refactor, `MpiClearVramEnd` is in no runtime graph at all, and
+      `MpiSaveVideo` + `MpiWindowedSampler` were executed for real 18 times on 2026-09-07.
+      Evidence in `validation.md`.
 
 ## The gate that let this ship — DONE
 

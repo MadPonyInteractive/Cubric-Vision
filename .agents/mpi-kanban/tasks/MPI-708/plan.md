@@ -142,6 +142,13 @@ on cards, and the Audio/Prompt mascots. Follow-up card only — no colour work h
 
 ## Phase 0b: The 1.5.1 bridge — teach the installed fleet the new names
 
+> **Drift, 2026-09-08 (MPI-709).** The three updater changes above are DONE — they landed in
+> MPI-709's working tree, with `tests/updater-rename-bridge.test.cjs` covering this phase's
+> Verify clauses. The fourth is superseded rather than done: **there is no 1.5.1.** MPI-709
+> found 1.5.0 had two downloads, both Fabio's, so it was deleted and is being RE-CUT carrying
+> both the `fromVersion` fix and this bridge — no phantom version. Phase 0a's verify
+> (`gh release view v1.5.0` returns a published release) therefore refers to the re-cut.
+
 Ships under the old name, changes nothing a user sees. Its only job is to put a wider
 updater on disk so 2.0 can rename artifacts freely. Everything here is in the *shipped*
 updater scripts, which is why it cannot wait for 2.0: the updater that runs is the one
@@ -154,22 +161,22 @@ owns the hotfix and the release cut; this phase's tasks ride along in the same r
 be the safest possible carrier for these updater changes. Sequence: MPI-709 lands first,
 these tasks join the same cut.
 
-- [ ] Widen the asset pattern in all three platform updaters so both the legacy and the new
+- [x] Widen the asset pattern in all three platform updaters so both the legacy and the new
       artifact names match: `scripts/portable/win-update.cjs:26`,
       `scripts/portable/linux/update.sh:74`, `scripts/portable/macos/update.command:19,21`.
       **Verify:** a unit check asserts the widened pattern matches both
       `CubricVision-windows-x64-update-v2.0.0.zip` and
       `CubricStudio-windows-x64-update-v2.0.0.zip`, and still rejects an unrelated asset.
-- [ ] Widen the relaunch-exe resolution so a renamed executable is found: `win-update.cjs:64`
+- [x] Widen the relaunch-exe resolution so a renamed executable is found: `win-update.cjs:64`
       hardcodes `CubricVision.exe`, and `scripts/portable/windows/update.bat:15,16,21` +
       `update-from-zip.bat:18,20` use it as the node runtime. Resolve the new name first,
       fall back to the old. **Verify:** the applier relaunches successfully against a staged
       tree containing only the new exe name, and again against one containing only the old.
-- [ ] Widen the appId acceptance in `scripts/portable/apply-update.cjs:246` to accept both
+- [x] Widen the appId acceptance in `scripts/portable/apply-update.cjs:246` to accept both
       values rather than the single hardcoded `cubric.vision` (D2). The value does not change
       at 2.0; this only stops it being frozen forever. **Verify:** `node --test tests/` passes,
       including `tests/portable-update-apply.test.cjs`.
-- [ ] Cut and publish 1.5.1 with legacy artifact names, via `/mpi-release`. **Verify:**
+- [~] Cut and publish 1.5.1 with legacy artifact names, via `/mpi-release`. **Verify:**
       `npm run release:check` passes and a real 1.5.0 portable install updates itself to
       1.5.1 through the in-app prompt.
 

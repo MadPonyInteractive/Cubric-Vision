@@ -150,12 +150,96 @@ The semver sort is numeric, not lexical — the published list comes back
 `checkSmokeEvidence` is untouched apart from hoisting its local `git()` helper to module
 scope for reuse. `node --test tests/smoke-evidence-merge.test.cjs` — 3/3 pass.
 
-**That stale smoke evidence blocks the 1.5.0 re-cut.** `release:check` is red right now for
-a reason that has nothing to do with this card; the re-cut needs a fresh
-`node scripts/smoke-workflows.mjs` run first.
+**That stale smoke evidence blocked the 1.5.0 re-cut** — and the diagnosis above turned out
+to be wrong in a way worth recording. See the next section.
 
-## Not done — Fabio's GitHub steps and one spin-out
+## The staleness was real, the blast radius was not (2026-09-08)
 
-Unchanged from the handoff: delete `refs/tags/v1.5.0`, delete or re-point
-`refs/heads/1.5.0`, remove the three `release-baselines/*.json` before the re-cut, and the
-new card for the stale top-level `update-manifest.json`. See `checklist.md`.
+The handoff said the core engine pin had moved and the evidence predated it. Half right. The
+`0.31.0 -> 0.34.0` text is the gate's *bumpNote*, measured against `v1.4.2`; the evidence
+already recorded `want 0.34.0 / got 0.34.0 / proven true`, so the engine-version check
+passed. What actually tripped the gate was the timestamp anchor: `node_lock.json` last
+changed at `ace2161e` (2026-09-06 18:14), which moved the **MpiNodes** pin `8505769 ->
+287edb8`. One line of that file.
+
+That hop changed four classes, established by comparing each class's own source across the
+two commits (`scripts/engine-drift.mjs`):
+
+| class | what changed | reaches a shipped graph? |
+|---|---|---|
+| `MpiClearVram` | body lifted verbatim into a module-level `_clear_vram()` helper it now calls — same four operations, same order | yes, nearly all of them |
+| `MpiClearVramEnd` | new node | **no** — only `raw/` and `scripts/workflow_generation/` templates, which are never dispatched |
+| `MpiSaveVideo` | `RETURN_TYPES () -> ("STRING",)`, `ui` payload byte-identical | 15 runtime graphs |
+| `MpiWindowedSampler` | new node | the two H3 runtimes only |
+
+Everything else in `sampler.py`, `video.py` and `vram.py` is byte-identical across the hop.
+
+**No smoke run was needed, and none was run.** Three independent facts:
+
+1. `f91438ca` (2026-09-06 18:31, "bake the windowed sampler into both H3 runtimes") is what
+   genuinely invalidated the 09-05 H3 rows — verified by reading the graph at each commit,
+   where the `MpiWindowedSampler` count goes 0 → 1 that evening.
+2. Fabio then ran all three H3 ops against the post-bake graphs on **2026-09-07 14:57–15:37Z**
+   in `Documents/Cubric Vision/Projects/RTX5090 H3 Tests` — `ref2v_ms` ×7, `t2v_ms` ×5,
+   `i2v_ms` ×6, every one a multi-MB mp4 with a decoded thumbnail, and partly for the express
+   purpose of checking the new sampler. That exercises both `MpiWindowedSampler` and
+   `MpiSaveVideo` (which wrote all 18 files) on the graphs that ship.
+3. `git log --since=2026-09-07T15:37Z -- comfy_workflows/ dev_configs/node_lock.json` is
+   **empty**: what ran that afternoon is what ships.
+
+`MpiSaveVideo`'s new socket is also connected nowhere — 15 runtime graphs contain the node,
+0 nodes consume any of its outputs — so no shipped graph's execution can differ.
+
+### What changed in the gate
+
+`scripts/engine-drift.mjs`, called by **both** twins (`release-health-check.mjs` and
+`smoke-workflows.mjs`'s `loadMergeBase`) so they cannot drift apart. Per-class, not
+per-module: a module *shell* change still condemns every class in that module, because a
+shared helper moving can carry behaviour with it — which is exactly why `MpiClearVram` is
+flagged rather than silently cleared. Anything unanswerable (core bump, third-party pin,
+missing sibling checkout) returns the blunt refusal, unchanged.
+
+`dev_configs/engine-attestation.json` carries the human half, pinned to this exact
+`from`/`to` hop so it expires the instant either pin moves. `MpiClearVramEnd` is
+**deliberately not attested** — the narrowed rule clears it on its own, which is the worked
+example that the aim is right.
+
+Verified: `npm run release:check` → **passed**, reporting `no shipped graph loads a changed
+class (attested: MpiClearVram, MpiSaveVideo, MpiWindowedSampler)`.
+`node scripts/smoke-workflows.mjs --self-check` → OK. `npm test` → **914/914**, including the
+new `tests/engine-drift.test.cjs` (4) and `tests/updater-rename-bridge.test.cjs` (3).
+
+## MPI-708 Phase 0b rode this cut
+
+All three updater-bridge changes landed, so an install shipped under the old name can still
+find and apply a Cubric Studio-named release. The updater that runs is the one already on
+disk, which is why none of this can wait for 2.0.
+
+- Asset pattern widened to `^Cubric(Vision|Studio)-…-update-v.*\.zip$` on all three
+  platforms (`win-update.cjs`, `linux/update.sh`, `macos/update.command` ×2 arches).
+- Relaunch/runtime exe resolution tries `CubricStudio.exe` then `CubricVision.exe`
+  (`win-update.cjs`, `windows/update.bat`, `windows/update-from-zip.bat`).
+- `apply-update.cjs` accepts either `cubric.vision` or `cubric.studio`; builds still stamp
+  `cubric.vision`, and a foreign appId is still refused with the install left byte-identical.
+
+`tests/updater-rename-bridge.test.cjs` asserts each of Phase 0b's Verify clauses, including
+that a FULL build name is still **not** mistaken for an update bundle. The test caught one
+real thing on the way: it failed on `update-from-zip.bat` because a stale comment named the
+old exe before the new resolution, so the comment was corrected.
+
+Also swept, same MPI-387 drift: `install-test/README.md` (3 places — the app-root listing,
+the `CUBRIC_USER_DATA_ROOT` claim, and the "launch both ways" step), `DEVELOPMENT.md:123`,
+and `scripts/portable/dev-setup/setup.bat:28`, which told a developer to launch with two
+deleted files. `build-portable.mjs`'s `RETIRED_PATHS` still names them **deliberately** —
+that is the list that deletes them from an updated install, and it must stay.
+
+Sibling: `mpi-ci` commit `ac45b4f` syncs the pod's `node_lock.json` to MpiNodes `287edb8`
+(committed, **not pushed**). Code-only pack, no image rebuild.
+
+## Not done — Fabio's GitHub steps
+
+Delete `refs/tags/v1.5.0` (`fa655783`, pointing at `a8691834`) and delete or re-point
+`refs/heads/1.5.0`. Both are destructive and outward-facing, so they stay with Fabio.
+The three `release-baselines/*.json` are now removed, so the next build emits a FULL bundle
+— restamp them from the published full build afterwards. Spin-out card for the stale
+top-level `update-manifest.json`: **MPI-710** (todo / research).
