@@ -41,6 +41,28 @@ at pickup.
       in its own `files[]`. Mutation-checked test, 798/798.
 - [x] **MPI-527** — the umbrella over both, closed with them. **Gate A's release-pipeline row
       is clear.**
+- [ ] **The launchers rewrite themselves mid-run, and the 2.0 rename guarantees it fires.**
+      Found in MPI-709's 1.5.0 install-test leg (2026-09-08, evidence in that card's
+      `validation.md`). `update-from-zip.bat` is itself in the update bundle, and **cmd re-reads
+      a batch file at its byte offset between commands** — so when the applier replaced it
+      mid-execution, cmd resumed inside the NEW file, emitted
+      `'_EXECUBRIC_PORTABLE_ROOTCUBRIC_PORTABLE_ROOT~f1"' is not recognized`, and invoked the
+      applier a second time. Only the `fromVersion` guard stopped that second run from applying
+      a delta onto an already-updated install. Net effect there: a successful update ends in an
+      error and exit code 1.
+      - Windows in-app is **safe** and needs no fix: `main.js:1232` spawns
+        `update/win-update.cjs` through the app binary as node, and node reads the whole file at
+        load. MPI-387 made Windows skip `.bat` because Smart App Control blocks it.
+      - **Linux and macOS in-app are NOT safe**, and there it is the primary path: the same
+        `main.js:1232` spawns `update.sh` / `update.command`, and `sh` also reads scripts
+        incrementally. The 1.5.0 linux delta already shipped `update.sh` and
+        `update-from-zip.sh`.
+      - **Why 2.0 specifically:** the Cubric Studio rename changes every launcher filename, so
+        a 1.5.0 → 2.0 update replaces the running launcher on every platform by construction.
+        This stops being a latent risk and becomes the default path.
+      - Remedy is standard and small: wrap each launcher's body in a function invoked on the
+        last line, so the interpreter has parsed the whole file before any of it can be
+        replaced. Verify by updating a real Linux install in place, per MPI-559 phase 1.
 - [ ] **MPI-516** — port the three-signal destroyed-prompt detector, WITH its false-positive guard.
 - [ ] **MPI-575** — measure the LTX preview junk-frame path on a live foley/extend run, then fix.
 - [ ] Every Gate A card that did not clear has a known-issue bullet written.

@@ -243,3 +243,197 @@ Delete `refs/tags/v1.5.0` (`fa655783`, pointing at `a8691834`) and delete or re-
 The three `release-baselines/*.json` are now removed, so the next build emits a FULL bundle
 — restamp them from the published full build afterwards. Spin-out card for the stale
 top-level `update-manifest.json`: **MPI-710** (todo / research).
+
+## The fix was on the wrong branch — found 2026-09-08, route A taken
+
+The whole MPI-709/708 body of work was committed to **master**. v1.5.0 was never cut from
+master. Tag `v1.5.0` = `fa655783` -> `a8691834`, which sits on the **`1.4.2` maintenance
+branch** (worktree `C:/AI/Mpi/Cubric-Vision-1.4.x`). Master forked from it at `372c1895`
+(stamp 1.4.2, 2026-08-15) and is 879 commits ahead / 34 behind. 1.4.3, 1.4.4 and 1.5.0 all
+shipped from the 1.4.x line while master ran on toward 2.0.
+
+Measured before deciding anything:
+
+| | master `c4d88ed2` | branch `1.4.2` `b4ca625d` |
+|---|---|---|
+| stamped version | 1.4.2 | **1.5.0** |
+| `apply-update.cjs` fromVersion guard | 4 refs | **0** |
+| `release-baselines/*.json` | removed | **present, `toVersion: 1.5.0`** |
+| `checkUpdateEvidence` / `release:check:publish` | present | **absent** |
+| `scripts/engine-drift.mjs`, `tests/updater-rename-bridge.test.cjs` | present | **absent** |
+
+Two consequences the earlier sessions did not catch:
+
+1. **The green `npm run release:check` proved a 1.4.2 release, not a 1.5.0 one.** It reads
+   `APP_VERSION` from the tree it runs in, and master's is `1.4.2`. `checkUpdateEvidence`
+   refuses when `evidence.toVersion !== appVersion`, so `update-evidence.json` could never
+   have been written against master.
+2. **`2092f07e` dropped the baselines on the wrong line.** The 1.4.x branch still carried
+   `release-baselines/win32-x64.json` at `toVersion: 1.5.0`, which is exactly the file that
+   would have made the re-cut emit another unusable delta.
+
+**Fabio chose route A (2026-09-08): re-cut from the 1.4.x line.** Landed as `34639329` on
+branch `1.4.2` — cherry-picks of `7caae2c9`, `37247fac` and `3d11f948`, all three clean with
+zero conflicts, plus the three baselines deleted. `npm test` 673/673. `release:check` passes
+and now prints the "evidence was NOT checked" warning; `release:check:publish` correctly
+refuses on the missing `update-evidence.json`.
+
+**`2fded019` was deliberately NOT carried across.** It narrows the smoke-evidence staleness
+rule, and this branch's gate is already green on its own 44-op evidence
+(`dev_configs/smoke-evidence.json`, 2026-09-07T22:42, ComfyUI 0.34.0). Carrying it would be
+dead weight and it references `scripts/engine-drift.mjs`, which this line does not have.
+Verified afterwards: `grep -c engine-drift scripts/release-health-check.mjs` = 0 on the
+committed tree, so nothing dangles. It stays on master for 2.0.
+
+`js/data/releaseNotes.js` was deliberately left untouched, so `.approved-1.5.0.json` stays
+valid. 1.5.0 reached no external user, so from a user's side it is still a first release and
+the applier guard is invisible to them — and any edit after approval re-drifts the hash and
+fails the CI build outright.
+
+### Install-test source install — staged 2026-09-08
+
+`D:\CVTest\CubricVision-v1.4.2\`, a fresh extract of the published
+`CubricVision-windows-x64-v1.4.2.zip` (6509 entries, no top-level folder). 1.4.2 is **two**
+releases behind 1.5.0 (1.4.3 and 1.4.4 sit between), so it clears the gate; 1.4.4 would not.
+Fabio's note: the old `D:\cubric-install-test\...v1.3.0` folder is unusable — it is the
+corrupted victim, now reading 1.5.0, and its 1.3.0 base had already been updated to 1.4.0.
+
+`engine/` (6.3 GB) and `models/` (12 GB) were **moved** in from
+`D:\CVTest\CubricVision-v1.5.0\` — same volume, so 0.04s, versus an 11 GB bootstrap plus
+every weight. That folder now has neither; move them back to restore it.
+
+`extra_model_paths.yaml` was repaired as memory predicted — it carried
+`base_path: D:/CVTest/CubricVision-v1.5.0/models` and nothing self-heals it. Now points at
+`D:/CVTest/CubricVision-v1.4.2/models`.
+
+**Git Bash `tar` cannot read a zip** ("This does not look like a tar archive", exit 0 under
+`2>/dev/null`). Use `/c/Windows/System32/tar.exe` — bsdtar, 6509 entries in seconds.
+
+## The update leg FAILED — 2026-09-08, and it is release-blocking
+
+The leg ran exactly as § 3 prescribes: genuine published 1.4.2 install
+(`BUILD_HASH 372c18958356`), two releases behind, real project and a real generation made
+first so a later failure would be attributable. Then `update-from-zip.bat` with the re-cut
+FULL bundle. It **failed**:
+
+```
+UNKNOWN: unknown error, copyfile
+  '...\CubricVision-v1.5.0-update-only\icudtl.dat' -> 'D:\CVTest\CubricVision-v1.4.2\icudtl.dat'
+APPLIER_EXIT=1
+```
+
+### Root cause
+
+`copyManifestFile` (`scripts/portable/apply-update.cjs`) retries through `evictBusyFile`
+only when `isBusyError(err)` is true, and that predicate lists
+`EBUSY, EPERM, EACCES, ETXTBSY`. Windows/libuv reports **`UNKNOWN`**
+(`ERROR_USER_MAPPED_FILE`) when overwriting a **memory-mapped** file, and `icudtl.dat` is
+ICU data Electron maps at startup. So the eviction machinery that already exists — and that
+had just successfully swapped the 222 MB `CubricVision.exe` three files earlier — is skipped
+for `icudtl.dat`, and `main().catch` aborts the whole run.
+
+**Why it has never been seen:** every Windows update bundle ever shipped was a small delta —
+v1.4.1 **51** entries, v1.4.2 **130**, v1.4.3 **29**. Electron runtime files do not change
+between patch releases, so they were never in a bundle. The re-cut FULL bundle carries
+**6523** entries and is the first to include them. No full bundle has ever been applied in
+place on Windows.
+
+**There is no rollback.** `main().catch` prints the message and sets exit 1. The
+`update/rollback/<stamp>/` tree is filled as it goes but nothing restores it and the error
+never mentions it. The run left `CubricVision.exe.old` behind and the install mixed.
+
+### The measurement that reframes it
+
+Every file the applier wrote before dying was **byte-identical** to what was already there:
+
+| file | 1.4.2 installed vs 1.5.0 bundle |
+|---|---|
+| `icudtl.dat` | same (`5bfd3eef…`) — the one it died on |
+| `CubricVision.exe` | same (`d8916507…`) — 222 MB, evicted for nothing |
+| `chrome_100_percent.pak`, `chrome_200_percent.pak` | same |
+| `d3dcompiler_47.dll`, `dxcompiler.dll`, `dxil.dll`, `ffmpeg.dll` | same |
+
+So the applier aborted an update, and evicted the running binary, to rewrite files that had
+not changed. **The test install is therefore unharmed** — `resources/app` was never reached,
+`user-data` md5s are identical, and the seven files it did write were the same bytes. It is
+still a usable 1.4.2 source install; it just carries a stray `CubricVision.exe.old` plus
+`update/rollback/` and `update/tmp/` dirs.
+
+The obvious fix is to **skip the copy when the target already matches the manifest's
+`sha256`** — the manifest carries one per file and `applyDelta` already uses them. No copy,
+no eviction, no lock to lose. That is a root fix, not a guard at the crash site: the lock
+conflict is a consequence of unnecessary I/O.
+
+### Why fixing it does NOT unblock 1.5.0
+
+`scripts/portable/win-update.cjs:154` resolves
+`const applyScript = path.join(root, 'update', 'apply-update.cjs')` — the applier **already
+on the user's disk**. A 1.4.2 user updating to 1.5.0 runs their own 1.4.2 applier. Confirmed
+on this install: `grep -c fromVersion update/apply-update.cjs` = **0**.
+
+So neither the `fromVersion` guard nor a skip-identical fix reaches anyone updating *to*
+1.5.0. Both protect the update *after* the one that installs them. Consequences:
+
+- Shipping the FULL bundle: every Windows user more than zero versions behind aborts on
+  `icudtl.dat`, **after** their `CubricVision.exe` has been evicted, with no rollback.
+- Shipping a 1.4.4 delta: 1.4.4 users are fine; everyone older runs their own unguarded
+  applier and gets the original MPI-709 corruption. That is the status quo, unfixed.
+
+**The publish gate did its job.** `checkUpdateEvidence` is the reason this was found before
+publication instead of by users, which is precisely the leg 1.5.0 walked straight through.
+
+## The delta leg — 2026-09-08, and a launcher that rewrites itself mid-run
+
+Source install `D:\CVTest\CubricVision-v1.4.4`, a fresh extract of the published
+`CubricVision-windows-x64-v1.4.4.zip`, provenance proven: `BUILD_HASH 8b28b230783e` equals
+the `v1.4.4` tag sha. Engine `0.31.0` = 1.4.4's own pin, so no repair download. Real
+`user-data` seeded from the 1.4.2 run.
+
+Bundle verified before it went near the install: `fromVersion "1.4.4"`, `toVersion "1.5.0"`,
+120 files, `BUILD_HASH 43b22c407b61` — 121 entries against the FULL bundle's 6523.
+
+**The update applied.** `Applied Cubric Vision update to 1.5.0.` App version 1.5.0,
+`BUILD_HASH 43b22c407b61`, all three `user-data` md5s byte-identical, the installed applier
+now carries the `fromVersion` guard (0 refs → 4). The app boots, bumps the engine
+`0.31.0 → 0.34.0`, shows the 1.5.0 changelog and renders the full landing screen with all
+37 projects — the exact screen the 1.5.0 corruption never reached.
+
+### The stale update-manifest is MPI-710, not a regression
+
+After the update `resources/cubric/update-manifest.json` still read `toVersion 1.4.4`
+(mtime 2026-09-03, the build date — never touched), and the nested copy read `0.0.11`.
+
+Cause found, and it is the same shape as everything else here: the applier that RAN is
+1.4.4's own, and `grep -c UPDATE_MANIFEST_REL` on the backed-up copy in
+`update/rollback/<stamp>/update/apply-update.cjs` is **0** — it does not even define the
+constant. MPI-523's manifest refresh is not in 1.4.4. The 1.5.0 applier now installed has it
+at line 368, so the manifest refreshes from the next update onward. Nothing to fix here; the
+unit test passes because it tests the CURRENT applier, which is never the one that runs.
+
+### A launcher replaced while it is executing
+
+The run printed success and then:
+
+```
+'_EXECUBRIC_PORTABLE_ROOTCUBRIC_PORTABLE_ROOTf1"' is not recognized ...
+This installation is 1.5.0, so the 1.5.0 update was not applied. It expects 1.4.4.
+APPLIER_EXIT=1
+```
+
+The delta replaces `update-from-zip.bat`, and **cmd re-reads a batch file at its byte offset
+between commands**. It resumed mid-line inside the NEW file, produced garbage, and invoked
+the applier a second time. The `fromVersion` guard refused that second run, which is the only
+reason nothing broke — the guard caught a bug it was not written for. Net effect: a
+successful update ends in an error and a non-zero exit code.
+
+Blast radius, measured rather than assumed:
+
+| path | launcher | re-read hazard |
+|---|---|---|
+| Windows, in-app (`run-update`) | `main.js:1232` spawns `update/win-update.cjs` through the app binary as node | **None** — node reads the whole file at load. MPI-387 made Windows skip `.bat` precisely because Smart App Control blocks it |
+| Windows, offline `update-from-zip.bat` | cmd | **Observed.** Cosmetic: update succeeds, then errors and exits 1 |
+| Linux / macOS, in-app | `main.js:1232` spawns `update.sh` / `update.command` | **Same class, and it is the PRIMARY path there.** The linux delta ships `update.sh` and `update-from-zip.sh`; sh also reads scripts incrementally |
+
+Not fixed here, and not blocking the Windows release. The standard remedy is to wrap the
+launcher body in a function invoked on the last line, so the interpreter has parsed the whole
+file before any of it can be replaced.
