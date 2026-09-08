@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-660", "at": "2026-08-30T08:58:30+01:00", "actor": "claude", "from": "doing", "to": "done", "reason": "Naming fixed for Flows, prompt-box ops and the two tool routes; 797-test suite green, docs healed."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-660", "type": "task.deleted", "at": "2026-09-08T10:51:48Z", "actor": "session:540f1f45", "summary": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-660/ (workspace preserved intact). mpi-archive run 2026-09-08."}

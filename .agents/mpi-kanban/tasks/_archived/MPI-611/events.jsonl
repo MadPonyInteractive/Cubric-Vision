@@ -1,0 +1,4 @@
+{"schema": "mpi-kanban/event/v1", "id": "MPI-611", "type": "task.created", "at": "2026-08-23T09:18:00Z", "actor": "claude", "summary": "Created in doing - Tab ring fix for the open Flow leg."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-611", "type": "validation.updated", "at": "2026-08-23T09:52:00Z", "actor": "claude", "summary": "Ring verified live on an isolated instance; maturity -> validating, pending Fabio's feel check."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-611", "type": "task.moved", "at": "2026-08-23T10:12:00Z", "actor": "claude", "summary": "doing -> done. Fabio verified the ring in the live app; desktop spec + 706 unit tests green."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-611", "type": "task.deleted", "at": "2026-09-08T10:51:48Z", "actor": "session:540f1f45", "summary": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-611/ (workspace preserved intact). mpi-archive run 2026-09-08."}
