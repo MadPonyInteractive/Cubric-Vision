@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-708",
+  "title": "Rename the product to Cubric Studio - repo, app, mascots, sites",
+  "description": "Child of MPI-677. The family merged into one app, so the ecosystem name is free: Cubric Vision becomes Cubric Studio at 2.0. 1.5 is the last release under the old name. Five workstreams across three repos - GitHub repo renames (hub to Cubric-Connector FIRST to free the name, then Cubric-Vision to Cubric-Studio), in-app name + userData migration, mascots and per-op colours, MadPony-Identity sites and socials, the 2.0 release note. Full reasoning and ordering: brief.md.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-09-08T10:32:29+01:00",
+  "updated_at": "2026-09-08T10:12:26Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

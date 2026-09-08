@@ -1,0 +1,11 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "scripts/portable/apply-update.cjs",
+    "tests/portable-update-apply.test.cjs",
+    "release-baselines/README.md",
+    "docs/playbooks/install-test/README.md",
+    "docs/releases/portable-distribution-contract.md",
+    "scripts/release-health-check.mjs"
+  ]
+}

@@ -1,0 +1,4 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-708", "at": "2026-09-08T10:32:29+01:00", "actor": "claude", "column": "todo", "title": "Rename the product to Cubric Studio - repo, app, mascots, sites"}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-708", "type": "task.updated", "at": "2026-09-08T09:33:59Z", "actor": "claude", "summary": "Linked brief.md - decision, repo-rename ordering, six workstreams."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-708", "type": "task.updated", "at": "2026-09-08T09:57:05Z", "actor": "claude", "summary": "Attached plan.md (large adaptive, 6 decisions front-loaded) and the rename surface audit."}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-708", "type": "task.updated", "at": "2026-09-08T10:12:26Z", "actor": "claude", "summary": "Plan revised: 1.5.1 updater bridge replaces the artifact-name freeze; Documents folder heal reinstated; website/docs repos moved out of scope."}
