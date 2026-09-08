@@ -11,6 +11,26 @@ const REPO_ROOT = path.resolve(SCRIPT_DIR, '..');
 
 const rel = (...parts) => path.join(REPO_ROOT, ...parts);
 
+const git = (args) => {
+  try {
+    return execFileSync('git', args, { cwd: REPO_ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+  } catch { return null; }
+};
+
+// X.Y.Z only — the versioning rule allows nothing else (docs/versioning.md).
+const compareVersions = (a, b) => {
+  const pa = String(a).replace(/^v/, '').split('.').map(Number);
+  const pb = String(b).replace(/^v/, '').split('.').map(Number);
+  for (let i = 0; i < 3; i += 1) {
+    if ((pa[i] || 0) !== (pb[i] || 0)) return (pa[i] || 0) < (pb[i] || 0) ? -1 : 1;
+  }
+  return 0;
+};
+
+// The update-test gate is publish-time only: `release:check` runs at the version-bump
+// gate, long before any artifact exists to install-test.
+const PUBLISH_GATE = process.argv.includes('--publish');
+
 const FILES = {
   appVersion: rel('js', 'core', 'appVersion.js'),
   packageJson: rel('package.json'),
@@ -27,6 +47,7 @@ const FILES = {
   systemDependencies: rel('dev_configs', 'system_dependencies.json'),
   nodeLock: rel('dev_configs', 'node_lock.json'),
   smokeEvidence: rel('dev_configs', 'smoke-evidence.json'),
+  updateEvidence: rel('dev_configs', 'update-evidence.json'),
   preReleaseTest: rel('scripts', 'pre_release_test.py'),
   // The product Pod's start.sh is in the SIBLING mpi-ci repo. It hardcodes the
   // extra_model_paths.yaml ComfyUI reads on the volume. MPI-143: a model whose
@@ -464,11 +485,6 @@ async function checkSmokeEvidence() {
   }
 
   // Did the engine move in this release? Compare against the last release tag.
-  const git = (args) => {
-    try {
-      return execFileSync('git', args, { cwd: REPO_ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-    } catch { return null; }
-  };
   const lastTag = git(['describe', '--tags', '--abbrev=0', '--match', 'v*']);
   if (!lastTag) {
     console.warn('Skipping engine smoke-evidence check: no v* tag found (first release, or a shallow clone).');
@@ -524,6 +540,66 @@ async function checkSmokeEvidence() {
   }
 }
 
+// MPI-709 gate: an update BUNDLE may not ship without evidence that it was applied to a
+// real install more than one version behind, and that the app still WORKED afterwards.
+// The 1.4.4 -> 1.5.0 delta applied onto a 1.4.0 folder dropped the 67 files added across
+// 1.4.x; the server came up healthy and the renderer died on the first missing import, so
+// it read as a hang. The install-test playbook passed that build, because its update leg
+// asserted only that `user-data/` survived - which a corrupted install does perfectly.
+//
+// Evidence is hand-recorded by docs/playbooks/install-test/README.md section 3. It cannot be
+// produced by a script: the leg needs a built artifact, a real extracted folder, and a
+// human opening the output image (MPI-419 - every automated channel reported success on a
+// generation that was uniform grey noise).
+async function checkUpdateEvidence(appVersion) {
+  const prior = (git(['tag', '--list', 'v*']) || '')
+    .split('\n')
+    .map((t) => t.trim())
+    .filter((t) => /^v\d+\.\d+\.\d+$/.test(t))
+    .map((t) => t.slice(1))
+    .filter((v) => compareVersions(v, appVersion) < 0)
+    .sort(compareVersions);
+
+  // "Two behind" needs two releases to be behind. A first or second release has no
+  // gap to span, and its bundle is FULL anyway.
+  if (prior.length < 2) {
+    console.warn(`Skipping update-test evidence check: only ${prior.length} released version(s) precede ${appVersion}.`);
+    return;
+  }
+  const oneBehind = prior[prior.length - 1];
+  const twoBehind = prior[prior.length - 2];
+
+  let evidence;
+  try {
+    evidence = await readJson(FILES.updateEvidence);
+  } catch {
+    fail(`No dev_configs/update-evidence.json - run the update leg in docs/playbooks/install-test/README.md section 3 and record it. An update bundle may not ship unproven: 1.5.0's delta silently corrupted every install more than one version behind, and the old checklist line reported PASS on it (MPI-709).`);
+    return;
+  }
+
+  const to = String(evidence.toVersion || '').replace(/^v/, '');
+  if (to !== appVersion) {
+    fail(`update-evidence.json records toVersion ${to || '(missing)'}, but this release is ${appVersion} - that run tested a different build.`);
+  }
+
+  const from = String(evidence.fromVersion || '').replace(/^v/, '');
+  if (!from) {
+    fail('update-evidence.json does not record fromVersion - the version of the install that was updated - so it cannot prove the update spanned a gap.');
+  } else if (!prior.includes(from)) {
+    fail(`update-evidence.json says the source install was ${from}, which is not a published version. Test from a release users actually hold: ${prior.join(', ')}.`);
+  } else if (compareVersions(from, oneBehind) >= 0) {
+    fail(`update-evidence.json tested an update from ${from}, only ONE release behind ${appVersion}. A one-behind update passes even when the applier is broken - a delta's fromVersion IS that install, the single case it fits. Re-run from ${twoBehind} or older (MPI-709).`);
+  }
+
+  if (evidence.generation?.ok !== true || !String(evidence.generation?.artifact || '').trim()) {
+    fail('update-evidence.json records no real generation after the update (needs generation.ok true and generation.artifact naming the output file that was opened). A surviving user-data folder is not proof the app works: on the 1.5.0 corruption user-data was fully intact and the app never got past the landing screen (MPI-709).');
+  }
+
+  if (evidence.userDataSurvived !== true) {
+    fail('update-evidence.json does not record that user-data (projects, secrets, settings) survived the update.');
+  }
+}
+
 async function main() {
   try {
     const { appVersion, schemaVersion } = await checkVersions();
@@ -533,6 +609,7 @@ async function main() {
     await checkPreReleaseEngineSource();
     await checkPodModelPaths();
     await checkSmokeEvidence();
+    if (PUBLISH_GATE) await checkUpdateEvidence(appVersion);
   } catch (err) {
     fail(err.message);
   }
@@ -544,6 +621,9 @@ async function main() {
   }
 
   console.log('Release health check passed.');
+  if (!PUBLISH_GATE) {
+    console.log('Update-test evidence was NOT checked. Run `npm run release:check:publish` before publishing.');
+  }
 }
 
 main();

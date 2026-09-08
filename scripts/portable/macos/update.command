@@ -15,10 +15,12 @@ export MPI_RESOURCES_PATH="$ROOT/resources"
 
 REPO="${CUBRIC_GITHUB_REPO:-MadPonyInteractive/Cubric-Vision}"
 ARCH="$(uname -m)"
+# MPI-708 Phase 0b: match the Cubric Studio asset names too, so an install shipped under
+# the old name can still find the 2.0 update. The updater that runs is the installed one.
 if [ "$ARCH" = "arm64" ]; then
-  PATTERN='^CubricVision-macos-arm64-update-v.*\.zip$'
+  PATTERN='^Cubric(Vision|Studio)-macos-arm64-update-v.*\.zip$'
 else
-  PATTERN='^CubricVision-macos-x64-update-v.*\.zip$'
+  PATTERN='^Cubric(Vision|Studio)-macos-x64-update-v.*\.zip$'
 fi
 DOWNLOAD_DIR="$ROOT/update/downloads"
 ELECTRON="$ROOT/app/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron"

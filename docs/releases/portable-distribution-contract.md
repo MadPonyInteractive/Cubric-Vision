@@ -234,6 +234,26 @@ and reports the version it was BEFORE the update — a 1.3.1 -> 1.4.0 delta left
 runtime (`findManifestRoot` inspects the BUNDLE; the next delta's baseline comes from
 `release-baselines/`), so the cost was diagnosis time, not a broken update.
 
+**`fromVersion` is a PRECONDITION, not a label (MPI-709).** A delta carries only the files
+that changed between two exact versions, so it applies to exactly one installed version and
+to no other. Applied anywhere else it leaves every file changed in between missing and
+stamps the result with the new version — a hybrid that reports itself as healthy.
+`apply-update.cjs` therefore refuses a bundle whose `fromVersion` does not equal the
+installed version, read from the app's own `package.json` (`resources/app/package.json` on
+Windows, `app/package.json` elsewhere) and **never** from
+`resources/cubric/update-manifest.json`, which is stale in the field — measured at 1.3.0 on
+an install running 1.5.0, across two in-place updates, despite MPI-523. `fromVersion: null`
+(FULL bundle) is self-contained and stays universally applicable; an installed version that
+cannot be read is a refusal, not a guess. The check runs ahead of the first write, so a
+refused bundle leaves the installation byte-identical.
+
+Nothing validated this until 1.5.0: `appId` and `platform` were the only checks, so the
+1.4.4 → 1.5.0 delta applied onto a 1.4.0 install, dropped the 67 files added across 1.4.x,
+killed the renderer on a missing ESM import — which reads as a hang, since the server stays
+healthy — and printed *"Update applied successfully"*. **The planning consequence: a delta
+reaches only the users exactly one version behind. Everyone further back needs a FULL
+bundle**, which is what an absent `release-baselines/*.json` makes the build emit.
+
 ## Portable Root Layout
 
 **There are two layouts, and the split is deliberate.** Linux and macOS keep the
@@ -669,7 +689,13 @@ Before a platform artifact is published as validated for that platform, record:
 - Folder-open behavior.
 - Video extraction or crop behavior.
 - Error-report labels, including stage/version/build hash when implemented.
-- Update-from-zip result on a copied portable folder when update bundles exist.
+- Update-from-zip result on a copied portable folder when update bundles exist — from an
+  install **at least two released versions behind**, and followed by a real generation
+  whose output was opened and looked at. A surviving `user-data/` is not the test: it
+  survives a corrupted install too (MPI-709). Record it in
+  `dev_configs/update-evidence.json` — `npm run release:check:publish` refuses a release
+  without it. Procedure:
+  [playbooks/install-test/README.md](../playbooks/install-test/README.md) § 3.
 
 macOS contributor validation should also record Gatekeeper behavior and whether
 the artifact was launched through Finder, Terminal, or both.

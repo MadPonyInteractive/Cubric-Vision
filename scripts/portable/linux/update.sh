@@ -71,7 +71,7 @@ echo "Checking for updates ($REPO)..."
 # stderr (shown to the user). Run it as Node via the bundled Electron binary.
 TARGET="$(ELECTRON_RUN_AS_NODE=1 "$ELECTRON" "$FETCH" \
   --repo "$REPO" \
-  --pattern '^CubricVision-linux-x64-update-v.*\.zip$' \
+  --pattern '^Cubric(Vision|Studio)-linux-x64-update-v.*\.zip$' \
   --out-dir "$DOWNLOAD_DIR")" \
   || fail "could not download the update (see the message above)."
 

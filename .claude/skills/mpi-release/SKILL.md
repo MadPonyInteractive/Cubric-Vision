@@ -136,6 +136,18 @@ unshipped-roadmap claims; Vision is local image/video, not an assistant) and
 follow the platform-disclosure rule in that checklist.
 
 ### 6. 🛑 Publish — create the GitHub Release
+
+> **Install-test the update bundle first, then `npm run release:check:publish`.** Run the
+> update leg in
+> [`docs/playbooks/install-test/README.md`](../../../docs/playbooks/install-test/README.md)
+> § 3 — an in-place update from an install **at least two released versions behind**,
+> followed by a real generation whose output you open and look at — and record
+> `dev_configs/update-evidence.json`. The publish-mode check refuses the release without it.
+> A one-behind test proves nothing: a delta's `fromVersion` IS that install. 1.5.0 shipped a
+> delta that silently corrupted every install further back, and the old checklist line
+> asserted only that `user-data\` survived — which it did, on a build that never got past
+> the landing screen (MPI-709).
+
 With the user's authorization, create the release on the existing tag and attach
 all 6 artifacts (full builds **and** update bundles — the update bundles are how
 existing users patch in place via the online `update.*` script; without them

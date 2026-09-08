@@ -15,6 +15,8 @@ const fs = require('fs');
 const path = require('path');
 
 const UPDATE_MANIFEST_REL = 'resources/cubric/update-manifest.json';
+// Both accepted, neither emitted: builds still stamp cubric.vision. See the check below.
+const ACCEPTED_APP_IDS = ['cubric.vision', 'cubric.studio'];
 
 function parseArgs(argv) {
   const opts = { root: '', bundle: '' };
@@ -82,6 +84,73 @@ function evictBusyFile(target) {
   } catch {
     return false;
   }
+}
+
+// What version is ALREADY installed here, read from the app's own package.json \u2014
+// the same tree layout loadExtractZip walks (resources/app on Windows, app on
+// Linux/macOS).
+//
+// NOT from resources/cubric/update-manifest.json, which looks like the obvious
+// source and is not trustworthy. Measured on the real install that MPI-709 was
+// found on: package.json and js/core/appVersion.js both said 1.5.0 while the
+// top-level manifest still said 1.3.0 (createdAt 2026-08-01) and the nested copy
+// said 0.0.11 \u2014 stale across two separate in-place updates, despite MPI-523
+// making the applier copy it. Keying the guard off that would refuse legitimate
+// deltas for anyone whose manifest had drifted, which is the opposite of the bug
+// being fixed. package.json is what the running app reports as its version, so it
+// is what the precondition has to compare against.
+//
+// Returns null when no app package.json is readable, which is treated as
+// unverifiable rather than assumed-compatible.
+function readInstalledVersion(portableRoot) {
+  const candidates = [
+    path.join(portableRoot, 'resources', 'app', 'package.json'),
+    path.join(portableRoot, 'app', 'package.json'),
+  ];
+  for (const file of candidates) {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(file, 'utf8').replace(/^\uFEFF/, ''));
+      if (typeof pkg.version === 'string' && pkg.version) return pkg.version;
+    } catch {
+      // try the next layout
+    }
+  }
+  return null;
+}
+
+// A DELTA bundle carries only the files that changed between two specific
+// versions, so it applies to exactly one starting version and no other. Applied
+// anywhere else it leaves every file that changed in between missing, and the
+// result stamps itself with the new version while being a hybrid of two.
+//
+// That is MPI-709: the 1.4.4 -> 1.5.0 delta applied onto a 1.4.0 install dropped
+// 67 files — dompurify, agentDispatch.js, MpiMediaPicker, MpiStepPreview — and the
+// renderer died on the first missing import while the updater printed "Update
+// applied successfully". Nothing here validated the precondition, so the corruption
+// was silent; appId and platform were the only checks.
+//
+// `fromVersion: null` means a FULL bundle, which is self-contained and therefore
+// applies to any starting version. Anything else must match exactly, and an
+// installed version we cannot read is a refusal rather than a guess — an
+// unverifiable delta is precisely the case that caused the corruption.
+function assertBundleApplies(manifest, portableRoot) {
+  if (manifest.fromVersion == null) return;
+
+  const installed = readInstalledVersion(portableRoot);
+  if (installed === manifest.fromVersion) return;
+
+  const target = manifest.toVersion || 'the new version';
+  // Deliberately does NOT tell the user to download a full build. A fresh download
+  // lands in a NEW folder with no engine/, costing them the entire ComfyUI download
+  // again (Fabio, 2026-09-08). A full update bundle repairs in place instead, keeping
+  // the engine, the models and user-data — so point at the next update, not a reinstall.
+  const remedy = `It expects ${manifest.fromVersion}. Nothing was changed. `
+    + 'A repair release that installs over any version is on the way — take that '
+    + 'update when it is offered.';
+
+  throw new Error(installed === null
+    ? `Cannot verify this installation's version, so the ${target} update was not applied. ${remedy}`
+    : `This installation is ${installed}, so the ${target} update was not applied. ${remedy}`);
 }
 
 function findManifestRoot(dir, depth = 0) {
@@ -243,7 +312,11 @@ async function main() {
   }
   const manifestPath = path.join(bundleRoot, ...UPDATE_MANIFEST_REL.split('/'));
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8').replace(/^\uFEFF/, ''));
-  if (manifest.appId !== 'cubric.vision') {
+  // MPI-708 Phase 0b: the value does NOT change at 2.0 — this only stops it being frozen
+  // forever by the applier already installed on every user's disk. An installed 1.5 that
+  // accepts one literal could never be handed a bundle carrying the other, and the applier
+  // that runs is the shipped one, so widening it later is impossible by construction.
+  if (!ACCEPTED_APP_IDS.includes(manifest.appId)) {
     throw new Error(`Wrong update appId: ${manifest.appId}`);
   }
   if (manifest.platform && manifest.platform !== process.platform) {
@@ -252,6 +325,9 @@ async function main() {
   if (!Array.isArray(manifest.files)) {
     throw new Error('Update manifest files must be an array');
   }
+  // Last precondition, and it must stay ahead of the first write below: a refused
+  // bundle has to leave the installation exactly as it was (MPI-709).
+  assertBundleApplies(manifest, opts.root);
 
   fs.mkdirSync(rollbackRoot, { recursive: true });
   for (const file of manifest.files) {

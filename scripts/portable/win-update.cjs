@@ -23,7 +23,12 @@ const path = require('path');
 const { spawn, spawnSync } = require('child_process');
 
 const DEFAULT_REPO = 'MadPonyInteractive/Cubric-Vision';
-const ASSET_PATTERN = '^CubricVision-windows-x64-update-v.*\\.zip$';
+// MPI-708 Phase 0b: both names, because the updater that RUNS is the one already on disk.
+// At 2.0 the product becomes Cubric Studio and the release assets rename with it — an
+// installed 1.5 whose pattern only knows CubricVision would find no asset and report
+// "no update available" forever, with no way to fix it except a reinstall. Widened here so
+// the fleet can cross the rename; the old name still matches, so nothing regresses today.
+const ASSET_PATTERN = '^Cubric(Vision|Studio)-windows-x64-update-v.*\\.zip$';
 
 // MPI-422 gap 1: the in-app button spawns us detached with stdio:'ignore', so there
 // is no console at all and every console.error went to NUL. A failed update quit the
@@ -60,10 +65,19 @@ function openLog(root) {
 // the root, NOT process.execPath: apply-update.cjs may have renamed the running image
 // aside as <exe>.old and written the new one in its place, so execPath can be the
 // retired binary. ELECTRON_RUN_AS_NODE must go or the app boots as plain node and exits.
+// MPI-708 Phase 0b: the update we just applied may have BROUGHT the renamed exe, so resolve
+// the new name first and fall back to the old. Getting this wrong is unrecoverable-looking:
+// the update succeeds, nothing relaunches, and the user is left staring at a closed app that
+// updated itself correctly.
+const EXE_NAMES = ['CubricStudio.exe', 'CubricVision.exe'];
+function resolveExe(root) {
+  return EXE_NAMES.map(n => path.join(root, n)).find(p => fs.existsSync(p)) || null;
+}
+
 function relaunch(root) {
-  const exe = path.join(root, 'CubricVision.exe');
-  if (!fs.existsSync(exe)) {
-    log(`Relaunch skipped: ${exe} not found.`);
+  const exe = resolveExe(root);
+  if (!exe) {
+    log(`Relaunch skipped: none of ${EXE_NAMES.join(', ')} found in ${root}.`);
     return;
   }
   const env = { ...process.env };

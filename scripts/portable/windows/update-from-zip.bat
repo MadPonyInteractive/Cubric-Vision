@@ -15,9 +15,12 @@ if not exist "%~1" (
 )
 
 rem The portable install's only guaranteed runtime is the app itself. Since the
-rem standard-Electron relayout that binary is CubricVision.exe at the root, not a
-rem nested node_modules\electron\dist\electron.exe.
-set "ELECTRON_EXE=%CUBRIC_PORTABLE_ROOT%\CubricVision.exe"
+rem standard-Electron relayout that binary sits at the root, not in a nested
+rem node_modules\electron\dist\electron.exe.
+rem MPI-708 Phase 0b: it is CubricStudio.exe from 2.0 and CubricVision.exe before it,
+rem so resolve the new name first and fall back to the old.
+set "ELECTRON_EXE=%CUBRIC_PORTABLE_ROOT%\CubricStudio.exe"
+if not exist "%ELECTRON_EXE%" set "ELECTRON_EXE=%CUBRIC_PORTABLE_ROOT%\CubricVision.exe"
 if exist "%ELECTRON_EXE%" (
   set "ELECTRON_RUN_AS_NODE=1"
   "%ELECTRON_EXE%" "%CUBRIC_PORTABLE_ROOT%\update\apply-update.cjs" -- --root "%CUBRIC_PORTABLE_ROOT%" --bundle "%~f1"
