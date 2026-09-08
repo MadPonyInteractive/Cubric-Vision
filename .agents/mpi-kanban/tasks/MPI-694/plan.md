@@ -4,6 +4,55 @@
 line of it was built.** Read `brief.md` first (licences + the measured VRAM facts — unchanged
 and still binding), and `../MPI-664/research/stable-audio-3-bench.md` for every bench fact.
 
+## Current State — 2026-09-07, THE BUILD IS DONE. Only the graphics are left.
+
+Everything below this block is the 2026-09-05 state, kept because its findings still hold.
+The delta since: the licence gate SHIPPED, both arms RAN for real in Fabio's own app, three
+things Fabio changed after seeing them running, and the weights moved to R2.
+
+🟢 **THE LICENCE GATE SHIPPED (`b246c968`, fix `15143dcc`).** ONE descriptor, not two, and
+the architecture forces it: the gate fires per INSTALL KEY and all three weights install
+under the single `flow:sound-and-music` dep key (`requiredModels: []`), so a second
+descriptor could never be keyed there. Both agreements live in `STABLE_AUDIO_3`, bundled
+under `licences/stable-audio-3/` — `LICENSE.txt` byte-identical to what
+stabilityai/stable-audio-3-medium serves (11,852 B), `GEMMA-TERMS.txt` the text of
+ai.google.dev/gemma/terms (Google publish it as a web page; no repo we pull from carries a
+LICENSE file), `NOTICE.txt` carrying both required strings verbatim. `poweredBy` is
+"Powered by Stability AI". One new field, `alsoLicensed`, is the only code: a descriptor can
+carry a second agreement, rendered as its own link in the gate AND in `flowLicences.js` —
+"provide a copy" is not discharged by naming the second one. Fabio saw it fire on his own
+install and accepted it.
+
+🟢 **BOTH ARMS VERIFIED LIVE, and the engine log names the checkpoint each one loaded** —
+`StableAudio3` staged **875 MB** for SFX (small_sfx) and **2771 MB** for Music (Medium),
+with `SAT5GemmaModel` 537 MB shared by both. Durations exact on the app path, not just the
+bench: 4 → 4.087s, 10 → 10.031s, 2 → 2.043s. `volumedetect` max −3.5 / −1.5 / −9.1 dB.
+Sidecars carry `flowId` + `flowInputs`, so Reuse works. The throwaway project was deleted
+at Fabio's word.
+
+🔴 **THREE CHANGES FABIO MADE AFTER SEEING THEM RUN (`08f8e085`) — do not undo any:**
+1. **Low VRAM is GONE from Sound & Music**, control and graph. Copied from Music Maker's
+   shape, where 13.3 GB of MiniMax weights make it real; here the whole graph stages ~6.5 GB
+   and the four-arm bench already found chunked decode saves nothing on peak while costing
+   +15s at 60s. `VAEDecodeAudioTiled` and its `MpiIfElse` came out of `raw/`, re-converted:
+   19 nodes → 17, plain decode feeds `MpiClearVram` directly. Verified by a real run after.
+2. **The Song placeholder names a SUNG song** — the horror-trailer line was an instrumental
+   brief, which belongs to the other flow now.
+3. **Neither description names the other flow.** Read from inside a flow, "for sung songs,
+   use Song" hints songs might be an option here.
+
+🟢 **THE WEIGHTS SERVE FROM R2 (MPI-705, `f66286bb`, card DONE).** HF measured ~1%/min on
+Fabio's line — ~100 minutes for the flow whose appeal is being small. All three uploaded to
+`cubric-models`, verified byte-exact by `rclone lsl` and a public HEAD, `url` swapped to
+`models.cubric.studio` with the Comfy-Org HF urls kept as `mirrorUrl`. `release:deps`: all
+305 URLs reachable.
+
+**Next action: `/mpi-flow-graphics` for BOTH flows** — the 4/5 tile and the wide hero clip
+each. Neither has `preview`/`video` today; both render sites guard on the key so the tiles
+fall back. That is the last build item on this card.
+
+---
+
 ## Current State — 2026-09-05, both flows BUILT and every gate green
 
 **Fabio settled the names and the no-enhancer default in one line: "Song and Sound & Music,
