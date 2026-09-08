@@ -69,7 +69,7 @@ release — a release that skips versions lists all of them.
 - The user rewrites it into user-friendly language. Keep within the claim
   boundary in `docs/releases/github-release-checklist.md` (image + video gen
   allowed; no unshipped-roadmap claims; Vision is local image/video, not an
-  assistant) and include that checklist's platform-disclosure block.
+  assistant) and follow that checklist's platform-disclosure rule.
 - Apply edits, then publish with `gh release create`.
 
 ## Why this matters (don't skip it)

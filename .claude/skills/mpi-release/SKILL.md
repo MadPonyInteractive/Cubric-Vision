@@ -133,7 +133,7 @@ blocks since the last release (each version added its own block; a release that
 skips versions lists all of them). Keep within the claim boundary in
 `docs/releases/github-release-checklist.md` (image + video gen allowed; no
 unshipped-roadmap claims; Vision is local image/video, not an assistant) and
-include the platform-disclosure block from that checklist.
+follow the platform-disclosure rule in that checklist.
 
 ### 6. 🛑 Publish — create the GitHub Release
 With the user's authorization, create the release on the existing tag and attach
