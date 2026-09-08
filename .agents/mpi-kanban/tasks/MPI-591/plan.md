@@ -1436,3 +1436,29 @@ It does NOT monkey-patch - it says so at startup ("ComfyUI is not modified") and
 `layout_contract.py` explains why the old patches went away in ComfyUI 0.34 (bench is 0.34.2).
 Unlike `ComfyUI-MiniMax-H3-Extend.disabled` it is safe to leave loaded, but it still NEVER enters
 `node_lock.json` (D6).
+
+### FABIO'S VERDICT ON A1, AND THE TEST CORPUS IS WRONG
+
+He watched it. **FLAWLESS, VIDEO AND AUDIO** - his words, and that is the gate the metrics only
+ever stood in for. Phase 5h failed on his ear after the instruments said "sound clean"; this time
+ear and instruments agree. **The continuation also IMPROVED on the source.** The source itself
+tears and smears - it is ref2v output at low resolution, and in his words reference-to-video "has a
+lot of tearing and smearing and is practically crap". That is D1 confirmed from the footage rather
+than from a metric.
+
+**But it makes the picture half of A1's verdict unrepresentative.** Nobody extends footage this
+bad, so the visible improvement across the join would not show up in a real extension, where the
+source is already good. The 0.49 luma step is a true measurement of a case that does not occur.
+
+**This does NOT invalidate A1.** The audio result stands on its own - the level step and the
+seam correlation are measured against the source's OWN sound, so "the source is ugly" does not
+reach them, and the mechanism demonstrably phase-locks.
+
+**The tension, and the call:** switching to a good source breaks comparability with the -3.51 dB
+baseline, which was measured on `ref2v_ms_004.mp4` specifically. So:
+
+* **A2 KEEPS this source.** Its only job is a single-variable A/B against A1 (turbo LoRA on),
+  and that needs the same footage on both sides.
+* **A later arm re-runs the winner on an FL2VA-GENERATED source** - good footage, the case a user
+  actually hits. That arm is about whether the win holds, not about the baseline.
+* Whatever ships is decided on the second corpus, not the first.
