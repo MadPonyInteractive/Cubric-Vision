@@ -1,0 +1,18 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "routes/llm.js",
+    "routes/forkBridge.js",
+    "routes/remoteEngine.js",
+    "services/llmEngines.mjs",
+    "scripts/recipe-engines.mjs",
+    "js/services/llmService.js",
+    "js/core/secretsClient.js",
+    "js/components/Organisms/MpiPromptBox/**",
+    "js/shell/connectorOps.js",
+    "main/secretsStore.js",
+    "server.js",
+    "tests/llm-service.test.cjs",
+    ".agents/mpi-kanban/tasks/MPI-677/**"
+  ]
+}

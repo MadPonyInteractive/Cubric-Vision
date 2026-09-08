@@ -70,6 +70,51 @@ export const secretsClient = {
     },
 
     /**
+     * Encrypts and stores the DeepInfra API key — the cloud prompt enhancer
+     * (MPI-677 step 1a). Same write-only contract as the RunPod key: set,
+     * presence, clear, and no way to read it back. The forked server resolves it
+     * over the fork bridge; `routes/llm.js` hands it straight to the engine and
+     * nothing else ever holds it. Its own slot, never the RunPod one.
+     * @param {string} key
+     * @returns {Promise<{ok: boolean, weakEncryption?: boolean, error?: string}>}
+     */
+    async setDeepInfraKey(key) {
+        const ipc = _ipc();
+        if (!ipc) return { ok: false, error: 'ipc_unavailable' };
+        try {
+            return await ipc.invoke('secrets:set-deepinfra-key', { key });
+        } catch (err) {
+            clientLogger.error('settings', '[secretsClient] set-deepinfra-key failed', err);
+            return { ok: false, error: 'ipc_error' };
+        }
+    },
+
+    /** @returns {Promise<boolean>} True when a DeepInfra key is stored. */
+    async hasDeepInfraKey() {
+        const ipc = _ipc();
+        if (!ipc) return false;
+        try {
+            const res = await ipc.invoke('secrets:has-deepinfra-key');
+            return !!res?.has;
+        } catch (err) {
+            clientLogger.error('settings', '[secretsClient] has-deepinfra-key failed', err);
+            return false;
+        }
+    },
+
+    /** @returns {Promise<{ok: boolean}>} */
+    async clearDeepInfraKey() {
+        const ipc = _ipc();
+        if (!ipc) return { ok: false };
+        try {
+            return await ipc.invoke('secrets:clear-deepinfra-key');
+        } catch (err) {
+            clientLogger.error('settings', '[secretsClient] clear-deepinfra-key failed', err);
+            return { ok: false };
+        }
+    },
+
+    /**
      * Encrypts and stores the per-Pod Cubric wrapper token in the main process.
      * Write-only from the renderer (no get channel — the server resolves it via
      * the fork bridge, keyed by podId). Used by Phase 4 in-app Pod-create.

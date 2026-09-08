@@ -1,8 +1,11 @@
 /**
- * main/secretsStore.js — main-process secret storage for the RunPod remote engine.
+ * main/secretsStore.js — main-process secret storage.
  *
- * Stores the user's RunPod API key and the per-Pod Cubric wrapper token, encrypted,
- * under <APP_USER_DATA>/runpod-secrets.json. Runs in the MAIN Electron process only
+ * Stores the user's RunPod API key, the per-Pod Cubric wrapper token, and the
+ * DeepInfra API key that pays for the cloud prompt enhancer (MPI-677 step 1a),
+ * encrypted, under <APP_USER_DATA>/runpod-secrets.json. The FILE NAME is
+ * historical and deliberately unchanged — renaming it orphans every key already on
+ * disk for the sake of a tidier path. Runs in the MAIN Electron process only
  * (safeStorage is main-only). The renderer never reads a raw secret back — it can set,
  * test, and clear via IPC. The forked Express server gets the decrypted key on demand
  * through a process-message bridge (registerForkBridge).
@@ -151,6 +154,40 @@ function clearApiKey() {
   return { ok: true };
 }
 
+// --- DeepInfra (the cloud prompt enhancer, MPI-677 step 1a) -----------------
+// ITS OWN SLOT, never the RunPod one. They are different vendors, different
+// consequences of a leak, and a user may hold one and not the other — sharing
+// `runpodApiKey` would silently authenticate DeepInfra with a RunPod key and
+// report the failure as "enhance is down".
+
+function setDeepInfraKey(plainKey) {
+  if (!plainKey || typeof plainKey !== 'string') {
+    return { ok: false, reason: 'empty' };
+  }
+  const weak = !_encryptionAvailable();
+  const data = _read();
+  data.deepInfraApiKey = _encrypt(plainKey);
+  _write(data);
+  _log('info', 'DeepInfra API key stored');
+  return { ok: true, weakEncryption: weak };
+}
+
+function hasDeepInfraKey() {
+  return !!(_read().deepInfraApiKey);
+}
+
+function getDeepInfraKey() {
+  return _decrypt(_read().deepInfraApiKey);
+}
+
+function clearDeepInfraKey() {
+  const data = _read();
+  delete data.deepInfraApiKey;
+  _write(data);
+  _log('info', 'DeepInfra API key cleared');
+  return { ok: true };
+}
+
 function setWrapperToken(token, podId) {
   const data = _read();
   data.wrapperToken = _encrypt(token);
@@ -195,6 +232,12 @@ function init({ app, safeStorage, ipcMain, logger }) {
     ipcMain.handle('secrets:has-api-key', () => ({ has: hasApiKey() }));
     ipcMain.handle('secrets:clear-api-key', () => clearApiKey());
     ipcMain.handle('secrets:encryption-status', () => encryptionStatus());
+    // DeepInfra: set / has / clear only. There is deliberately NO get channel —
+    // the renderer must never hold the key, and the forked server resolves it
+    // over the fork bridge below.
+    ipcMain.handle('secrets:set-deepinfra-key', (_e, { key } = {}) => setDeepInfraKey(key));
+    ipcMain.handle('secrets:has-deepinfra-key', () => ({ has: hasDeepInfraKey() }));
+    ipcMain.handle('secrets:clear-deepinfra-key', () => clearDeepInfraKey());
     // Wrapper token is write-only from the renderer (keyed to a podId). There is
     // deliberately no renderer get channel — the forked server resolves it via
     // the fork bridge. Used by Phase 4 in-app Pod-create and the manual store path.
@@ -221,6 +264,16 @@ function registerForkBridge(serverProcess) {
       let value = null;
       try { value = getApiKey(); } catch { value = null; }
       serverProcess.send({ type: 'secrets:get-api-key-response', id: msg.id, value });
+    } else if (msg.type === 'secrets:get-deepinfra-key-request') {
+      let value = null;
+      try { value = getDeepInfraKey(); } catch { value = null; }
+      serverProcess.send({ type: 'secrets:get-deepinfra-key-response', id: msg.id, value });
+    } else if (msg.type === 'secrets:has-deepinfra-key-request') {
+      // Presence only — this is what the enhance route's readiness probe asks,
+      // so the key itself never crosses the channel just to answer "is it set?".
+      let has = false;
+      try { has = hasDeepInfraKey(); } catch { has = false; }
+      serverProcess.send({ type: 'secrets:has-deepinfra-key-response', id: msg.id, has });
     } else if (msg.type === 'secrets:get-wrapper-token-request') {
       let value = null;
       try { value = getWrapperToken(msg.podId); } catch { value = null; }
@@ -243,6 +296,10 @@ module.exports = {
   hasApiKey,
   getApiKey,
   clearApiKey,
+  setDeepInfraKey,
+  hasDeepInfraKey,
+  getDeepInfraKey,
+  clearDeepInfraKey,
   setWrapperToken,
   getWrapperToken,
   clearWrapperToken,

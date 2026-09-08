@@ -20,41 +20,11 @@ const router = express.Router();
 const logger = require('./logger');
 const { client, setApiKeyResolver } = require('./runpodRemote');
 const { isNetworkDownError } = require('./netCheck');
+const { ask: _ask } = require('./forkBridge');
 
 // --- fork bridge (child -> main request/response by id) ---------------------
-
-const _pending = new Map();
-let _bridgeReady = false;
-
-function _initBridge() {
-  if (_bridgeReady) return;
-  if (typeof process.on === 'function') {
-    process.on('message', (msg) => {
-      if (!msg || !msg.type || !msg.id) return;
-      const entry = _pending.get(msg.id);
-      if (!entry) return;
-      _pending.delete(msg.id);
-      entry.resolve(msg);
-    });
-    _bridgeReady = true;
-  }
-}
-
-function _ask(type, extra, timeoutMs = 5000) {
-  _initBridge();
-  return new Promise((resolve) => {
-    if (typeof process.send !== 'function') return resolve(null);
-    const id = crypto.randomUUID();
-    const timer = setTimeout(() => {
-      _pending.delete(id);
-      resolve(null);
-    }, timeoutMs);
-    _pending.set(id, {
-      resolve: (m) => { clearTimeout(timer); resolve(m); },
-    });
-    process.send({ type, id, ...extra });
-  });
-}
+// Moved to ./forkBridge.js in MPI-677 step 1a so the enhance route can ask for
+// the DeepInfra key over the SAME single listener. Behaviour is unchanged.
 
 async function getRunPodApiKey() {
   const m = await _ask('secrets:get-api-key-request', {});
