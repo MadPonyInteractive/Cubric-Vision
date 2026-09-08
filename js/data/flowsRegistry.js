@@ -2176,10 +2176,6 @@ export const FLOWS = [
     // watching Enhance fill them is what shows the button does not touch the brief. The
     // enhancer still answers in ONE marked string; `to` names which marker lands where,
     // and the frame splits it (MpiBaseFlow § _writeEnhanced).
-    //
-    // ⚠️ NO PREVIEW ASSETS YET. `preview`/`video` are deliberately absent until
-    // `/mpi-flow-graphics` cuts them from a real run; both render sites guard on the key,
-    // so the tile falls back rather than 404ing.
     {
         id: 'minimax-music',
         // Fabio, 2026-09-01: "Text to Music" is not a good name — it reads as the model's
@@ -2194,6 +2190,16 @@ export const FLOWS = [
         // key `flowTextToMusic` and the `filePrefix` all STAY — a renamed op id is a
         // tombstone problem (MPI-533), not a rename.
         title: 'Song',
+        // Art off `flowMusicMaker_013` — a real 120s run, "Don't wake the morning", one
+        // cast voice. The LYRIC SHEET is what nothing else in the set has, so both assets
+        // lead with its grammar (`[Chorus]` in heat, `<Singer A>` in frost) rather than
+        // with another line-of-type-over-a-waveform, which is already Chatter Box's tile
+        // and Drama Box's. The hero writes the sheet a group at a time, then draws the
+        // track under a heat playhead, then returns to the bare page — loop seam measured
+        // 0.006/255. The band is a 12s excerpt on purpose: the whole two minutes averages
+        // into a flat pink brick at 220px and says nothing.
+        preview: 'flow-song.webp',
+        video: 'flow-song.mp4',
         // NO "for instrumentals, use Sound & Music" TAIL, same reason as its twin
         // (Fabio, 2026-09-07): naming the other flow from INSIDE this one reads as an
         // option on this one. Each description says what its own flow makes; the Flow
@@ -2567,11 +2573,20 @@ export const FLOWS = [
     // the same FLOW-WITH-DEPS shape as Music Maker and Voice Changer, and text is the
     // entire input, so step 0 renders its own "needs no input media" panel.
     //
-    // ⚠️ NO PREVIEW ASSETS YET (`preview`/`video`) until `/mpi-flow-graphics` cuts them
-    // from a real run; both render sites guard on the key, so the tile falls back.
     {
         id: 'sound-and-music',
         title: 'Sound & Music',
+        // Art off four real runs made for it (MPI-694) — one per category, durations
+        // MEASURED off the files: 10.031 / 10.031 / 4.087 / 2.043s for 10/10/4/2 asked.
+        // Both assets are a TIME RULER, not lanes: a row's width IS its length, so the
+        // 2s one-shot is a fifth of the 10s bed and the frost tick marks where each one
+        // actually stops. That is deliberate distance from Stems, whose tile is five
+        // EQUAL lanes of one track — four labelled lanes here would have been the same
+        // picture with different words. The hero draws each row in under a heat playhead
+        // that halts on its own mark, so the dropdown and the length slider are taught in
+        // one pass; loop seam measured 0.013/255.
+        preview: 'flow-sound-and-music.webp',
+        video: 'flow-sound-and-music.mp4',
         // NO "for sung songs, use Song" TAIL (Fabio, 2026-09-07): naming the other flow
         // on this screen reads as an option ON this one — the user is standing inside
         // Sound & Music, and a sentence about songs there hints the flow might do them.
