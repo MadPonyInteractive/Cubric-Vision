@@ -13,6 +13,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
+const crypto = require('node:crypto');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -202,6 +203,74 @@ test('a delta is REFUSED when the installed version cannot be read', () => {
     // the real installs, so "probably fine" is the wrong default.
     assert.notStrictEqual(run.status, 0, 'unverifiable delta was applied');
     assert.strictEqual(fs.readFileSync(path.join(install, 'app', 'changed.txt'), 'utf8'), 'old');
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+// MPI-709 — a FULL bundle lists every file, and most of them the install already has
+// byte-for-byte. Rewriting those is not merely wasted I/O: it picks a fight with files the
+// running Electron holds. The 1.5.0 re-cut evicted a 222 MB CubricVision.exe and then died
+// on icudtl.dat, and BOTH were identical to what was already on disk. An unchanged file
+// must not be touched at all.
+
+test('a file already matching the manifest sha256 is NOT rewritten', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mpi709-skip-'));
+  const install = path.join(root, 'install');
+  const bundle = path.join(root, 'bundle');
+  const sha = (text) => crypto.createHash('sha256').update(Buffer.from(text)).digest('hex');
+  try {
+    writeJson(path.join(install, 'resources', 'app', 'package.json'), {
+      name: 'cubric-vision', version: '1.4.4',
+    });
+    writeJson(path.join(install, ...MANIFEST_REL), {
+      appId: 'cubric.vision', toVersion: '1.4.4', files: [], preserve: [],
+    });
+    // Stands in for icudtl.dat: identical in both versions, and the one the applier died on.
+    fs.writeFileSync(path.join(install, 'unchanged.bin'), 'same-bytes');
+    fs.writeFileSync(path.join(install, 'changed.txt'), 'old');
+
+    fs.mkdirSync(bundle, { recursive: true });
+    fs.writeFileSync(path.join(bundle, 'unchanged.bin'), 'same-bytes');
+    fs.writeFileSync(path.join(bundle, 'changed.txt'), 'new');
+    writeJson(path.join(bundle, ...MANIFEST_REL), {
+      appId: 'cubric.vision',
+      platform: process.platform,
+      fromVersion: null,
+      toVersion: '1.5.0',
+      files: [
+        { path: 'unchanged.bin', sha256: sha('same-bytes') },
+        { path: 'changed.txt', sha256: sha('new') },
+      ],
+      preserve: [],
+      delete: [],
+    });
+
+    // Backdate the untouched file well past filesystem timestamp granularity, so a rewrite
+    // is unmistakable rather than a rounding artefact.
+    const backdated = new Date(Date.now() - 60_000);
+    fs.utimesSync(path.join(install, 'unchanged.bin'), backdated, backdated);
+    const before = fs.statSync(path.join(install, 'unchanged.bin')).mtimeMs;
+
+    const run = spawnSync(process.execPath, [APPLIER, '--root', install, '--bundle', bundle], {
+      encoding: 'utf8',
+    });
+    assert.strictEqual(run.status, 0, `applier failed: ${run.stderr || run.stdout}`);
+
+    // Untouched: same mtime, same bytes.
+    assert.strictEqual(fs.statSync(path.join(install, 'unchanged.bin')).mtimeMs, before);
+    assert.strictEqual(fs.readFileSync(path.join(install, 'unchanged.bin'), 'utf8'), 'same-bytes');
+
+    // Skipping identical files must not skip real ones.
+    assert.strictEqual(fs.readFileSync(path.join(install, 'changed.txt'), 'utf8'), 'new');
+
+    // A file that was never copied has nothing to roll back, so it must not appear there —
+    // that is what proves the copy was skipped and not merely idempotent.
+    const rollbacks = fs.readdirSync(path.join(install, 'update', 'rollback'));
+    assert.strictEqual(rollbacks.length, 1);
+    const rollbackRoot = path.join(install, 'update', 'rollback', rollbacks[0]);
+    assert.ok(!fs.existsSync(path.join(rollbackRoot, 'unchanged.bin')));
+    assert.strictEqual(fs.readFileSync(path.join(rollbackRoot, 'changed.txt'), 'utf8'), 'old');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

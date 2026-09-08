@@ -11,6 +11,7 @@
 // this short-lived applier process makes `.asar` entries extract as plain files.
 process.noAsar = true;
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
@@ -65,8 +66,15 @@ function loadExtractZip(root) {
 // CubricVision.exe would otherwise abort the whole run with EBUSY. Move the live
 // image aside, write the new one in its place, and sweep the leftover on the next
 // update (by then nothing holds it).
+// UNKNOWN belongs here: libuv maps Windows ERROR_USER_MAPPED_FILE to UNKNOWN, which is
+// what you get for a MEMORY-MAPPED file rather than a running image. Electron maps
+// icudtl.dat at startup, and the applier runs through the app's own binary, so a bundle
+// carrying icudtl.dat hits UNKNOWN and — before this — skipped the eviction below and
+// aborted the whole run, three files after it had already swapped CubricVision.exe. Only
+// ever seen once a FULL bundle shipped: every delta prunes the Electron runtime, which
+// does not change between patch releases (MPI-709, measured 2026-09-08).
 function isBusyError(err) {
-  return err && ['EBUSY', 'EPERM', 'EACCES', 'ETXTBSY'].includes(err.code);
+  return err && ['EBUSY', 'EPERM', 'EACCES', 'ETXTBSY', 'UNKNOWN'].includes(err.code);
 }
 
 function evictBusyFile(target) {
@@ -238,7 +246,23 @@ function restoreLauncherBits(portableRoot) {
   }
 }
 
-function copyManifestFile(bundleRoot, portableRoot, backupRoot, relPath) {
+// A FULL bundle lists every file, most of which the install already has byte-for-byte.
+// Rewriting those costs the whole runtime in I/O and, worse, picks a fight with every
+// locked file for no gain: the 1.5.0 re-cut evicted a 222 MB CubricVision.exe and then
+// aborted on icudtl.dat, and BOTH were identical to what was already on disk. The
+// manifest already carries a sha256 per entry (applyDelta prunes on it), so compare and
+// skip. Nothing to copy means nothing to evict.
+function targetAlreadyMatches(target, expectedSha) {
+  if (!expectedSha) return false;
+  try {
+    const actual = crypto.createHash('sha256').update(fs.readFileSync(target)).digest('hex');
+    return actual === expectedSha;
+  } catch {
+    return false; // absent or unreadable — copy it
+  }
+}
+
+function copyManifestFile(bundleRoot, portableRoot, backupRoot, relPath, expectedSha) {
   const source = path.resolve(bundleRoot, ...relPath.split('/'));
   const target = assertInside(portableRoot, path.join(portableRoot, ...relPath.split('/')));
   if (!source.startsWith(path.resolve(bundleRoot) + path.sep) && source !== path.resolve(bundleRoot)) {
@@ -247,6 +271,7 @@ function copyManifestFile(bundleRoot, portableRoot, backupRoot, relPath) {
   if (!fs.existsSync(source)) {
     throw new Error(`Update manifest listed missing file: ${relPath}`);
   }
+  if (targetAlreadyMatches(target, expectedSha)) return;
   backupExisting(portableRoot, backupRoot, relPath);
   fs.mkdirSync(path.dirname(target), { recursive: true });
   try {
@@ -332,7 +357,7 @@ async function main() {
   fs.mkdirSync(rollbackRoot, { recursive: true });
   for (const file of manifest.files) {
     if (!file || typeof file.path !== 'string') continue;
-    copyManifestFile(bundleRoot, opts.root, rollbackRoot, file.path);
+    copyManifestFile(bundleRoot, opts.root, rollbackRoot, file.path, file.sha256);
   }
   // The manifest is not in its own files[]: createUpdateManifest builds the file
   // list and only then writes the manifest into the same stage root, so a bundle

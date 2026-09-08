@@ -92,19 +92,31 @@ reported PASS on the build that was breaking users (MPI-709, 2026-09-08).
 
 Two conditions make it a real test.
 
-**A. Update from at least TWO released versions behind.** A one-behind source passes even
-with the applier completely broken: a delta bundle's `fromVersion` IS the previous release,
-so that one install is the single case it genuinely fits. The corruption only appears
-across a gap. List the published tags and pick a source with at least one release strictly
-between it and the version you are shipping:
+**A. Update from the OLDEST install the bundle claims to serve.** Which install that is
+depends on what the bundle is, so read its `resources/cubric/update-manifest.json` first and
+record the `fromVersion` you find there as `bundleFromVersion` in the evidence:
+
+- **A FULL bundle (`fromVersion: null`) claims every install**, so it must be tested across a
+  gap: **at least TWO released versions behind**. A one-behind source passes even with the
+  applier completely broken, because a delta's `fromVersion` IS the previous release and that
+  one install is the single case it genuinely fits. Shipping 1.5.0 with v1.4.2 / v1.4.3 /
+  v1.4.4 published → update from v1.4.2 or older, never from v1.4.4.
+- **A DELTA claims exactly one install — its own `fromVersion`.** Test it from precisely that
+  version. Demanding a two-behind run of a delta asks for a test that cannot legitimately
+  pass, and running it anyway just reproduces the corruption on purpose.
 
 ```bash
 git tag --list "v*" | sort -V | tail -6
 ```
 
-Shipping 1.5.0 with v1.4.2 / v1.4.3 / v1.4.4 published → update from v1.4.2 or older,
-never from v1.4.4. Keep a couple of old full portables on disk for this; a fresh extract of
-an old release is the source install.
+Keep a couple of old full portables on disk for this; a fresh extract of an old release is
+the source install.
+
+> **Shipping a delta is a decision about who you are NOT serving.** Every install older than
+> the delta's `fromVersion` runs an applier that predates the `fromVersion` guard, so it does
+> not refuse — it applies the delta silently and corrupts. Those users get no error and no
+> warning from the software. The release body is their only protection, and it has to tell
+> them to take the full zip rather than the update zip (MPI-709, 2026-09-08).
 
 **B. Assert the app WORKS afterwards, with a real generation.** A file count and a clean
 `app.log` prove nothing here — in the 1.5.0 failure the server logged nothing wrong at all,
@@ -138,6 +150,7 @@ Steps:
   "at": "2026-09-08T14:00:00Z",
   "toVersion": "1.5.0",
   "fromVersion": "1.4.2",
+  "bundleFromVersion": null,
   "platform": "win32",
   "bundle": "CubricVision-windows-x64-update-v1.5.0.zip",
   "userDataSurvived": true,
@@ -149,9 +162,17 @@ Steps:
 }
 ```
 
-`fromVersion` is the version of the **install you updated**, not the field in the bundle's
-manifest. `generation.artifact` names the file you actually opened; the gate refuses an
-empty one, because an unopened output is the failure mode MPI-419 already cost us once.
+The two version fields are **not** the same thing and the gate compares them:
+
+- `fromVersion` — the version of the **install you updated**.
+- `bundleFromVersion` — the `fromVersion` field of the **bundle's own**
+  `resources/cubric/update-manifest.json`. `null` for a FULL bundle, a version for a delta.
+  It is what tells the gate which installs the bundle claims to serve, and therefore what a
+  fair test of it looks like (condition A). Read it, don't assume it — an absent
+  `release-baselines/*.json` makes the build emit FULL, and a restored one makes it a delta.
+
+`generation.artifact` names the file you actually opened; the gate refuses an empty one,
+because an unopened output is the failure mode MPI-419 already cost us once.
 
 ---
 
