@@ -1666,3 +1666,75 @@ percentile — quieter than ordinary content, and better than the 4-step's 0.6x.
 the problem.** The 2.8218 s step is source content: peak 0.08705 in BOTH outputs, identical.
 
 Wall clock: 250.5 s for each 8-step arm, against the 4-step port run's 210.3 s.
+
+## Phase 6a - THE BARE-BONES FL2VA ARM RAN (2026-09-08), AND THE AUDIO DEFECT IS GONE
+
+First arm of the new direction. `research/bench/arm_a1_bare.json`, 24 nodes, dispatched under the
+lease as `3c0ef1bf`, **580.8 s** wall. The bench oracle (`NikoDemon80/ComfyUI-H3-Motion-Context`)
+was installed by Fabio into `G:\ComfyUi\ComfyUI\custom_nodes` for this arm - D6, oracle on the
+bench, nothing near the engine.
+
+| metric | shipped 8-step (P5h_encA) | F16b, the 4-step arm Fabio passed | **A1 bare bones** |
+|---|---|---|---|
+| level step across the join | **-3.51 dB** | -1.12 dB | **-0.43 dB** |
+| seam correlation | not measured | not measured | **0.791, CONTINUATION** |
+| worst 1-frame luma step at join | 1.17 | 1.14 | **0.49** |
+| luma excursion span | 2.60 | 2.20 | **1.90** |
+
+**-0.43 dB is INSIDE the 0.55 dB bench noise floor** - not merely better than the baseline,
+indistinguishable from no step at all, and better than the arm that passed. The audio-continuity
+gate that failed at Phase 5h is answered.
+
+`seam_probe.py` gives its verdict for the first time in this saga: mean corr **0.791**, 32/35
+windows above 0.6, lag trend **0.07 ms** across the span with **0.08 ms** residual rms - it
+phase-locks rather than drifting. Correlation collapses to 0.19 past the seam, which is the
+method's own sanity check firing correctly. Upstream's own numbers for the same fix were 0.45 ->
+0.95+; ours is on the PIXEL path, which they document as costing a lossy round trip the latent
+path does not, so 0.791 is the pixel path's number and not directly comparable to their 0.95.
+
+### The mechanism reported itself, and matched plan.md line for line
+
+```
+h3_motion_context: ComfyUI H3 layout checks passed, anchors and pinned audio will land where intended
+h3_motion_context: video from pixels, video/head, 22 frames -> 7 cond blocks at indices 0..18,
+124 frame clip at 864x480, trim 22, audio 24 frames -> 40 latent steps (1.000s) from vae,
+on the timeline ending at frame 22.200
+```
+
+`22.200` IS the end-alignment arithmetic landing: overhang `+1/3` of an audio latent step, and
+`22 + (1/3)/(5/3) = 22.2`. plan.md predicted `overhang` is exactly one of {0, +1/3, -1/3} from
+source; the bench produced +1/3 on the first run.
+
+**The constant -9.0 ms lag is EXPECTED, not a defect.** A 1/3 step at 40 Hz is **8.33 ms**, and the
+pinned audio window ends 0.2 frame past the pinned picture - so the reconstruction reads ~8.3 ms
+early against the source tail by construction. Measured -9.0 vs predicted -8.33 leaves **0.67 ms**
+unaccounted; small, constant, and NOT the 8.3 ms cycling error plan.md warns about (that one
+cycles, this one has a 0.08 ms residual). Worth a note, not a chase.
+
+### WHAT THIS DOES AND DOES NOT PROVE
+
+**Does:** the end-aligned pin produces a real continuation on this footage, and a bare-bones
+LoRA-free chain has no level defect. D2's premise holds.
+
+**Does NOT:** attribute the win to the pin alone. A1 changed SIX things against the shipped graph
+at once - end-aligned pin (vs `MiniMaxH3AddGuide` at `frame_idx 0`), fl2va conditioning and weights
+(vs ref2va), no turbo LoRA, no EasyCache, no attention backend, and native-res single stage (vs
+half-res + upscale + refine). That is D2's intended ordering, not sloppiness, but the -3.51 -> -0.43
+move is the WHOLE bundle's and no single change owns it yet.
+
+### Arm A1's exact shape, so the next arm changes ONE thing
+
+fl2va UNET + `MiniMaxH3SigmaShift(12, 2)` straight off the loader; simple/25, res_multistep, seed
+591000591, 864x480, `4 + 22/24` -> 124 frames = 22 pinned + 102 new; `MpiH3ImageToVideo` with NO
+`first_frame` (upstream drops one anyway - "the pinned head owns the start"); `context_length 22`,
+`audio_context_length 24`, pixel path. Source `cowboys/Media/ref2v_ms_004.mp4`. Prompt is in the
+graph file - it was NOT recorded anywhere for the Phase 5h arms, so this one is written down.
+
+### New instruments
+
+`seam_probe.py` is ported and carries a `--self-check` (synthetic continuation 0.995 vs cover band
+0.087). `measure.py` does trim + concat + both metrics in one call; it was smoke-tested on a
+synthetic generation BEFORE the GPU run and reproduced Phase 5h's source-side **-26.35 dB** exactly,
+so the instrument agrees with the baseline it is compared against. `validate.py` checks a graph
+against the live `/object_info` - every class installed, every required input wired, every weight
+offered - which is a second of insurance against a 10-minute run dying on a typo.

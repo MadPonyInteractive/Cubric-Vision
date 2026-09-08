@@ -1413,3 +1413,26 @@ whole truth).
 **Noted, do not build against it yet:** Dars is making every H3 generation save its latent. If that
 lands, Extend gets the latent path for free on anything the app generated and the pixel path
 narrows to user-imported footage only.
+
+## PHASE 6a RESULT - the bare-bones arm PASSED (2026-09-08)
+
+`validation.md` Phase 6a. Level step **-0.43 dB** against the -3.51 dB baseline and INSIDE the
+0.55 dB noise floor; seam correlation **0.791**, verdict CONTINUATION; picture seam also better
+(worst 1-frame luma step 0.49 vs 1.14-1.19). The audio failure that killed the 8-step gate does not
+reproduce on this chain.
+
+**Next, in D2's order - one variable per arm:**
+
+1. **A2, the turbo LoRA back on** (`minimax_h3_fl2v_turbo_8step_v1.0_768p`, beta/8, euler). This is
+   the untested prime suspect from Phase 5h AND the thing the upstream README independently warns
+   "thickens the sound". A1 is now the control it never had.
+2. **A3, accelerators** - EasyCache and the attention backend, on top of whichever of A1/A2 wins.
+3. **THEN** the MpiNodes port (`ComfyUi-MpiNodes/h3.py` via `/mpi-nodes-sync`), latent branch built
+   in from the start per D4/D5. A1 is the number the port has to match.
+4. Only then D3's parked upscale question, and Phase 6 docs.
+
+**The oracle is INSTALLED on the bench** at `G:\ComfyUi\ComfyUI\custom_nodes\ComfyUI-H3-Motion-Context`.
+It does NOT monkey-patch - it says so at startup ("ComfyUI is not modified") and its own
+`layout_contract.py` explains why the old patches went away in ComfyUI 0.34 (bench is 0.34.2).
+Unlike `ComfyUI-MiniMax-H3-Extend.disabled` it is safe to leave loaded, but it still NEVER enters
+`node_lock.json` (D6).
