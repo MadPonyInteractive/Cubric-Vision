@@ -1,0 +1,39 @@
+{
+  "schema": "cubric/engine-attestation/v1",
+  "pack": "ComfyUI-MpiNodes",
+  "from": "85057698ccb8cd62f53f484c3fae42326b0e8a06",
+  "to": "287edb83f0de589984f59aa8fd4e92726087d7fb",
+  "attested_at": "2026-09-08T13:10:00+01:00",
+  "attested_by": "Fabio (MadPonyInteractive)",
+  "card": "MPI-709",
+  "why": "The v1.2.11 pin move changed four classes. None of them can reach a shipped graph in a way the 2026-09-05 smoke did not already cover, and the two that could were executed for real on 2026-09-07 against the current graphs. This attestation records that reasoning per class so the gate does not have to guess, and it expires the moment either pin moves.",
+  "classes": {
+    "MpiClearVram": {
+      "kind": "refactor",
+      "reason": "Behaviour is unchanged. The node's body was lifted verbatim into a module-level _clear_vram() helper which it now calls: same four operations (gc.collect, unload_all_models, soft_empty_cache, and the cuda empty_cache/ipc_collect pair), same order, same guard. Flagged only because vram.py's module shell changed when MpiClearVramEnd was added alongside it. Reviewed against `git diff 8505769..287edb8 -- vram.py`."
+    },
+    "MpiSaveVideo": {
+      "kind": "additive-and-proven",
+      "reason": "RETURN_TYPES went from () to (\"STRING\",) with RETURN_NAMES (\"video_path\",); the ui payload is byte-identical so the preview is unaffected. The new socket is connected NOWHERE: 15 runtime graphs contain MpiSaveVideo and 0 nodes consume any of its outputs, so no shipped graph's execution can differ. It was also exercised end-to-end on 2026-09-07 — every one of the 18 generations below was written to disk by this node and decoded to a thumbnail.",
+      "evidence": {
+        "project": "C:/Users/Fabio/Documents/Cubric Vision/Projects/RTX5090 H3 Tests",
+        "when": "2026-09-07T14:57:34Z .. 2026-09-07T15:37:54Z",
+        "generations": 18,
+        "artefacts": "18 playable mp4s, each with a decoded .thumb.jpg, recorded in Media/.meta sidecars"
+      }
+    },
+    "MpiWindowedSampler": {
+      "kind": "proven",
+      "reason": "New in v1.2.11 and baked into both H3 runtimes by f91438ca (2026-09-06 18:31), which is what made the 2026-09-05 H3 smoke rows genuinely stale. It appears in no other runtime graph. Fabio ran all three H3 ops against the post-bake graphs on 2026-09-07 — partly for the express purpose of checking this node — and watched the output. comfy_workflows/ and node_lock.json have both been untouched since 15:37Z that day, so what ran is what ships.",
+      "evidence": {
+        "project": "C:/Users/Fabio/Documents/Cubric Vision/Projects/RTX5090 H3 Tests",
+        "when": "2026-09-07T14:57:34Z .. 2026-09-07T15:37:54Z",
+        "ops": { "ref2v_ms": 7, "t2v_ms": 5, "i2v_ms": 6 },
+        "graphs": ["minimax_h3_fl2va.json", "minimax_h3_r2va.json"]
+      }
+    }
+  },
+  "deliberately_not_attested": {
+    "MpiClearVramEnd": "New node, and no runtime graph loads it — it exists only in comfy_workflows/raw/ and scripts/workflow_generation/ templates, which are authoring inputs and are never dispatched. It needs no attestation: the gate finds zero graphs for it on its own. Left here as the worked example of the narrowing doing its job."
+  }
+}

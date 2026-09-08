@@ -5,6 +5,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { assessPinMove } from './engine-drift.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(SCRIPT_DIR, '..');
@@ -48,6 +49,7 @@ const FILES = {
   nodeLock: rel('dev_configs', 'node_lock.json'),
   smokeEvidence: rel('dev_configs', 'smoke-evidence.json'),
   updateEvidence: rel('dev_configs', 'update-evidence.json'),
+  engineAttestation: rel('dev_configs', 'engine-attestation.json'),
   preReleaseTest: rel('scripts', 'pre_release_test.py'),
   // The product Pod's start.sh is in the SIBLING mpi-ci repo. It hardcodes the
   // extra_model_paths.yaml ComfyUI reads on the volume. MPI-143: a model whose
@@ -521,9 +523,29 @@ async function checkSmokeEvidence() {
   // Stale evidence is the quiet failure: a green file from the PREVIOUS bump still
   // names an old version, but one carrying the right version and an old timestamp
   // would pass every check above. Anchor it to when the pin actually moved.
+  //
+  // Anchoring on the timestamp ALONE was too blunt, though: node_lock.json also carries the
+  // MpiNodes pin, which is code-only and moves for reasons most graphs cannot feel. On
+  // 2026-09-06 it moved to v1.2.11 — two nodes affected, ~120 untouched — and every one of
+  // the 37 rows died, demanding a 290 GB re-run to re-prove image ops the pin cannot reach.
+  // assessPinMove narrows it to the graphs that actually load a changed class, and answers
+  // "stale" to anything it cannot see (a core bump, a third-party pin, a missing checkout).
   const pinMovedAt = git(['log', '-1', '--format=%cI', '--', 'dev_configs/node_lock.json']);
-  if (pinMovedAt && evidence?.at && new Date(evidence.at) < new Date(pinMovedAt)) {
-    fail(`${bumpNote} smoke-evidence.json is STALE — recorded ${evidence.at}, but node_lock.json last changed ${pinMovedAt}. Re-run the smoke.`);
+  const drift = assessPinMove({
+    repo: REPO_ROOT,
+    wfDir: rel('comfy_workflows'),
+    evidenceAt: evidence?.at,
+    pinMovedAt,
+    attestationFile: FILES.engineAttestation,
+  });
+  if (drift.stale) {
+    const detail = drift.graphs?.size
+      ? ` Changed and unattested: ${[...drift.classes].sort().join(', ')} — reaching ${[...drift.graphs.keys()].slice(0, 6).join(', ')}${drift.graphs.size > 6 ? ` +${drift.graphs.size - 6} more` : ''}.`
+      : ` ${drift.reason}.`;
+    fail(`${bumpNote} smoke-evidence.json is STALE — recorded ${evidence.at}, but node_lock.json last changed ${pinMovedAt}.${detail} Re-run the smoke, or attest the classes in dev_configs/engine-attestation.json if a human has established they cannot affect a shipped graph.`);
+  } else if (drift.changed?.size) {
+    console.warn(`Engine pin moved, but no shipped graph is affected: ${drift.reason}`
+      + (drift.attested?.size ? ` (attested: ${[...drift.attested].sort().join(', ')})` : ''));
   }
 
   // Coverage is REPORTED, never gated — scoping a run is a legitimate call and the cost

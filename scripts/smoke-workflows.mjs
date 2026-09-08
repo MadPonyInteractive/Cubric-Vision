@@ -30,6 +30,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { tmpdir } from 'node:os';
 import { createInterface } from 'node:readline/promises';
+import { assessPinMove } from './engine-drift.mjs';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const WF_DIR = path.join(REPO, 'comfy_workflows');
@@ -1383,9 +1384,27 @@ function loadMergeBase() {
         pinMovedAt = execFileSync('git', ['log', '-1', '--format=%cI', '--', 'dev_configs/node_lock.json'],
             { cwd: REPO, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
     } catch { /* no git / shallow clone — the version guard above still stands */ }
-    if (pinMovedAt && prior.at && new Date(prior.at) < new Date(pinMovedAt)) {
+    // Narrowed to the graphs a changed class can actually reach — same call the release gate
+    // makes, so the two cannot disagree about what "stale" means. A pin move that touches no
+    // shipped graph leaves these rows valid and a scoped run merges into them; anything this
+    // cannot see still returns the blunt refusal.
+    const drift = assessPinMove({
+        repo: REPO,
+        wfDir: WF_DIR,
+        evidenceAt: prior.at,
+        pinMovedAt,
+        attestationFile: path.join(REPO, 'dev_configs/engine-attestation.json'),
+    });
+    if (drift.stale) {
+        const detail = drift.graphs?.size
+            ? ` ${[...drift.classes].sort().join(', ')} changed and reach ${drift.graphs.size} shipped graph(s).`
+            : ` ${drift.reason}.`;
         die(`dev_configs/smoke-evidence.json is STALE — recorded ${prior.at}, node_lock.json last changed ${pinMovedAt}.`
-            + ` Those rows describe the engine BEFORE the pin moved — run the FULL matrix.`);
+            + `${detail} Those rows describe the engine BEFORE the pin moved — run the FULL matrix.`);
+    }
+    if (drift.changed?.size) {
+        log(`\n  prior evidence kept: the pin moved but ${drift.reason}`
+            + (drift.attested?.size ? ` (attested: ${[...drift.attested].sort().join(', ')})` : ''));
     }
     return prior;
 }
