@@ -57,23 +57,28 @@ Local Windows builds do the same by hand:
 
 ## Current baselines
 
-- All three hold the **v1.4.4 FULL (portable-stage)** manifests (2026-09-03)
-  from the shipped 1.4.4 build, so the next release deltas against
-  1.4.4. `toVersion: 1.4.4`, `fromVersion: null`, `kind: portable-stage`:
-  - `darwin-arm64.json` — 6654 files
-  - `linux-x64.json` — 6474 files
-  - `win32-x64.json` — 6512 files
+- All three hold the **v1.5.0 FULL (portable-stage)** manifests (2026-09-08)
+  from the shipped 1.5.0 build, so the next release deltas against
+  1.5.0. `toVersion: 1.5.0`, `fromVersion: null`, `kind: portable-stage`:
+  - `darwin-arm64.json` — 6669 files
+  - `linux-x64.json` — 6489 files
+  - `win32-x64.json` — 6527 files
 
-  Restamped from the published artifacts (mpi-ci run 33806856417, SHA
-  `8b28b230`, tag `v1.4.4`) **after** v1.4.4 went live on the GitHub release,
-  per the timing rule in **Contract**. Like 1.4.3, 1.4.4 was cut from the
-  `1.4.2` maintenance branch, not master — the restamp is authored on master
-  and cherry-picked onto `1.4.2`, so both branches delta against the same
-  shipped build. The +2 per platform over v1.4.3 is the patch's own two new
-  files (a unit test and the archival release note), which is the shape a
-  three-fix patch should have.
+  Restamped from the published artifacts (mpi-ci run 34267252349, SHA
+  `43b22c40`, tag `v1.5.0`) **after** v1.5.0 went live on the GitHub release,
+  per the timing rule in **Contract**. The +15 is the same on all three, which
+  is the shape to expect when a release adds files to the shared app tree rather
+  than to one platform's launchers.
 
-  Preceding values: v1.4.3 were 6652 / 6472 / 6510 (mpi-ci run 33519891797,
+  **These live on the `1.4.2` maintenance branch only, and deliberately NOT on
+  master.** MPI-709 removed master's baselines (`2092f07e`) so a build from
+  master emits a FULL bundle, and that is still what 2.0 wants: the Cubric Studio
+  rename changes the artifact name and the app id, so a delta against 1.5.0 is
+  not what should ship there. Earlier releases cherry-picked the restamp onto
+  both branches; from here the two lines diverge on purpose.
+
+  Preceding values: v1.4.4 were 6654 / 6474 / 6512 (mpi-ci run 33806856417,
+  SHA `8b28b230`); v1.4.3 were 6652 / 6472 / 6510 (mpi-ci run 33519891797,
   SHA `f7939337`); v1.4.2 were 6650 / 6470 / 6508 (mpi-ci run
   31910502305, SHA `372c1895`); v1.4.1 were 6595 / 6415
   / 6450; v1.4.0 were 6589 / 6409 / 6444; v1.3.1 were 6565 / 6385 / 6420 (mpi-ci run 30755518372, SHA
