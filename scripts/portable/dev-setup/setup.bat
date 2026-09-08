@@ -25,4 +25,4 @@ if exist package-lock.json (
 cd /d "%ROOT%"
 
 echo.
-echo == Setup complete. Launch with start.vbs (or start-with-terminal.bat). ==
+echo == Setup complete. Launch with CubricVision.exe. ==

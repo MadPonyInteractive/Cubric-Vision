@@ -15,6 +15,8 @@ const fs = require('fs');
 const path = require('path');
 
 const UPDATE_MANIFEST_REL = 'resources/cubric/update-manifest.json';
+// Both accepted, neither emitted: builds still stamp cubric.vision. See the check below.
+const ACCEPTED_APP_IDS = ['cubric.vision', 'cubric.studio'];
 
 function parseArgs(argv) {
   const opts = { root: '', bundle: '' };
@@ -310,7 +312,11 @@ async function main() {
   }
   const manifestPath = path.join(bundleRoot, ...UPDATE_MANIFEST_REL.split('/'));
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8').replace(/^\uFEFF/, ''));
-  if (manifest.appId !== 'cubric.vision') {
+  // MPI-708 Phase 0b: the value does NOT change at 2.0 — this only stops it being frozen
+  // forever by the applier already installed on every user's disk. An installed 1.5 that
+  // accepts one literal could never be handed a bundle carrying the other, and the applier
+  // that runs is the shipped one, so widening it later is impossible by construction.
+  if (!ACCEPTED_APP_IDS.includes(manifest.appId)) {
     throw new Error(`Wrong update appId: ${manifest.appId}`);
   }
   if (manifest.platform && manifest.platform !== process.platform) {

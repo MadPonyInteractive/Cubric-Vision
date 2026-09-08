@@ -12,12 +12,17 @@ set "CUBRIC_PORTABLE_ROOT=%~dp0."
 set "MPI_RESOURCES_PATH=%CUBRIC_PORTABLE_ROOT%\resources"
 set "ELECTRON_RUN_AS_NODE=1"
 
-if not exist "%CUBRIC_PORTABLE_ROOT%\CubricVision.exe" (
-  echo CubricVision.exe not found next to this script. Is this a complete portable install?
+rem MPI-708 Phase 0b: resolve the new product name first, fall back to the old one. This
+rem script survives an update in place, so after 2.0 renames the exe it must still find it.
+set "CUBRIC_EXE=%CUBRIC_PORTABLE_ROOT%\CubricStudio.exe"
+if not exist "%CUBRIC_EXE%" set "CUBRIC_EXE=%CUBRIC_PORTABLE_ROOT%\CubricVision.exe"
+
+if not exist "%CUBRIC_EXE%" (
+  echo Neither CubricStudio.exe nor CubricVision.exe was found next to this script. Is this a complete portable install?
   pause
   exit /b 2
 )
 
-"%CUBRIC_PORTABLE_ROOT%\CubricVision.exe" "%CUBRIC_PORTABLE_ROOT%\update\win-update.cjs" --root "%CUBRIC_PORTABLE_ROOT%"
+"%CUBRIC_EXE%" "%CUBRIC_PORTABLE_ROOT%\update\win-update.cjs" --root "%CUBRIC_PORTABLE_ROOT%"
 if errorlevel 1 pause
 exit /b %ERRORLEVEL%

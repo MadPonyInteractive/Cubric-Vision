@@ -5,16 +5,18 @@ traps that only appear in a real installed portable, not in `npm start`.
 
 **Standing test location:** builds are extracted to
 `D:\cubric-install-test\CubricVision-windows-x64-v<X.Y.Z>\CubricVision-windows-x64-v<X.Y.Z>\`
-— the **inner** folder is the app root (`start.vbs`, `start-with-terminal.bat`,
-`user-data\`, `update.bat`, `update-from-zip.bat`).
+— the **inner** folder is the app root (`CubricVision.exe`, `user-data\`, `update.bat`,
+`update-from-zip.bat`).
 
 ---
 
 ## 0. The #1 gotcha — data is PER-FOLDER
 
-The portable launcher sets `CUBRIC_USER_DATA_ROOT=<app-root>\user-data`
-(`scripts/portable/windows/start-with-terminal.bat`), so **every extracted build has
-its own empty `user-data\`**. A freshly-extracted build therefore has:
+On Windows the app resolves its own portable root and points user data at
+`<app-root>\user-data` (`main.js`, MPI-387 fix D — there is no start script to export
+`CUBRIC_USER_DATA_ROOT` any more; Linux and macOS still do it from `start-with-terminal.sh`
+/ `start.command`). So **every extracted build has its own empty `user-data\`**. A
+freshly-extracted build therefore has:
 
 - No RunPod API key → Settings shows *"Save a valid API key to load live availability"*.
 - No projects, no settings.
@@ -67,7 +69,9 @@ existing network volume shows tagged `· volume` and auto-selects when you pick 
 
 ## 2. Smoke checklist
 
-- [ ] **Launch both ways:** `start.vbs` (no terminal) and `start-with-terminal.bat` (log visible).
+- [ ] **Launch:** double-click `CubricVision.exe`. There is one launcher on Windows now
+      (MPI-387 — Smart App Control blocks `.vbs`/`.bat` outright on a clean Windows 11). To
+      watch the log live instead, run that same exe from a terminal.
 - [ ] **Changelog** — "What's New" shows for this version and reads correctly.
 - [ ] **18+ gate** — shows once, dismisses clean, no visual glitch.
 - [ ] **Local generation** — run one image and one video end-to-end.
