@@ -50,17 +50,22 @@ off while it is still a draft (`copy-review.md` § Gate 2).
 
 ## Platform Disclosure
 
-Include this disclosure, adjusted only when validation evidence has been
-recorded for the exact artifact being published:
+**State what was actually tested for THIS version, and nothing else.** This is a
+per-release factual claim, not boilerplate to paste. A line carried over from the
+last body becomes a lie the moment that testing did not happen again — which is
+exactly what shipped into the 1.5.0 draft before Fabio caught it (2026-09-08).
 
-- Windows: tested locally on the maintainer Windows development machine. Not
-  yet validated on a separate clean Windows host unless a later validation note
-  says otherwise.
-- Linux: install and launch validation only on the maintainer's weak Ubuntu
-  laptop. Generation support is unvalidated unless a stronger Linux host or a
-  contributor validates it.
-- macOS: artifacts are produced mechanically but are maintainer-untested.
-  Community validation is needed before stronger macOS support language is used.
+- **Tested this version** — say where it was tested and how far it got, e.g.
+  "tested locally on the maintainer's Windows development machine. Not yet
+  validated on a separate clean Windows host."
+- **Not tested this version** — the entire line is **"not tested on this
+  version."** Do not soften it, do not describe what an older release managed,
+  and do not explain what would be needed.
+
+**Never solicit community validation** (Fabio, 2026-09-08). macOS is tested on a
+rented box or it is not tested at all; there is no third state in which the public
+closes the gap, so a release body must never imply one. This applies to any shape
+of contributor-validation request — none of them belong in a release body.
 
 Do not claim a platform is supported because an artifact was built. Record the
 artifact name, OS version, CPU architecture, GPU and driver stack when relevant,
@@ -165,23 +170,6 @@ This is the only working first-launch path for un-notarized builds.
 Release copy should describe Cubric Studio Vision as a local image and video
 generation app. Do not add claims about bundled language-model, assistant, or
 prompt-intelligence features; those are outside Vision release scope.
-
-## Contributor Validation Request
-
-Ask contributors to include these fields when reporting a validation result:
-
-- Platform and OS version
-- CPU architecture
-- GPU and driver stack
-- Artifact name and version
-- Clean install or update path tested
-- Launcher result
-- Engine setup or repair result
-- Whether generation was tested
-- App log tail from the failed or validated run
-
-For macOS reports, also ask for Gatekeeper behavior and whether the app was
-launched through Finder, Terminal, or both.
 
 ## Where to get a test machine (surveyed 2026-07-30)
 
