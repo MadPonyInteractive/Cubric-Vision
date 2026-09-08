@@ -117,8 +117,16 @@ assert.strictEqual(resolvePrompt(undefined, 'short'), 'short',
 assert.strictEqual(resolvePrompt('', 'short'), 'short',
     'an empty capture must not blank the saved prompt');
 
-// ── the two capability gates (mirror MpiPromptBox._refreshOpSlot) ─────────────
+// ── the two capability gates ──────────────────────────────────────
 // Both default FALSE — unlike negativePrompt, a model must opt in.
+//
+// `styleLoras` still mirrors MpiPromptBox._refreshOpSlot. `promptEnhance` no longer
+// gates any UI at all: MPI-677 deleted the in-workflow toggle and the flag now declares
+// ComfyUI-BACKEND ELIGIBILITY, read only by `canEnhanceInGraph()` in llmService. The
+// shape of the check is unchanged, so it is still asserted here — what changed is what
+// a `true` buys you, which is why the encoder-family assertion below matters MORE now,
+// not less: it is the only thing standing between a wrong flag and a crashed
+// TextGenerate node.
 const showStyle   = (m) => m?.capabilities?.styleLoras === true;
 const showEnhance = (m) => m?.capabilities?.promptEnhance === true;
 
@@ -176,15 +184,38 @@ const path = require('path');
 const WF_DIR = path.join(__dirname, '..', 'comfy_workflows');
 
 for (const op of ['t2i', 'i2i']) {
-    for (const c of ['styleSelect', 'stylization', 'enhancePrompt']) {
+    for (const c of ['styleSelect', 'stylization']) {
         assert.ok(COMMANDS[op].components.includes(c), `${op} must offer ${c}`);
     }
 }
-// The enhancer is still base-graph-only: no detailer/upscaler carries TextGenerate, and
-// Klein's enhancer sits on the shared text path, not on those branches.
-for (const op of ['upscale', 'detail']) {
-    assert.ok(!COMMANDS[op].components.includes('enhancePrompt'),
-        `${op} must NOT offer enhancePrompt — no graph has TextGenerate on that path`);
+
+// ── the in-workflow enhancer is GONE, on every op (MPI-677 step 1b) ───────────
+//
+// It used to be a per-model toggle on t2i/i2i/control/kleinEdit. Enhancement stopped
+// being a property of the workflow and became its own control beside the prompt box, on
+// every model and every workflow — which is what makes ONE path possible. Keeping the
+// toggle would mean an approved enhancement got enhanced a SECOND time inside the graph.
+//
+// Two halves, and the test needs both, because either alone is a false green:
+//   1. nothing offers the control (so nothing injects Input_Enhance_Prompt), and
+//   2. every graph carrying the node bakes it false (so the default is off even if
+//      something did).
+for (const [op, def] of Object.entries(COMMANDS)) {
+    assert.ok(!(def.components || []).includes('enhancePrompt'),
+        `${op} still offers the deleted in-workflow enhancePrompt toggle`);
+}
+
+const ENHANCE_GRAPHS = ['krea2_t2i_sfw', 'krea2_t2i_nsfw', 'klein_t2i', 'klein_9b_t2i'];
+for (const file of ENHANCE_GRAPHS) {
+    const graph = JSON.parse(fs.readFileSync(path.join(WF_DIR, `${file}.json`), 'utf8'));
+    // Titles are matched case-insensitively at injection time and the graphs are
+    // authored by hand — `Input_enhance_prompt` and `Input_Enhance_Prompt` are the same
+    // node (see commandExecutor._paramIsTrue), so match the same way.
+    const node = Object.values(graph)
+        .find(n => (n?._meta?.title || '').toLowerCase() === 'input_enhance_prompt');
+    assert.ok(node, `${file}: expected an Input_enhance_prompt node — has the graph been replaced?`);
+    assert.strictEqual(node.inputs.boolean, false,
+        `${file}: Input_enhance_prompt must bake FALSE — nothing injects it any more, so the baked value IS the value`);
 }
 
 const titlesOfWorkflow = (file) => new Set(

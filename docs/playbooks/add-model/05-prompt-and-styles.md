@@ -133,7 +133,11 @@ the graph expands, rewrites, or decorates the prompt.
   Omit this and an enhanced run shows `3/2` — the counter climbs past its own total, which
   reads as a hang precisely when the run is genuinely slower. An *unrecorded* workflow
   stays `0`; a delta on top of "unknown" is still unknown.
-- **Prompt-box controls** (`enhancePrompt` toggle) are gated on the op's `components[]`
+- **Prompt-box controls** are gated on the op's `components[]`
+  (the `enhancePrompt` toggle that used to be the example here was deleted in MPI-677 —
+  enhancement is its own control beside the prompt box now, on every model and every op
+  except the edit family, and `capabilities.promptEnhance` declares ComfyUI-backend
+  eligibility rather than gating any UI)
   **and** on `capabilities.promptEnhance` (defaults **false** — a model opts in). Add the
   toggle only to ops whose graph actually has the nodes.
 

@@ -209,17 +209,18 @@ export const commands = {
         mediaType: MEDIA_TYPE.IMAGE,
         requiresImages: 0,
         promptRequired: true,
-        // styleSelect/stylization/enhancePrompt are ALSO capability-gated per model
+        // styleSelect/stylization are ALSO capability-gated per model
         // (MpiPromptBox._refreshOpSlot) — listing them here only says "this op's graph
         // has the nodes", not "every model shows them". Krea2's detailer/upscaler
-        // graphs carry no style rack and no enhancer, so those ops omit all three.
+        // graphs carry no style rack, so those ops omit both.
         // qualityTier is gated the same way, on usesQualityTier(model.type): only a
         // tier-keyed model (Krea2) mounts it; SDXL/Chroma/Flux never see it.
         // Array order IS mount order (MpiPromptBox._refreshOpSlot appends in sequence):
-        // the full-width tier block leads, the enhancer rides the bottom row beside
-        // ratio + batch, so Krea2's panel matches LTX/Wan/SDXL. The turbo bolt sits
-        // beside the enhancer — both are bare icon toggles, so they share that row.
-        components: ['qualityTier', 'styleSelect', 'stylization', 'ratio', 'batch', 'krea2Turbo', 'enhancePrompt'],
+        // the full-width tier block leads, ratio + batch ride the bottom row, so
+        // Krea2's panel matches LTX/Wan/SDXL. MPI-677 removed the in-graph
+        // `enhancePrompt` toggle from every op — enhancement is now its own control
+        // beside the prompt box, not a property of the workflow.
+        components: ['qualityTier', 'styleSelect', 'stylization', 'ratio', 'batch', 'krea2Turbo'],
     },
     i2i: {
         label: 'Image to Image',
@@ -253,7 +254,7 @@ export const commands = {
         // a latent, so it is live here and inert on t2i. Default matches the graph's
         // baked 0.3. The bare `Denoise` key's tier-2 alias `Input_Denoise` matches the
         // node case-insensitively.
-        components: ['qualityTier', 'styleSelect', 'stylization', 'denoise', 'ratio', 'batch', 'krea2Turbo', 'enhancePrompt'],
+        components: ['qualityTier', 'styleSelect', 'stylization', 'denoise', 'ratio', 'batch', 'krea2Turbo'],
         defaults: { denoise: 0.30 },
     },
     // Structure transfer: Input_Image → a preprocessor → the model's control path.
@@ -339,7 +340,7 @@ export const commands = {
         // (Qwen alone has no strength node). `ratio` is suppressed per model by
         // `imageSizedOps`/modelShowsRatio, which is how Klein/Krea2/Qwen hide it here
         // while SDXL and Chroma keep it.
-        components: ['qualityTier', 'qwenTier', 'controlType', 'styleSelect', 'stylization', 'controlStrength', 'ratio', 'batch', 'krea2Turbo', 'enhancePrompt'],
+        components: ['qualityTier', 'qwenTier', 'controlType', 'styleSelect', 'stylization', 'controlStrength', 'ratio', 'batch', 'krea2Turbo'],
     },
     // FLUX.2 Klein's instruction edit (MPI-354). A separate op from `edit` and
     // `krea2Edit` for one reason: THREE reference images. `ReferenceLatent` sets
@@ -377,7 +378,7 @@ export const commands = {
             { key: 'inputImage3', mediaType: MEDIA_TYPE.IMAGE, title: 'Input_Image_3', required: false, ordinal: true },
         ],
         promptRequired: true,
-        components: ['styleSelect', 'stylization', 'ratio', 'enhancePrompt'],
+        components: ['styleSelect', 'stylization', 'ratio'],
     },
     upscale: {
         label: 'Upscale',
@@ -482,7 +483,9 @@ export const commands = {
         // Styles + the style slider help the edit path, so they stay. No batch: Krea2's
         // second sampler produces artifacts on batched follow-ups. `ratio` is listed but
         // suppressed by Krea2's imageSizedOps — edit now follows the SOURCE image size.
-        // NO enhancePrompt (MPI-310 session): the enhancer actively harms this op.
+        // NO ENHANCEMENT AT ALL on this op (MPI-310 session, and MPI-677's
+        // ENHANCE_EXEMPT_OPS says the same for the whole edit family): the enhancer
+        // actively harms it.
         // Krea2EditGroundedEncode feeds the instruction to Qwen3-VL *together with the
         // source image* (KREA2_EDIT_TEMPLATE in comfyui-krea2edit/__init__.py), so the
         // text carries only the DELTA — appearance comes from the frame=1 source latent.
@@ -1397,6 +1400,35 @@ export const commands = {
 };
 
 export const COMMANDS = commands;
+
+/**
+ * Ops that get NO prompt enhancement at all (MPI-677 step 1b; the rule is locked in
+ * Cubric-Prompt MPI-21).
+ *
+ * AN EDIT TAKES AN INSTRUCTION, NOT A SCENE DESCRIPTION — "remove the sign", "make the
+ * jacket red". Expanding that into a paragraph of lighting and camera direction
+ * actively damages it, so the answer is not a different recipe or a pass-through: it is
+ * no enhancement, and the control is ABSENT rather than present and unhelpful.
+ *
+ * THE EXEMPTION BELONGS TO THE OPERATION, NOT THE MODEL. Klein spans both sides of the
+ * line on its own: `t2i`/`i2i`/`control`/`detail` enhance, `kleinEdit`/`inpaint` do not.
+ * So never derive this from the model card — `control` still enhances even on an
+ * edit-heavy model, because the reference constrains structure while the prompt still
+ * carries the creative load.
+ *
+ * `krea2Edit` also has a second, independent reason (see its entry above):
+ * Krea2EditGroundedEncode feeds the instruction to Qwen3-VL together with the source
+ * image, so the text carries only the DELTA and paraphrasing silently flips edit
+ * strength.
+ */
+export const ENHANCE_EXEMPT_OPS = Object.freeze(new Set([
+    'edit', 'kleinEdit', 'krea2Edit', 'qwenEdit', 'inpaint',
+]));
+
+/** True when this op is one the enhancer must stay out of. */
+export function opAllowsEnhance(key) {
+    return !ENHANCE_EXEMPT_OPS.has(key);
+}
 
 /**
  * DELETED in MPI-365 — `DEFAULT_STYLE_OPS` used to sit here.

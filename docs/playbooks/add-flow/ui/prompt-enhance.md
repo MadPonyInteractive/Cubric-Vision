@@ -65,7 +65,6 @@ nobody can press can only be automatic — and there is no control on screen at 
 
 ```js
 enhance: {
-    op: 'promptEnhance',
     from: ['positive', 'Input_Style', 'Input_Instrumental'],
     to: { MOOD: 'Input_Mood', VOCAL: 'Input_Vocal', ARRANGEMENT: 'Input_Arrangement' },
     injectionParams: MY_RECIPE,
@@ -164,8 +163,14 @@ should split into two steps.
 
 - **A prompt the user just types.** One `text` field. The pair earns its place only when
   something rewrites the text and the user must see what it wrote.
-- **Enhancing in place.** `MpiPromptBox._runEnhance()` overwrites the prompt with the result and
-  calls the Cubric Prompt CONNECTOR (`shell/connectorOps.js`). That is a different system with a
-  different owner — do not wire a flow into it, and do not "unify" the two.
-- **`enhancePrompt: false` in `js/data/promptControlDefaults.js`** is a third unrelated thing: a
-  per-model boolean control. Three concepts named "enhance"; keep them apart.
+- **Enhancing in place.** `MpiPromptBox`'s own enhance control overwrites the prompt box with the
+  result. Since MPI-677 both it and this share ONE dispatch — `runComfyEnhance()` in
+  `js/services/llmService.js` — but they are still different features: the box picks a
+  per-target-model RECIPE and may answer off-GPU on DeepInfra, while a flow injects its OWN recipe
+  and stays on the ComfyUI graph because it depends on that graph's scrub/tidy post-processing.
+  Reuse the dispatch; do not wire a flow into the box's recipe resolution.
+- **The per-model `enhancePrompt` toggle is GONE** (MPI-677 step 1b). It used to be a third thing
+  named "enhance": a boolean control injecting `Input_Enhance_Prompt` so the workflow rewrote the
+  prompt inside the graph. Enhancement stopped being a property of the workflow, all four graphs
+  that carry the node bake it `false`, and nothing injects the key. Do not re-add it — with the
+  box's control in front of it, an approved enhancement would be enhanced twice.

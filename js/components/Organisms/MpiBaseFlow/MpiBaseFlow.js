@@ -21,6 +21,7 @@ import { renderIcon } from '/js/utils/icons.js';
 import { getStepKind, stepValueToParam, stepValueToMedia, isFrameKind } from './stepKinds.js';
 import { enqueueGeneration, findMissingMediaSlot } from '../../../services/generationService.js';
 import { getCommand } from '../../../data/commandRegistry.js';
+import { runComfyEnhance } from '../../../services/llmService.js';
 import { flowModelSlots, flowModelIds, setFlowModel } from '../../../data/flowsRegistry.js';
 import { disambiguatedName } from '../../../data/modelRegistry.js';
 import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
@@ -1254,57 +1255,34 @@ export const MpiBaseFlow = ComponentFactory.create({
                 if (!silent) Events.emit('ui:warning', { message: 'Write a prompt first, then Enhance.' });
                 return Promise.resolve();
             }
-            // The op is a separate registration from the flow's own; a flow shipped
-            // ahead of it would otherwise fail deep inside the queue.
-            if (!getCommand(d.op)) {
-                clientLogger.warn('MpiBaseFlow', `enhance field "${d.id}" names unregistered op "${d.op}"`);
-                if (!silent) Events.emit('ui:warning', { message: 'The prompt enhancer is not available in this build.' });
-                return Promise.resolve();
-            }
             let _settle;
             const settled = new Promise((res) => { _settle = res; });
-            const done = () => { _enhancing = null; _paintEnhance(); _settle(); };
             _enhancing = d.id;
             _paintEnhance();
-            enqueueGeneration(
-                {
-                    operation: d.op,
-                    model: { id: d.model || null, mediaType: 'image' },
-                    positive: source,
-                    negative: '',
-                    injectionParams: {
-                        // The declaration's OWN params (MPI-664). The enhancer op is
-                        // deliberately reusable — its recipe and both scrub patterns are
-                        // meant to be injected by the caller, and commandRegistry's own
-                        // comment has said so since MPI-504 — but until now no route
-                        // existed: a second flow got Character Sheet's baked "You are a
-                        // character designer" whatever it asked for. One object on the
-                        // declaration, spread here, IS that route.
-                        ...(d.injectionParams || {}),
-                        // The seed is spread LAST, so a declaration cannot reach it. It is
-                        // DRIVEN, never a user field, and never stored: the loop is
-                        // Enhance → Generate → Enhance, and a fixed seed returns the same
-                        // phrase on every press. What the sidecar keeps is the enhanced
-                        // TEXT, which is why storing the seed as well was considered and
-                        // rejected.
-                        Input_Seed: Math.floor(Math.random() * 2 ** 31),
-                    },
-                },
-                {
-                    // A text op never fires onComplete — GenerationCallbacks.onText.
-                    onText: (text) => {
-                        const out = String(text || '').trim();
-                        if (out) _writeEnhanced(d, out);
-                        done();
-                    },
-                    onError: (err) => {
-                        done();
-                        clientLogger.error('MpiBaseFlow', 'prompt enhance failed', err);
-                    },
-                    onCancel: done,
-                },
-                { scope: 'gallery' },
-            );
+
+            // ONE DISPATCH, SHARED WITH THE PROMPT BOX (MPI-677 step 1b). This used to
+            // be its own `enqueueGeneration` call, a near-copy of the one in
+            // `llmService`, which is how the seed rule and the onText-not-onComplete
+            // rule ended up written twice. The declaration's OWN params (MPI-664) still
+            // ride along — the enhancer op is deliberately reusable and its recipe and
+            // both scrub patterns are meant to be injected by the caller — they just
+            // travel one level down now. The op name and the "not in this build" guard
+            // moved with the dispatch, which is why the declaration no longer names an
+            // operation.
+            runComfyEnhance({
+                prompt: source,
+                injectionParams: d.injectionParams,
+                modelId: d.model || null,
+            }).then((result) => {
+                if (result.ok && result.text) _writeEnhanced(d, result.text);
+                else if (!result.ok && !result.cancelled) {
+                    clientLogger.error('MpiBaseFlow', 'prompt enhance failed', result.error);
+                    if (!silent && result.error) Events.emit('ui:warning', { message: result.error });
+                }
+                _enhancing = null;
+                _paintEnhance();
+                _settle();
+            });
             return settled;
         }
 

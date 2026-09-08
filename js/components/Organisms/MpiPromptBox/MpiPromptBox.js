@@ -6,7 +6,7 @@ import { MpiPopup } from '../../Primitives/MpiPopup/MpiPopup.js';
 import { MpiToast } from '../../Primitives/MpiToast/MpiToast.js';
 import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
-import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel, matchRefTagQuery, stripOrdinalMediaRoles, modelShowsStyleRack, modelShowsRatio, modelShowsBatch, modelControlTypes, getOpHelp, isTextOnlyOp, pickTextOnlyOp } from '../../../data/commandRegistry.js';
+import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel, matchRefTagQuery, stripOrdinalMediaRoles, modelShowsStyleRack, modelShowsRatio, modelShowsBatch, modelControlTypes, getOpHelp, isTextOnlyOp, pickTextOnlyOp, opAllowsEnhance } from '../../../data/commandRegistry.js';
 import { MpiOpHelpDialog } from '../../Compounds/MpiOpHelpDialog/MpiOpHelpDialog.js';
 import { getModelDepStatus, tierLetterFor } from '../../../data/modelRegistry.js';
 import { usesQualityTier } from '../../../utils/ratios.js';
@@ -20,7 +20,7 @@ import { qs, qsa, on, off } from '../../../utils/dom.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { remoteEngineClient } from '../../../services/remoteEngineClient.js';
-import { checkPromptEnhanceAvailable, enhancePrompt } from '../../../shell/connectorOps.js';
+import { enhance as enhanceLocally } from '../../../services/llmService.js';
 
 /**
  * MpiPromptBox — Prompt input Block with self-composing operation slots.
@@ -1683,6 +1683,10 @@ export const MpiPromptBox = ComponentFactory.create({
             // The negative toggle is model-gated too, and `model` is reassigned
             // live by setModel/setModelList without a remount. Both converge here.
             _refreshNegToggle();
+
+            // The enhance control is OP-gated (edit and inpaint get none at all), and
+            // the op is reassigned live by setOperation. Same convergence point.
+            _refreshEnhanceBtn();
         }
 
         // ── Negative mode toggle ───────────────────────────────────────────────
@@ -1746,14 +1750,31 @@ export const MpiPromptBox = ComponentFactory.create({
 
         _refreshNegToggle();
 
-        // ── Enhance (Cubric Prompt, MPI-5) ─────────────────────────────────────
-        // Capability-gated: the control is only mounted when cubric.prompt is
-        // registered and advertises prompt.enhance. Absent Prompt → no control
-        // at all (the slot stays hidden), so PromptBox is a clean standalone
-        // editor. One-click action button: clicking enhances the active prompt
-        // field via the broker and writes the result back through the existing
-        // injectPrompts(). Disabled while a request is in flight.
-        const enhanceSlot = qs('#enhance-slot', el);
+        // ── Enhance (MPI-677 step 1b) ────────────────────────────────
+        // ONE CONTROL, ONE PATH, EVERY MODEL AND EVERY WORKFLOW (Fabio, 2026-09-08).
+        //
+        // This used to call out over the broker to Cubric Prompt (MPI-5), behind a
+        // capability probe that polled every 3 s for 30 s and left the box with NO
+        // control at all when the sibling app was absent. The recipe layer moved into
+        // this repo in MPI-35, so the whole round trip collapses into a local call and
+        // both the probe and the poll are gone — the button is unconditional because
+        // there is no longer a second app for it to be conditional on.
+        //
+        // NO PER-MODEL BRANCH, deliberately. `krea2` and `chroma` take the identical
+        // code path: llmService picks the backend (DeepInfra by default — off-GPU, no
+        // queue wait — with the in-graph encoder or Ollama locally) and
+        // `resolveRecipe()` picks the recipe. The in-graph `Input_Enhance_Prompt`
+        // toggle is GONE for the same reason: enhancement stopped being a property of
+        // the workflow and became its own thing, which is what makes one path possible.
+        // All four graphs that carry the node bake `boolean: false` and nothing injects
+        // the key any more, so an approved enhancement can never be enhanced a second
+        // time inside the graph.
+        //
+        // THE ONE GATE IS THE OPERATION, NEVER THE MODEL (Cubric-Prompt MPI-21, locked):
+        // an edit takes an INSTRUCTION, not a scene description, so on those ops the
+        // control is ABSENT rather than present and unhelpful. Vision knows the
+        // operation locally, so this is a local check — nothing has to cross a wire to
+        // find it out.
         let _enhanceBtn = null;
         let _enhancing = false;
 
@@ -1767,29 +1788,27 @@ export const MpiPromptBox = ComponentFactory.create({
 
         async function _runEnhance() {
             if (_enhancing) return;
-            const source = _readMode();
-            if (!source.trim()) { _enhanceToast('Type a prompt to enhance first.', 'warning'); return; }
+            if (!positiveValue.trim()) { _enhanceToast('Type a prompt to enhance first.', 'warning'); return; }
             _enhancing = true;
             _enhanceBtn?.el?.setDisabled?.(true);
             try {
-                // Vision owns the recipe key: Cubric Prompt selects its enhancer
-                // recipe by this id. Default to the model's `type` (e.g. 'sdxl',
-                // 'wan' — already aligns with Prompt's recipe ids); a model may
-                // override with an explicit `enhanceRecipe` when they diverge.
-                const result = await enhancePrompt({
-                    prompt: positiveValue,
-                    negativePrompt: negativeValue,
-                    targetModelId: model?.enhanceRecipe ?? model?.type,
-                    operation: activeOperation,
-                });
+                // The recipe key is the model's own: `enhanceRecipe ?? type`, resolved
+                // by `resolveRecipe()` in this repo. llmService applies that default,
+                // so the call site does not restate it and the two cannot drift.
+                const result = await enhanceLocally({ prompt: positiveValue, model });
                 if (result.ok) {
-                    el.injectPrompts({
-                        positive: result.prompt ?? positiveValue,
-                        negative: result.negativePrompt ?? negativeValue,
-                    });
+                    // ponytail: writes straight back into the prompt box, which is what
+                    // the broker path did. Step 1c replaces THIS branch with the
+                    // overlay (short prompt above, the enhanced text editable below,
+                    // OK / Cancel, and the box keeping the user's own words). The seam
+                    // is exactly here — everything above it is backend-agnostic.
+                    el.injectPrompts({ positive: result.text, negative: negativeValue });
                     emit('input', { positive: positiveValue, negative: negativeValue, negativeAudio: negativeAudioValue, activeMode: promptMode });
-                    // result.note is set when Prompt had no recipe for this model
-                    // and fell back to a default enhancer — surface it honestly.
+                    // `note` is set when the model's key matched no recipe and the
+                    // pinned fallback answered. The fallback is DESIGNED to answer,
+                    // which is exactly why it hides a miss so well — two MiniMax-H3
+                    // VIDEO cards were enhanced by the `chroma` IMAGE recipe for a week
+                    // and nothing failed loudly. Surface it verbatim.
                     _enhanceToast(result.note || 'Prompt enhanced.', result.note ? 'info' : 'success');
                 } else {
                     _enhanceToast(result.error || 'Enhance failed.', 'warning');
@@ -1800,42 +1819,36 @@ export const MpiPromptBox = ComponentFactory.create({
             }
         }
 
-        // Probe capability async; reveal the button only if Prompt is live.
-        // Poll (every 3s, up to 30s) so a capability that registers slightly
-        // late still reveals the button — belt-and-suspenders with the splash.
-        function _mountEnhanceBtn() {
-            if (!enhanceSlot || _enhanceBtn) return;
-            enhanceSlot.classList.remove('hide');
-            _enhanceBtn = MpiButton.mount(enhanceSlot, {
+        // Mounted and unmounted by OPERATION, converging in _refreshOpSlot() beside
+        // _refreshNegToggle() — both `activeOperation` and `model` are reassigned live
+        // without a remount, and that function is the one place both land.
+        // `qs()` per call rather than a closure const: _refreshOpSlot has callers that
+        // fire from events, and a const declared further down this body would be in its
+        // temporal dead zone for them.
+        function _refreshEnhanceBtn() {
+            const slot = qs('#enhance-slot', el);
+            if (!slot) return;
+
+            const show = opAllowsEnhance(activeOperation);
+            if (show === !!_enhanceBtn) return;
+
+            if (!show) {
+                _enhanceBtn.destroy();   // factory destroy() also removes el from the slot
+                _enhanceBtn = null;
+                slot.classList.add('hide');
+                return;
+            }
+
+            slot.classList.remove('hide');
+            _enhanceBtn = MpiButton.mount(slot, {
                 icon: 'enhance',
-                info: 'Enhance prompt with Cubric Prompt',
+                info: 'Enhance prompt — rewrite it into the shape this model reads best',
                 size: 'sm', variant: 'primary',
             });
             _enhanceBtn.on('click', () => { void _runEnhance(); });
         }
 
-        let _enhancePollCount = 0;
-        const ENHANCE_POLL_MAX = 10; // 10 × 3 000 ms = 30 s ceiling
-        function _pollEnhanceAvailable() {
-            if (_enhancePollCount >= ENHANCE_POLL_MAX || _enhanceBtn) return;
-            _enhancePollCount++;
-            checkPromptEnhanceAvailable().then((available) => {
-                if (available) {
-                    _mountEnhanceBtn();
-                } else if (_enhancePollCount < ENHANCE_POLL_MAX) {
-                    setTimeout(_pollEnhanceAvailable, 3000);
-                }
-            }).catch(() => { /* no broker / no Prompt → stay standalone */ });
-        }
-
-        checkPromptEnhanceAvailable().then((available) => {
-            if (available) {
-                _mountEnhanceBtn();
-            } else {
-                // Not yet available — start polling.
-                setTimeout(_pollEnhanceAvailable, 3000);
-            }
-        }).catch(() => { /* no broker / no Prompt → stay standalone */ });
+        _refreshEnhanceBtn();
 
         // ── Run / Stop ─────────────────────────────────────────────────────────
         runSlotEl = qs('#bottom-right-slot', el);

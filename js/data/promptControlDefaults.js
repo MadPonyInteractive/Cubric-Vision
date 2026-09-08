@@ -76,6 +76,5 @@ export const PROMPT_CONTROL_DEFAULTS = Object.freeze({
     stylization: 1.0,
     // Prompt enhancer (Input_Enhance_Prompt MpiIfElse). OFF by default: it costs a
     // full autoregressive pass through the text encoder's LM head before sampling.
-    enhancePrompt: false,
 });
 

@@ -9,10 +9,21 @@
     "js/services/llmService.js",
     "js/core/secretsClient.js",
     "js/components/Organisms/MpiPromptBox/**",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/data/commandRegistry.js",
+    "js/data/flowsRegistry.js",
+    "js/data/promptControlDefaults.js",
+    "js/data/modelConstants/models.js",
+    "js/utils/promptReuse.js",
     "js/shell/connectorOps.js",
     "main/secretsStore.js",
     "server.js",
     "tests/llm-service.test.cjs",
+    "tests/enhance-control.test.cjs",
+    "tests/output-prompt-capture.test.cjs",
+    "docs/playbooks/add-flow/ui/prompt-enhance.md",
+    "docs/playbooks/add-model/05-prompt-and-styles.md",
+    "docs/playbooks/common/prompt-box-controls.md",
     ".agents/mpi-kanban/tasks/MPI-677/**"
   ]
 }

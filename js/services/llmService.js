@@ -37,6 +37,9 @@ import { clientLogger } from './clientLogger.js';
 /** The mode every image recipe declares, and the base mode of the video ones. */
 const DEFAULT_MODE = 't2v';
 
+/** The registered ComfyUI operation that runs `qwen3vl_4b_prompt_enhancer.json`. */
+export const COMFY_ENHANCE_OP = 'promptEnhance';
+
 /**
  * The enhancer LLM for uncensored work. Local only — no serverless catalogue
  * carries an abliterated build, which is the whole reason an NSFW prompt cannot
@@ -231,27 +234,57 @@ async function runServerBackend({ prompt, system, backend, modelId }) {
 }
 
 /**
- * One completion through ComfyUI, as its own queued job.
+ * ONE COMPLETION THROUGH COMFYUI — and the ONLY dispatch to that graph in the app.
  *
- * Reuses the `promptEnhance` operation that already exists for Character Sheet
- * and MiniMax Music rather than adding a second dispatch path to the same graph.
- * CERTAIN AND WORTH SAYING IN THE UI: this is a QUEUED job, so it waits behind a
- * running generation. DeepInfra does not.
+ * Every ComfyUI enhance goes through here: the prompt box's control, Character Sheet's
+ * Enhance button and Music Maker's automatic pre-Generate rewrite. Before MPI-677 step
+ * 1b the flows had their own copy of this call in `MpiBaseFlow._runEnhance`, which is
+ * how the seed rule and the `onText`-not-`onComplete` rule came to be written twice.
+ * `commandRegistry`'s own comment has called the `promptEnhance` op reusable since
+ * MPI-504; this is the single route that makes it so.
+ *
+ * `system` is OPTIONAL, and its absence is meaningful rather than a mistake: Character
+ * Sheet's recipe is baked into the graph's `Input_System_Prompt` node, so a caller with
+ * nothing to say leaves the baked value standing.
+ *
+ * WHY THE FLOWS STAY ON THIS BACKEND rather than inheriting the cloud default: the
+ * graph is not just an LLM call, it is a PIPELINE — `Replace Text` strips newlines,
+ * `Input_Scrub_Negation` deletes "no ..." clauses, `Input_Tidy` eats the trailing full
+ * stop because a character phrase is spliced into the middle of a longer sentence. Both
+ * flows were tuned on GPU runs against that chain. Routing them to DeepInfra would drop
+ * three post-processing nodes and change the instrument without measuring it, which is
+ * the trap this repo documents. A flow that wants the cloud opts in by asking for it,
+ * after someone has measured the difference.
+ *
+ * @param {object}  a
+ * @param {string}  a.prompt              the text to rewrite
+ * @param {string} [a.system]             a system prompt to inject; omit to keep the graph's
+ * @param {object} [a.injectionParams]    extra params by node title (the caller's recipe knobs)
+ * @param {string} [a.modelId]            a model to pin the job to; null lets the queue pick
+ * @returns {Promise<{ok:boolean, text?:string, backend?:string, model?:string, error?:string}>}
+ *          Never rejects — an error and a cancel both resolve `{ ok: false }`.
  */
-async function runComfyBackend({ prompt, system }) {
+export async function runComfyEnhance({ prompt, system, injectionParams, modelId = null } = {}) {
+    const { getCommand } = await import('../data/commandRegistry.js');
+    // The op is a separate registration from any flow's own; a build shipped without it
+    // would otherwise fail deep inside the queue.
+    if (!getCommand(COMFY_ENHANCE_OP)) {
+        return { ok: false, error: 'The prompt enhancer is not available in this build.' };
+    }
     const { enqueueGeneration } = await import('./generationService.js');
     return new Promise((resolve) => {
         enqueueGeneration(
             {
-                operation: 'promptEnhance',
-                model: { id: null, mediaType: 'image' },
+                operation: COMFY_ENHANCE_OP,
+                model: { id: modelId, mediaType: 'image' },
                 positive: prompt,
                 negative: '',
                 injectionParams: {
-                    ...buildComfyInjectionParams(system),
-                    // Driven, never a user field: a fixed seed returns the same
-                    // phrase on every press, and the loop is Enhance -> edit ->
-                    // Enhance. Spread last so nothing above can reach it.
+                    ...(system ? { Input_System_Prompt: system } : {}),
+                    ...(injectionParams || {}),
+                    // Driven, never a user field, and never stored: a fixed seed returns
+                    // the same phrase on every press and the loop is Enhance -> edit ->
+                    // Enhance. Spread LAST so no caller can reach it.
                     Input_Seed: Math.floor(Math.random() * 2 ** 31),
                 },
             },
@@ -264,7 +297,10 @@ async function runComfyBackend({ prompt, system }) {
                     model: 'qwen3vl_4b_abliterated',
                 }),
                 onError: (err) => resolve({ ok: false, error: (err && err.message) || 'Enhance failed.' }),
-                onCancel: () => resolve({ ok: false, error: 'Enhance cancelled.' }),
+                // `cancelled` so a caller can tell a user's own Stop from a failure and
+                // stay quiet about it. The flows were silent on cancel before this call
+                // was shared, and a toast for something you just pressed Stop on is noise.
+                onCancel: () => resolve({ ok: false, cancelled: true, error: 'Enhance cancelled.' }),
             },
             { scope: 'gallery' },
         );
@@ -306,7 +342,7 @@ export async function enhance({ prompt, model, recipeKey, mode, backend } = {}) 
     const chosen = chooseBackend({ model, override, serverDefault: status?.defaultBackend });
 
     const result = chosen === 'comfy'
-        ? await runComfyBackend({ prompt: idea, system })
+        ? await runComfyEnhance({ prompt: idea, injectionParams: buildComfyInjectionParams(system) })
         : await runServerBackend({
             prompt: idea,
             system,

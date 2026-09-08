@@ -1237,7 +1237,7 @@ export const FLOWS = [
                     },
                     {
                         id: 'enhance', type: 'button', label: 'Enhance', icon: 'enhance',
-                        action: 'enhance', op: 'promptEnhance',
+                        action: 'enhance',
                         from: 'positive', to: 'Input_Positive',
                     },
                     {
@@ -1265,7 +1265,7 @@ export const FLOWS = [
             },
             {
                 id: 'enhance', type: 'button', label: 'Enhance', icon: 'enhance',
-                action: 'enhance', op: 'promptEnhance',
+                action: 'enhance',
                 from: 'positive', to: 'Input_Positive',
             },
             {
@@ -2270,7 +2270,6 @@ export const FLOWS = [
         // caption. The running order is the user's, stated in their lyrics, and the
         // rewriter's job stops at texture.
         enhance: {
-            op: 'promptEnhance',
             from: ['positive', 'Input_Style', 'Input_Style_Custom'],
             to: {
                 MOOD: 'Input_Mood',

@@ -1111,7 +1111,7 @@ export const PROMPT_BOX_CONTROLS = {
             this.value = initial;
 
             // Bare icon button, no label row — it sits in the button strip next to
-            // the enhancer, so it mounts like enhancePrompt does.
+            // the enhancer, so it mounts like the style rack does.
             this._instance = MpiButton.mount(hostEl, {
                 icon: 'bolt',
                 info: 'Turbo — faster generation, different results and less precision',
@@ -1539,50 +1539,6 @@ export const PROMPT_BOX_CONTROLS = {
         },
     },
 
-    /**
-     * enhancePrompt — in-workflow prompt expansion (`Input_Enhance_Prompt`, MpiIfElse).
-     *
-     * ON routes the prompt through a `TextGenerate` node, which runs the LM head of
-     * the text encoder the workflow ALREADY loaded (Qwen3-VL for Krea2) — no second
-     * model, no extra VRAM. It costs an autoregressive pass before sampling, which is
-     * why it is opt-in, why the info string names the cost, and why commandExecutor
-     * adds a progress bar for it (see stagesFor's `extraBars`).
-     *
-     * The prompt box is deliberately NOT rewritten — the user keeps seeing their own
-     * words. What the encoder saw is captured from the graph's `Output_prompt` node
-     * and is what gets saved + reused. See docs/playbooks/add-model/05-prompt-and-styles.md §10.
-     */
-    enhancePrompt: {
-        nodeTitle: 'Input_Enhance_Prompt',
-        scope: 'perModel',
-        defaultValue: PROMPT_CONTROL_DEFAULTS.enhancePrompt,
-        mount(hostEl, opts = {}) {
-            const saved = _readSaved(this, opts);
-            const initialActive = saved.enhancePrompt === true;
-            this.value = initialActive;
-
-            this._instance = MpiButton.mount(hostEl, {
-                icon: 'enhance',
-                size: 'sm',
-                variant: 'primary',
-                toggleable: true,
-                active: initialActive,
-                info: 'Enhance prompt — expands your prompt before rendering (does not play well with Pose Reference)',
-            });
-
-            this._instance.on('click', ({ active }) => {
-                this.value = !!active;
-                _emitUpdate(this, opts, 'enhancePrompt', !!active);
-            });
-        },
-        getValue() {
-            return this.value === true;
-        },
-        getInjectionParams() {
-            return { Input_Enhance_Prompt: this.value === true };
-        },
-    },
-
 };
 
 /**
@@ -1652,11 +1608,6 @@ export function visibleControlIds(model, operation, ctx = {}) {
         // edit do exactly that. Offering the picker there is worse than useless:
         // it makes the user believe they chose an output shape they did not get.
         if (id === 'ratio' && !modelShowsRatio(model, operation)) return false;
-
-        // Prompt enhancer (Input_Enhance_Prompt) needs a text encoder whose
-        // CLIP implements .generate() — Qwen3-VL/Gemma yes, T5/umT5 CRASHES.
-        // Never infer this from the op; the model declares it.
-        if (id === 'enhancePrompt' && model?.capabilities?.promptEnhance !== true) return false;
 
         // Quality-tier radio mounts only for models whose ratio set is keyed
         // by tier ('quality' + 'quality-orientation'). NOT a capability flag:

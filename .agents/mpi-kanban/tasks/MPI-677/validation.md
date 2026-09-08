@@ -103,3 +103,108 @@ there works in dev and is absent in the shipped app. Nothing in the file was
 edited — every constant the sweeps were measured on travelled verbatim, which is
 what keeps the app and the harness on one implementation instead of two that
 drift.
+
+## Step 1b — the control (2026-09-08)
+
+Built and **exercised in a running app against a live cloud backend**. Six of the seven
+bullets are proven; the seventh needs the GPU and is recorded as owed, not rounded up.
+
+### What ran
+
+| Check | Command | Result |
+|---|---|---|
+| Whole suite | `npm test` | **915 pass / 0 fail** (was 907; +1 new file, +7 asserts) |
+| New tests | `node tests/enhance-control.test.cjs` | **7 pass / 0 fail** |
+| Lint | `npm run lint` | clean, `--max-warnings=0` |
+| Server boots | `CUBRIC_PORT=3199 node server.js` with the key exported | `/llm/status` → `{"deepinfra":{"hasKey":true},…,"defaultBackend":"deepinfra"}` |
+
+### The live run, in the app, on port 3199
+
+**Three enhances, three models, one code path.** Typed into the real prompt box and the
+real button pressed:
+
+| Model | key → recipe | Output (first words) |
+|---|---|---|
+| the project's SDXL card | `sdxl` (exact) | `POSITIVE PROMPT: landscape photography, lighthouse, weathered stone…` |
+| `krea2` | `enhanceRecipe: 'krea-2'` | `A lone lighthouse stands tall against a darkening sky in this wide shot…` |
+| `chroma-flash` | `type: 'chroma'` | `A wide shot captured on a Hasselblad X2D 100C depicts a weathered stone lighthouse…` |
+
+Every one toasted **"Prompt enhanced."** with no `note`, so all three resolved EXACTLY —
+none fell through to `FALLBACK_RECIPE_ID`. Three different recipes, and the control's own
+code never branched: the same button, the same handler, `resolveRecipe()` doing the work.
+
+**THE BROKER IS OUT OF THE PATH, measured rather than asserted.** The network log across
+those three presses shows three `POST /llm/enhance → 200` and, under `?connector`, only
+`GET /connector/jobs/stream` — the SSE relay step 2 deliberately KEEPS. Zero
+`/connector/enhance`, zero `/connector/capabilities`. The capability probe and its
+10×3 s poll are gone with the import: the button is unconditional because there is no
+longer a second app for it to be conditional on.
+
+### The operation gate, live
+
+`workspace:set-operation` driven through five ops on one card, reading the slot each time:
+
+```
+t2i: buttons=1 hidden=false | qwenEdit: buttons=0 hidden=true | control: buttons=1 hidden=false
+kleinEdit: buttons=0 hidden=true | i2i: buttons=1 hidden=false        (inpaint: buttons=0 hidden=true)
+```
+
+`control` keeping the control is the non-obvious half and it is the correct half: the
+reference constrains STRUCTURE, so the prompt still carries the creative load. That is
+why Qwen Image Edit is not wholly exempt — **the exemption is per OPERATION, never per
+model**, which is the whole content of Cubric-Prompt MPI-21.
+
+### The in-graph enhancer is off, and it needed no graph edit
+
+All four graphs ALREADY bake `boolean: false` on their `Input_enhance_prompt` MpiIfElse
+(`krea2_t2i_sfw` #241, `krea2_t2i_nsfw` #241, `klein_t2i` #8, `klein_9b_t2i` #8) —
+verified by reading the JSON. The only thing that ever set it `true` was the
+`enhancePrompt` control's `getInjectionParams()`, so **deleting the control forces false
+and no workflow file was touched.** Confirmed live: `getRunPayload().injectionParams` on
+a `krea2` t2i now contains no key matching `/enhance/i` at all.
+
+Both halves are asserted in `tests/output-prompt-capture.test.cjs` — nothing offers the
+toggle AND every graph bakes false — because either alone is a false green.
+
+### Owed, and why
+
+- **The ComfyUI-encoder backend end to end — STILL OWED, same reason as step 1a.**
+  `gpu_lease.py status` → `GPU 0 busy … MPI-591 … pid 4592`, so the local path could not
+  be exercised. The cloud path is what ran above. This is now the ONLY thing standing
+  between step 1a's last open bullet and closed.
+- **Character Sheet and Music Maker were not RUN**, for the same lease. What was checked
+  is the half that does not need a GPU: all three enhance declarations still collect
+  through `_enhanceDecls`' filter, Music Maker still carries its 1,940-character
+  `Input_System_Prompt` and its three-marker `to` map, and Character Sheet still
+  correctly carries none (its recipe is baked in the graph). Dispatch shape is shared
+  code now; the run is owed.
+
+### One thing that LOOKS like a regression and is not
+
+An `sdxl` enhance returns `POSITIVE PROMPT: …\nNEGATIVE PROMPT: …` as one blob and the
+whole blob lands in the positive field. **The broker path did exactly the same** —
+Cubric-Prompt has no splitter anywhere in `src/main/` (grepped), so its responder
+returned the labelled text as `prompt` and left `negativePrompt` undefined, and Vision
+wrote `result.negativePrompt ?? negativeValue`, i.e. the negative unchanged. So this is
+PARITY, not something 1b broke, and it is step 1c's own bullet ("the lower box mirrors
+the model's fields"). Splitting it silently here would pre-empt a UX decision that is
+Fabio's: which channel the negative block lands in is something the user should see and
+approve in the overlay, not something the control does behind them.
+
+### The scope call worth recording
+
+**"Fold in the two Flow-internal enhance buttons" was read as ONE DISPATCH, not one
+backend**, and the difference is load-bearing. Routing the flows to the cloud default
+would have dropped three post-processing nodes they depend on — `Replace Text` strips
+newlines, `Input_Scrub_Negation` deletes "no …" clauses, `Input_Tidy` eats the trailing
+full stop because a character phrase is spliced into the middle of a longer sentence —
+on two flows that were tuned by real GPU runs against that chain. That is changing the
+instrument without measuring it. So `MpiBaseFlow._runEnhance`'s near-copy of the
+`enqueueGeneration` call was deleted and both flows now call `runComfyEnhance()`, which
+is the single dispatch to that graph in the app; the op name and the "not in this build"
+guard moved with it, which is why the declarations no longer carry `op: 'promptEnhance'`
+and the plan's literal grep passes.
+
+**The seed rule is why this mattered rather than being tidiness.** `Input_Seed` must be
+spread LAST so no caller can pin it; it was written twice, in two files, and a test now
+asserts the ordering in the one place it survives.
