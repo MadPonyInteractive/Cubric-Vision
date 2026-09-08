@@ -6,6 +6,8 @@
     "release-baselines/README.md",
     "docs/playbooks/install-test/README.md",
     "docs/releases/portable-distribution-contract.md",
-    "scripts/release-health-check.mjs"
+    "scripts/release-health-check.mjs",
+    "package.json",
+    ".claude/skills/mpi-release/SKILL.md"
   ]
 }

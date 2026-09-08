@@ -96,8 +96,66 @@ writing:
    an absent baseline as "ship a FULL bundle", which serves 1.4.4 and everything older.
    Restamp from the published full build afterwards, as the existing post-publish step does.
 
-## Not done — carried to the handoff
+## The release gate — closed 2026-09-08
 
-The gate work, which is the half that prevents a repeat:
-`docs/playbooks/install-test/README.md:75`, the `release:check` evidence requirement, and
-the contract doc. See `checklist.md`.
+### Why the old leg passed a corrupt build
+
+`docs/playbooks/install-test/README.md:75` asserted one thing: *"confirm `user-data\`
+SURVIVES"*. On the broken install it did — projects, secrets and settings were all intact,
+because the applier never touches those prefixes. The leg had no way to fail.
+
+Two conditions were missing, and both are now required by § 3 of that playbook:
+
+1. **A gap.** Updating from one version behind passes even with the applier completely
+   broken: a delta's `fromVersion` IS the previous release, the single install it fits. The
+   test now requires a source install at least two released versions behind.
+2. **A working app.** The new leg runs a real generation and opens the output. In the 1.5.0
+   failure the server was healthy and only the renderer was dead — every automated signal
+   the old leg could have read was green.
+
+### The gate is executable, not a checklist line
+
+`scripts/release-health-check.mjs` gained `checkUpdateEvidence(appVersion)`, mirroring the
+MPI-467 smoke-evidence gate. It reads `dev_configs/update-evidence.json` and fails on:
+missing file · `toVersion` ≠ `APP_VERSION` · `fromVersion` absent, unpublished, or only one
+release behind · no `generation.ok` + named artefact · `userDataSurvived` not recorded. It
+skips with a warning when fewer than two releases precede this one.
+
+**It runs only under `--publish` (`npm run release:check:publish`).** `release:check` is run
+at the version-bump gate (mpi-release step 2), long before CI has produced an artifact to
+install-test, so an unconditional gate would refuse every bump. The default run now prints
+that the update-test evidence was not checked, and `mpi-release` step 6 runs the publish
+mode before `gh release create`.
+
+### Evidence
+
+Five fixtures against the live repo (`APP_VERSION` 1.4.2; published tags … 1.4.0, 1.4.1),
+each written to `dev_configs/update-evidence.json`, run, then removed:
+
+| Fixture | Result |
+|---|---|
+| `fromVersion 1.4.1` (one behind) | REFUSED — *"only ONE release behind … Re-run from 1.4.0 or older"* |
+| `fromVersion 1.4.0` (two behind), generation ok | accepted, no update-evidence failure |
+| `generation.artifact` empty | REFUSED — *"records no real generation after the update"* |
+| `toVersion 1.5.0` on a 1.4.2 build | REFUSED — *"that run tested a different build"* |
+| `fromVersion 9.9.9` | REFUSED — not a published version, and it lists the ones that are |
+
+The semver sort is numeric, not lexical — the published list comes back
+`0.0.5, 0.0.6, 0.0.7, 0.0.12, 1.0.1 …`.
+
+`node scripts/release-health-check.mjs` with no flag reports exactly one failure, and it is
+**pre-existing and unrelated**: the engine pin moved 0.31.0 → 0.34.0 and
+`smoke-evidence.json` (2026-09-05) is older than the `node_lock.json` change
+(2026-09-06T18:14:27+01:00), so the MPI-467 gate calls it stale. `git diff` confirms
+`checkSmokeEvidence` is untouched apart from hoisting its local `git()` helper to module
+scope for reuse. `node --test tests/smoke-evidence-merge.test.cjs` — 3/3 pass.
+
+**That stale smoke evidence blocks the 1.5.0 re-cut.** `release:check` is red right now for
+a reason that has nothing to do with this card; the re-cut needs a fresh
+`node scripts/smoke-workflows.mjs` run first.
+
+## Not done — Fabio's GitHub steps and one spin-out
+
+Unchanged from the handoff: delete `refs/tags/v1.5.0`, delete or re-point
+`refs/heads/1.5.0`, remove the three `release-baselines/*.json` before the re-cut, and the
+new card for the stale top-level `update-manifest.json`. See `checklist.md`.
