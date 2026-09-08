@@ -4,6 +4,11 @@ Written 2026-08-31 after Fabio brought in `kat3ri/ComfyUI-MiniMax-H3-Extend`. Tw
 this plan and neither should be re-searched: `brief.md` (the H3 seam physics — every rule there
 fails SILENTLY) and `research/minimax-h3-extend-nodepack.md` (the pack, and what changed).
 
+> **STOP - THE CARD PIVOTED 2026-09-08. READ THE END OF THIS FILE FIRST**, section
+> "DIRECTION CHANGE, 2026-09-08 - THE CARD PIVOTS TO FL2VA + MOTION CONTEXT". The 8-step
+> gate FAILED (`validation.md` Phase 5h) and the ref2v graph described below is no longer
+> the direction. Eight settled decisions are recorded there; do not re-open them.
+
 ## Current State (2026-09-01, after 4b + 4c — only Phase 5 and Phase 6 are left)
 
 **Phases 1, 2, 3, 3b, 4, 4b and 4c are ALL CLOSED.** The graph is 40 nodes, both arms are
@@ -1235,3 +1240,176 @@ only one of them is tight:
 
 Nothing. Both questions answered 2026-08-31: the negative hides on the H3 arm (§ Phase 3), and the
 disk question dissolves because Phase 1 needs no download (§ Disk).
+
+---
+
+# DIRECTION CHANGE, 2026-09-08 — THE CARD PIVOTS TO FL2VA + MOTION CONTEXT
+
+Everything above this line describes the ref2v / one-frame-pin / pixel-join graph. That graph is
+still what SHIPS, and its gate FAILED (`validation.md` § Phase 5h: **-3.51 dB** level step across
+the join against the -1.12 dB of the arm Fabio passed). It is not being patched further.
+
+## Decisions — SETTLED WITH FABIO, DO NOT RE-OPEN
+
+**D1 — Extend moves to FL2VA conditioning, off ref2v.** Fabio's verdict on the footage: the
+reference-video model tears, and the tearing translates into morphing, distortion and pixelated
+output. `minimax_h3_fl2va.json` already ships AND carries its own matching distill
+(`#455 minimax_h3_fl2v_turbo_8step_v1.0_768p`) — the extend flow is currently on the *ref2v*
+conditioning path AND the *ref2v* distill.
+
+**D2 — BARE BONES FIRST. NO LoRA.** Order is: prove a good extension with nothing on it, then the
+turbo LoRA, then accelerators and attention, then possibly the upscale phase. Rationale is not
+only diagnostic — see D5; a LoRA-free low-res chain may be the shipping shape, which would demote
+the open -3.51 dB LoRA defect from blocker to a constraint on an optional path.
+
+**D3 — The upscale phase is PARKED, and is not needed to prove extension.** Fabio: the upscale
+stage exists so you can generate at low resolution and upscale, which for an *extension* means
+generating below the input's resolution. Untested, and suspicious on its face. Prove the seam
+first.
+
+**D4 — TWO PATHS, ONE NODE: latent if provided, pixel encode/decode if not.** Not speculative —
+this is exactly what the upstream pack does (`context_latent` wired => picture and sound both come
+from it, `context_frames`/`context_audio` ignored; absent it the pixel path runs and sets
+`overhang = 0.0` because decoded audio was cut at the frame, so the pixel branch is the SIMPLER
+arithmetic, not a degraded one). Build the latent branch in from the start so infinite video is
+not a retrofit.
+  - **Extend Video** (this card) — user's imported MP4, no latent exists, pixel path. It pays no
+    round-trip penalty: the source was never a latent, so there is no decode to avoid.
+  - **Infinite video / future flows** — our own output, latent path, full quality per link.
+
+**D5 — The infinite-video shape: chain entirely at LOW resolution, then upscale the finished
+latent through the already-windowed refine.** Fabio's design, and it dissolves a tension recorded
+wrongly earlier in this session: `context_latent` refuses a resolution change **mid-chain**, not
+an upscale AFTER the chain is complete. Every link at one resolution, one resize at the end. At
+low res 25 steps is cheap and needs no LoRA, and `MpiWindowedSampler` makes a 30 s - 60 s upscale
+credible. Not this card, but the node must not preclude it.
+
+**D6 — THE UPSTREAM PACK NEVER GOES NEAR THE ENGINE.** Explicit instruction from Fabio. It is an
+ORACLE ON THE BENCH ONLY, same posture as `kat3ri/ComfyUI-MiniMax-H3-Extend`. Nothing from it
+enters `node_lock.json`. We reimplement the arithmetic in `ComfyUi-MpiNodes/h3.py` via
+`/mpi-nodes-sync`, crediting the source in the docstring.
+
+**D7 — The H3 community licence is ASSESSED AND SORTED.** The upstream README claims it does not
+cover the EU, UK, Korea or the US. Fabio has dealt with it. **Do not raise it again.**
+
+**D8 — MPI-591 stays in `doing`.**
+
+## The mechanism, read out of the source — DO NOT RE-DERIVE
+
+Read from `NikoDemon80/ComfyUI-H3-Motion-Context` (919 stars, updated 2026-09-08), which is the
+real upstream behind the `Motion-Director` repo Fabio linked; Motion Director is a timeline/
+orchestration UI whose README names five continuity features and explains none of them. Source
+copies of `nodes.py`, `README.md`, `layout_contract.py`, `tests/level_step.py`, `CHANGELOG.md` were
+pulled to the session scratchpad (`mc/`) — re-fetch with `gh api` if gone.
+
+**Why our audio fails, in their words:** *"Add Guide anchors audio starting at a frame and running
+forward. To actually continue a soundtrack, the pinned window has to END at the join and reach
+backwards into the sound that already played."* Our graph is `#903 MiniMaxH3AddGuide` at
+`frame_idx: 0` with the source track in the STANDALONE `ref_audio_1`. They hit the identical
+failure and named it: the model reads a reference as *"a separate clip that sounds like this"* — a
+cover band. Cross-correlation at the join went **0.45 -> 0.95+** when they fixed it.
+
+**Video pin.** Slice the last N latent steps out of the previous clip's video latent, one cond
+block per step, offsets from `FRAME_PER_TOKEN = (1,4,4,4,4)` (same geometry Phase 5b derived here
+independently — the two agree). Two hard refusals: `start = total - steps` must have
+`start % 5 == 0`, and off-grid run lengths must **snap DOWN** the grid
+`(124,107,90,73,56,39,22,5,1)` from the VAE's `max(1,(n-5)//17*5+2)`. Their reason for the snap is
+the dangerous bit: encoding 10 frames yields the same 2 steps as encoding 5 **but covering frames
+[-10..-6] instead of [-5..-1]** — the pinned run ends early and the clip continues from the wrong
+instant, silently.
+
+**Audio pin — this is the whole trick.** Stock places a keyframe's audio window STARTING at
+`(5/3) * index` and running forward. To make it END at the join:
+
+```
+end_frame = span + overhang / FRAME_RESCALE        # end-align with the pinned video
+end_coord = round(FRAME_RESCALE * end_frame)       # snap onto the target's own 40 Hz grid
+end_frame = end_coord / FRAME_RESCALE
+resolved_frame_index = end_frame - ref_audio_t / FRAME_RESCALE
+```
+
+`FRAME_RESCALE = 5/3` (24 fps picture, 40 Hz audio latents). That index is **fractional, and
+negative whenever the audio window is longer than the pinned head**, which it normally is — legal
+layout arithmetic, unreachable through stock Add Guide, which is why they carry
+`layout_contract.py` to refuse if ComfyUI ever stops honouring it. `overhang = total_t -
+(5/3)*frames` is **exactly one of {0, +1/3, -1/3}** because 5/3 x an integer lands on .0/.333/.667
+and never .5, and H3 rounds the audio grid to NEAREST. Skipping the snap costs up to 1/3 step =
+**8.3 ms**, cycling rather than constant — that was their "chained clips come out 8 ms late" bug.
+
+**Settings they collapsed to constants, losing branch documented in their own source:**
+`ENCODE_MODE = "video"` (one VAE call for the whole pinned run, motion lives inside the latent;
+per-frame stills "left a visible seam"), `ANCHOR_MODE = "head"` (negative-time pinning "collides
+with the text rows, weakens the anchors and darkens the output"), `AUDIO_MODE = "timeline"` (vs
+`"ref"`, the cover band).
+
+**It is a CONDITIONING PASS-THROUGH** — `RETURN_TYPES = ("CONDITIONING", "INT")`, wired between a
+stock H3 conditioning node and the guider, MERGING pinned keyframes into whatever arrives. Their
+comment: *"the pinned run decides how the clip starts, the anchor decides where it ends"*, and an
+upstream `last_frame` anchor is called a legitimate companion. **That is FL2VA's exact shape** — D1
+and this mechanism compose without a graph rebuild.
+
+**Their input surface**, worth matching: `context_length` offers only `22/5/39/56` (whole numbers
+of latent steps), default 22, described as "nearly seamless" against 5's "just barely fluid";
+`audio_context_length` default **24 frames = 1 s**, END-aligned and INDEPENDENT of the picture
+window, multiples of 3 landing on the 40 Hz grid. The INT return is `trim_frames`.
+
+## Traps carried forward
+
+1. **Phase 5b's "more context is worse" DOES NOT TRANSFER.** That measured the kat3ri pack's
+   pixel-domain `context_frames` with no end-aligned audio. Different mechanism. It must not be
+   used to veto a 22-frame pin.
+2. **The pinned head comes back in the output** and must be trimmed, picture and sound together,
+   before concatenating. A 56-frame pin spends 2.3 s of render on frames you throw away.
+3. **H3 emits 32 kHz, not 48.** A hardcoded 48000 in any remux silently kills the tail of a long
+   chain while every duration check still passes.
+4. `level.py` is the level-continuity instrument; `dropouts.py` is structurally blind to it. See
+   `validation.md` § Phase 5h.
+
+## We already own every primitive — the new code is small
+
+| what the upstream needed a node for | what Cubric Vision already ships |
+|---|---|
+| Save Latent / Load Latent (exists only because ComfyUI won't wire a sampler to itself) | **`MpiStageLatents`** (`save_path`/`load_path`/`is_continue`) |
+| `_streams_from_latent`, to reach video and audio separately | **`LTXVSeparateAVLatent` / `LTXVConcatAVLatent`** |
+| — | **`MpiWindowedSampler`** (`overlap_frames: 17`, `frame_grid: 5`) |
+| — | **`MinimaxH3LatentUpscaler3D`** + `enable_temporal_chunking`, **`ManualSigmas`** |
+
+`MpiWindowedSampler`'s `frame_grid: 5` / `overlap_frames: 17` is **the same 17m+5 grid** as the
+upstream's `VIDEO_RUN_GRID` and the VAE's `(n-5)//17*5+2`. Our sampler is already on H3's latent
+grid, which is what makes D5 credible rather than hopeful.
+
+**The only genuinely new code is the keyframe arithmetic** (tail slice, end-alignment, the
+fractional/negative audio index, the `%5` and grid-snap refusals). It lands in
+`ComfyUi-MpiNodes/h3.py`, which today has `MpiH3Length`, `MpiH3References`, `MpiH3ImageToVideo`,
+`MpiH3MaskedPrefix`, `MpiH3EncodeAV`, `MpiH3DecodeAV` and essentially no keyframe-index handling.
+
+## THIRD SWEEP MISS — `flow_h3_extend.json` was left out AGAIN
+
+MPI-699/704 swept `minimax_h3_r2va` and `minimax_h3_fl2va`; the extend flow was not in the file
+list. Against those two it is missing: **`MpiWindowedSampler`**, `MinimaxH3LatentUpscaler3D`,
+`MpiStageLatents`, `ManualSigmas`, `LTXVConcatAVLatent`/`LTXVSeparateAVLatent`, `MpiFloat`, 6x
+`MpiLoraModelClip` (the style-LoRA slots), and the THIRD sigma shift (`shift_audio: 0.5`, the
+refine stage). r2va's turbo arm is now **beta/10**; extend is still beta/8. This is the third
+occurrence — it is a process bug, not bad luck, and the file belongs in the H3 sweep's list
+permanently.
+
+## NEXT ACTION — the bare-bones bench arm
+
+Not started. Needs the GPU (Fabio said it is free 2026-09-08; ask anyway, the lease is not the
+whole truth).
+
+1. Base `comfy_workflows/minimax_h3_fl2va.json`, **LoRA OFF**, quality arm, no accelerators, no
+   upscale, pixel path.
+2. Pin the source tail: last **22** frames + **24** frames of END-ALIGNED tail audio.
+3. Trim 22 off the front, concatenate, measure.
+4. **Port `tests/seam_probe.py`** from the upstream scratchpad copy — it cross-correlates the new
+   clip's opening against the previous ending and is the one number that separates "continued"
+   from "cover band". That is the verdict metric this saga has never had. Run it alongside
+   `level.py`.
+5. Baseline to beat, already on the board: **-3.51 dB** level step, and whatever correlation the
+   currently shipped graph scores.
+
+**Deferred, unchanged:** multi-reference extends (a new character mid-extend via `ref_image_1..9`).
+**Noted, do not build against it yet:** Dars is making every H3 generation save its latent. If that
+lands, Extend gets the latent path for free on anything the app generated and the pixel path
+narrows to user-imported footage only.

@@ -1591,3 +1591,78 @@ The two-pass shape (half-res stage 1 -> `MinimaxH3LatentUpscaler3D` -> 3-step re
 **MPI-688**, which already names sweeping the H3 flows onto it. If extend moves there, the
 refine's reference encoder must be titled `Refine_Refs`, never a second `Input_Refs` -
 `validate-injection-rules.mjs` rejects the duplicate outright.
+
+## Phase 5h — THE 8-STEP GATE RAN (2026-09-05), AND IT FAILED ON AUDIO CONTINUITY
+
+Three bench runs on the shipped `flow_h3_extend.json`, Phase 5g inputs throughout (source
+`cowboys/Media/ref2v_ms_004.mp4`, seed 591000591, wagon prompt, turbo TRUE, `Input_Duration` 4 ->
+#954 -> N=141). All 225 frames / 9.375 s / 864x480, 124 source + 101 new. Every run's executed
+graph was read back from `/history` rather than trusted from the posted file.
+
+**THE RESULT IS STILL CURRENT AT 2026-09-08 AND MUST NOT BE RE-RUN TO RE-ESTABLISH IT.** MPI-698
+dropped NVFP4 and reverted `#390` to `int8_convrot`, which is exactly the encoder the A/B arm
+used. Shipped HEAD was compared node-by-node, input-by-input against the `P5h_encA` dispatch:
+**zero non-injected differences**. The A/B arm IS the shipped graph.
+
+| arm | encoder | shift_audio | level step across the join |
+|---|---|---|---|
+| F16b (4-step, the arm Fabio PASSED) | int8_convrot | 5 | **-1.12 dB** |
+| F15b (4-step, its cache-eviction twin) | int8_convrot | 5 | -1.67 dB |
+| P5h_8step | nvfp4_awq | 4 | -3.81 dB |
+| **P5h_encA — THIS IS SHIPPED HEAD** | **int8_convrot** | **4** | **-3.51 dB** |
+| P5h_shift5 | nvfp4_awq | 5 | -4.02 dB |
+
+**The picture is fine and was never the problem.** `luma.py` worst 1-frame step at the join:
+1.14 (4-step) / 1.17 / 1.19 / — flat across every arm. Join motion 6.93 -> 6.67, if anything
+slightly better. The span widening (2.20 -> 2.60) is a smooth post-join exposure ramp
+(dY -0.14/-0.15/-0.13), not a step.
+
+### What was ELIMINATED, with numbers — do not re-test these
+
+The eviction band was measured first, off the handoff's own pair (F15b vs F16b share a seed and an
+upstream graph, video md5 `8d4baf30` vs `e56a0cd6`): **0.55 dB**. Anything inside that is noise.
+
+- **The text encoder is NOT the cause.** nvfp4 -3.81 vs int8_convrot -3.51 = **0.30 dB**, inside
+  the band. (This A/B is now moot anyway — NVFP4 was dropped by MPI-698.)
+- **`shift_audio` is NOT the cause.** 4 -> 5 moved it -3.81 -> **-4.02**, the WRONG WAY, 0.21 dB,
+  inside the band. The hypothesis was that `MiniMaxH3SigmaShift.shift_audio` scales the audio
+  latent: `comfy/ldm/minimax/model.py` does multiply by `carry = sigma_a / sigma_v`, but twenty
+  lines down it undoes it (`out[1] = (1-scale)*(audio_src*carry) + (1+(scale-1)*sigma_a)*out[1]`).
+  It is a **compensated change of variables, not a gain**. Reading the multiply without following
+  it to the compensation is the trap.
+- **STILL OPEN, prime suspect: the turbo LoRA.** `lightx2v_turbo_4step_v0.1` at 0.2 on the CLIP ->
+  `ref2v_turbo_8step_v1.0` at **1.0 on the model**. MPI-687 swapped it for dependency reasons and
+  explicitly did not re-tune it. Second suspect: beta/6 -> beta/8. Neither tested.
+- Independent corroboration found 2026-09-08: the `H3-Motion-Context` pack's README states turbo
+  LoRAs "thicken the sound and soften the picture" and tells you to turn them off before blaming
+  the chaining.
+
+The three 8-step runs cluster at -3.51 / -3.81 / -4.02 across two encoders and two `shift_audio`
+values — spread 0.51 dB, i.e. the eviction band. **The regression is robust, reproducible and
+belongs to the sampler arm.**
+
+### The shape of the defect: a FLAT OFFSET, not a decay, not a splice artefact
+
+Per-250 ms RMS, three arms side by side: **bit-identical for 0 - 4.0 s** (the spliced-in source is
+genuinely untouched, which also clears `MpiAudioSplice`), tiny differences 4.0 - 5.0 s inside the
+800 ms splice crossfade, then from 5.25 s the 8-step arms sit 2.3 - 3.0 dB below the 4-step arm and
+**stay there to the end**. Source-side steady RMS -26.34/-26.35 on every arm.
+
+### NEW INSTRUMENT: `level.py`. `dropouts.py` CANNOT SEE THIS CLASS OF DEFECT.
+
+`dropouts.py` scores every window against its own LOCAL median, so a level offset that persists
+across the boundary reads as normal on both sides. It finds holes and clicks. It is blind to "the
+continuation is quieter than the source it continues" — **the exact same blind spot `flash.py` has
+on a smooth luma ramp**, and the second time this family of error has cost a session. The first
+report out of this gate said "sound clean" on that basis and was wrong; Fabio's ear caught it.
+
+`level.py` prints a per-250 ms RMS series and the steady-state step across the join, excluding the
+800 ms splice window either side. It is in the session scratchpad and MUST be carried forward.
+
+What `dropouts.py` DID correctly establish, and which still holds: no dropout at the join at all;
+the only sub-median windows are the file's own fade-in and a -12.4 dB dip at 1.44 s that the SOURCE
+has at -12.3 dB; and the splice measured directly at 5.167 s is **0.5x** the file's own 99.99th
+percentile — quieter than ordinary content, and better than the 4-step's 0.6x. **The splice is not
+the problem.** The 2.8218 s step is source content: peak 0.08705 in BOTH outputs, identical.
+
+Wall clock: 250.5 s for each 8-step arm, against the 4-step port run's 210.3 s.
