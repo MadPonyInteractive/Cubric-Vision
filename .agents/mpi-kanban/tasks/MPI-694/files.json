@@ -18,6 +18,11 @@
     "comfy_workflows/flow_stable_audio.json",
     "comfy_workflows/raw/flow_minimax_music.json",
     "comfy_workflows/flow_minimax_music.json",
-    "tests/inject-params-titles.test.cjs"
+    "tests/inject-params-titles.test.cjs",
+    "comfy_workflows/display/flow-song.webp",
+    "comfy_workflows/display/flow-song.mp4",
+    "comfy_workflows/display/flow-sound-and-music.webp",
+    "comfy_workflows/display/flow-sound-and-music.mp4",
+    "docs/playbooks/add-flow/06-preview-image.md"
   ]
 }
