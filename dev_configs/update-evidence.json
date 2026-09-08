@@ -1,0 +1,30 @@
+{
+  "at": "2026-09-08T20:07:00Z",
+  "toVersion": "1.5.0",
+  "fromVersion": "1.4.4",
+  "bundleFromVersion": "1.4.4",
+  "platform": "win32",
+  "bundle": "CubricVision-windows-x64-update-v1.5.0.zip",
+  "userDataSurvived": true,
+  "generation": {
+    "ok": true,
+    "artifact": "C:\\Users\\Fabio\\Documents\\Cubric Vision\\Projects\\1.4.2 test\\Media\\t2i_002.png",
+    "note": "SDXL Realistic text-to-image, 1024x1024, 1m18s, run in the UPDATED install and opened. A real image, and a different composition from the pre-update one, so it was generated rather than resurfaced. Fabio looked at it."
+  },
+  "sourceInstall": {
+    "path": "D:\\CVTest\\CubricVision-v1.4.4",
+    "buildHash": "8b28b230783e",
+    "note": "Fresh extract of the published CubricVision-windows-x64-v1.4.4.zip. buildHash equals the v1.4.4 tag sha, so this is byte-for-byte what users hold."
+  },
+  "afterUpdate": {
+    "appVersion": "1.5.0",
+    "buildHash": "43b22c407b61",
+    "engine": "0.34.0",
+    "note": "Engine bumped 0.31.0 -> 0.34.0 on first launch, matching 1.5.0's pin. Changelog rendered and the full landing screen populated - the screen the 1.5.0 corruption never reached."
+  },
+  "caveats": [
+    "userDataSurvived covers the PORTABLE's user-data (settings, secrets, window state): all three md5s byte-identical before and after, and again after a hard restart. Projects live in the shared Documents\\Cubric Vision\\Projects and would survive a corrupted install too, so they prove nothing on their own.",
+    "This is a DELTA bundle (bundleFromVersion 1.4.4) and serves 1.4.4 only. Installs older than 1.4.4 run an applier that predates the fromVersion guard, so it does not refuse - it applies silently and corrupts. The release body must tell them to take the full zip. See MPI-709 validation.md.",
+    "The offline update-from-zip.bat path prints an error and exits 1 AFTER a successful update, because the delta replaces that batch file while cmd is executing it. The Windows in-app path (main.js:1232 -> update/win-update.cjs run as node) is unaffected. Recorded, not fixed."
+  ]
+}
