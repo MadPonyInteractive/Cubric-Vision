@@ -249,7 +249,9 @@ top-level `update-manifest.json`: **MPI-710** (todo / research).
 The whole MPI-709/708 body of work was committed to **master**. v1.5.0 was never cut from
 master. Tag `v1.5.0` = `fa655783` -> `a8691834`, which sits on the **`1.4.2` maintenance
 branch** (worktree `C:/AI/Mpi/Cubric-Vision-1.4.x`). Master forked from it at `372c1895`
-(stamp 1.4.2, 2026-08-15) and is 879 commits ahead / 34 behind. 1.4.3, 1.4.4 and 1.5.0 all
+(stamp 1.4.2, 2026-08-15) and is 879 commits ahead. Behind depends on which end of that line
+you measure: **34** against `a8691834` (the old `v1.5.0` tag, where `origin/1.5.0` pointed)
+and **39** against `b4ca625d`, the branch head. 1.4.3, 1.4.4 and 1.5.0 all
 shipped from the 1.4.x line while master ran on toward 2.0.
 
 Measured before deciding anything:
@@ -333,10 +335,21 @@ had just successfully swapped the 222 MB `CubricVision.exe` three files earlier 
 for `icudtl.dat`, and `main().catch` aborts the whole run.
 
 **Why it has never been seen:** every Windows update bundle ever shipped was a small delta —
-v1.4.1 **51** entries, v1.4.2 **130**, v1.4.3 **29**. Electron runtime files do not change
-between patch releases, so they were never in a bundle. The re-cut FULL bundle carries
-**6523** entries and is the first to include them. No full bundle has ever been applied in
-place on Windows.
+v1.4.1 **51** entries, v1.4.2 **130**, v1.4.3 **29**, counted with
+`tar -tf D:\CubricStudio\Vision\Builds\v<ver>\CubricVision-windows-x64-update-v<ver>.zip`.
+Those artifacts are on disk, not in the repo, so this is not reproducible from git alone.
+Electron runtime files do not change between patch releases, so they were never in a bundle.
+The re-cut FULL bundle carries **6523** zip entries (manifest `files: 6522`, plus the manifest
+itself, which is never in its own `files[]`) and is the first to include them.
+
+> Not to be confused with the **6527** in `release-baselines/win32-x64.json`: that is the
+> `files[]` of the FULL portable artifact's manifest, a different archive from a later build
+> (`43b22c40`, not `34639329`). A claim audit flagged the two as contradictory on 2026-09-08;
+> they measure different things and both are right.
+
+On the evidence above, no full bundle appears ever to have been applied in place on Windows —
+three consecutive deltas and a runtime that never entered one. That is an inference from three
+releases, not a search of every build ever cut.
 
 **There is no rollback.** `main().catch` prints the message and sets exit 1. The
 `update/rollback/<stamp>/` tree is filled as it goes but nothing restores it and the error
