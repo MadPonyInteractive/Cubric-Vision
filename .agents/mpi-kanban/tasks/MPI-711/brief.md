@@ -104,8 +104,9 @@ The mask the model receives is **2.11x the drawn area**:
 - Head travels up to **24px vertically / 32px horizontally inside one 4-frame token**.
 - **A tracked crop recovers only 13pp — not worth building.** Pure translation cannot cancel
   it; the head also rotates and the hair shape changes.
-- Spatial blocking is the larger term, not the temporal union. This **corrects**
-  `memory/project_h3_as_sampled_mask_floor.md`, which records the temporal term as larger.
+- Spatial blocking is the larger term, roughly twice the temporal union. Written into
+  `memory/project_h3_as_sampled_mask_floor.md` on 2026-09-09 — that file already had the
+  32px floor right, it had simply never priced the two terms against each other.
 
 ## Why the approach is being retired
 
