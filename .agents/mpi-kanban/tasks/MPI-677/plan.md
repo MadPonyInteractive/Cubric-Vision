@@ -51,8 +51,18 @@ than accepted from its report:
   behind `npm run recipe:test` (`package.json:21`), run live under the GPU
   lease. Claim audit: 13 proven / 0 false.
 
-**So the recipes are here and reachable — but nothing in Vision calls them.**
-The enhance button still goes out over the broker. That is step 1.
+**Delivered 2026-09-08/09 — steps 1a and 1b are done.** Vision has its own LLM
+client (`routes/llm.js` + `js/services/llmService.js`, both backends proven
+live) AND the button now calls it: `2558895c` replaced the broker path, deleted
+the in-workflow enhance toggle, gated the control on the OPERATION, and folded
+the two Flow enhance buttons into one dispatch. `7a9d40df` repointed a stale
+cross-repo note. `js/shell/connectorOps.js` has **zero importers left** — step 2
+can delete the file outright rather than untangling it.
+
+**What is left in step 1 is the OVERLAY (1c) and one GPU measurement (1d).**
+Until 1c lands, the control writes the enhanced text straight back into the
+prompt box, exactly as the broker path did; the seam is marked in
+`MpiPromptBox.js` with a `ponytail:` comment.
 
 **Renames in flight (Fabio, 2026-09-08) — another agent is carding these; do not
 create those cards and do not rename anything from this card.**
@@ -387,6 +397,40 @@ with ownership `js/data/recipes/corpus.js` + `docs/agent/**` against
 `.claude/skills/cubric-vision/**`, and only once MPI-547 has landed.
 
 ## Plan Drift
+
+- **2026-09-09 — "fold in the two Flow-internal enhance buttons" was read as ONE
+  DISPATCH, not one backend, and that reading is load-bearing.** The obvious
+  reading — route Character Sheet and Music Maker to the cloud default like
+  everything else — would have dropped three post-processing nodes those flows
+  depend on: `Replace Text` strips newlines, `Input_Scrub_Negation` deletes
+  "no …" clauses, `Input_Tidy` eats the trailing full stop because a character
+  phrase is spliced into the middle of a longer sentence. Both flows were tuned
+  on real GPU runs against that chain, and Character Sheet's recipe is not even
+  in JS — it is baked into the graph's `Input_System_Prompt` node. Sending them
+  to DeepInfra is changing the instrument without measuring it. So
+  `MpiBaseFlow._runEnhance`'s near-copy of the `enqueueGeneration` call was
+  deleted and both flows call `runComfyEnhance()`, the single dispatch to that
+  graph; the op name and the not-in-this-build guard moved with it, which is why
+  the declarations no longer carry `op: 'promptEnhance'` and the step's literal
+  grep still passes. **A flow that wants the cloud opts in after someone
+  measures the difference.**
+- **2026-09-09 — forcing `Input_enhance_prompt` false needed no graph edit.** All
+  four workflows already bake `boolean: false` on that MpiIfElse; the only thing
+  that ever set it `true` was the `enhancePrompt` control's
+  `getInjectionParams()`. Deleting the control IS the forcing. Both halves are
+  now asserted — nothing offers the toggle AND every graph bakes false — because
+  either alone is a false green.
+- **2026-09-09 — the `sdxl` negative-block defect is PARITY, not a regression 1b
+  introduced, and that was measured rather than assumed.** A `separate-field`
+  recipe returns `POSITIVE PROMPT: …\nNEGATIVE PROMPT: …` as one blob and the
+  whole blob lands in the positive box. Cubric-Prompt has **no splitter anywhere
+  in `src/main/`** (grepped), so its responder returned the labelled text as
+  `prompt` and left `negativePrompt` undefined — the broker path did exactly the
+  same thing. `pony.recipe.js:216-227` reached the same conclusion independently
+  from the other side while deciding not to emit a negative block at all. Left
+  for 1c deliberately: which channel the negative lands in is something the user
+  should see and approve in the overlay, not something the control does behind
+  them.
 
 - **2026-09-08 — reordered to Fabio's priority, and the letters retired.** The
   first draft led with the card description's A/B/C/D and put the agent
