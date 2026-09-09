@@ -1854,3 +1854,37 @@ has to stay for imported media. Design for both, not one.
 `minimax_h3_ref2va_pruned_int8_convrot`. Making it land is a transformer AND mechanism change, and
 the reference path must be REMOVED rather than left unused: fl2va does not error on references, it
 samples fine and silently ignores them (`docs/models/h3/ref2va.md`).
+
+## THE CONTEXT DEFAULT IS 56, NOT 22 (Fabio, 2026-09-09)
+
+Fabio's call: the extend should pick up **about 2 seconds** of the previous clip by default, and
+fall back to whatever is there when the clip is shorter - the behaviour he remembered from LTX.
+
+**LTX's actual rule, read off `flow_ltx_extend.json` rather than memory:**
+
+    #23  MpiMath   floor((a-1)/8)*8+1     a = MpiLoadVideo frame_count   (the WHOLE clip)
+    #24  MpiClamp  min 1, max 73
+
+So LTX takes the entire source, snaps it to its own 8k+1 latent grid, and caps at **73 frames -
+3.04 s at 24 fps**, not 2 s. It is not user-exposed. Short clip: it takes what is there.
+
+**That is the same algorithm H3 already runs.** `MiniMaxH3MotionContext` does
+`n = min(request, available)` then snaps DOWN to `VIDEO_RUN_GRID`. The take-what-you-can fallback
+Fabio wants is already built in - only the DEFAULT is wrong.
+
+**2 s is not reachable on H3's grid** (48 frames is off it). The neighbours are 39 = 1.625 s and
+**56 = 2.333 s**. Pick **56**: nearer 2 s, and nearer LTX's cap in spirit. It is also the value
+Phase 7b proved carries a scene across a shot change.
+
+**A live inconsistency for the port to resolve:** the SHIPPED flow does not use that clamp at all.
+`flow_h3_extend.json` `#902 GetImageRangeFromBatch start_index=-1, num_frames=39` is a hard 39
+frames with **no clamp against a short source** - a clip under 39 frames has untested behaviour
+there. Three different context rules exist right now:
+
+| | rule | at 24 fps |
+|---|---|---|
+| LTX extend (shipped) | `min(whole clip snapped to 8k+1, 73)` | up to 3.04 s |
+| H3 extend (shipped) | **fixed 39, no clamp** | 1.625 s |
+| H3 bench (`MotionContext`) | `min(request, available)` snapped to the run grid, default 22 | 0.917 s, max 2.333 s |
+
+The port should land on one rule: default 56, clamp to available, snap down.
