@@ -1,0 +1,11 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    ".agents/mpi-kanban/tasks/MPI-711/plan.md",
+    ".agents/mpi-kanban/tasks/MPI-711/brief.md",
+    ".agents/mpi-kanban/tasks/MPI-711/research/",
+    ".agents/mpi-kanban/tasks/MPI-711/validation.md",
+    ".agents/mpi-kanban/tasks/MPI-711/checklist.md"
+  ],
+  "note": "Research card. No repo code is owned. Benching happens on the standalone bench at G:/ComfyUi, which is outside every git root. If a decision later lands in the repo, this list must be re-declared first."
+}

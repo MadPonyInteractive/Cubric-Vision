@@ -4,10 +4,10 @@
   "title": "Localised video editing: the LanPaint/H3 masked route hit a wall - evaluate models built for the job",
   "description": "Cards six days of uncarded work (five handoffs, no card) and turns it toward native localised-edit models. The H3 + LanPaint masked route WORKS mechanically - MpiH3EncodeAV/MpiH3DecodeAV were built for it, the SAM3 mask and the composite are measured correct, audio masking is finished - but it cannot do the job: measured 2026-09-08, hue inside the mask NEVER moves toward the requested colour at any denoise including 1.0, and the two failure modes leave no window (<=0.4 the plate wins and the hair returns unchanged, 0.6 gives cartoon hair, 0.8-1.0 invents a new face with saturation collapsing 172->83). Root shape: masking is a workaround imposed on a model with no native localised-edit task, and H3 is slow. Next: evaluate Capybara (HunyuanVideo-1.5, instruction-based local video edits, MIT) and Bernini-R (Wan 2.2 renderer-only, rv2v reference-guided video editing) - licence and weights FIRST. VOID is object-removal only and cannot recolour, so it belongs on its own card. SETTLED, do not re-open: ref2v vs fl2v (a wash), turbo vs non-turbo (a wash), the mask and composite are correct, audio is done, shift_video 12.0 is the node default, the ~1s/22-frame window is the DESIGN POINT not a defect, and the heretic text encoder is the deliberately shipped weight. Detail: brief.md.",
   "column": "todo",
-  "maturity": "research",
+  "maturity": "planned",
   "status": "idle",
   "created_at": "2026-09-08T20:05:00+01:00",
-  "updated_at": "2026-09-08T20:05:00+01:00",
+  "updated_at": "2026-09-09T09:14:49+01:00",
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl",

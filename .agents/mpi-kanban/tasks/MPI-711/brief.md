@@ -108,6 +108,37 @@ The mask the model receives is **2.11x the drawn area**:
   `memory/project_h3_as_sampled_mask_floor.md` on 2026-09-09 — that file already had the
   32px floor right, it had simply never priced the two terms against each other.
 
+### Square mask instead of the SAM3 shape — tested 2026-09-09, does NOT rescue it
+
+Last test on the masked route before parking. The idea: stop conditioning on the
+hair-shaped SAM3 mask and hand the model the padded square instead, so Region behaves like
+an editing marquee — "repaint this area" rather than "repaint this shape". One link on the
+bench graph: `MpiMaskSquareBbox.square_mask` -> `MaskToImage`, in place of the grown SAM3
+mask, everything else (padding 64, grow 6, box, /32 rounding, 768 canvas) untouched.
+
+**Result (user, 2026-09-09): it did not hold up. Even at low noise it produced something
+different — similar, but a different subject, not the same one edited.** Same family as the
+denoise table above: the region is regenerated rather than modified, and the square makes
+that worse, not better, because it hands the model MORE area to reinvent and removes the
+known pixels LanPaint conditions on.
+
+Two mechanical facts found while wiring it, both worth keeping:
+
+- LanPaint hard-thresholds the mask, `(denoise_mask > 0.5).float()`. Feathering what you
+  feed the MODEL does nothing; only `MpiH3DecodeAV.feather` softens anything.
+- A near-all-white mask leaves LanPaint no known pixels to condition on, so it degenerates
+  to plain sampling while still paying its inner steps (`LanPaint_NumSteps` extra evals per
+  step). With no mask at all it falls through cleanly — `else: out, _ = self.inner_model(...)`
+  — so "region, no mask" is a valid and faster configuration, not an error.
+
+**The untried lever, if this is ever picked up again:** feed the input video's own frame
+back in as a REFERENCE image (`MpiH3References`) alongside the masked region, so identity
+is carried by a reference rather than by the surviving pixels. Parked, not disproven — the
+user moved to other work 2026-09-09 rather than chase it.
+
+The bench graph was reverted to the SAM3 mask the same day; the square wiring is not on
+disk. `square_mask` is output 0 of `MpiMaskSquareBbox` and is left unconnected.
+
 ## Why the approach is being retired
 
 Masked inpainting on H3 is a **workaround**: the model has no native localised-edit task, so
