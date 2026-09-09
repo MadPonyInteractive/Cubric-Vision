@@ -2208,3 +2208,77 @@ continuous. One arm cannot say whether that is our chain or is what H3 does with
 measurement.
 
 **The ear is still the gate for this stage** - the joined clip went to Fabio.
+
+## Phase 7b - THE CUT-BACK ARM (2026-09-09): it cuts back, and the bench was measuring at the wrong size
+
+`arm_cutback_c2_10step.json`, built by `research/bench/make_cutback_arm.py` off the approved speech
+arm. Three edits: `#601 context_length` 22 -> "56", `#605` `'a + 22/24'` -> `'a + 56/24'` (length
+152 -> grid 158, so new footage stays 102 frames), `#232` a three-shot prompt mirroring what the pin
+replays. 10 steps, `shift_audio` 1, turbo LoRA on, seed 591000591, 1152x480. **730.9 s**, success,
+158 frames.
+
+Going to 56 was the point: the pinned window is frames 68-123 of 062 and the cut is at frame 76.8,
+so **9 pinned frames are the wide shot and 47 are the eyes ECU** - the model's context contains the
+scene AND an example of the exact edit being asked for.
+
+### Result: it cut back on the first free frame
+
+`measure.py` hardcodes `PINNED = 22`; this arm needed 56, so it was overridden at the call site.
+
+Frame-to-frame diff over the 102 new frames: mean 9.48, and a single spike of **56.29 (5.9x)
+between new-frame 0 and 1** - one frame, no dissolve, at 2.375 s of the generated clip against the
+2.500 s the prompt asked for. It cut as soon as it was free of the pin and held the wide shot to the
+end. Scene carried: draft horse in harness frame left, man on the dapple grey right, high downward
+angle, road in motion blur, low warm light, forearm on the rein bottom-right. The revolver locked
+out at the lens was prompted and NOT reproduced.
+
+### Audio, and why the numbers must not be read as a verdict
+
+| | speech arm (ctx 22) | cut-back arm (ctx 56) |
+|---|---|---|
+| seam corr | 0.390 | 0.493 |
+| floor vs source | -7.82 dB | **+10.62 dB** |
+| range vs source | +13.72 dB | **-6.50 dB** |
+
+An 18.4 dB swing in floor and 20.2 dB in range, far outside the ~0.9 dB bar. **Two reasons not to
+call this an improvement.** First, context AND prompt both changed, so nothing is attributable.
+Second and decisive: **Fabio's ear called the ctx-22 clip perfect**, which falsifies the reading
+"floor drop = the bed was dropped" that Phase 7a gave the same metric. `dynamics.py` measures a real
+structural difference - burst-and-gap versus continuous - and that is all it is entitled to say.
+Its Phase 7a interpretation is WITHDRAWN.
+
+### THE FACE DEGRADED - BUT AT A RESOLUTION THE PRODUCT NEVER USES
+
+Fabio's observation: the man's face is wrong in the returned wide shot. Four crops of the same
+region settle where it comes from:
+
+| | source | result |
+|---|---|---|
+| A | 1920x800 original, frame 40 | face fully legible - hat, moustache, mouth, revolver |
+| B | **1152x480** resized, same frame | **still fully legible** - the downscale did NOT do it |
+| C | 1152x480 extension, frame 48 | moustache gone, mouth smeared, face flattened |
+| D | 1152x480 **pinned head**, frame 4 (= source frame 72, a frame it was HANDED) | **already degraded** |
+
+D is the informative one: the model cannot even carry a wide frame it was directly given. The
+arithmetic says why - the DiT token grid is **/32** (latent /16, then a 2x2 patchify, both read off
+the Phase 7a reshape error). At 1152x480 that is 36x15 tokens, and his face at ~53 px is **1.7
+tokens tall**. There is nothing there to hold an identity in.
+
+**This is NOT a product finding.** `flow_h3_extend.json` `#916 ImageResizeKJv2` takes `width`/
+`height` from `MpiLoadVideo`'s own outputs with `divisible_by: 32` and `keep_proportion: 'crop'` -
+it crops to the grid and never scales. 1920x800 is already 60x25 on that grid, so the real flow runs
+062 **untouched at native resolution**, where the face is 2.6 tokens rather than 1.7. The bench
+downsampled; the product does not.
+
+**Bench correction, carried forward:** the arms hardcode `#167`/`#168` while the shipped flow
+derives them from the source. Any future corpus-2 arm runs at **native 1920x800, no resize step**.
+Corpus 1 was never affected - 864x480 is `ref2v_ms_004.mp4`'s own size.
+
+### Reference facts gathered without spending GPU
+
+`context_length` is a combo `["22","5","39","56"]`, **default 22 = 0.917 s** (not 2 s), clamped by
+`n = min(request, available)` then snapped DOWN to `VIDEO_RUN_GRID = (124,107,90,73,56,39,22,5,1)`:
+a 1.00 s source asked for 56 pins 22; a 0.50 s source asked for 22 pins 5. The grid continues upward
+at 17m+5 and the 56 ceiling is only the dropdown, so the cap is the port's to choose. Combos are
+enforced server-side (`execution.py:1071`). And `context_latent` needs the previous clip's sampler
+output latent, which an IMPORTED video does not have - the pixel path must survive in the port.

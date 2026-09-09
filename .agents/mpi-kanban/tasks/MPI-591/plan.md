@@ -1772,3 +1772,85 @@ near-silence rather than over the hooves/tyres/wind bed the prompt asked for. **
 is fine; the sound bed is what broke.** Whether that is our chain or is simply what H3 does with
 speech in an extension prompt cannot be told from one arm - it needs a silent-prompt arm on this
 same corpus as the family's own reference point.
+
+## PHASE 7b - THE CUT-BACK WORKS, AND THE PLAN'S RESIZE ADVICE IS WRONG TWICE (2026-09-09)
+
+`validation.md` Phase 7b. Fabio's question: 062 leaves a wide POV shot at 3.200 s and ends on an
+eyes ECU. Can the extension cut BACK to that wide shot? His reasoning for why context matters, and
+it is right: the wide shot cannot be re-invented from prose - horses, the lady, the road, the
+light, the time of day.
+
+**IT WORKS.** `arm_cutback_c2_10step.json`, `context_length` 56, `length` 158 (so new footage stays
+102 frames and the arm is comparable to the approved one), 730.9 s. The extension cuts to the wide
+POV on the FIRST frame it is free of the pin - a single-frame hard cut, frame-to-frame diff 56.29
+against a 9.48 mean (5.9x), no dissolve - and carries the scene: the draft horse in harness at
+frame left, the man on the dapple grey at right, the high downward angle, the road in motion blur,
+the low warm light, the forearm on the rein bottom-right. It did NOT reproduce the revolver locked
+out at the lens, which the prompt asked for; it took the framing and the scene, not the pose.
+
+**56 was enough. The 124-frame experiment is unnecessary** - the pinned window straddling 062's cut
+gave the model both the scene and an example of the edit, and it took them.
+
+### THE RESIZE ADVICE IN "THE SECOND CORPUS IS CHOSEN" IS WRONG TWICE - IGNORE IT
+
+Phase 7a already recorded that 960x400 is off the 32-grid. The deeper error: **no resize was needed
+at all.** 1920x800 is ALREADY a legal H3 size - 1920/32 = 60, 800/32 = 25. The only real motive for
+downscaling was VRAM and wall clock on the 4060 Ti, and the section presents it as a correctness
+requirement. It is not.
+
+**And the shipped flow does not downscale.** `comfy_workflows/flow_h3_extend.json` `#916`:
+
+    ImageResizeKJv2   width = ['331', 5]   height = ['331', 6]      <- MpiLoadVideo's OWN w/h
+                      divisible_by = 32    keep_proportion = 'crop'
+
+It feeds the source's own dimensions back in and only CROPS to the 32-grid, never scales. 062 passes
+through untouched at 1920x800 in the real flow.
+
+**Consequence: every picture judgement on corpus 2 this session is at a resolution users never
+see.** The cut-back result stands - it cut back and carried the scene - but the degraded face is a
+bench artefact of a 1152x480 the product would not have used. **Corpus 1 is unaffected**: 864x480 IS
+`ref2v_ms_004.mp4`'s native size, so the whole step ladder and `shift_audio` sweep are clean. **Any
+future corpus-2 arm runs at native 1920x800 with no resize step.**
+
+### context_length: THE DEFAULT IS 0.917 s, THE 56 CAP IS A DROPDOWN, AND IT SNAPS DOWN
+
+Read off `/object_info` and `ComfyUI-H3-Motion-Context/nodes.py`, not assumed.
+
+    context_length: (["22", "5", "39", "56"], {default: "22"})
+    n = min(int(context_length), available)
+    run = next(g for g in VIDEO_RUN_GRID if g <= n)
+    VIDEO_RUN_GRID = (124, 107, 90, 73, 56, 39, 22, 5, 1)
+
+* **Default is 22 frames = 0.917 s, not 2 s.** 56 = 2.333 s is the maximum offered and Phase 7b is
+  the first arm ever to use it.
+* It clamps to what the clip HAS, then snaps DOWN to the grid, and warns rather than erroring. A
+  1.00 s source (24 frames) asked for 56 pins **22**, not 24. A 0.50 s source (12 frames) asked for
+  22 pins **5**. Short sources lose context off a cliff.
+* Why snap down: an off-grid count encodes to the same number of latent steps as the lower grid
+  point, but those steps then cover the FIRST frames of the input rather than the last - the pin
+  would end early and the join would jump.
+* **The grid continues upward at 17m+5; the node "only offers up to 56" in its dropdown.** So the
+  2.333 s ceiling is a UI cap, not a model limit. Combo values ARE enforced server-side
+  (`execution.py:1071`, "Value not in list"), so reaching past it needs the node's list edited -
+  and `ComfyUI-H3-Motion-Context` is bench-only and never enters `node_lock.json` (D6). **The cap
+  is ours to choose in the MpiNodes port.**
+
+### A CONSTRAINT THE PORT MUST DESIGN AROUND: context_latent CANNOT SERVE AN IMPORTED VIDEO
+
+`context_latent` is documented as skipping the decode/re-encode that costs quality at every join,
+and D4/D5 wants it in the port. But it needs **the previous clip's SAMPLER OUTPUT latent**. A user
+who imports a video has no such latent - you would VAE-encode its pixels, which is the same round
+trip. **So the latent path only helps CHAINED extensions from our own pipeline**, and the pixel path
+has to stay for imported media. Design for both, not one.
+
+### THE BENCH AND THE SHIPPED FLOW ARE DIFFERENT ARCHITECTURES
+
+| | transformer | context mechanism |
+|---|---|---|
+| bench arms (all session) | **fl2va** | `MiniMaxH3MotionContext` |
+| `flow_h3_extend.json` (runtime AND raw) | **ref2va** | `MpiH3References` + `MiniMaxH3AddGuide`, last 39 frames |
+
+**The FL2VA swap has NOT landed** - both the runtime and raw shipped flows still load
+`minimax_h3_ref2va_pruned_int8_convrot`. Making it land is a transformer AND mechanism change, and
+the reference path must be REMOVED rather than left unused: fl2va does not error on references, it
+samples fine and silently ignores them (`docs/models/h3/ref2va.md`).
