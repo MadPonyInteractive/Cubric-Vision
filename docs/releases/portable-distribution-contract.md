@@ -254,6 +254,40 @@ healthy — and printed *"Update applied successfully"*. **The planning conseque
 reaches only the users exactly one version behind. Everyone further back needs a FULL
 bundle**, which is what an absent `release-baselines/*.json` makes the build emit.
 
+**THE APPLIER THAT RUNS IS THE ONE ALREADY ON THE USER'S DISK.** `win-update.cjs` resolves
+`const applyScript = path.join(root, 'update', 'apply-update.cjs')` — `root` is the
+installation, not the bundle — and `main.js`'s `run-update` handler spawns the installed
+`update/win-update.cjs` (Windows) or `update.sh` / `update.command` (Linux/macOS). The
+bundle's own copy of the applier is written *by* the run, far too late to govern it.
+
+So **every fix to the updater protects the update AFTER the one that ships it, never that
+one.** Verified on a real 1.4.4 install (2026-09-08): `grep -c fromVersion
+update/apply-update.cjs` was `0` before the update and `4` after. Three separate fixes have
+now been caught by this, and it is not a bug to fix — it is the shape of in-place updating.
+All three first ship in 1.5.0, and **none of them helps anyone updating TO 1.5.0**:
+
+| fix | first protects | measured |
+|---|---|---|
+| MPI-523 manifest refresh | 1.5.0 → next | `grep -c UPDATE_MANIFEST_REL` is `0` at tag `v1.4.0` and `0` in the real 1.4.4 install's applier, `4` in 1.5.0's. The 1.4.4 → 1.5.0 update therefore left `update-manifest.json` reading `toVersion 1.4.4`, which is MPI-710 |
+| MPI-709 `fromVersion` guard | 1.5.0 → next | `0` refs before, `4` after |
+| MPI-709 skip-identical copy | 1.5.0 → next | the 1.4.4 applier rewrites every listed file regardless |
+
+MPI-523 is the cautionary one: its unit test passes, and has passed since 2026-08-30, because
+it tests the applier in the tree — which is never the applier that runs. A green test here
+says nothing about the field until a full release cycle has gone by.
+
+Three consequences when planning a release:
+
+1. A guard cannot rescue the users who most need it. Anyone on a version predating it applies
+   whatever you ship without complaint, so **the release body is their only protection** —
+   say plainly which installs the bundle serves and tell the rest to take the full zip.
+2. Do not test a shipped bundle expecting your new applier to run. Extract a genuine
+   published install of the source version; it brings its own.
+3. A FULL bundle is not automatically the safe universal answer. It contains the Electron
+   runtime, and an older applier can fail on files the running process holds. See
+   `isBusyError` / `targetAlreadyMatches` in `apply-update.cjs`, both added after a 1.5.0 FULL
+   bundle aborted on `icudtl.dat` — after evicting `CubricVision.exe`, with no rollback.
+
 ## Portable Root Layout
 
 **There are two layouts, and the split is deliberate.** Linux and macOS keep the

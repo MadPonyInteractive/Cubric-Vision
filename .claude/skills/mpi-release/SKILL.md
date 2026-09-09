@@ -37,8 +37,27 @@ mandatory user-facing copy gates). The version file edits belong to
 
 ## Preconditions
 
-- You are on **master** and it is at the version you're bumping *from*. Confirm
-  with `git show master:js/core/appVersion.js`.
+- **Find the release line FIRST — it is often NOT master.** Resolve the last
+  published tag to a commit and ask which branches contain it:
+  ```bash
+  gh release list --repo MadPonyInteractive/Cubric-Vision --limit 3
+  git rev-parse "v<last>^{}" && git branch -a --contains "v<last>^{}"
+  ```
+  Whichever branch that names is the line you cut from, and you work in ITS
+  worktree (`git worktree list`). **1.4.3, 1.4.4 and 1.5.0 were all cut from the
+  `1.4.2` maintenance branch**, created by step 9, while master ran on toward the
+  next minor — master was 879 commits ahead and still stamped `1.4.2`. This
+  precondition used to read "you are on master", and in 2026-09-08 MPI-709 that
+  cost an hour: every fix for the bug being released had been committed to
+  master, so none of it was in the release it was written for. `mpi-continue`
+  will not catch this for you; the card says nothing about branches.
+- **The line you cut from is at the version you're bumping *from*.** Confirm on
+  that branch, not master: `git show <branch>:js/core/appVersion.js`. A `git
+  status` that looks right in the wrong worktree is the trap.
+- **Check `release-baselines/*.json` belongs to that line too.** The branches
+  diverge on purpose: master has none (so a build from it emits a FULL bundle),
+  the maintenance line carries them (so it emits a delta). See
+  `release-baselines/README.md` § Current baselines.
 - The user-facing changes are feature-complete and `docs/releases/UNRELEASED.md`
   holds the accumulated notes since the last release.
 - You know the digit to bump (table above).
