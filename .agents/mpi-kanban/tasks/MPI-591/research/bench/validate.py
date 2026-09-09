@@ -12,6 +12,48 @@ import urllib.request
 BENCH = 'http://127.0.0.1:8188'
 
 
+def check_int_widget_limits(graph, info, bad):
+    """An MpiInt feeding a numeric widget escapes that widget's own min/max/step.
+
+    This cost a full dispatch on 2026-09-09: #167/#168 carried 960x400 into
+    MpiH3ImageToVideo, which declares step 32. 400 is not a multiple of 32, so the
+    latent grid came out ODD (400/16 = 25) and the DiT's 2x2 patchify died inside
+    SamplerCustomAdvanced with a reshape error 30 s in - a failure mode that names
+    neither node and looks nothing like a size problem.
+
+    The widget would have refused it in the UI. A link bypasses the widget, so the
+    only place left to check is here.
+    """
+    for nid, node in sorted(graph.items(), key=lambda x: int(x[0])):
+        cls = node['class_type']
+        if cls not in info:
+            continue
+        spec = info[cls]['input']
+        allowed = dict(spec.get('required', {}))
+        allowed.update(spec.get('optional', {}))
+
+        for name, val in node['inputs'].items():
+            if not (isinstance(val, list) and len(val) == 2):
+                continue
+            src = graph.get(str(val[0]))
+            if not src or src['class_type'] != 'MpiInt':
+                continue
+            n = src['inputs'].get('int')
+            opts = allowed.get(name)
+            if not isinstance(n, int) or not opts or not isinstance(opts[1], dict):
+                continue
+            rules = opts[1]
+            where = '#%s %s.%s <- #%s MpiInt %d' % (nid, cls, name, val[0], n)
+            step = rules.get('step')
+            if step and n % step:
+                bad.append('%s: NOT a multiple of step %d (nearest %d / %d)'
+                           % (where, step, n - n % step, n - n % step + step))
+            if 'min' in rules and n < rules['min']:
+                bad.append('%s: below min %s' % (where, rules['min']))
+            if 'max' in rules and n > rules['max']:
+                bad.append('%s: above max %s' % (where, rules['max']))
+
+
 def main(graph_path):
     graph = json.load(open(graph_path))
     info = json.load(urllib.request.urlopen(BENCH + '/object_info', timeout=120))
@@ -59,6 +101,8 @@ def main(graph_path):
                            % (nid, cls, name, val,
                               ('did you mean %s?' % near[:3]) if near
                               else '%d options, none close' % len(opts)))
+
+    check_int_widget_limits(graph, info, bad)
 
     print('%d nodes checked against %d installed classes' % (len(graph), len(info)))
     if bad:

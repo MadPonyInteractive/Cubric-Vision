@@ -1700,3 +1700,75 @@ not against the first corpus.
 described as "the previous clip's SAMPLER OUTPUT latent". That is the D4/D5 latent path the plan
 wants built into the MpiNodes port from the start, and it is already reachable on the bench today.
 Not needed for the speech work; recorded so the port does not rediscover it.
+
+## PHASE 7a - THE SPEECH STAGE RAN ON CORPUS 2, AND THE PLAN'S RESIZE WAS WRONG (2026-09-09)
+
+`validation.md` Phase 7a. First arm on the second corpus: `arm_speech_c2_10step.json`, the
+standing recommendation (10 steps, `shift_audio` 1, turbo LoRA on, seed 591000591) with the
+shouted line added. 400.6 s wall, success.
+
+### THE 960x400 RECOMMENDATION IS WRONG AND COST A DISPATCH - USE 1152x480
+
+The section above picks 960x400 for exact 2.4 aspect at 0.93x A1's pixel count. **400 is not a
+legal H3 dimension.** `MpiH3ImageToVideo` declares `step: 32` on `width` and `height`, and
+`#167`/`#168` feed them from `MpiInt` **links**, which bypass the widget that would have enforced
+it. 400/16 = 25, an ODD latent grid, and the DiT's 2x2 patchify needs an even one:
+
+    #153 SamplerCustomAdvanced RuntimeError:
+    shape '[1, 24, 1, 1, 12, 2, 30, 2]' is invalid for input of size 36000
+    wanted 24*24*60 = 34560, got 24*25*60 = 36000
+
+**The invariant is NOT the one this plan wrote down.** The feared failure was source-vs-graph
+disagreement; the two agreed perfectly at 960x400. The real rule is that **both dimensions must be
+multiples of 32** - and the source must then be resized to match, so the pin still agrees.
+
+Exact 2.4 aspect on a 32-grid leaves only **768x320** and **1152x480**. Picked 1152x480: it keeps
+corpus 1's height, and the ECU of the man's eyes needs the detail. It costs 1.33x A1's pixel count
+and ran 400.6 s against the ladder's ~250 s, so **wall clocks on corpus 2 are NOT comparable to the
+first corpus's** - one more reason this is a separate baseline family.
+
+### validate.py NOW CATCHES THIS CLASS - the handoff's warning is retired
+
+`check_int_widget_limits` walks every `MpiInt` feeding a numeric widget and enforces the declared
+`min`/`max`/`step` off `/object_info`. Proved by regenerating the failing shape and watching it
+refuse:
+
+    #472 MpiH3ImageToVideo.height <- #168 MpiInt 400: NOT a multiple of step 32 (nearest 384 / 416)
+
+So "validate.py will NOT catch that mismatch" is **no longer true for the size class**. It still
+cannot check that `#167`/`#168` equal the SOURCE's resolution - that needs an ffprobe of `#600`.
+
+### 062 IS NOT A PLAIN CLOSE-UP: IT IS A TWO-SHOT WITH A HARD CUT AT 3.200 s
+
+Read off its own sidecar, not assumed. Shot 1 is a POV from the wagon with the man riding
+alongside, revolver out; **Shot 2 is an EXTREME CLOSE-UP of his eyes**, cropped above the brows and
+below the bridge of the nose, finishing the line `...or I'll shoot.` The pins land clean:
+
+| | window | vs the cut at frame 76.8 |
+|---|---|---|
+| picture pin, 22 frames | frames 102-123 = 4.250-5.125 s | after |
+| audio pin, 24 frames | 4.167-5.167 s | after |
+
+Both entirely inside Shot 2, so the extension continues ONE continuous shot and no pin straddles
+the cut. **A bonus for this stage:** no mouth is in frame, so the shouted line is judged on voice
+alone with no lip-sync confound. **A warning for any third corpus:** a source with a cut inside its
+last second would put a scene change inside the pin, and nothing in the graph would say so.
+
+### THE RESULT: THE INSTRUMENTS SAY THE AMBIENT BED DID NOT CONTINUE
+
+Fabio's ear is the gate and it has the clip. What the instruments say, with the caveat that the
+level step is meaningless once a shout is in the prompt:
+
+| metric | reading |
+|---|---|
+| level step | **+6.86 dB** - uninterpretable, it averages a shout with whatever bed is under it |
+| **floor** (new) | **-7.82 dB** - the extension's quietest window is 7.8 dB below the source's quietest |
+| **range** (new) | **+13.72 dB** - the extension's p90-p10 is 13.7 dB wider than the source's |
+| seam corr | **0.390**, 2/35 windows above 0.6 - "does not phase-track" (A1 on corpus 1 was 0.791) |
+| luma | clean - worst 1-frame step 2.20, no flash or stall at the join |
+
+The floor and the range are the two that matter and they agree: the extension emits the shout over
+near-silence rather than over the hooves/tyres/wind bed the prompt asked for. **Picture continuity
+is fine; the sound bed is what broke.** Whether that is our chain or is simply what H3 does with
+speech in an extension prompt cannot be told from one arm - it needs a silent-prompt arm on this
+same corpus as the family's own reference point.

@@ -2137,3 +2137,74 @@ Two noise floors were needed and only one was ever measured. A cache-eviction fl
 evicted weights) answers "is this run reproducible"; a SEED floor answers "is this difference
 real". They are not the same number and the seed one is bigger. **Any future arm comparison on this
 bench is significant at ~0.9 dB, and single-pair differences below that are not findings.**
+
+## Phase 7a - THE SPEECH STAGE ON CORPUS 2 (2026-09-09): the bed drops, the picture holds
+
+First arm of the second baseline family. `arm_speech_c2_10step.json`, derived from
+`arm_shift1_10step.json` by `research/bench/make_speech_arm.py` with four edits and no others:
+`#600` source, `#167`/`#168` size, `#232` prompt, `#207` prefix. Carried over untouched: 10 steps,
+`shift_audio` 1, turbo LoRA on, seed 591000591, beta/euler.
+
+### The corpus
+
+`ref2v_ms_062.mp4`, probed not assumed: 1920x800, 124 frames, 24 fps, 5.167 s, 32 kHz. Same
+temporal grid as corpus 1, so `level.py`'s `JOIN = 5.167`, `SR = 32000`, the 22/24 pin and the
+`4 + 22/24` arithmetic all hold with no edit.
+
+Pre-resized once to **1152x480** (exact 2.4 aspect, both dims on the 32-grid), lanczos, **audio
+stream-copied** so the pinned audio is bit-identical to the source. Lives at
+`research/bench/out/corpus2/` - `out/` is gitignored, so no binary enters the tree; rebuild it with
+one ffmpeg line if it is ever missing.
+
+### THE FIRST DISPATCH FAILED IN 30 s. The plan's 960x400 is not a legal H3 size.
+
+    #153 SamplerCustomAdvanced RuntimeError:
+    shape '[1, 24, 1, 1, 12, 2, 30, 2]' is invalid for input of size 36000
+
+`MpiH3ImageToVideo` declares `step: 32` on width and height. 400/16 = 25 is an odd latent grid and
+the 2x2 patchify needs an even one - it asked for 24*24*60 = 34560 and got 24*25*60 = 36000. The
+error names neither the size nor the node that set it, and surfaces two nodes downstream of the
+cause.
+
+**Why it got past validate.py:** `#167`/`#168` are `MpiInt` **links**. A link bypasses the widget
+that enforces `step`. `check_int_widget_limits` was added to `validate.py` to close exactly that
+gap, and was proved against the failing shape before being trusted:
+
+    #472 MpiH3ImageToVideo.height <- #168 MpiInt 400: NOT a multiple of step 32 (nearest 384 / 416)
+    1 PROBLEM(S) - do not dispatch
+
+### `dynamics.py` IS NEW AND PROVEN BEFORE USE
+
+`level.py`'s single steady-state step cannot separate "continued the bed AND added a shout" from
+"dropped the bed and emitted only a shout" - both read as "louder". The separator is the FLOOR, not
+the mean: a continued bed puts a hard lower bound on every window.
+
+`--self-check` on synthetic signal: a continued bed reads **+0.02 dB**, a dropped bed reads
+**-40.08 dB**. **The first version of that self-check was wrong** - it sprayed the shout randomly
+across every sample instead of into contiguous windows, so it lifted the floor in both cases and
+read +15.15 vs +13.48, indistinguishable. A shout is contiguous in time. The check caught its own
+synthetic being wrong, which is the reason to write it before reading any real number.
+
+### Result
+
+| metric | source side | extension side | delta |
+|---|---|---|---|
+| floor (min 250 ms window) | -43.42 dB | **-51.23 dB** | **-7.82** |
+| p10 | -41.63 | -50.61 | |
+| median | -26.53 | -14.46 | |
+| p90 | -18.20 | -13.46 | |
+| range p90-p10 | 23.43 dB | **37.15 dB** | **+13.72** |
+
+`level.py` step **+6.86 dB** - recorded for completeness and **not interpretable**: with speech in
+the extension it is averaging the shout together with whatever bed is under it. Seam probe **mean
+corr 0.390**, only 2/35 windows above 0.6, verdict "does not phase-track the source tail"; corpus 1
+arm A1 scored 0.791 / CONTINUATION, but that is a different family and the comparison is
+qualitative only. `luma.py` across the join: worst 1-frame step 2.20, no flash and no stall.
+
+**Reading:** floor down and range wide, both pointing the same way - the extension put the shout
+over near-silence instead of over the hooves/tyres/wind bed the prompt asked for. The picture is
+continuous. One arm cannot say whether that is our chain or is what H3 does with any speech prompt;
+**a silent-prompt arm on this same corpus is the missing reference point** and is the cheapest next
+measurement.
+
+**The ear is still the gate for this stage** - the joined clip went to Fabio.
