@@ -4,7 +4,40 @@
 line of it was built.** Read `brief.md` first (licences + the measured VRAM facts — unchanged
 and still binding), and `../MPI-664/research/stable-audio-3-bench.md` for every bench fact.
 
-## Current State — 2026-09-07, THE BUILD IS DONE. Only the graphics are left.
+## Current State — 2026-09-09, THE GRAPHICS SHIPPED. No build item is left on this card.
+
+`8c4754d1` + `a9efcfa2`, both in `origin/master`. Both flows now carry `preview`/`video`;
+neither tile falls back to a gradient any more.
+
+🟢 **SONG — off `flowMusicMaker_013`, a real 120s run already on disk** ("Don't wake the
+morning", `<Singer A>` female, 75 BPM). No GPU spent. Both assets lead on the LYRIC-SHEET
+grammar (`[Chorus]` in heat, `<Singer A>` in frost) because a line-of-type-over-a-waveform is
+already Chatter Box's tile AND Drama Box's, and a third would have been invisible inside the
+family. Hero writes the sheet a group at a time, draws the track under a heat playhead, returns
+to the bare page. 33,576 B / 111,115 B, 7.2s, loop seam 0.006/255. The band is a 12s excerpt on
+purpose — the whole two minutes averages into a flat pink brick at 220px.
+
+🟢 **SOUND & MUSIC — four NEW runs, one per category** (Fabio cleared the GPU 2026-09-09; the
+old clips died with the deleted throwaway project and nothing survived on disk). Durations
+MEASURED off the files: **10.031 / 10.031 / 4.087 / 2.043s** for 10/10/4/2 asked — the exact-length
+claim is verified, not assumed. Both assets are a TIME RULER, not lanes: a row's width IS its
+length, frost tick where each stops. That is deliberate distance from Stems, whose tile is five
+EQUAL lanes of one track — four labelled lanes here would have been the same picture with
+different words. 31,174 B / 74,935 B, 8.0s, loop seam 0.013/255.
+Source audio lives in an EPHEMERAL scratchpad project
+(`…/998b35a5-…/scratchpad/mpi694-art/MPI-694 Flow Art/Media/flowSoundMusic_00{1..4}.flac`) —
+**if the art must ever be rebuilt, that audio has to be re-made or moved somewhere durable
+first.** Prompts and settings are in `sam-runs.json` beside it.
+
+🔴 **A PLAYBOOK TRAP WAS FOUND THE HARD WAY and is now in the trap table:** an element bigger
+than the viewport screenshots with the unpainted region PURE BLACK, correct dimensions, no
+error. It put a tile with a black top third into the live Flow Library before it was caught.
+Resize the viewport larger than the element, then assert a known-ground pixel at each edge.
+
+🟡 **`js/data/flowsRegistry.js` WAS CO-EDITED** — a peer's `op: 'promptEnhance'` removals
+(MPI-677) sat unstaged in the tree while this card committed. Kept out with content-anchored
+hunk staging + `git commit -n`; they have since landed as `2558895c`. `mpi-message`
+`40302890-dd95-4cb0-b061-9f85c18f15ed` records it.
 
 Everything below this block is the 2026-09-05 state, kept because its findings still hold.
 The delta since: the licence gate SHIPPED, both arms RAN for real in Fabio's own app, three
@@ -283,8 +316,9 @@ restricts by territory and neither bars outputs.
 - 🟡 A direct A/B against MiniMax on one instrumental brief.
 - 🟡 Does the reprompter beat a hand-written prompt? Every clip judged good so far was made
   with it **off** — which is the evidence behind shipping Flow B without one.
-- 🟡 Preview graphics for BOTH flows (`/mpi-flow-graphics`), and
-  `docs/playbooks/add-flow/existing-flows/minimax-music.md` needs renaming and a sibling.
+- ✅ ~~Preview graphics for BOTH flows~~ — DONE 2026-09-09, `8c4754d1`.
+- 🟡 `docs/playbooks/add-flow/existing-flows/minimax-music.md` needs renaming to match `Song`,
+  plus a sibling page for Sound & Music. **The only doc item left on this card.**
 - 🟡 An agent-dispatched flow gets no caption (`agentDispatch.js:_submitFlow` vs
   `MpiBaseFlow._run`) — worth its own card.
 
