@@ -1738,3 +1738,402 @@ synthetic generation BEFORE the GPU run and reproduced Phase 5h's source-side **
 so the instrument agrees with the baseline it is compared against. `validate.py` checks a graph
 against the live `/object_info` - every class installed, every required input wired, every weight
 offered - which is a second of insurance against a 10-minute run dying on a typo.
+
+## Phase 6b - ARM A2, THE TURBO LoRA BACK ON: CONVICTED (2026-09-08)
+
+> **CORRECTED BY PHASE 6c.** The BUNDLE is convicted and everything measured below stands, but
+> the LoRA is NOT the culprit inside it - A2b removed the LoRA and came back at -6.16 dB.
+> The 8-step `beta`/`euler` sampler arm owns the damage. Do not read this section alone.
+
+`research/bench/arm_a2_turbo.json`, 25 nodes, dispatched under the lease as `cbc2cb5f`, **240.3 s**
+wall against A1's 580.8 s. ONE bundle changed against A1 and nothing else - `git`-level diff of the
+two graph files is exactly seven lines: `#516 shift_audio` 2 -> 4, a new `#455 MpiLoraModel`
+(`minimax_h3_fl2v_turbo_8step_v1.0_768p`, strength 1.0) wired `#516 -> #455`, `#338` simple/25 ->
+beta/8 now reading `#455`, `#346` res_multistep -> euler, `#150` guider reading `#455`, and the
+output prefix. Same source clip, same seed 591000591, same 22/24 pin, same 864x480, same prompt,
+same pixel path, same single stage, still no EasyCache and no attention backend.
+
+`what_ran.py` on the prompt id confirms it from the SERVER's echo, not from the posted file: the
+LoRA executed at 1.0 in the model path, `beta/8`, `euler`, `#153` reading `#455`.
+
+| metric | shipped 8-step (P5h_encA) | **A1 bare bones** | **A2 turbo** |
+|---|---|---|---|
+| level step across the join | -3.51 dB | **-0.43 dB** | **-5.97 dB** |
+| seam correlation | not measured | 0.791 | **0.825** |
+| worst 1-frame luma step at join | 1.17 | 0.49 | 0.64 |
+| luma excursion span | 2.60 | 1.90 | 2.41 |
+| wall clock | 250.5 s | 580.8 s | **240.3 s** |
+
+**THE TURBO BUNDLE OWNS THE LEVEL DEFECT.** -5.97 against A1's -0.43 is a **5.54 dB** move on a
+metric whose measured noise floor is 0.55 dB - ten times the bar, on the one variable the plan
+named as prime suspect. The upstream README's "turbo LoRAs thicken the sound" and Phase 5h's
+untested suspicion are now the same confirmed finding. Source-side steady RMS came back **-26.35
+dB**, bit-for-bit the figure every previous arm measured, so the instrument agrees with the
+baseline it is compared against.
+
+### THE PIN IS NOT WHAT TURBO BREAKS - the defect is pure GAIN, not continuity
+
+Seam correlation went **UP**: 0.825 vs A1's 0.791, 34/35 windows above 0.6, and the lag is the same
+constant **-9.0 ms** with a 0.07 ms trend and 0.06 ms residual rms. Past the seam it collapses to
+0.23/0.20, the method's own sanity check firing correctly. So under turbo the model still
+phase-locks to the source and still continues it - it just continues it 6 dB too quiet. That
+separates two failure modes Phase 5h could not tell apart, and it means the end-aligned pin
+mechanism is not implicated in the regression at all.
+
+### The SHAPE differs from Phase 5h - this one decays, that one was flat
+
+Phase 5h's shipped-graph defect was a **flat offset** holding from 5.25 s to the end. A2's is a
+**ramp into a floor**: -29.19 at join+0.25, sliding to about -32.5 by join+2.0 s, then flat to the
+end. Same direction, different shape, so "turbo makes it quieter" is not one single reproduced
+mechanism. Recorded, not chased.
+
+### Two things this does NOT say
+
+* **NOT "the shipped graph is better".** A2 at -5.97 is 2.46 dB below shipped's -3.51, outside the
+  band - but they are not the same chain. Shipped is ref2va + `MiniMaxH3AddGuide` + EasyCache +
+  the attention backend + half-res/upscale/refine, and it carries the **ref2v** turbo LoRA, not the
+  **fl2v** one. The comparison that means something is A2 vs A1, and that one is unambiguous.
+* **NOT a picture finding.** 0.64 vs A1's 0.49 is the wrong way, but **no noise floor was ever
+  measured for the luma metric** - only for the level metric (0.55 dB). A 0.15 difference on an
+  uncalibrated instrument is not interpretable. Both are far under the shipped 1.17.
+
+### ATTRIBUTION IS NOT FINISHED - A2 moved three things, and one is already cleared
+
+`shift_audio` 2 -> 4 is **not** a candidate: Phase 5h measured 4 -> 5 at 0.21 dB, inside the band,
+and traced the compensation in `comfy/ldm/minimax/model.py` that makes it a change of variables
+rather than a gain. That leaves two suspects inside the bundle, and they are not the same thing:
+
+1. **the turbo LoRA itself**, or
+2. **the 8-step beta/euler arm** - a quality/step-count effect that would show up with no LoRA at
+   all.
+
+**A2b decides it in about 90 s:** A1 exactly, plus beta/8 + euler, **no LoRA**. Near -0.43 convicts
+the LoRA; near -6 convicts the step count. Until that runs, "turbo" is convicted as a bundle and
+the individual culprit is not named.
+
+### What turbo actually buys, so the trade is on the record
+
+340 s of wall clock - 240.3 s against 580.8 s, 2.4x - for 5.54 dB of level. That is the number the
+shipping decision is made against, not a vague "turbo is faster".
+
+## Phase 6c - ARM A2b: THE LoRA IS EXONERATED; THE FAST SAMPLER ARM OWNS IT (2026-09-08)
+
+`research/bench/arm_a2b_8step_nolora.json`, 24 nodes, dispatched as `c90fabc1`, 190.2 s. Exactly
+one thing differs from A2: `#455 MpiLoraModel` is deleted and its two consumers (`#338`, `#150`)
+read `#516` again. `shift_audio` stays 4, `beta/8` and `euler` stay, same source, same seed.
+
+**The bench cached 18 of the 24 nodes** - `#472` conditioning, `#601` motion context, `#516` sigma
+shift, both VAEs, the UNET, the CLIP. So no cache eviction happened between A2 and A2b and the only
+thing that differed reaching the sampler was the model itself. This is a TIGHTER comparison than
+the 0.55 dB floor describes, because that floor was measured across an eviction.
+
+| | A1 | A2 | **A2b** |
+|---|---|---|---|
+| turbo LoRA | no | **YES** | no |
+| sampler arm | simple/25, res_multistep | beta/8, euler | beta/8, euler |
+| `shift_audio` | 2 | 4 | 4 |
+| **level step** | **-0.43 dB** | **-5.97 dB** | **-6.16 dB** |
+| seam correlation | 0.791 | 0.825 | 0.806 |
+| worst 1-frame luma step | 0.49 | 0.64 | 0.49 |
+| 0-250 Hz shape | not measured | -5.88 dB | **-7.35 dB** |
+
+**A2 vs A2b is 0.19 dB.** Inside the noise floor, with no eviction between them. Removing the turbo
+LoRA entirely changed nothing - if anything A2b is marginally worse and its bass collapse is
+deeper. **The turbo LoRA is not the culprit. The 8-step `beta`/`euler` sampler arm is.**
+
+This overturns Phase 5h's prime suspect and the headline of Phase 6b. It also overturns the
+upstream README's "turbo LoRAs thicken the sound" as an explanation for OUR defect - the README may
+still be right about their chain, but on this bench the LoRA is not carrying the damage.
+
+`shift_audio` remains cleared (Phase 5h: 0.21 dB, compensated in `comfy/ldm/minimax/model.py`), so
+what is left inside the convicted bundle is `beta/8` + `euler` against `simple/25` +
+`res_multistep`. That is still three coupled things - scheduler, step count, sampler - and A2b does
+not separate them from each other. It separates all three, as a group, from the LoRA.
+
+**A1 vs A2b is a FOUR-way difference, not a step-count difference** - checked against the two
+graph files rather than from memory: scheduler `simple` -> `beta`, steps 25 -> 8, sampler
+`res_multistep` -> `euler`, and `shift_audio` 2 -> 4. Minus the cleared `shift_audio`, three
+coupled changes remain. **Nothing measured so far says the STEP COUNT specifically is the
+cause.** `beta` and `euler` are equally unexamined, and a scheduler change moves the sigma
+schedule the audio latent rides every bit as much as a step count does.
+
+**The arm that isolates it: A2c = A2b with `steps` 8 -> 25 and NOTHING else** - `beta`,
+`euler` and `shift_audio` 4 all held. Bass returns -> the step count owns it. Bass stays
+collapsed -> `beta`/`euler` own it, and the fast/quality toggle is not a step slider at all.
+
+### FABIO'S EAR, AND WHAT THE SPECTRUM ACTUALLY SAYS
+
+He listened to A2 and reported the horses' hooves came back soft, "like they had a low-pass filter
+on them", losing high frequencies. That is a real defect, correctly localised to the hooves, and
+`level.py`'s single broadband number is structurally incapable of seeing it - a uniform level drop
+and a filter both read as "quieter" there. So `bands.py` was written for it.
+
+**The mechanism is the opposite of a low-pass.** On BOTH 8-step arms the damage is a BASS COLLAPSE:
+
+* 0-250 Hz falls **-9.62 dB (A2)** / **-10.71 dB (A2b)**, which is **5.88 / 7.35 dB deeper** than
+  the overall step across the other bands.
+* The 2-8 kHz region - the hoof CLICK - moves with the crowd, shape +-0.1 dB. It is not attenuated
+  relative to anything.
+* Spectral centroid goes **UP**, 352 -> 645 Hz (A2) / 725 Hz (A2b), because the bass left.
+* Crest factor is flat (+0.1 / -0.2 dB), so attacks are as sharp as the source's - **not** transient
+  smearing either.
+
+A hoof impact stripped of ~10 dB of body reads as thin, distant and soft, which is the percept he
+described; the attribution to "lost highs" is the one part the instrument contradicts. Recording
+both halves because the ear found the defect and the instrument found its mechanism, and shipping
+copy that says "loses treble" would be wrong.
+
+**This also reframes the -6 dB itself.** It was never a uniform level drop. The low band is by far
+the loudest (source 15.89 dB against -9.35 at the top), so its collapse dominates the broadband RMS
+that `level.py` reports.
+
+### A1's BANDS ARE NOT MEASURED, and cannot be without a re-run
+
+A1's clips lived in a scratchpad that did not survive its session. Its bass is INFERRED intact: a
+10 dB collapse in the dominant band cannot coexist with a -0.43 dB broadband step. Sound inference,
+but it is inference, and one 580 s re-run of the committed graph would turn it into a measurement.
+
+### NEW INSTRUMENT: `bands.py`
+
+Per-band RMS across the same two steady windows `level.py` uses, then each band's step MINUS the
+median step - the SHAPE, i.e. what a band did over and above the overall level change. Plus crest
+factor and spectral centroid. `--self-check` proves it on synthetic ground truth BEFORE it is
+trusted: a uniform -6 dB reads +0.00 worst shape, a 3 kHz low-pass reads -24.47.
+
+**A framing that was tried and is WRONG, recorded so it is not retried:** a tilt defined as
+top-band step minus bottom-band step. On this material the band that moves most is the BOTTOM one,
+so that tilt reports "+8.03 dB, brighter at the top" for a clip whose bass merely collapsed, and
+the rising centroid corroborates the same wrong story. Anchor the read to the median across bands,
+never to one end.
+
+### WHAT THIS MEANS FOR THE PRODUCT - the toggle is STEPS, not the LoRA
+
+Fabio's call this session: expose turbo as a user option rather than hunt it to extinction, because
+a user doing muted b-roll should be able to buy the speed. A2b sharpens what that option is:
+
+* The toggle is **8 fast steps vs 25 quality steps**, NOT "turbo LoRA on/off".
+* **Turning the LoRA off while keeping 8 steps buys nothing** - 0.19 dB, inside the floor - and
+  costs picture (A2's luma 0.64 against A2b/A1's 0.49, though the luma metric still has no measured
+  noise floor). So whenever the fast arm is selected, the LoRA should stay on.
+* The honest description of the cost is **"the low end thins out"**, not "the audio gets quieter"
+  and not "it loses treble".
+* Speed bought: 580.8 s -> 240.3 s, **2.4x**. A2b's 190.2 s is not comparable - 18 nodes were
+  served from cache.
+
+### THE ARM THAT WOULD MAKE THE TOGGLE A SLIDER
+
+Not run, and it is now the interesting one. If the damage is the STEP COUNT, an intermediate arm -
+LoRA on, `beta`/euler, 12 or 16 steps - may recover the bass at half the cost of the quality arm.
+That turns a binary toggle into a real quality ladder. It is one ~5 minute run and it is the
+question the product decision actually rests on.
+
+## Phase 6d - THE STEP LADDER: two defects, not one (2026-09-08)
+
+Fabio's call: the 8-step arm is simply starved, so walk the turbo path up in steps. Three arms,
+each differing from A2 ONLY at `#338.steps` - `arm_a2_turbo_10step.json`, `_15step`, `_25step`.
+Turbo LoRA on, `beta`, `euler`, `shift_audio` 4, same source and seed throughout. Fabio's prior
+bench knowledge, which is why this was worth running and is not derivable from the repo: **this
+distill tolerates step counts far above its nominal 8 - he has taken it to 25 with no picture
+degradation, and 10 already looks better than 8.**
+
+| steps | level step | 0-250 Hz step (shape) | centroid drift | crest | corr | luma worst | wall | cached |
+|---|---|---|---|---|---|---|---|---|
+| 8 (A2) | -5.97 dB | -9.62 (**-5.88**) | +293 Hz | +0.1 | 0.825 | 0.64 | 238.1 s | 0/25 COLD |
+| 10 | -5.23 dB | -8.36 (**-4.59**) | +239 Hz | +0.1 | 0.823 | 0.56 | 243.3 s | 17/25 |
+| 15 | -3.91 dB | -6.36 (**-2.94**) | +144 Hz | -0.2 | 0.814 | 0.49 | 342.0 s | 19/25 |
+| 25 | **-2.60 dB** | -4.61 (**-1.48**) | **+60 Hz** | -0.5 | 0.811 | 0.49 | 567.7 s | 19/25 |
+| A1 (25, `simple`/`res_multistep`, shift 2, NO LoRA) | **-0.43 dB** | not measured | - | - | 0.791 | 0.49 | 580.8 s | 0 COLD |
+
+Wall times are the bench's own `execution_start`/`execution_success` stamps, not the dispatcher's
+10 s poll. The sampler ran fresh in every arm. **Only 10/15/25 are comparable to each other** - all
+three warm at 19-ish cached nodes; A2's 238.1 s was COLD and carries ~34 s of model load.
+
+### THE EXTRAPOLATION WAS WRONG, AND THAT IS THE FINDING
+
+Phase 6c's ladder predicted, by straight-lining 0.29 dB/step from 8->15, that 25 steps would land
+near **-0.5 dB** and so explain the whole defect. It landed at **-2.60 dB**. The curve SATURATES:
+per-step gain 0.37 (8->10), 0.264 (10->15), **0.131** (15->25). Steps are buying less and less, and
+2.17 dB separates the 25-step turbo arm from A1's 25-step quality arm - four times the noise floor.
+**Step count does not explain the defect.**
+
+### WHAT THE BANDS SHOW: THE SPECTRAL DEFECT IS FIXED, A FLAT OFFSET IS NOT
+
+Steps fix the thing Fabio's ear caught and leave something else behind:
+
+* **The bass collapse is essentially gone.** 0-250 Hz shape -5.88 -> -4.59 -> -2.94 -> **-1.48**,
+  and at 25 steps `bands.py` no longer names the bass at all - the biggest deviation moves to
+  8k-16k at +1.69. Centroid drift +293 -> **+60 Hz**: the spectrum has converged on the source.
+* **A broadband level offset remains.** At 25 steps the extension is spectrally right and simply
+  ~2.6-3.1 dB quiet.
+
+So there are **TWO defects on this chain, with different causes**:
+
+1. a **bass collapse**, which is step starvation and which more steps fix; and
+2. a **residual flat level offset**, which more steps do NOT fix and which A1 does not have.
+
+Phase 6b/6c read the 8-step number as one defect. It was two, superimposed, and the broadband
+`level.py` figure could not separate them - `bands.py` could, only once there were four points to
+compare.
+
+### WHAT OWNS THE RESIDUAL 2.17 dB - still open
+
+25-step turbo vs A1 differ by: `beta` vs `simple`, `euler` vs `res_multistep`, `shift_audio` 4 vs
+2, and the LoRA present vs absent. The LoRA was cleared **at 8 steps** (Phase 6c, 0.19 dB) - that
+does NOT automatically carry to 25, where the sampler has room to express it. Cheapest decisive
+arm: **A1 exactly, plus the turbo LoRA** - one variable against a measured -0.43 dB.
+
+### PICTURE: FABIO'S PRIOR KNOWLEDGE CONFIRMED ACROSS THE WHOLE LADDER
+
+Worst 1-frame luma step 0.64 -> 0.56 -> 0.49 -> 0.49. From 15 steps up it is identical to the
+25-step quality arm. Running this distill at 3x its nominal step count costs the picture nothing,
+which is what made the whole ladder worth running.
+
+**One thing moved that had not before:** crest factor drifts -0.5 dB at 25 steps, the first
+meaningful move in that number on any arm. Small, noted, not chased - if a later arm shows attacks
+softening as steps climb, this is where it started.
+
+### THE KNEE IS 15 STEPS, and that is the product number
+
+* 10 -> 15: **+98.7 s** buys **1.32 dB**
+* 15 -> 25: **+225.7 s** buys **1.31 dB**
+
+The same gain for 2.3x the time. Sampling costs ~21.6 s/step with ~27 s of fixed overhead on this
+bench. If the fast path ships with a step control, **15 is the default** - past it the curve pays
+badly, and below it the bass collapse is audible.
+
+## Phase 6e - THE shift_audio SWEEP: a strong knob, and Phase 5h was wrong about it (2026-09-08)
+
+Five points at 10 steps, turbo LoRA on, `beta`/`euler`, same source, same seed, same silent prompt.
+Only `#516.shift_audio` moves. `shift_audio` 4 is the ladder's existing 10-step arm, re-measured
+through the sweep's own code path so all five rows share one method.
+
+| `shift_audio` | level step | 0-250 Hz | bass shape | **centroid drift** | crest | corr |
+|---|---|---|---|---|---|---|
+| **1** | **-3.55 dB** | -5.83 | **-2.64** | **+124 Hz** | -0.2 | 0.802 |
+| 2 | -4.29 dB | -6.86 | -3.38 | +153 Hz | -0.1 | 0.810 |
+| 3 | -4.87 dB | -7.73 | -4.15 | +214 Hz | +0.0 | 0.816 |
+| 4 (shipped turbo) | -5.29 dB | -8.36 | -4.59 | +239 Hz | +0.1 | 0.823 |
+| 6 | -6.31 dB | -9.92 | -5.66 | +284 Hz | +0.2 | 0.828 |
+
+**Perfectly monotonic on every audio metric: LOWER `shift_audio` is better.** Across 1 -> 6 the
+level step spans **2.76 dB** and the centroid drift spans **160 Hz**. Dropping from the shipped 4 to
+1 buys **1.74 dB** and **halves the centroid drift**, at zero cost in time.
+
+### THIS OVERTURNS A "DO NOT RE-TEST" ENTRY
+
+`validation.md` Phase 5h lists `shift_audio` under *"What was ELIMINATED, with numbers - do not
+re-test these"*, on the evidence that 4 -> 5 moved -3.81 -> -4.02, i.e. 0.21 dB, inside the band.
+**That test was under-powered, not wrong.** A single one-unit step in the direction that makes
+things worse, on an 8-step arm whose bass collapse dominated everything, cannot see a knob whose
+full useful range is 1 to 6. Swept properly it is one of the strongest levers on this card.
+
+The Phase 5h source reading still stands and is worth keeping: `comfy/ldm/minimax/model.py` does
+compensate the multiply, so `shift_audio` is a change of variables rather than a raw gain. The
+error was concluding that a compensated change of variables therefore cannot MATTER. It changes the
+sigma schedule the audio latent rides, and that changes what the sampler converges to.
+
+**Rule this suggests, worth carrying:** eliminating a knob on a one-unit step is not eliminating it.
+Sweep the range, or say explicitly that only that step was tested.
+
+### THE ONE COUNTER-TREND: seam correlation goes the other way
+
+Correlation rises with `shift_audio` - 0.802 at 1 against 0.828 at 6 - so the knob trades a little
+phase-lock for a lot of level and spectrum. The spread is 0.026 and every row still reads
+CONTINUATION; for scale, A1 scored 0.791 and Fabio passed it by ear as flawless. Recorded as a real
+trade, not dismissed, but on this evidence it is not close to a reason to keep `shift_audio` high.
+
+### WHERE THIS LEAVES THE TURBO PATH
+
+| config | level | centroid | wall |
+|---|---|---|---|
+| 10 steps, shift 4 (today's turbo) | -5.29 dB | +239 Hz | 243.3 s |
+| **10 steps, shift 1** | **-3.55 dB** | **+124 Hz** | ~250 s |
+| 25 steps, shift 4 | -2.60 dB | +60 Hz | 567.7 s |
+
+**10 steps at `shift_audio` 1 recovers most of what 25 steps bought, for 2.3x less time.** The
+step ladder and this knob are attacking the same defect from two directions, and the cheap one was
+never tried.
+
+### NOT YET AT THE EDGE - the sweep stopped at the boundary of what was tested
+
+`shift_audio` accepts 0.01 to 100 and the trend is still improving at 1, so **1 is the edge of the
+sweep, not a minimum**. The shipped refine stage already runs 0.5, so low values are known-safe in
+this engine. Extending to 0.5 and 0.25 is two runs and would find the actual floor - or find where
+the correlation trade turns bad.
+
+### METHOD NOTE
+
+`shift_audio` 4 reads -5.29 dB here against the -5.23 dB `measure.py` reported for the same file.
+The 0.06 dB is window alignment - this script slices raw samples, `level.report` slices the window
+index. All five sweep rows use the identical path, so the comparison between them is sound; only
+cross-tool comparisons carry the 0.06.
+
+## Phase 6f - THE SEED CONTROL: the real noise floor is 0.86 dB, not 0.55 (2026-09-08)
+
+Fabio asked for `shift_audio` 1 re-run on a different seed, to check whether an artefact he heard
+would move. It did not test that (Phase 6g - the artefact is in the SOURCE), but it answered a
+question this card had never asked: **how much do two runs differ when NOTHING differs but the
+seed?** Every "noise floor" on this card until now was the 0.55 dB CACHE-EVICTION floor, measured
+from a pair that SHARED a seed.
+
+| `shift_audio` | seed | level step | 0-250 Hz | bass shape | centroid | corr |
+|---|---|---|---|---|---|---|
+| 0.25 | 591000591 | -4.29 dB | -6.89 | -3.36 | +155 Hz | 0.798 |
+| 0.5 | 591000591 | -3.67 dB | -5.99 | -2.60 | +117 Hz | 0.799 |
+| **1** | **591000591** | **-3.55 dB** | -5.83 | -2.64 | +124 Hz | **0.802** |
+| **1** | **20260908** | **-4.41 dB** | -6.51 | -3.53 | +147 Hz | **0.776** |
+| 2 | 591000591 | -4.29 dB | -6.86 | -3.38 | +153 Hz | 0.810 |
+| 3 | 591000591 | -4.87 dB | -7.73 | -4.15 | +214 Hz | 0.816 |
+| 4 (shipped) | 591000591 | -5.29 dB | -8.36 | -4.59 | +239 Hz | 0.823 |
+| 6 | 591000591 | -6.31 dB | -9.92 | -5.66 | +284 Hz | 0.828 |
+
+**Identical settings, different seed: 0.86 dB apart** (-3.55 vs -4.41), plus 23 Hz of centroid and
+0.026 of correlation. **The usable noise floor on this bench is therefore at least 0.86 dB, not
+0.55.** It is ONE pair, so it is a lower bound on seed variance rather than a proper estimate - but
+it is already 1.6x the number this card has been using as its significance bar all session.
+
+### WHAT SURVIVES, AND WHAT DOES NOT
+
+The distinction that matters: **a monotonic multi-point trend survives a noise floor that swallows
+its adjacent steps.** Five points landing in the correct order is not something seed noise produces
+by chance; two points 0.7 dB apart is.
+
+**SURVIVES:**
+* **`shift_audio` matters, lower is better.** 1 -> 6 spans **2.76 dB** across five ordered points -
+  3.2x the seed floor end to end, and monotonic on level, bass and centroid together.
+* **The step ladder's shape.** 8 -> 25 steps spans 3.37 dB, also monotonic, also multi-point.
+* **The LoRA exoneration (Phase 6c).** That was a NULL result at 0.19 dB - a bigger floor only
+  makes a null safer.
+* **A1 vs everything.** -0.43 against -2.60 or worse is 2+ dB, clear of the floor.
+
+**DOES NOT SURVIVE - withdrawn:**
+* **The seam-correlation counter-trend from Phase 6e.** It read 0.802 at shift 1 rising to 0.828 at
+  shift 6, a span of **0.026** - and the seed pair alone differs by **0.026** on the same setting.
+  The trade is not established. Withdrawn, not merely qualified.
+
+**RE-QUALIFIED, weaker than stated:**
+* **8 -> 10 steps (0.74 dB)** is INSIDE the seed floor. "10 beats 8" is not established by that
+  measurement on its own; it survives only as part of the ladder's overall shape, and Fabio's own
+  bench experience independently says 10 looks better than 8.
+* **15 -> 25 steps (1.31 dB)** is ~1.5x the floor, not the comfortable margin Phase 6d implied.
+* **shift 4 -> 1 (1.74 dB)** is ~2x the floor. Real, but quote it as "about 1-2 dB", not 1.74.
+
+### THE SWEEP HAS A FLOOR, AND IT IS AT ABOUT 1
+
+0.25 / 0.5 / 1 come in at -4.29 / -3.67 / -3.55, a spread of **0.74 dB - inside the seed floor.**
+They are indistinguishable. **Going below `shift_audio` 1 buys nothing measurable**, and 0.25 is
+if anything slightly worse. The knob's useful range on this chain is 1 to 6 and the good end is 1.
+
+### THE STANDING RECOMMENDATION FOR THE TURBO PATH
+
+**10 steps, `shift_audio` 1, turbo LoRA on.** ~250 s, -3.55 dB, +124 Hz centroid drift, luma 0.56.
+Against today's shipped turbo (10 steps, shift 4) that is about 1-2 dB of level and roughly half
+the centroid drift, for no extra time. `shift_audio` 0.5 is an equally defensible choice - the two
+are inside the floor of each other.
+
+### THE LESSON THIS CARD SHOULD CARRY
+
+Two noise floors were needed and only one was ever measured. A cache-eviction floor (same seed,
+evicted weights) answers "is this run reproducible"; a SEED floor answers "is this difference
+real". They are not the same number and the seed one is bigger. **Any future arm comparison on this
+bench is significant at ~0.9 dB, and single-pair differences below that are not findings.**

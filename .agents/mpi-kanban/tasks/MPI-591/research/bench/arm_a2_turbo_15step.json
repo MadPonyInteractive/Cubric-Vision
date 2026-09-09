@@ -1,0 +1,361 @@
+{
+  "121": {
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Video VAE"
+    },
+    "inputs": {
+      "vae_name": "minimax_h3_video_vae_int8_convrot.safetensors"
+    }
+  },
+  "122": {
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Audio VAE"
+    },
+    "inputs": {
+      "vae_name": "minimax_h3_audio_vae_fp32.safetensors"
+    }
+  },
+  "129": {
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "FL2VA (not ref2va)"
+    },
+    "inputs": {
+      "unet_name": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+      "weight_dtype": "default"
+    }
+  },
+  "130": {
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    },
+    "inputs": {
+      "clip_name": "qwen3vl_32b_h3_ultra_uncensored_heretic_int8_convrot.safetensors",
+      "type": "minimax",
+      "device": "default"
+    }
+  },
+  "516": {
+    "class_type": "MiniMaxH3SigmaShift",
+    "_meta": {
+      "title": "A2 CHANGE 1/3: turbo shift (audio 4, was 2) - still no EasyCache, no attention backend"
+    },
+    "inputs": {
+      "shift_video": 12,
+      "shift_audio": 4,
+      "model": [
+        "129",
+        0
+      ]
+    }
+  },
+  "455": {
+    "class_type": "MpiLoraModel",
+    "_meta": {
+      "title": "A2 CHANGE 2/3: THE TURBO LoRA - the prime suspect from Phase 5h, absent in A1"
+    },
+    "inputs": {
+      "lora_name": "minimax-h3\\minimax_h3_fl2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors",
+      "strength_model": 1.0,
+      "model": [
+        "516",
+        0
+      ]
+    }
+  },
+  "195": {
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Seed"
+    },
+    "inputs": {
+      "int": 591000591
+    }
+  },
+  "167": {
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Width"
+    },
+    "inputs": {
+      "int": 864
+    }
+  },
+  "168": {
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Height"
+    },
+    "inputs": {
+      "int": 480
+    }
+  },
+  "212": {
+    "class_type": "MpiInt",
+    "_meta": {
+      "title": "Input_Duration"
+    },
+    "inputs": {
+      "int": 4
+    }
+  },
+  "214": {
+    "class_type": "MpiConvert",
+    "_meta": {
+      "title": "Mpi Convert"
+    },
+    "inputs": {
+      "round": true,
+      "input": [
+        "212",
+        0
+      ]
+    }
+  },
+  "605": {
+    "class_type": "MpiMath",
+    "_meta": {
+      "title": "Add the 22 pinned frames to the duration"
+    },
+    "inputs": {
+      "math_expression": "a + 22/24",
+      "a": [
+        "214",
+        2
+      ]
+    }
+  },
+  "213": {
+    "class_type": "MpiH3Length",
+    "_meta": {
+      "title": "Mpi H3 Length"
+    },
+    "inputs": {
+      "seconds": [
+        "605",
+        0
+      ]
+    }
+  },
+  "232": {
+    "class_type": "MpiText",
+    "_meta": {
+      "title": "Input_Positive"
+    },
+    "inputs": {
+      "string": "A covered wagon pulled by two dark horses keeps rolling down a dusty desert road, the woman in the blue shawl driving them on, dust rising from the wheels. Hooves on packed dirt, wagon wheels creaking, wind across the desert."
+    }
+  },
+  "472": {
+    "class_type": "MpiH3ImageToVideo",
+    "_meta": {
+      "title": "FL2VA conditioning - NO first_frame (the pinned head owns the start)"
+    },
+    "inputs": {
+      "clip": [
+        "130",
+        0
+      ],
+      "vae": [
+        "121",
+        0
+      ],
+      "prompt": [
+        "232",
+        0
+      ],
+      "width": [
+        "167",
+        0
+      ],
+      "height": [
+        "168",
+        0
+      ],
+      "length": [
+        "213",
+        0
+      ]
+    }
+  },
+  "600": {
+    "class_type": "MpiLoadVideo",
+    "_meta": {
+      "title": "Input_Video (the clip being continued) - SAME SOURCE AS A1, deliberately"
+    },
+    "inputs": {
+      "string": "C:\\Users\\Fabio\\Documents\\Cubric Vision\\Projects\\cowboys\\Media\\ref2v_ms_004.mp4",
+      "block_if_empty": true,
+      "force_rate": 24
+    }
+  },
+  "601": {
+    "class_type": "MiniMaxH3MotionContext",
+    "_meta": {
+      "title": "THE MECHANISM - 22 frames pinned, 24 frames of END-ALIGNED tail audio (unchanged from A1)"
+    },
+    "inputs": {
+      "conditioning": [
+        "472",
+        0
+      ],
+      "vae": [
+        "121",
+        0
+      ],
+      "latent": [
+        "472",
+        1
+      ],
+      "context_length": "22",
+      "audio_context_length": 24,
+      "context_frames": [
+        "600",
+        0
+      ],
+      "context_audio": [
+        "600",
+        1
+      ],
+      "audio_vae": [
+        "122",
+        0
+      ]
+    }
+  },
+  "338": {
+    "class_type": "BasicScheduler",
+    "_meta": {
+      "title": "TURBO LADDER: beta / 15 steps - the ONLY change against A2 (8)"
+    },
+    "inputs": {
+      "scheduler": "beta",
+      "steps": 15,
+      "denoise": 1,
+      "model": [
+        "455",
+        0
+      ]
+    }
+  },
+  "346": {
+    "class_type": "KSamplerSelect",
+    "_meta": {
+      "title": "euler (was res_multistep) - part of change 3/3"
+    },
+    "inputs": {
+      "sampler_name": "euler"
+    }
+  },
+  "151": {
+    "class_type": "RandomNoise",
+    "_meta": {
+      "title": "RandomNoise"
+    },
+    "inputs": {
+      "noise_seed": [
+        "195",
+        0
+      ]
+    }
+  },
+  "150": {
+    "class_type": "BasicGuider",
+    "_meta": {
+      "title": "Basic Guider - now reads the LoRA'd model"
+    },
+    "inputs": {
+      "model": [
+        "455",
+        0
+      ],
+      "conditioning": [
+        "601",
+        0
+      ]
+    }
+  },
+  "153": {
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": {
+      "title": "Single stage - no upscale, no refine (D3), unchanged from A1"
+    },
+    "inputs": {
+      "noise": [
+        "151",
+        0
+      ],
+      "guider": [
+        "150",
+        0
+      ],
+      "sampler": [
+        "346",
+        0
+      ],
+      "sigmas": [
+        "338",
+        0
+      ],
+      "latent_image": [
+        "472",
+        1
+      ]
+    }
+  },
+  "177": {
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    },
+    "inputs": {
+      "samples": [
+        "153",
+        1
+      ],
+      "vae": [
+        "121",
+        0
+      ]
+    }
+  },
+  "505": {
+    "class_type": "VAEDecodeAudio",
+    "_meta": {
+      "title": "VAE Decode Audio"
+    },
+    "inputs": {
+      "samples": [
+        "153",
+        1
+      ],
+      "vae": [
+        "122",
+        0
+      ]
+    }
+  },
+  "207": {
+    "class_type": "MpiSaveVideo",
+    "_meta": {
+      "title": "Output_Video - UNTRIMMED, the 22-frame head is the seam_probe measurement"
+    },
+    "inputs": {
+      "fps": 24,
+      "filename_prefix": "MPI591_A2_turbo_15step",
+      "use_audio": true,
+      "truncate_to_audio": false,
+      "images": [
+        "177",
+        0
+      ],
+      "audio": [
+        "505",
+        0
+      ]
+    }
+  }
+}

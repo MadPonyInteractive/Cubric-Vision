@@ -26,3 +26,11 @@ Two calibrations worth not re-deriving:
 
 The bench-arm graphs, the dispatcher and the trim/concat/measure wrapper live one level up in
 `../bench/`. `measure.py` runs `seam_probe.py` and `level.py` together from one raw generation.
+
+* **`bands.py`, 2026-09-08.** Fabio's ear caught something on arm A2 that `level.py` cannot see:
+  the hooves went soft. A broadband RMS step cannot tell a level drop from a filter. `bands.py`
+  splits the same two steady windows into bands and reports each band's step MINUS the median -
+  the SHAPE - plus crest factor and centroid. Verdict on both 8-step arms: a BASS COLLAPSE
+  (0-250 Hz, 6-7 dB deeper than everything else), NOT the low-pass the ear reported and NOT
+  transient smearing. **A framing that is wrong and must not be retried:** a top-minus-bottom
+  tilt reports "brighter" here, because the band that moves most is the bottom one.

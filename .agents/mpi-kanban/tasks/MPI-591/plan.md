@@ -1462,3 +1462,241 @@ baseline, which was measured on `ref2v_ms_004.mp4` specifically. So:
 * **A later arm re-runs the winner on an FL2VA-GENERATED source** - good footage, the case a user
   actually hits. That arm is about whether the win holds, not about the baseline.
 * Whatever ships is decided on the second corpus, not the first.
+
+## PHASE 6b RESULT - the turbo LoRA is CONVICTED, as a bundle (2026-09-08)
+
+`validation.md` Phase 6b. Arm A2 = A1 + the turbo bundle, one seven-line graph diff, same source
+and seed. Level step **-5.97 dB** against A1's -0.43 dB: a **5.54 dB** move, ten times the 0.55 dB
+noise floor. The prime suspect named in the plan and independently fingered by the upstream README
+is confirmed.
+
+**The pin is not what turbo breaks.** Seam correlation went UP (0.825 vs 0.791), same constant
+-9.0 ms lag, same 0.06 ms residual. It still continues the source; it continues it 6 dB too quiet.
+The defect is gain, not continuity - a separation Phase 5h could not make.
+
+**NEXT ACTION - A2b, and it is cheap.** A2 moved three things. `shift_audio` is already cleared by
+Phase 5h (0.21 dB, inside the band, and the multiply is compensated in
+`comfy/ldm/minimax/model.py`), leaving the LoRA and the 8-step beta/euler arm. **A2b = A1 plus
+beta/8 + euler, NO LoRA**, ~90 s on the bench. Near -0.43 convicts the LoRA; near -6 convicts the
+step count. This is the arm that names the culprit, and nothing downstream should be built until it
+has run - if the step count is the cause, dropping the LoRA does not fix anything.
+
+Then, unchanged: **A3** (accelerators on the winner), the **second corpus** on FL2VA-generated
+footage where shipping is actually decided, and only then the **MpiNodes port**.
+
+## PHASE 6c RESULT - the LoRA is INNOCENT; the fast sampler ARM is guilty (2026-09-08)
+
+`validation.md` Phase 6c. **A2b = A2 with the turbo LoRA deleted and nothing else. -6.16 dB against
+A2's -5.97.** 0.19 dB apart, inside the floor, and with NO cache eviction between them (the bench
+served 18 of 24 nodes from cache, including the conditioning and the motion context), so the
+comparison is tighter than the 0.55 dB floor implies. Removing the LoRA changed nothing.
+
+**This overturns Phase 5h's prime suspect and Phase 6b's headline.** The damage belongs to the
+8-step `beta`/`euler` sampler arm, not to `minimax_h3_fl2v_turbo_8step`. `shift_audio` stays
+cleared. What is still coupled inside the convicted group is scheduler + step count + sampler; A2b
+separates that group from the LoRA, not its three members from each other.
+
+**FABIO'S EAR vs THE SPECTRUM.** He heard the hooves go soft on A2 and called it a low-pass. The
+defect is real and he localised it correctly; the mechanism is the reverse. `bands.py` (new, with a
+synthetic `--self-check`) shows a BASS COLLAPSE on both 8-step arms - 0-250 Hz down 9.62 dB (A2) /
+10.71 dB (A2b), 5.88 / 7.35 dB deeper than every other band - while 2-8 kHz moves with the crowd,
+the centroid rises, and crest factor is flat. The hooves lost body, not top. Shipping copy must say
+"the low end thins out", never "loses treble".
+
+**PRODUCT (Fabio's call, this session): turbo becomes a USER OPTION, not a defect to eliminate.**
+And the option is **8 fast steps vs 25 quality steps**, NOT "LoRA on/off": turning the LoRA off
+while keeping 8 steps buys nothing on audio and costs picture, so the LoRA should stay on whenever
+the fast arm is chosen. Speed bought: 580.8 s -> 240.3 s, 2.4x.
+
+**NEXT ACTION - the arm that turns the toggle into a slider.** LoRA on, `beta`/euler, **12 or 16
+steps**. If the bass comes back at half the quality arm's cost, the fast/quality binary becomes a
+real ladder, and that is what the product decision rests on now. ~5 min.
+
+Then unchanged: **A3** (accelerators on the winner), the **second corpus** on FL2VA-generated
+footage where shipping is decided, and only then the **MpiNodes port**. One gap worth closing
+cheaply if a spare run comes up: A1's bands were never measured (its clips died with its
+scratchpad) - its bass is inferred intact from the -0.43 dB broadband step, not measured.
+
+## PHASE 6d RESULT - the ladder: TWO defects, and 15 steps is the knee (2026-09-08)
+
+`validation.md` Phase 6d. Turbo path walked up in steps (10/15/25, one variable each against A2's
+8): level step **-5.97 -> -5.23 -> -3.91 -> -2.60 dB**, monotonic. Fabio's theory was right that
+steps matter; my linear extrapolation predicting -0.5 dB at 25 was WRONG - the curve saturates
+(per-step gain 0.37 -> 0.264 -> 0.131) and 25-step turbo stops at -2.60, **2.17 dB short of A1**.
+
+**THE DEFECT WAS TWO DEFECTS.** `bands.py` across four points: the bass collapse is step
+starvation and steps fix it (0-250 Hz shape -5.88 -> -1.48, centroid drift +293 -> +60 Hz, and at
+25 steps the bass is no longer the worst band). What remains is a FLAT ~2.6 dB level offset that
+steps do not touch and A1 does not have. The broadband `level.py` number could never separate the
+two.
+
+**NEXT ACTION - what owns the residual.** 25-step turbo vs A1 differ by four things: `beta` vs
+`simple`, `euler` vs `res_multistep`, `shift_audio` 4 vs 2, LoRA present vs absent. The LoRA was
+cleared **at 8 steps only** - that does not carry to 25. Cheapest decisive arm: **A1 exactly plus
+the turbo LoRA**, one variable against a measured -0.43 dB.
+
+**PRODUCT: 15 steps is the knee and the default.** 10->15 buys 1.32 dB for 98.7 s; 15->25 buys
+1.31 dB for 225.7 s. Sampling is ~21.6 s/step + ~27 s fixed. Picture is identical to the quality
+arm from 15 steps up (luma 0.49), confirming Fabio's prior bench finding that this distill takes
+3x its nominal steps with no degradation - a fact not derivable from the repo, recorded here.
+
+## THE CENTROID IS A SPEECH PROBLEM, AND IT IS STEP-DEPENDENT (Fabio, 2026-09-08)
+
+**His prior bench knowledge, not derivable from this repo or any doc:** turbo LoRAs on H3 have a
+tendency to **boost the spectral centroid, and that is what makes SPEECH hurt the ears.** He has
+noticed it in earlier tests. Our whole corpus has **no speech in it**, so every centroid number on
+this card is measured on the case that does not hurt.
+
+**Our own ladder now gives that observation a shape.** Centroid drift across the join, turbo path:
+
+| steps | 8 | 10 | 15 | 25 |
+|---|---|---|---|---|
+| centroid drift | **+293 Hz** | **+239 Hz** | +144 Hz | +60 Hz |
+
+The boost is **step-dependent and worst where turbo is fastest.** So picking 10 steps for speed
+sits near the worst end of exactly the effect that hurts vocals. That is the whole reason the
+`shift_audio` sweep is worth running at 10 steps rather than anywhere else.
+
+**Settled this session, do not re-open:** the scheduler and the sampler are NOT to be swept. Each
+arm already has known-good values, the residual 2.17 dB is not worth re-litigating them for, and
+Fabio called it directly. `shift_audio` is the knob to explore instead. The Phase 6c note proposing
+"A1 plus the turbo LoRA" is **superseded** - that arm was about attributing the residual, and the
+residual is no longer the question.
+
+**Also settled: 15 and 25 steps are indistinguishable to his ear**, so the extra 225.7 s that 25
+costs buys nothing audible. Turbo's whole point is speed. **The turbo path is 10 steps.**
+
+### WHY THE SWEEP KEEPS THE SILENT PROMPT, and how speech gets judged
+
+Putting a shouted line in the extension prompt would make `level.py`, `bands.py` and the centroid
+**stop measuring continuity**: the extension would contain content the source never had, so a level
+step and a centroid drift would be reporting "a scream was added", not "the continuation matches".
+Every number on this card would become incomparable with the ladder in one move.
+
+So the sweep runs on the SAME silent prompt, source and seed - fully comparable to the 10-step arm
+already measured (-5.23 dB, +239 Hz) and to the whole ladder - and speech is judged in a SECOND
+stage on the one or two candidates the instruments pick. That keeps the instruments meaningful and
+costs fewer GPU minutes than sweeping with speech in every arm.
+
+**Open question for the second stage, Fabio's call:** shout a line over the existing wagon source,
+or generate a fresh CLOSE-SHOT source with a speaking character. He raised the distance problem
+himself - the woman is far away, which is the hardest case to judge harshness on. A close-shot
+FL2VA-generated source would also serve as the **second corpus** this plan already requires before
+shipping, so it settles two things in one.
+
+## PHASE 6e RESULT - shift_audio is a STRONG knob, and Phase 5h eliminated it wrongly (2026-09-08)
+
+`validation.md` Phase 6e. Sweep at 10 steps, turbo on, only `#516.shift_audio` moving:
+
+| shift | 1 | 2 | 3 | 4 (shipped) | 6 |
+|---|---|---|---|---|---|
+| level step | **-3.55** | -4.29 | -4.87 | -5.29 | -6.31 |
+| centroid drift | **+124 Hz** | +153 | +214 | +239 | +284 |
+
+Monotonic on every audio metric - lower is better, 2.76 dB and 160 Hz across the range. **Going
+from the shipped 4 to 1 buys 1.74 dB and HALVES the centroid drift for free**, which is precisely
+the speech-harshness lever Fabio asked for.
+
+**PHASE 5h's "shift_audio is NOT the cause - do not re-test" IS OVERTURNED.** It tested a single
+4 -> 5 step (0.21 dB, inside the band) on an arm whose bass collapse dominated. Under-powered, not
+wrong. Its source reading still stands - the multiply IS compensated in
+`comfy/ldm/minimax/model.py` - but a compensated change of variables still changes the sigma
+schedule the audio latent rides. **Carry the rule: eliminating a knob on a one-unit step is not
+eliminating it.**
+
+Counter-trend, recorded not dismissed: seam correlation moves the OTHER way, 0.802 at shift 1
+against 0.828 at 6. Spread 0.026, every row still CONTINUATION, and A1 passed Fabio's ear at 0.791.
+
+**10 steps + shift 1 = -3.55 dB / +124 Hz at ~250 s**, against 25 steps + shift 4 at -2.60 dB /
++60 Hz for 567.7 s. The cheap knob recovers most of what the expensive one did.
+
+**NEXT ACTION - two runs, then speech.** The trend is still improving at 1 and `shift_audio` goes
+to 0.01 (the shipped refine stage runs 0.5), so **1 is the edge of the sweep, not a minimum**:
+extend to **0.5 and 0.25** and find the floor, or find where the correlation trade turns bad. THEN
+take the winner into the speech stage - Fabio's call still open there between shouting a line over
+the wagon source and generating a close-shot FL2VA source that doubles as the second corpus.
+
+## PHASE 6f RESULT - the noise floor was wrong all session (2026-09-08)
+
+`validation.md` Phase 6f. The seed control Fabio asked for did not test the artefact (that is in the
+source - Phase 6g) but answered something never asked: **identical settings, different seed = 0.86
+dB apart.** Every significance call this session used the 0.55 dB CACHE-EVICTION floor, measured
+from a pair that SHARED a seed. **The usable floor is at least 0.86 dB**, from one pair, so a lower
+bound rather than an estimate.
+
+**Survives:** `shift_audio` matters and lower is better (1 -> 6 spans 2.76 dB across five ordered
+points); the step ladder's shape (8 -> 25 spans 3.37 dB); the LoRA exoneration (a null at 0.19 dB,
+which a bigger floor only makes safer); A1 vs everything (2+ dB).
+
+**WITHDRAWN:** the seam-correlation counter-trend from Phase 6e. Its whole span was 0.026 and the
+seed pair differs by 0.026 on identical settings. Not established.
+
+**Re-qualified:** 8 -> 10 steps (0.74 dB) is inside the floor - "10 beats 8" rests on the ladder's
+shape and Fabio's own bench experience, not on that pair. 15 -> 25 (1.31 dB) is ~1.5x the floor.
+shift 4 -> 1 (1.74 dB) is ~2x - quote it as "about 1-2 dB".
+
+**The sweep has a floor at about `shift_audio` 1.** 0.25 / 0.5 / 1 land within 0.74 dB of each
+other, inside seed noise; below 1 buys nothing and 0.25 is marginally worse.
+
+**STANDING RECOMMENDATION - the turbo path is 10 steps, `shift_audio` 1, LoRA on.** ~250 s,
+-3.55 dB, +124 Hz. Against today's shipped turbo that is 1-2 dB and about half the centroid drift,
+for no extra time. 0.5 is equally defensible.
+
+**RULE FOR EVERY FUTURE ARM ON THIS BENCH:** two floors exist and only one was measured. A
+cache-eviction floor answers "is this reproducible"; a SEED floor answers "is this difference
+real". Significance here is ~0.9 dB, and a single-pair difference below that is not a finding.
+
+## THE SECOND CORPUS IS CHOSEN: ref2v_ms_062.mp4 (Fabio, 2026-09-08)
+
+`C:\Users\Fabio\Documents\Cubric Vision\Projects\cowboys\Media\ref2v_ms_062.mp4` - a
+CLOSE-UP with voice, which is what the speech judgement needs. Fabio raised the distance problem
+himself: on `ref2v_ms_004.mp4` the woman is far away and the turbo centroid boost is hardest to
+judge there.
+
+**What carries over unchanged** (probed, not assumed): 124 frames, 24 fps, 5.167 s, 32 kHz - the
+SAME temporal grid as 004. So `level.py`'s hardcoded `JOIN = 5.167`, the 22-frame picture pin, the
+24-frame audio pin and the `4 + 22/24` duration arithmetic all hold with no edit. That is luck
+worth checking again if a third corpus ever appears - `JOIN` is a module constant.
+
+### WHAT DOES NOT CARRY: RESOLUTION, AND THERE IS AN UNWRITTEN INVARIANT HERE
+
+| | 004 (first corpus) | **062 (second corpus)** |
+|---|---|---|
+| resolution | 864x480 | **1920x800** |
+| aspect | 1.800 | **2.400** |
+| pixels | 414,720 | 1,536,000 (3.7x) |
+
+Every arm hardcodes 864x480 in `#167`/`#168` (`MpiInt`), and on 004 that HAPPENED to equal the
+source's own resolution. **Neither node resizes** - checked against the live `/object_info`:
+`MpiLoadVideo` has no width/height inputs at all (it *outputs* them), and
+`MiniMaxH3MotionContext` VAE-encodes `context_frames` exactly as handed to it. So the bench arms
+carry an invariant nobody wrote down: **`#167`/`#168` must equal the source clip's resolution**, or
+the pinned latent and the generation latent disagree.
+
+**Three ways out, in order of preference:**
+
+1. **Pre-resize 062 once with `ffmpeg` and point `#600` at the copy.** Keeps every graph shape
+   identical, so the arms stay one-variable against each other. **960x400** is the pick: exact 2.4
+   aspect, 0.93x A1's pixel count, so wall clocks stay roughly comparable to the whole ladder.
+2. Insert an image-resize node between `#600` and `#601`. One more node in every arm, and it
+   changes the graph the MpiNodes port has to match.
+3. Generate at native 1920x800. **3.7x A1's pixel count on a 16 GB 4060 Ti** - expect it to be very
+   slow or to OOM, and every timing on this card becomes incomparable. Not recommended for a
+   measurement arm.
+
+**Do not skip this and let it fail at dispatch:** `validate.py` will NOT catch it. It checks
+classes, wiring and weight names against `/object_info`; a latent-size disagreement is a runtime
+error, so the cost of getting it wrong is a full dispatch, not a second.
+
+### THE SECOND CORPUS IS A NEW BASELINE FAMILY, NOT A CONTINUATION
+
+Different source, different resolution and (if speech is added) a different prompt. **Nothing
+measured on it is comparable to the -0.43 / -2.60 / -3.55 dB numbers**, which are all
+`ref2v_ms_004.mp4` at 864x480. Re-establish the family's own reference point first - the
+recommended turbo config, 10 steps and `shift_audio` 1 - and read every later arm against that,
+not against the first corpus.
+
+**Noted while checking:** `MiniMaxH3MotionContext` exposes an optional **`context_latent`** input,
+described as "the previous clip's SAMPLER OUTPUT latent". That is the D4/D5 latent path the plan
+wants built into the MpiNodes port from the start, and it is already reachable on the bench today.
+Not needed for the speech work; recorded so the port does not rediscover it.

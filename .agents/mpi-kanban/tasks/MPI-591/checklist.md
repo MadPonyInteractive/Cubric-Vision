@@ -264,3 +264,65 @@ port alone). Bench writes to `D:\WORK\Images\Outputs`, never `<ComfyUI>\output`.
       the quality arm runs 6 steps.
 - [ ] The two-pass sweep is MPI-688, not this card. `Refine_Refs`, never a second
       `Input_Refs`.
+- [x] ARM A1, the bare-bones control (2026-09-08): FL2VA, no LoRA, no accelerators, pixel
+      path, native-res single stage, 22-frame pin + 24 frames of end-aligned tail audio.
+      -0.43 dB level step, corr 0.791, luma 0.49. Fabio watched it: FLAWLESS on both
+      streams. `research/bench/arm_a1_bare.json`, `validation.md` Phase 6a.
+- [x] ARM A2, the turbo LoRA back on (2026-09-08): CONVICTED. -5.97 dB, a 5.54 dB move
+      against A1 on a 0.55 dB noise floor. Seam correlation went UP (0.825), same constant
+      -9.0 ms lag - the defect is GAIN, not continuity, and the pin is not implicated.
+      `research/bench/arm_a2_turbo.json`, `validation.md` Phase 6b.
+- [ ] ARM A2b - NAMES THE CULPRIT, ~90 s. A2 moved three things; `shift_audio` is already
+      cleared by Phase 5h. A1 plus beta/8 + euler, NO LoRA: near -0.43 convicts the LoRA,
+      near -6 convicts the step count. Nothing downstream should be built before it runs.
+- [ ] ARM A3 - accelerators (EasyCache, the attention backend) on whichever arm wins.
+- [ ] THE SECOND CORPUS - re-run the winner on FL2VA-generated footage. The current source
+      is low-res ref2v output that tears, so A1's PICTURE verdict does not transfer.
+      Shipping is decided here, not on the first corpus.
+- [x] ARM A2b, the LoRA removed (2026-09-08): **-6.16 dB, the LoRA is EXONERATED.** 0.19 dB
+      from A2, inside the floor, no cache eviction between them. The 8-step beta/euler
+      sampler arm owns the audio damage. `validation.md` Phase 6c.
+- [x] FABIO'S EAR ANSWERED: the hooves lose BODY, not top. `bands.py` shows 0-250 Hz down
+      9.62/10.71 dB, ~6-7 dB deeper than every other band; 2-8 kHz moves with the crowd,
+      centroid RISES, crest flat. Not a low-pass, not transient smearing.
+- [ ] NEXT: the slider arm - LoRA on, beta/euler, 12 or 16 steps. Does the bass come back at
+      half the quality arm's cost? Turns the fast/quality binary into a ladder.
+- [ ] Turbo ships as a USER OPTION (Fabio, 2026-09-08). Copy must say "the low end thins
+      out", never "loses treble", and the toggle is STEPS, not the LoRA - keep the LoRA on
+      whenever the fast arm is selected.
+- [ ] NOT MEASURED, inferred only: A1's bands. Its clips died with its scratchpad; the bass
+      is inferred intact from the -0.43 dB broadband step. One 580 s re-run would settle it.
+- [x] THE STEP LADDER (2026-09-08): 10/15/25 steps on the turbo path, one variable each.
+      -5.23 / -3.91 / -2.60 dB. Monotonic, SATURATING - 25-step turbo is 2.17 dB short of
+      A1, so step count does NOT explain the defect. `validation.md` Phase 6d.
+- [x] THE DEFECT IS TWO DEFECTS: a bass collapse that steps fix (0-250 Hz shape -5.88 ->
+      -1.48, centroid +293 -> +60 Hz) and a flat ~2.6 dB offset that steps do not.
+- [x] FABIO'S PRIOR BENCH KNOWLEDGE, recorded because the repo cannot tell you: this distill
+      runs to 25 steps with no picture degradation (luma 0.49 from 15 up, same as the
+      quality arm), and 10 already beats 8.
+- [ ] NEXT: what owns the residual 2.17 dB. A1 exactly PLUS the turbo LoRA - one variable
+      against a measured -0.43. The LoRA was cleared at 8 steps ONLY; that does not carry.
+- [ ] PRODUCT: 15 steps is the knee - 10->15 buys 1.32 dB for 98.7 s, 15->25 buys 1.31 dB
+      for 225.7 s. Default the fast path to 15 if a step control ships.
+- [x] THE shift_audio SWEEP (2026-09-08): 1/2/3/4/6 at 10 steps, turbo on. Monotonic -
+      LOWER IS BETTER. Level -3.55 -> -6.31, centroid +124 -> +284 Hz. Shipped 4 -> 1 buys
+      1.74 dB and halves the centroid drift for free. `validation.md` Phase 6e.
+- [x] PHASE 5h's shift_audio ELIMINATION IS OVERTURNED - it tested one 4->5 step on an arm
+      whose bass collapse dominated. Under-powered, not wrong. Rule: eliminating a knob on a
+      one-unit step is not eliminating it.
+- [ ] NEXT: extend the sweep DOWN to 0.5 and 0.25 - the trend is still improving at 1 and
+      the node accepts 0.01 (the refine stage already ships 0.5). Two runs.
+- [ ] THEN the speech stage on the winner. Fabio's call: shout a line over the wagon source,
+      or generate a close-shot FL2VA source that doubles as the second corpus.
+- [ ] WATCH, not yet a problem: seam correlation trades against shift_audio (0.802 at 1 vs
+      0.828 at 6). Every row still CONTINUATION; A1 passed by ear at 0.791.
+- [x] THE SEED CONTROL (2026-09-08): shift 1 re-run on seed 20260908 lands 0.86 dB from the
+      same settings on seed 591000591. **The real noise floor is >=0.86 dB, not the 0.55 dB
+      cache-eviction figure used all session.** `validation.md` Phase 6f.
+- [x] WITHDRAWN: the Phase 6e seam-correlation counter-trend. Span 0.026, seed noise 0.026.
+- [x] THE SHIFT SWEEP HAS A FLOOR AT ~1: 0.25 / 0.5 / 1 are within 0.74 dB, inside seed
+      noise. Below 1 buys nothing; 0.25 is marginally worse.
+- [x] STANDING RECOMMENDATION: turbo path = 10 steps, shift_audio 1, LoRA on. ~250 s,
+      -3.55 dB, +124 Hz centroid drift.
+- [ ] RULE TO ENFORCE: significance on this bench is ~0.9 dB. Trends across 3+ ordered
+      points survive it; single adjacent pairs below it are not findings.
