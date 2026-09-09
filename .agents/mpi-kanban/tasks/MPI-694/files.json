@@ -23,6 +23,9 @@
     "comfy_workflows/display/flow-song.mp4",
     "comfy_workflows/display/flow-sound-and-music.webp",
     "comfy_workflows/display/flow-sound-and-music.mp4",
-    "docs/playbooks/add-flow/06-preview-image.md"
+    "docs/playbooks/add-flow/06-preview-image.md",
+    "docs/playbooks/add-flow/existing-flows/song.md",
+    "docs/playbooks/add-flow/existing-flows/sound-and-music.md",
+    "js/data/modelConstants/universal_workflows.js"
   ]
 }

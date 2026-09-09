@@ -133,9 +133,11 @@ export const UNIVERSAL_WORKFLOWS = {
     flowTextToMusic: {
         workflow: 'flow_minimax_music.json',
     },
-    // MPI-694 — Stable Audio 3. 19 nodes: two checkpoints behind a lazy gate, one
-    // T5Gemma encoder shared by both, and the plain/tiled decode pair Music Maker
-    // already uses. No reprompter — see the FlowDef.
+    // MPI-694 — Stable Audio 3. 17 nodes: two checkpoints behind a lazy gate, one
+    // T5Gemma encoder shared by both, and a plain decode straight into MpiClearVram.
+    // Was 19 — `VAEDecodeAudioTiled` and its `MpiIfElse` came out with the Low VRAM
+    // toggle (Fabio, 2026-09-07), because chunked decode saves nothing on peak here
+    // and costs +15s at 60s. Song keeps its pair. No reprompter — see the FlowDef.
     flowSoundAndMusic: {
         workflow: 'flow_stable_audio.json',
     },

@@ -25,9 +25,19 @@ Derived from `plan.md` (the two-flow design, 2026-09-05).
 - [x] `FlowDef` in `flowsRegistry.js` — no `steps`, four run-slide fields
 - [x] Three dep entries in `assetDeps.js`, every sha256 verified against HuggingFace's
       `X-Linked-ETag`, every `size` derived by `computeDepHashes.py`'s own formatter
-- [ ] 🔴 **The licence gate in `licences.js`** — see `plan.md` § Before release
-- [ ] Preview graphics (`/mpi-flow-graphics`)
-- [ ] A real Generate, on Fabio's press
+- [x] 🔴 **The licence gate in `licences.js`** — shipped `b246c968`, fix `15143dcc`. ONE
+      descriptor (`STABLE_AUDIO_3`) carrying both agreements via the new `alsoLicensed` field
+- [x] Preview graphics (`/mpi-flow-graphics`) — both flows, `8c4754d1`, live with no fallback
+- [x] A real Generate, on Fabio's press — both arms, engine log names each checkpoint
+
+## Docs
+
+- [x] `docs/playbooks/add-flow/existing-flows/song.md` — **written, not renamed**: no page for
+      the MiniMax flow had ever existed (the handoff called this a rename of `minimax-music.md`,
+      which is in no commit)
+- [x] `docs/playbooks/add-flow/existing-flows/sound-and-music.md` — its sibling
+- [x] The stale `19 nodes` / tiled-decode comment in `universal_workflows.js`, left behind by
+      the Low VRAM removal
 
 ## Verification
 

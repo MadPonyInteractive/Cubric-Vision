@@ -4,6 +4,26 @@
 line of it was built.** Read `brief.md` first (licences + the measured VRAM facts — unchanged
 and still binding), and `../MPI-664/research/stable-audio-3-bench.md` for every bench fact.
 
+## Current State — 2026-09-09 (later), THE DOCS SHIPPED. Nothing is left but two decisions.
+
+🟢 **BOTH `existing-flows` PAGES ARE WRITTEN** — `song.md` and `sound-and-music.md`, 200 lines
+each (the `docs/README.md` budget, so a line has to come out before one goes in). 🔴 **THE
+HANDOFF'S PREMISE WAS WRONG:** it called this a rename of
+`docs/playbooks/add-flow/existing-flows/minimax-music.md`. That file has never existed in any
+commit — MPI-664 shipped the MiniMax flow with no page at all, so this was two new writes.
+
+🟢 **ONE STALE COMMENT FIXED**, and it was this card's own drift: `universal_workflows.js` still
+said the Stable Audio graph was `19 nodes` with "the plain/tiled decode pair Music Maker already
+uses", both untrue since the Low VRAM removal (`08f8e085`). Now 17, with the reason inline.
+
+🟡 **`js/data/modelConstants/universal_workflows.js` ALSO SAYS "Forty-six nodes" FOR
+`flowTextToMusic`, and the graph has 49.** Not this card's drift and NOT touched — flag it to
+whoever next opens MPI-664.
+
+Still open, and neither is a build item: the two release blockers (Stability registration §III,
+the Gemma §3.1 EULA clause), the three optional experiments, and Fabio's call on the 15.69 GB
+`qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors`.
+
 ## Current State — 2026-09-09, THE GRAPHICS SHIPPED. No build item is left on this card.
 
 `8c4754d1` + `a9efcfa2`, both in `origin/master`. Both flows now carry `preview`/`video`;
