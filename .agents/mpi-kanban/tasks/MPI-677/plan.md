@@ -59,6 +59,28 @@ the two Flow enhance buttons into one dispatch. `7a9d40df` repointed a stale
 cross-repo note. `js/shell/connectorOps.js` has **zero importers left** — step 2
 can delete the file outright rather than untangling it.
 
+**Delivered 2026-09-10 — step 1c is BUILT and driven live, and steps 1a + 1b are
+now fully closed.** `8059690a` shipped `MpiEnhanceDialog`, the labelled-blob
+splitter, staleness detection and `sourcePrompt` through to the sidecar;
+`6a79d72b` recorded the live runs. 916/916, lint clean, pushed.
+
+- **Both owed GPU runs ran** (lease taken, released). The ComfyUI-encoder
+  backend end to end: Krea 2, `comfy` pinned, 34 s, `qwen3vl_4b_abliterated`,
+  zero `/llm/enhance` with `fetch` wrapped. Character Sheet 13 s to a real
+  character phrase; Music Maker's `auto` enhance completed on the engine with
+  its three-marker output and was cancelled before the music graph — no song,
+  no card.
+- **Step 1c's every bullet was driven in the running app**, including the
+  iteration loop proven AT THE WIRE: with a full enhancement in the lower box, a
+  third Enhance press sent the SHORT prompt.
+- **The only thing left on 1c is Fabio's user-ux pass** — its verify mode is
+  `user-ux`, so no test can close it.
+- One leg is recorded as NOT driven: Reuse's sidecar write/read needs a real
+  generation plus a reload. Unit-tested and source-asserted only.
+
+**So step 2 is the next buildable thing**, and it is cheaper than written: the
+step-2 grep now hits only 7 files, and `connectorOps.js` is a deletion.
+
 **What is left in step 1 is the OVERLAY (1c) and one GPU measurement (1d).**
 Until 1c lands, the control writes the enhanced text straight back into the
 prompt box, exactly as the broker path did; the seam is marked in
