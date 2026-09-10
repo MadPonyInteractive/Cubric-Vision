@@ -10,13 +10,34 @@ their URLs. There is no test to run.
 
 ## Current State
 
-**PARKED 2026-09-09, moved back to `todo` at the user's request.** Nothing is blocked and
-nothing failed — the user moved to other work. The last act on the card was one more test of
-the masked route (square mask instead of the SAM3 shape, `brief.md` § Square mask): it did
-not hold up, the region came back as a different subject rather than an edited one. The
-untried lever named there is feeding the input video's own frame back as a REFERENCE image;
-it is parked, not disproven. Resume at Phase 3 — Bernini-R rv2v, bench already set up.
+**UN-PARKED 2026-09-09/10 — the thesis is PROVEN and Bernini-R is the answer.** The card was
+parked on 2026-09-09 (square mask on the H3/LanPaint route did not rescue it, `brief.md`
+§ Square mask) and the board still says `todo`/`planned`, which is now WRONG: real work ran
+on it on 09-09 and 09-10. **The board needs moving to `doing` — a handoff may not do it.**
 
+What happened, in order:
+
+1. **Bernini-R works.** The user ran ComfyUI's shipped template and got a clean localised
+   edit — hair recoloured AND the background replaced, face/outfit/pose intact. H3 never
+   moved hue off ~14 at any denoise; this did it in one pass. The "masking is a workaround
+   imposed on a model with no native localised-edit task" framing in `brief.md` is
+   vindicated.
+2. **Masked beats unmasked.** The user's own finding: a full-frame edit degrades the image,
+   a masked one holds. So masking still belongs on top — but as crop-and-composite
+   (`InpaintCropImproved`/`InpaintStitchImproved`), NOT as H3's known-pixel conditioning.
+   That answers Phase 4's first question ahead of time.
+3. The user built their own bench graph, `flow_bernini_video_edit.json` (163 nodes), and it
+   is reviewed and structurally clean as of 09-10 07:50.
+4. **`MpiBerniniConditioning` was built** in the sibling node pack — committed as `20a8d4d`,
+   **NOT pushed, and `dev_configs/node_lock.json` NOT bumped.** Both wait on the user.
+
+The square-mask failure recorded in `brief.md` is H3-specific and does **not** transfer:
+LanPaint hard-thresholds its mask and conditions on known pixels, so a square removes the
+pixels it needs. Bernini has no mask input at all and conditions on in-context latents.
+
+Next action: the user is porting speed tricks from their existing Wan 2.2 workflow, then
+testing `reference_video` / `ref_image_*`. Phase 3 (rv2v character replacement) is the
+first real use of the new node's slots.
 
 The H3 + LanPaint masked route is closed on measurement (brief.md § The wall). The card is
 now evaluating models with a **native localised-edit task**.
@@ -104,6 +125,18 @@ Only if one wins: whether masking is still wanted on top, and whether the
 
 - 2026-09-09: plan.md created. The card ran on `brief.md` alone from its creation on
   2026-09-08 until now, which left `mpi-handoff` with no running notes to read.
+- 2026-09-10: **Phase 2 is dead and Phase 3 is what remains.** Capybara was dropped, so
+  "bench Capybara on the hair case" will not happen; Bernini-R already passed the hair case
+  as v2v, which was Phase 2's actual purpose. What is left of the plan is Phase 3 (rv2v with
+  references) and Phase 4 (decide), plus the two carried items — a VOID card, and the
+  MpiNodes release + pin bump.
+- 2026-09-10: a **dependency cycle** was found and fixed in the bench graph. The trim that
+  sizes the plate had been wired to `MpiBerniniConditioning`'s `length` OUTPUT, but the trim
+  feeds SAM3 → crop → packer → back into that same node's `source_video`. ComfyUI would have
+  refused the graph. Repointed to `Snap length to 4n+1#1070`, which derives the same number
+  from `frame_count` alone and sits upstream of everything. **General rule the node's
+  docstring does not say: the `length` output may only feed things DOWNSTREAM of
+  `source_video`.**
 - 2026-09-09: **Phase order swapped, Bernini-R before Capybara.** The brief's licence row
   for Capybara ("MIT") is true of the project and not of the weights. Licence-first, as the
   handoff demanded, puts the Apache-2.0 model first. `brief.md` § The new direction has the
