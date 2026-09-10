@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-712",
+  "title": "MpiAspectRatio - rename ratio output to string, add a 2-slot MPI_PACK output; add Mpi Packer 2 / Unpacker 2",
+  "description": "Node-pack work in the sibling repo ComfyUi-MpiNodes. (1) MpiAspectRatio's STRING output is labelled 'ratio'; rename to 'string' to match the logic.py convention. (2) Append a second output of the existing MPI_PACK type carrying 2 slots. (3) Create MpiPacker2/MpiUnpacker2 as _count=2 subclasses of the existing MpiPacker/MpiUnpacker in switches.py. Ends in changelog.md + README.md rows, a push, and a dev_configs/node_lock.json pin bump.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-09-10T09:05:00+01:00",
+  "updated_at": "2026-09-10T09:40:00+01:00",
+  "links": {
+    "checklist": "checklist.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "validation": "validation.md"
+  }
+}
