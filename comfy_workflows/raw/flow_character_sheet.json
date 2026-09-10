@@ -1,8 +1,8 @@
 {
   "id": "7801754e-cdb0-470d-9786-ce2404da2c4a",
   "revision": 0,
-  "last_node_id": 892,
-  "last_link_id": 1780,
+  "last_node_id": 893,
+  "last_link_id": 1782,
   "nodes": [
     {
       "id": 136,
@@ -46,9 +46,9 @@
       ],
       "title": "Input_Lora_Phase1_2",
       "properties": {
-        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -59,6 +59,10 @@
         "None",
         1
       ],
+      "widgets_values_named": {
+        "lora_name": "None",
+        "strength_model": 1
+      },
       "color": "#432",
       "bgcolor": "#653"
     },
@@ -104,9 +108,9 @@
       ],
       "title": "Input_Lora_Phase1_5",
       "properties": {
-        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -117,6 +121,10 @@
         "None",
         1
       ],
+      "widgets_values_named": {
+        "lora_name": "None",
+        "strength_model": 1
+      },
       "color": "#432",
       "bgcolor": "#653"
     },
@@ -132,7 +140,7 @@
         122
       ],
       "flags": {},
-      "order": 90,
+      "order": 89,
       "mode": 0,
       "inputs": [
         {
@@ -162,9 +170,9 @@
       ],
       "title": "Input_Lora_Phase1_3",
       "properties": {
-        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -175,6 +183,10 @@
         "None",
         1
       ],
+      "widgets_values_named": {
+        "lora_name": "None",
+        "strength_model": 1
+      },
       "color": "#432",
       "bgcolor": "#653"
     },
@@ -220,9 +232,9 @@
       ],
       "title": "Input_Lora_Phase1_1",
       "properties": {
-        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -233,6 +245,10 @@
         "None",
         1
       ],
+      "widgets_values_named": {
+        "lora_name": "None",
+        "strength_model": 1
+      },
       "color": "#432",
       "bgcolor": "#653"
     },
@@ -248,7 +264,7 @@
         122
       ],
       "flags": {},
-      "order": 92,
+      "order": 93,
       "mode": 0,
       "inputs": [
         {
@@ -278,9 +294,9 @@
       ],
       "title": "Input_Lora_Phase1_6",
       "properties": {
-        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -291,6 +307,10 @@
         "None",
         1
       ],
+      "widgets_values_named": {
+        "lora_name": "None",
+        "strength_model": 1
+      },
       "color": "#432",
       "bgcolor": "#653"
     },
@@ -331,6 +351,9 @@
       "widgets_values": [
         "clip"
       ],
+      "widgets_values_named": {
+        "Constant": "clip"
+      },
       "color": "#432",
       "bgcolor": "#653"
     },
@@ -359,9 +382,9 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "VAELoader",
         "cnr_id": "comfy-core",
         "ver": "0.25.0",
+        "Node name for S&R": "VAELoader",
         "models": [
           {
             "name": "qwen_image_vae.safetensors",
@@ -373,6 +396,9 @@
       "widgets_values": [
         "qwen_image_vae.safetensors"
       ],
+      "widgets_values_named": {
+        "vae_name": "qwen_image_vae.safetensors"
+      },
       "color": "#323",
       "bgcolor": "#535"
     },
@@ -413,6 +439,9 @@
       "widgets_values": [
         "vae"
       ],
+      "widgets_values_named": {
+        "Constant": "vae"
+      },
       "color": "#322",
       "bgcolor": "#533"
     },
@@ -460,13 +489,16 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "CLIPTextEncode",
         "cnr_id": "comfy-core",
-        "ver": "0.25.0"
+        "ver": "0.25.0",
+        "Node name for S&R": "CLIPTextEncode"
       },
       "widgets_values": [
         "A high-contrast, hyper-stylized fashion editorial portrait shot against a saturated mustard-yellow seamless backdrop, with the central figure rendered in crisp desaturated black-and-white, creating a striking duotone aesthetic reminiscent of David LaChapelle meets Helmut Newton with a punk-gothic edge.\n\nThe subject is a fierce young woman with a platinum-bleached, spiked liberty mohawk crown of hair, her expression cold and commanding as she stares directly into the lens. She wears a cropped black leather biker jacket exploding with oversized metallic conical studs and spikes across the shoulders, paired with a minimal black bikini bottom, sheer black thigh-high stockings, and chunky knee-high lace-up combat platform boots. Her toned, athletic physique is fully exposed at the midriff.\n\nShe sits regally upon an ornate throne carved in the shape of a snarling, fanged beast's head — part dragon, part demonic feline — its silver-grey surface intricately detailed with bones, scales, and gothic ornamentation. Her booted foot rests on a battered metal road case wrapped in heavy chains and covered in stickers and band decals.\n\nIn her right hand she grips a massive medieval war scythe, its long wooden shaft wrapped in leather, the enormous curved blade arcing dramatically over her head. Perched on her left fist, talons gripping her knuckles, is a majestic American bald eagle with pristine white head feathers and a sharp yellow beak, staring off to the side with predatory alertness.\n\nStudio lighting is hard and theatrical, casting crisp shadows. The composition is symmetrical, iconic, and poster-like — punk rock goddess of war meets American mythology. Hyperrealistic, high-fashion photography, 8k, sharp detail, magazine cover quality."
       ],
+      "widgets_values_named": {
+        "text": "A high-contrast, hyper-stylized fashion editorial portrait shot against a saturated mustard-yellow seamless backdrop, with the central figure rendered in crisp desaturated black-and-white, creating a striking duotone aesthetic reminiscent of David LaChapelle meets Helmut Newton with a punk-gothic edge.\n\nThe subject is a fierce young woman with a platinum-bleached, spiked liberty mohawk crown of hair, her expression cold and commanding as she stares directly into the lens. She wears a cropped black leather biker jacket exploding with oversized metallic conical studs and spikes across the shoulders, paired with a minimal black bikini bottom, sheer black thigh-high stockings, and chunky knee-high lace-up combat platform boots. Her toned, athletic physique is fully exposed at the midriff.\n\nShe sits regally upon an ornate throne carved in the shape of a snarling, fanged beast's head — part dragon, part demonic feline — its silver-grey surface intricately detailed with bones, scales, and gothic ornamentation. Her booted foot rests on a battered metal road case wrapped in heavy chains and covered in stickers and band decals.\n\nIn her right hand she grips a massive medieval war scythe, its long wooden shaft wrapped in leather, the enormous curved blade arcing dramatically over her head. Perched on her left fist, talons gripping her knuckles, is a majestic American bald eagle with pristine white head feathers and a sharp yellow beak, staring off to the side with predatory alertness.\n\nStudio lighting is hard and theatrical, casting crisp shadows. The composition is symmetrical, iconic, and poster-like — punk rock goddess of war meets American mythology. Hyperrealistic, high-fashion photography, 8k, sharp detail, magazine cover quality."
+      },
       "color": "#232",
       "bgcolor": "#353"
     },
@@ -484,7 +516,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 97,
+      "order": 98,
       "mode": 0,
       "inputs": [
         {
@@ -524,16 +556,15 @@
       ],
       "title": "Balanced",
       "properties": {
-        "Node name for S&R": "ToBasicPipe",
         "cnr_id": "comfyui-impact-pack",
         "ver": "8.22.0",
+        "Node name for S&R": "ToBasicPipe",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.1",
           "input_ue_unconnectable": {}
         }
-      },
-      "widgets_values": []
+      }
     },
     {
       "id": 143,
@@ -549,7 +580,7 @@
       "flags": {
         "collapsed": false
       },
-      "order": 96,
+      "order": 97,
       "mode": 0,
       "inputs": [
         {
@@ -589,16 +620,15 @@
       ],
       "title": "High",
       "properties": {
-        "Node name for S&R": "ToBasicPipe",
         "cnr_id": "comfyui-impact-pack",
         "ver": "8.22.0",
+        "Node name for S&R": "ToBasicPipe",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.1",
           "input_ue_unconnectable": {}
         }
-      },
-      "widgets_values": []
+      }
     },
     {
       "id": 57,
@@ -633,11 +663,10 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "ConditioningZeroOut",
         "cnr_id": "comfy-core",
-        "ver": "0.25.0"
-      },
-      "widgets_values": []
+        "ver": "0.25.0",
+        "Node name for S&R": "ConditioningZeroOut"
+      }
     },
     {
       "id": 312,
@@ -678,9 +707,9 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "VAEDecode",
         "cnr_id": "comfy-core",
         "ver": "0.3.29",
+        "Node name for S&R": "VAEDecode",
         "enableTabs": false,
         "tabWidth": 65,
         "tabXOffset": 10,
@@ -692,8 +721,7 @@
           "version": "7.0.1",
           "widget_ue_connectable": {}
         }
-      },
-      "widgets_values": []
+      }
     },
     {
       "id": 500,
@@ -732,6 +760,9 @@
       "widgets_values": [
         "seed"
       ],
+      "widgets_values_named": {
+        "Constant": "seed"
+      },
       "color": "#1b4669",
       "bgcolor": "#29699c"
     },
@@ -766,7 +797,10 @@
       },
       "widgets_values": [
         "Models"
-      ]
+      ],
+      "widgets_values_named": {
+        "Constant": "Models"
+      }
     },
     {
       "id": 77,
@@ -835,16 +869,15 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "FromBasicPipe",
         "cnr_id": "comfyui-impact-pack",
         "ver": "8.22.0",
+        "Node name for S&R": "FromBasicPipe",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.1",
           "input_ue_unconnectable": {}
         }
-      },
-      "widgets_values": []
+      }
     },
     {
       "id": 401,
@@ -914,6 +947,9 @@
       "widgets_values": [
         "seed"
       ],
+      "widgets_values_named": {
+        "Constant": "seed"
+      },
       "color": "#1b4669",
       "bgcolor": "#29699c"
     },
@@ -950,6 +986,9 @@
       "widgets_values": [
         "seed"
       ],
+      "widgets_values_named": {
+        "Constant": "seed"
+      },
       "color": "#1b4669",
       "bgcolor": "#29699c"
     },
@@ -999,9 +1038,9 @@
       ],
       "title": "Accelerator Lora",
       "properties": {
-        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -1012,6 +1051,10 @@
         "krea-2\\extra\\krea2_turbo_distill_r128.safetensors",
         1
       ],
+      "widgets_values_named": {
+        "lora_name": "krea-2\\extra\\krea2_turbo_distill_r128.safetensors",
+        "strength_model": 1
+      },
       "color": "#432",
       "bgcolor": "#653"
     },
@@ -1059,13 +1102,16 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "MpiIfElse",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633"
+        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633",
+        "Node name for S&R": "MpiIfElse"
       },
       "widgets_values": [
         true
-      ]
+      ],
+      "widgets_values_named": {
+        "boolean": true
+      }
     },
     {
       "id": 620,
@@ -1099,6 +1145,9 @@
       "widgets_values": [
         "turbo"
       ],
+      "widgets_values_named": {
+        "Constant": "turbo"
+      },
       "color": "#1b4669",
       "bgcolor": "#29699c"
     },
@@ -1114,7 +1163,7 @@
         78
       ],
       "flags": {},
-      "order": 98,
+      "order": 99,
       "mode": 0,
       "inputs": [
         {
@@ -1146,13 +1195,16 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "MpiIfElse",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633"
+        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633",
+        "Node name for S&R": "MpiIfElse"
       },
       "widgets_values": [
         true
-      ]
+      ],
+      "widgets_values_named": {
+        "boolean": true
+      }
     },
     {
       "id": 622,
@@ -1186,6 +1238,9 @@
       "widgets_values": [
         "turbo"
       ],
+      "widgets_values_named": {
+        "Constant": "turbo"
+      },
       "color": "#1b4669",
       "bgcolor": "#29699c"
     },
@@ -1201,7 +1256,7 @@
         58
       ],
       "flags": {},
-      "order": 99,
+      "order": 100,
       "mode": 0,
       "inputs": [
         {
@@ -1225,7 +1280,10 @@
       },
       "widgets_values": [
         "Models"
-      ]
+      ],
+      "widgets_values_named": {
+        "Constant": "Models"
+      }
     },
     {
       "id": 656,
@@ -1263,7 +1321,10 @@
       },
       "widgets_values": [
         "negative text"
-      ]
+      ],
+      "widgets_values_named": {
+        "Constant": "negative text"
+      }
     },
     {
       "id": 69,
@@ -1290,9 +1351,9 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "CLIPLoader",
         "cnr_id": "comfy-core",
         "ver": "0.25.0",
+        "Node name for S&R": "CLIPLoader",
         "models": [
           {
             "name": "qwen3vl_4b_fp8_scaled.safetensors",
@@ -1306,6 +1367,11 @@
         "krea2",
         "default"
       ],
+      "widgets_values_named": {
+        "clip_name": "qwen3vl_4b_abliterated_fp8_scaled.safetensors",
+        "type": "krea2",
+        "device": "default"
+      },
       "color": "#323",
       "bgcolor": "#535"
     },
@@ -1340,7 +1406,10 @@
       },
       "widgets_values": [
         "positive text"
-      ]
+      ],
+      "widgets_values_named": {
+        "Constant": "positive text"
+      }
     },
     {
       "id": 657,
@@ -1373,7 +1442,10 @@
       },
       "widgets_values": [
         "negative text"
-      ]
+      ],
+      "widgets_values_named": {
+        "Constant": "negative text"
+      }
     },
     {
       "id": 282,
@@ -1417,13 +1489,16 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "CLIPTextEncode",
         "cnr_id": "comfy-core",
-        "ver": "0.25.0"
+        "ver": "0.25.0",
+        "Node name for S&R": "CLIPTextEncode"
       },
       "widgets_values": [
         ""
       ],
+      "widgets_values_named": {
+        "text": ""
+      },
       "color": "#322",
       "bgcolor": "#533"
     },
@@ -1516,9 +1591,9 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "ClownsharKSampler_Beta",
         "cnr_id": "RES4LYF",
         "ver": "5ce9b5a77c227bf864e447a1e65305bf6cada5c2",
+        "Node name for S&R": "ClownsharKSampler_Beta",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.1",
@@ -1538,6 +1613,19 @@
         "standard",
         true
       ],
+      "widgets_values_named": {
+        "eta": 0.5,
+        "sampler_name": "linear/euler",
+        "scheduler": "beta",
+        "steps": 25,
+        "steps_to_run": -1,
+        "denoise": 1,
+        "cfg": 2,
+        "seed": 796,
+        "control_after_generate": "fixed",
+        "sampler_mode": "standard",
+        "bongmath": true
+      },
       "color": "#323",
       "bgcolor": "#535"
     },
@@ -1630,9 +1718,9 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "ClownsharKSampler_Beta",
         "cnr_id": "RES4LYF",
         "ver": "5ce9b5a77c227bf864e447a1e65305bf6cada5c2",
+        "Node name for S&R": "ClownsharKSampler_Beta",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.1",
@@ -1652,6 +1740,19 @@
         "standard",
         true
       ],
+      "widgets_values_named": {
+        "eta": 0.5,
+        "sampler_name": "linear/euler",
+        "scheduler": "beta",
+        "steps": 3,
+        "steps_to_run": -1,
+        "denoise": 0.19,
+        "cfg": 1,
+        "seed": 796,
+        "control_after_generate": "fixed",
+        "sampler_mode": "standard",
+        "bongmath": true
+      },
       "color": "#323",
       "bgcolor": "#535"
     },
@@ -1744,9 +1845,9 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "ClownsharKSampler_Beta",
         "cnr_id": "RES4LYF",
         "ver": "5ce9b5a77c227bf864e447a1e65305bf6cada5c2",
+        "Node name for S&R": "ClownsharKSampler_Beta",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.1",
@@ -1766,6 +1867,19 @@
         "standard",
         true
       ],
+      "widgets_values_named": {
+        "eta": 0.5,
+        "sampler_name": "linear/euler",
+        "scheduler": "beta",
+        "steps": 2,
+        "steps_to_run": -1,
+        "denoise": 0.3,
+        "cfg": 1,
+        "seed": 796,
+        "control_after_generate": "fixed",
+        "sampler_mode": "standard",
+        "bongmath": true
+      },
       "color": "#323",
       "bgcolor": "#535"
     },
@@ -1814,9 +1928,9 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "EmptyLatentImage",
         "cnr_id": "comfy-core",
         "ver": "0.3.60",
+        "Node name for S&R": "EmptyLatentImage",
         "ue_properties": {
           "widget_ue_connectable": {
             "width": true,
@@ -1831,7 +1945,12 @@
         904,
         1152,
         1
-      ]
+      ],
+      "widgets_values_named": {
+        "width": 904,
+        "height": 1152,
+        "batch_size": 1
+      }
     },
     {
       "id": 670,
@@ -1903,13 +2022,16 @@
       ],
       "title": "Recipe_Select",
       "properties": {
-        "Node name for S&R": "MpiAnySwitch",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633"
+        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633",
+        "Node name for S&R": "MpiAnySwitch"
       },
       "widgets_values": [
         1
-      ]
+      ],
+      "widgets_values_named": {
+        "select": 1
+      }
     },
     {
       "id": 673,
@@ -1941,11 +2063,12 @@
       ],
       "title": "Output_prompt",
       "properties": {
-        "Node name for S&R": "PreviewAny",
         "cnr_id": "comfy-core",
-        "ver": "0.27.0"
+        "ver": "0.27.0",
+        "Node name for S&R": "PreviewAny"
       },
       "widgets_values": [],
+      "widgets_values_named": {},
       "color": "#432",
       "bgcolor": "#653"
     },
@@ -1987,7 +2110,10 @@
       },
       "widgets_values": [
         "positive text"
-      ]
+      ],
+      "widgets_values_named": {
+        "Constant": "positive text"
+      }
     },
     {
       "id": 283,
@@ -2015,9 +2141,9 @@
       ],
       "title": "Input_Negative",
       "properties": {
-        "Node name for S&R": "MpiText",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiText",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -2027,6 +2153,9 @@
       "widgets_values": [
         ""
       ],
+      "widgets_values_named": {
+        "string": ""
+      },
       "color": "#432",
       "bgcolor": "#653"
     },
@@ -2072,9 +2201,9 @@
       ],
       "title": "Input_Bypass_Filter_Lora",
       "properties": {
-        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -2085,6 +2214,10 @@
         "krea-2\\extra\\krea2filterbypass3.safetensors",
         1
       ],
+      "widgets_values_named": {
+        "lora_name": "krea-2\\extra\\krea2filterbypass3.safetensors",
+        "strength_model": 1
+      },
       "color": "#432",
       "bgcolor": "#653"
     },
@@ -2130,9 +2263,9 @@
       ],
       "title": "Input_Lora_Phase1_4",
       "properties": {
-        "Node name for S&R": "MpiLoraModel",
         "cnr_id": "ComfyUi-MpiNodes",
         "ver": "076827b1f321827d0a62a17315ee450307836aa7",
+        "Node name for S&R": "MpiLoraModel",
         "ue_properties": {
           "widget_ue_connectable": {},
           "input_ue_unconnectable": {},
@@ -2143,6 +2276,10 @@
         "None",
         1
       ],
+      "widgets_values_named": {
+        "lora_name": "None",
+        "strength_model": 1
+      },
       "color": "#432",
       "bgcolor": "#653"
     },
@@ -2179,6 +2316,9 @@
       "widgets_values": [
         "vae"
       ],
+      "widgets_values_named": {
+        "Constant": "vae"
+      },
       "color": "#322",
       "bgcolor": "#533"
     },
@@ -2217,6 +2357,9 @@
       "widgets_values": [
         "clip"
       ],
+      "widgets_values_named": {
+        "Constant": "clip"
+      },
       "color": "#432",
       "bgcolor": "#653"
     },
@@ -2232,7 +2375,7 @@
         60
       ],
       "flags": {},
-      "order": 94,
+      "order": 95,
       "mode": 0,
       "inputs": [
         {
@@ -2260,6 +2403,9 @@
       "widgets_values": [
         "model"
       ],
+      "widgets_values_named": {
+        "Constant": "model"
+      },
       "color": "#223",
       "bgcolor": "#335"
     },
@@ -2299,7 +2445,10 @@
       },
       "widgets_values": [
         "turbo"
-      ]
+      ],
+      "widgets_values_named": {
+        "Constant": "turbo"
+      }
     },
     {
       "id": 72,
@@ -2390,9 +2539,9 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "ClownsharKSampler_Beta",
         "cnr_id": "RES4LYF",
         "ver": "5ce9b5a77c227bf864e447a1e65305bf6cada5c2",
+        "Node name for S&R": "ClownsharKSampler_Beta",
         "ue_properties": {
           "widget_ue_connectable": {},
           "version": "7.1",
@@ -2412,6 +2561,19 @@
         "standard",
         true
       ],
+      "widgets_values_named": {
+        "eta": 0.5,
+        "sampler_name": "linear/euler",
+        "scheduler": "beta",
+        "steps": 8,
+        "steps_to_run": -1,
+        "denoise": 1,
+        "cfg": 1,
+        "seed": 796,
+        "control_after_generate": "fixed",
+        "sampler_mode": "standard",
+        "bongmath": true
+      },
       "color": "#323",
       "bgcolor": "#535"
     },
@@ -2454,6 +2616,9 @@
       "widgets_values": [
         "W"
       ],
+      "widgets_values_named": {
+        "Constant": "W"
+      },
       "color": "#1b4669",
       "bgcolor": "#29699c"
     },
@@ -2496,6 +2661,9 @@
       "widgets_values": [
         "H"
       ],
+      "widgets_values_named": {
+        "Constant": "H"
+      },
       "color": "#1b4669",
       "bgcolor": "#29699c"
     },
@@ -2531,6 +2699,9 @@
       "widgets_values": [
         "W"
       ],
+      "widgets_values_named": {
+        "Constant": "W"
+      },
       "color": "#1b4669",
       "bgcolor": "#29699c"
     },
@@ -2566,6 +2737,9 @@
       "widgets_values": [
         "H"
       ],
+      "widgets_values_named": {
+        "Constant": "H"
+      },
       "color": "#1b4669",
       "bgcolor": "#29699c"
     },
@@ -2581,7 +2755,7 @@
         26
       ],
       "flags": {},
-      "order": 91,
+      "order": 90,
       "mode": 0,
       "inputs": [
         {
@@ -2601,11 +2775,10 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "MpiClearVram",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "4709e344671c395192bbec971b33179e6ee518ad"
-      },
-      "widgets_values": []
+        "ver": "4709e344671c395192bbec971b33179e6ee518ad",
+        "Node name for S&R": "MpiClearVram"
+      }
     },
     {
       "id": 731,
@@ -2619,7 +2792,7 @@
         60
       ],
       "flags": {},
-      "order": 95,
+      "order": 96,
       "mode": 0,
       "inputs": [
         {
@@ -2643,7 +2816,10 @@
       },
       "widgets_values": [
         "sheet output"
-      ]
+      ],
+      "widgets_values_named": {
+        "Constant": "sheet output"
+      }
     },
     {
       "id": 160,
@@ -2684,9 +2860,9 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "VAEDecode",
         "cnr_id": "comfy-core",
         "ver": "0.3.29",
+        "Node name for S&R": "VAEDecode",
         "enableTabs": false,
         "tabWidth": 65,
         "tabXOffset": 10,
@@ -2698,8 +2874,7 @@
           "version": "7.0.1",
           "widget_ue_connectable": {}
         }
-      },
-      "widgets_values": []
+      }
     },
     {
       "id": 730,
@@ -2713,7 +2888,7 @@
         32.756528546552545
       ],
       "flags": {},
-      "order": 93,
+      "order": 94,
       "mode": 0,
       "inputs": [
         {
@@ -2733,11 +2908,10 @@
       ],
       "title": "Character Sheet Generation Image Output",
       "properties": {
-        "Node name for S&R": "MpiReroute",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1"
-      },
-      "widgets_values": []
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
+        "Node name for S&R": "MpiReroute"
+      }
     },
     {
       "id": 739,
@@ -2775,7 +2949,10 @@
       },
       "widgets_values": [
         "is remove head"
-      ]
+      ],
+      "widgets_values_named": {
+        "Constant": "is remove head"
+      }
     },
     {
       "id": 743,
@@ -2810,6 +2987,9 @@
       "widgets_values": [
         "W"
       ],
+      "widgets_values_named": {
+        "Constant": "W"
+      },
       "color": "#1b4669",
       "bgcolor": "#29699c"
     },
@@ -2839,13 +3019,16 @@
       ],
       "title": "Recipe_3D",
       "properties": {
-        "Node name for S&R": "PrimitiveStringMultiline",
         "cnr_id": "comfy-core",
-        "ver": "0.27.0"
+        "ver": "0.27.0",
+        "Node name for S&R": "PrimitiveStringMultiline"
       },
       "widgets_values": [
         "3D animated character reference sheet of [CHARACTER PROMPT], modelled as a hero character for a feature animation. A single continuous rendered turnaround image containing three views of the same character arranged side by side in one unbroken frame, the grey background flowing continuously behind all three, the same character in every view with identical face, hair and wardrobe. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, a gentle three-quarter angle close to frontal, the whole nose clearly visible with both nostrils and the tip of the nose sitting well inside the outline of the face, both cheeks visible, both eyes visible and looking into the camera, neutral expression, mouth closed, face sharp and clear, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms hanging loose and relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Plain smooth eighteen percent grey card seamless studio background, flat neutral grey. Extremely even flat frontal illumination, soft open shadows, uniform brightness from edge to edge. Clean stylised 3D render with subsurface skin shading, groomed hair, glossy eyes with a small bright catch-light in each pupil, even studio render lighting."
-      ]
+      ],
+      "widgets_values_named": {
+        "value": "3D animated character reference sheet of [CHARACTER PROMPT], modelled as a hero character for a feature animation. A single continuous rendered turnaround image containing three views of the same character arranged side by side in one unbroken frame, the grey background flowing continuously behind all three, the same character in every view with identical face, hair and wardrobe. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, a gentle three-quarter angle close to frontal, the whole nose clearly visible with both nostrils and the tip of the nose sitting well inside the outline of the face, both cheeks visible, both eyes visible and looking into the camera, neutral expression, mouth closed, face sharp and clear, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms hanging loose and relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Plain smooth eighteen percent grey card seamless studio background, flat neutral grey. Extremely even flat frontal illumination, soft open shadows, uniform brightness from edge to edge. Clean stylised 3D render with subsurface skin shading, groomed hair, glossy eyes with a small bright catch-light in each pupil, even studio render lighting."
+      }
     },
     {
       "id": 666,
@@ -2873,13 +3056,16 @@
       ],
       "title": "Recipe_Photoreal",
       "properties": {
-        "Node name for S&R": "PrimitiveStringMultiline",
         "cnr_id": "comfy-core",
-        "ver": "0.27.0"
+        "ver": "0.27.0",
+        "Node name for S&R": "PrimitiveStringMultiline"
       },
       "widgets_values": [
         "Live-action photographic character reference sheet of [CHARACTER PROMPT], photographed as a real actor for a feature film. A single continuous studio photograph containing three views of the same character arranged side by side in one unbroken frame, the grey background flowing continuously behind all three, the same character in every view with identical face, hair and wardrobe. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, a gentle three-quarter angle close to frontal, the whole nose clearly visible with both nostrils and the tip of the nose sitting well inside the outline of the face, both cheeks visible, both eyes visible and looking into the lens, neutral expression, mouth closed, face sharp and clear, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms hanging loose and relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Plain smooth eighteen percent grey card seamless studio background, flat neutral grey. Extremely even flat frontal illumination, soft open shadows, uniform brightness from edge to edge. Authentic skin texture with visible pores, natural hair, realistic eyes with a small bright catch-light in each pupil, 85mm lens."
-      ]
+      ],
+      "widgets_values_named": {
+        "value": "Live-action photographic character reference sheet of [CHARACTER PROMPT], photographed as a real actor for a feature film. A single continuous studio photograph containing three views of the same character arranged side by side in one unbroken frame, the grey background flowing continuously behind all three, the same character in every view with identical face, hair and wardrobe. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, a gentle three-quarter angle close to frontal, the whole nose clearly visible with both nostrils and the tip of the nose sitting well inside the outline of the face, both cheeks visible, both eyes visible and looking into the lens, neutral expression, mouth closed, face sharp and clear, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms hanging loose and relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Plain smooth eighteen percent grey card seamless studio background, flat neutral grey. Extremely even flat frontal illumination, soft open shadows, uniform brightness from edge to edge. Authentic skin texture with visible pores, natural hair, realistic eyes with a small bright catch-light in each pupil, 85mm lens."
+      }
     },
     {
       "id": 676,
@@ -2907,13 +3093,16 @@
       ],
       "title": "W_1k",
       "properties": {
-        "Node name for S&R": "MpiInt",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04"
+        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04",
+        "Node name for S&R": "MpiInt"
       },
       "widgets_values": [
         1280
       ],
+      "widgets_values_named": {
+        "int": 1280
+      },
       "color": "#432",
       "bgcolor": "#653"
     },
@@ -2943,13 +3132,16 @@
       ],
       "title": "H_1k",
       "properties": {
-        "Node name for S&R": "MpiInt",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04"
+        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04",
+        "Node name for S&R": "MpiInt"
       },
       "widgets_values": [
         800
       ],
+      "widgets_values_named": {
+        "int": 800
+      },
       "color": "#432",
       "bgcolor": "#653"
     },
@@ -2965,7 +3157,7 @@
         60
       ],
       "flags": {},
-      "order": 88,
+      "order": 91,
       "mode": 0,
       "inputs": [
         {
@@ -2989,7 +3181,10 @@
       },
       "widgets_values": [
         "inpaint mask"
-      ]
+      ],
+      "widgets_values_named": {
+        "Constant": "inpaint mask"
+      }
     },
     {
       "id": 760,
@@ -3023,6 +3218,9 @@
       "widgets_values": [
         "is remove head"
       ],
+      "widgets_values_named": {
+        "Constant": "is remove head"
+      },
       "color": "#1b4669",
       "bgcolor": "#29699c"
     },
@@ -3057,7 +3255,10 @@
       },
       "widgets_values": [
         "sheet output"
-      ]
+      ],
+      "widgets_values_named": {
+        "Constant": "sheet output"
+      }
     },
     {
       "id": 753,
@@ -3097,13 +3298,16 @@
       ],
       "title": "SAM3 Model",
       "properties": {
-        "Node name for S&R": "CheckpointLoaderSimple",
         "cnr_id": "comfy-core",
-        "ver": "0.28.0"
+        "ver": "0.28.0",
+        "Node name for S&R": "CheckpointLoaderSimple"
       },
       "widgets_values": [
         "sam3.1_multiplex_fp16.safetensors"
-      ]
+      ],
+      "widgets_values_named": {
+        "ckpt_name": "sam3.1_multiplex_fp16.safetensors"
+      }
     },
     {
       "id": 757,
@@ -3117,7 +3321,7 @@
         150
       ],
       "flags": {},
-      "order": 84,
+      "order": 88,
       "mode": 0,
       "inputs": [
         {
@@ -3128,7 +3332,7 @@
         {
           "name": "source",
           "type": "MASK",
-          "link": 1553
+          "link": 1782
         }
       ],
       "outputs": [
@@ -3143,15 +3347,20 @@
       ],
       "title": "paste the head mask back at full size",
       "properties": {
-        "Node name for S&R": "MaskComposite",
         "cnr_id": "comfy-core",
-        "ver": "0.28.0"
+        "ver": "0.28.0",
+        "Node name for S&R": "MaskComposite"
       },
       "widgets_values": [
         0,
         0,
         "add"
-      ]
+      ],
+      "widgets_values_named": {
+        "x": 0,
+        "y": 0,
+        "operation": "add"
+      }
     },
     {
       "id": 768,
@@ -3179,13 +3388,16 @@
       ],
       "title": "W_2k",
       "properties": {
-        "Node name for S&R": "MpiInt",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04"
+        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04",
+        "Node name for S&R": "MpiInt"
       },
       "widgets_values": [
         1792
       ],
+      "widgets_values_named": {
+        "int": 1792
+      },
       "color": "#432",
       "bgcolor": "#653"
     },
@@ -3215,13 +3427,16 @@
       ],
       "title": "H_2k",
       "properties": {
-        "Node name for S&R": "MpiInt",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04"
+        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04",
+        "Node name for S&R": "MpiInt"
       },
       "widgets_values": [
         1120
       ],
+      "widgets_values_named": {
+        "int": 1120
+      },
       "color": "#432",
       "bgcolor": "#653"
     },
@@ -3295,13 +3510,16 @@
       ],
       "title": "Height_Select",
       "properties": {
-        "Node name for S&R": "MpiAnySwitch",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633"
+        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633",
+        "Node name for S&R": "MpiAnySwitch"
       },
       "widgets_values": [
         1
-      ]
+      ],
+      "widgets_values_named": {
+        "select": 1
+      }
     },
     {
       "id": 503,
@@ -3330,13 +3548,16 @@
       ],
       "title": "Input_Seed",
       "properties": {
-        "Node name for S&R": "MpiInt",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "aaa1d2d9fa713decae6843e64f5a81b84f9f443d"
+        "ver": "aaa1d2d9fa713decae6843e64f5a81b84f9f443d",
+        "Node name for S&R": "MpiInt"
       },
       "widgets_values": [
         976866873950
       ],
+      "widgets_values_named": {
+        "int": 976866873950
+      },
       "color": "#432",
       "bgcolor": "#653"
     },
@@ -3367,13 +3588,16 @@
       ],
       "title": "Input_Quality",
       "properties": {
-        "Node name for S&R": "MpiInt",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04"
+        "ver": "ba4b37ae349d7bb55e06c4b4c57b039a9abd1b04",
+        "Node name for S&R": "MpiInt"
       },
       "widgets_values": [
         1
       ],
+      "widgets_values_named": {
+        "int": 1
+      },
       "color": "#432",
       "bgcolor": "#653"
     },
@@ -3447,13 +3671,16 @@
       ],
       "title": "Width_Select",
       "properties": {
-        "Node name for S&R": "MpiAnySwitch",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633"
+        "ver": "69a43336a76b33dc5853489e8e1f91f03f981633",
+        "Node name for S&R": "MpiAnySwitch"
       },
       "widgets_values": [
         1
-      ]
+      ],
+      "widgets_values_named": {
+        "select": 1
+      }
     },
     {
       "id": 672,
@@ -3498,15 +3725,20 @@
       ],
       "title": "Sheet_Prompt",
       "properties": {
-        "Node name for S&R": "StringReplace",
         "cnr_id": "comfy-core",
-        "ver": "0.27.0"
+        "ver": "0.27.0",
+        "Node name for S&R": "StringReplace"
       },
       "widgets_values": [
         "",
         "[CHARACTER PROMPT]",
         ""
-      ]
+      ],
+      "widgets_values_named": {
+        "string": "",
+        "find": "[CHARACTER PROMPT]",
+        "replace": ""
+      }
     },
     {
       "id": 55,
@@ -3534,9 +3766,9 @@
       ],
       "title": "Input_Base_Model",
       "properties": {
-        "Node name for S&R": "UNETLoader",
         "cnr_id": "comfy-core",
         "ver": "0.25.0",
+        "Node name for S&R": "UNETLoader",
         "models": [
           {
             "name": "krea2_turbo_fp8_scaled.safetensors",
@@ -3549,6 +3781,10 @@
         "krea2_raw_int8_convrot.safetensors",
         "default"
       ],
+      "widgets_values_named": {
+        "unet_name": "krea2_raw_int8_convrot.safetensors",
+        "weight_dtype": "default"
+      },
       "color": "#323",
       "bgcolor": "#535"
     },
@@ -3581,11 +3817,10 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "PreviewImage",
         "cnr_id": "comfy-core",
-        "ver": "0.31.0"
-      },
-      "widgets_values": []
+        "ver": "0.31.0",
+        "Node name for S&R": "PreviewImage"
+      }
     },
     {
       "id": 767,
@@ -3599,7 +3834,7 @@
         287.5473804690291
       ],
       "flags": {},
-      "order": 89,
+      "order": 92,
       "mode": 2,
       "inputs": [
         {
@@ -3616,11 +3851,10 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "MaskPreview",
         "cnr_id": "comfy-core",
-        "ver": "0.31.0"
-      },
-      "widgets_values": []
+        "ver": "0.31.0",
+        "Node name for S&R": "MaskPreview"
+      }
     },
     {
       "id": 754,
@@ -3654,13 +3888,1122 @@
       ],
       "title": "SAM3 vocabulary",
       "properties": {
-        "Node name for S&R": "CLIPTextEncode",
         "cnr_id": "comfy-core",
-        "ver": "0.28.0"
+        "ver": "0.28.0",
+        "Node name for S&R": "CLIPTextEncode"
       },
       "widgets_values": [
         "face, hat, moustache"
-      ]
+      ],
+      "widgets_values_named": {
+        "text": "face, hat, moustache"
+      }
+    },
+    {
+      "id": 756,
+      "type": "SolidMask",
+      "pos": [
+        -4126.491066481982,
+        6923.273803281135
+      ],
+      "size": [
+        270,
+        106
+      ],
+      "flags": {},
+      "order": 54,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 1550
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 1551
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            1552
+          ]
+        }
+      ],
+      "title": "empty sheet-sized canvas",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.28.0",
+        "Node name for S&R": "SolidMask"
+      },
+      "widgets_values": [
+        0,
+        512,
+        512
+      ],
+      "widgets_values_named": {
+        "value": 0,
+        "width": 512,
+        "height": 512
+      }
+    },
+    {
+      "id": 752,
+      "type": "MpiBox",
+      "pos": [
+        -4730.815244751773,
+        6940.975908073101
+      ],
+      "size": [
+        270.4146484375,
+        130
+      ],
+      "flags": {},
+      "order": 63,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 1579
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 1580
+        }
+      ],
+      "outputs": [
+        {
+          "name": "mpi_box",
+          "type": "MPI_BOX",
+          "links": [
+            1545
+          ]
+        }
+      ],
+      "title": "the far-left region (front body only)",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "7d58def84882c6d2e376fe4096f7104012ebc6ec",
+        "Node name for S&R": "MpiBox"
+      },
+      "widgets_values": [
+        512,
+        512,
+        0,
+        0
+      ],
+      "widgets_values_named": {
+        "width": 512,
+        "height": 512,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "id": 774,
+      "type": "MpiMath",
+      "pos": [
+        -5273.520558179213,
+        6894.896383385612
+      ],
+      "size": [
+        295.386328125,
+        128
+      ],
+      "flags": {},
+      "order": 47,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "a",
+          "type": "*",
+          "link": 1578
+        },
+        {
+          "name": "b",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        },
+        {
+          "name": "c",
+          "shape": 7,
+          "type": "*",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "result",
+          "type": "*",
+          "links": [
+            1579
+          ]
+        }
+      ],
+      "title": "left 25% of the sheet width",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "7d58def84882c6d2e376fe4096f7104012ebc6ec",
+        "Node name for S&R": "MpiMath"
+      },
+      "widgets_values": [
+        "a // 4"
+      ],
+      "widgets_values_named": {
+        "math_expression": "a // 4"
+      }
+    },
+    {
+      "id": 758,
+      "type": "MpiBoxCrop",
+      "pos": [
+        -4413.654337745736,
+        6923.138672710201
+      ],
+      "size": [
+        250,
+        78
+      ],
+      "flags": {},
+      "order": 72,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 1561
+        },
+        {
+          "name": "mpi_box",
+          "type": "MPI_BOX",
+          "link": 1545
+        }
+      ],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            1548
+          ]
+        },
+        {
+          "name": "mpi_box",
+          "type": "MPI_BOX",
+          "links": []
+        }
+      ],
+      "title": "crop to the far-left region",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "7d58def84882c6d2e376fe4096f7104012ebc6ec",
+        "Node name for S&R": "MpiBoxCrop"
+      },
+      "widgets_values": [
+        false
+      ],
+      "widgets_values_named": {
+        "pad": false
+      }
+    },
+    {
+      "id": 744,
+      "type": "GetNode",
+      "pos": [
+        -5984.630500038655,
+        6697.3426832836385
+      ],
+      "size": [
+        210,
+        58
+      ],
+      "flags": {},
+      "order": 27,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            1551,
+            1580
+          ]
+        }
+      ],
+      "title": "Get_H",
+      "properties": {
+        "Node name for S&R": "GetNode",
+        "aux_id": "kijai/ComfyUI-KJNodes"
+      },
+      "widgets_values": [
+        "H"
+      ],
+      "widgets_values_named": {
+        "Constant": "H"
+      },
+      "color": "#1b4669",
+      "bgcolor": "#29699c"
+    },
+    {
+      "id": 759,
+      "type": "MpiBlocker",
+      "pos": [
+        -5665.766464024663,
+        6672.1109090524105
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 48,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "input",
+          "type": "*",
+          "link": 1559
+        },
+        {
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "boolean"
+          },
+          "link": 1566
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": [
+            1561,
+            1569
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
+        "Node name for S&R": "MpiBlocker"
+      },
+      "widgets_values": [
+        true
+      ],
+      "widgets_values_named": {
+        "boolean": true
+      }
+    },
+    {
+      "id": 112,
+      "type": "MpiText",
+      "pos": [
+        -8148.673075542925,
+        7000.06486931079
+      ],
+      "size": [
+        554.275529025053,
+        196.90800028317108
+      ],
+      "flags": {},
+      "order": 28,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "Text",
+          "type": "STRING",
+          "links": [
+            1442
+          ]
+        }
+      ],
+      "title": "Input_Positive",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
+        "Node name for S&R": "MpiText",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.7"
+        }
+      },
+      "widgets_values": [
+        "An eighty-year-old wizard with a long beard a pointy hat and fully white eyes with no iris, holding a large staff with a blue jewel on its handle. "
+      ],
+      "widgets_values_named": {
+        "string": "An eighty-year-old wizard with a long beard a pointy hat and fully white eyes with no iris, holding a large staff with a blue jewel on its handle. "
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 617,
+      "type": "MpiSimpleBoolean",
+      "pos": [
+        -2848.192976353702,
+        7154.826181797127
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 29,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "links": [
+            1290
+          ]
+        }
+      ],
+      "title": "Input_is_Turbo",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "aaa1d2d9fa713decae6843e64f5a81b84f9f443d",
+        "Node name for S&R": "MpiSimpleBoolean"
+      },
+      "widgets_values": [
+        false
+      ],
+      "widgets_values_named": {
+        "boolean": false
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 669,
+      "type": "PrimitiveStringMultiline",
+      "pos": [
+        -9198.493057125492,
+        7680.504510675639
+      ],
+      "size": [
+        560,
+        420
+      ],
+      "flags": {},
+      "order": 30,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            1440
+          ]
+        }
+      ],
+      "title": "Recipe_Cartoon",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0",
+        "Node name for S&R": "PrimitiveStringMultiline"
+      },
+      "widgets_values": [
+        "2D cartoon character reference sheet of [CHARACTER PROMPT], drawn as a hero character for an animated series, one continuous illustration containing three views of the same character arranged side by side in a single unbroken frame, the same character in every view with identical face, hair and wardrobe. The character is drawn with bold clean outlines and solid colour fills with clear soft shading that gives the figure depth and form, its colours and values kept distinctly deeper and richer than the background so the silhouette reads cleanly against it. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, the whole nose clearly visible with both nostrils, both cheeks visible, both eyes visible and looking at the viewer, neutral expression, mouth closed, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Behind all three views the background is a plain seamless light grey studio card, smooth and evenly lit with no gradient, no vignette and no shadow falling on it. Model-sheet clarity."
+      ],
+      "widgets_values_named": {
+        "value": "2D cartoon character reference sheet of [CHARACTER PROMPT], drawn as a hero character for an animated series, one continuous illustration containing three views of the same character arranged side by side in a single unbroken frame, the same character in every view with identical face, hair and wardrobe. The character is drawn with bold clean outlines and solid colour fills with clear soft shading that gives the figure depth and form, its colours and values kept distinctly deeper and richer than the background so the silhouette reads cleanly against it. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, the whole nose clearly visible with both nostrils, both cheeks visible, both eyes visible and looking at the viewer, neutral expression, mouth closed, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Behind all three views the background is a plain seamless light grey studio card, smooth and evenly lit with no gradient, no vignette and no shadow falling on it. Model-sheet clarity."
+      }
+    },
+    {
+      "id": 854,
+      "type": "GrowMask",
+      "pos": [
+        -4987.858350061263,
+        8294.599520653222
+      ],
+      "size": [
+        270,
+        82
+      ],
+      "flags": {},
+      "order": 58,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mask",
+          "type": "MASK",
+          "link": 1698
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            1769
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.31.0",
+        "Node name for S&R": "GrowMask"
+      },
+      "widgets_values": [
+        6,
+        true
+      ],
+      "widgets_values_named": {
+        "expand": 6,
+        "tapered_corners": true
+      }
+    },
+    {
+      "id": 668,
+      "type": "PrimitiveStringMultiline",
+      "pos": [
+        -9209.588615677343,
+        7192.1447299625415
+      ],
+      "size": [
+        560,
+        420
+      ],
+      "flags": {},
+      "order": 31,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "STRING",
+          "type": "STRING",
+          "links": [
+            1439
+          ]
+        }
+      ],
+      "title": "Recipe_Anime",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.27.0",
+        "Node name for S&R": "PrimitiveStringMultiline"
+      },
+      "widgets_values": [
+        "Anime character reference sheet of [CHARACTER PROMPT], drawn as a key character for an animated feature, one continuous cel-shaded illustration containing three views of the same character arranged side by side in a single unbroken frame, the same character in every view with identical face, hair and wardrobe. The character is drawn with crisp line art and cel-shaded colour fills with clear soft shading that gives the figure depth and form, its colours and values kept distinctly deeper and richer than the background so the silhouette reads cleanly against it, clean anime eyes with a small bright highlight in each pupil. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, the whole nose clearly visible with both nostrils, both cheeks visible, both eyes visible and looking at the viewer, neutral expression, mouth closed, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Behind all three views the background is a plain seamless mid grey studio card, smooth and evenly lit with no gradient, no vignette and no shadow falling on it. Model-sheet clarity."
+      ],
+      "widgets_values_named": {
+        "value": "Anime character reference sheet of [CHARACTER PROMPT], drawn as a key character for an animated feature, one continuous cel-shaded illustration containing three views of the same character arranged side by side in a single unbroken frame, the same character in every view with identical face, hair and wardrobe. The character is drawn with crisp line art and cel-shaded colour fills with clear soft shading that gives the figure depth and form, its colours and values kept distinctly deeper and richer than the background so the silhouette reads cleanly against it, clean anime eyes with a small bright highlight in each pupil. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, the whole nose clearly visible with both nostrils, both cheeks visible, both eyes visible and looking at the viewer, neutral expression, mouth closed, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Behind all three views the background is a plain seamless mid grey studio card, smooth and evenly lit with no gradient, no vignette and no shadow falling on it. Model-sheet clarity."
+      }
+    },
+    {
+      "id": 671,
+      "type": "MpiInt",
+      "pos": [
+        -8376.58863009265,
+        6892.4671471314505
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 32,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "int",
+          "type": "INT",
+          "links": [
+            1436
+          ]
+        }
+      ],
+      "title": "Input_Recipe",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
+        "Node name for S&R": "MpiInt"
+      },
+      "widgets_values": [
+        3
+      ],
+      "widgets_values_named": {
+        "int": 3
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 890,
+      "type": "GetNode",
+      "pos": [
+        -5124.802768530936,
+        8153.134597926215
+      ],
+      "size": [
+        210,
+        60
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 33,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            1773
+          ]
+        }
+      ],
+      "title": "Get_W",
+      "properties": {
+        "Node name for S&R": "GetNode",
+        "aux_id": "kijai/ComfyUI-KJNodes"
+      },
+      "widgets_values": [
+        "W"
+      ],
+      "widgets_values_named": {
+        "Constant": "W"
+      },
+      "color": "#1b4669",
+      "bgcolor": "#29699c"
+    },
+    {
+      "id": 891,
+      "type": "GetNode",
+      "pos": [
+        -5123.1531132647615,
+        8192.75482684242
+      ],
+      "size": [
+        210,
+        50
+      ],
+      "flags": {
+        "collapsed": true
+      },
+      "order": 34,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            1774
+          ]
+        }
+      ],
+      "title": "Get_H",
+      "properties": {
+        "Node name for S&R": "GetNode",
+        "aux_id": "kijai/ComfyUI-KJNodes"
+      },
+      "widgets_values": [
+        "H"
+      ],
+      "widgets_values_named": {
+        "Constant": "H"
+      },
+      "color": "#1b4669",
+      "bgcolor": "#29699c"
+    },
+    {
+      "id": 889,
+      "type": "ImageScale",
+      "pos": [
+        -4993.986221307218,
+        8092.828392717352
+      ],
+      "size": [
+        270,
+        130
+      ],
+      "flags": {},
+      "order": 69,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 1772
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 1773
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 1774
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            1775
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.34.2",
+        "Node name for S&R": "ImageScale"
+      },
+      "widgets_values": [
+        "nearest-exact",
+        512,
+        512,
+        "disabled"
+      ],
+      "widgets_values_named": {
+        "upscale_method": "nearest-exact",
+        "width": 512,
+        "height": 512,
+        "crop": "disabled"
+      }
+    },
+    {
+      "id": 887,
+      "type": "Image Crop Location Exact",
+      "pos": [
+        -5484.911583040137,
+        8092.828392717339
+      ],
+      "size": [
+        278.0171875,
+        174
+      ],
+      "flags": {},
+      "order": 57,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 1770
+        }
+      ],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            1772
+          ]
+        },
+        {
+          "name": "crop_data",
+          "type": "CROP_DATA",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "RES4LYF",
+        "ver": "419de2d7c78f415dde9aa352a7231820ebfc17a4",
+        "Node name for S&R": "Image Crop Location Exact"
+      },
+      "widgets_values": [
+        0,
+        0,
+        32,
+        32,
+        "original"
+      ],
+      "widgets_values_named": {
+        "x": 0,
+        "y": 0,
+        "width": 32,
+        "height": 32,
+        "edge": "original"
+      }
+    },
+    {
+      "id": 884,
+      "type": "GetNode",
+      "pos": [
+        -5731.276536720617,
+        8031.3433817358255
+      ],
+      "size": [
+        210,
+        58
+      ],
+      "flags": {},
+      "order": 35,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "*",
+          "type": "*",
+          "links": [
+            1766,
+            1770
+          ]
+        }
+      ],
+      "title": "Get_sheet output",
+      "properties": {
+        "Node name for S&R": "GetNode",
+        "aux_id": "kijai/ComfyUI-KJNodes"
+      },
+      "widgets_values": [
+        "sheet output"
+      ],
+      "widgets_values_named": {
+        "Constant": "sheet output"
+      }
+    },
+    {
+      "id": 892,
+      "type": "GetNode",
+      "pos": [
+        -4601.044272577852,
+        8232.5529707277
+      ],
+      "size": [
+        210,
+        58
+      ],
+      "flags": {},
+      "order": 36,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "*",
+          "type": "*",
+          "links": [
+            1777
+          ]
+        }
+      ],
+      "title": "Get_sheet output",
+      "properties": {
+        "Node name for S&R": "GetNode",
+        "aux_id": "kijai/ComfyUI-KJNodes"
+      },
+      "widgets_values": [
+        "sheet output"
+      ],
+      "widgets_values_named": {
+        "Constant": "sheet output"
+      }
+    },
+    {
+      "id": 741,
+      "type": "GetNode",
+      "pos": [
+        -4590.383441815848,
+        8348.590454679255
+      ],
+      "size": [
+        210,
+        58
+      ],
+      "flags": {},
+      "order": 37,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "BOOLEAN",
+          "type": "BOOLEAN",
+          "links": [
+            1528
+          ]
+        }
+      ],
+      "title": "Get_is remove head",
+      "properties": {
+        "Node name for S&R": "GetNode",
+        "aux_id": "kijai/ComfyUI-KJNodes"
+      },
+      "widgets_values": [
+        "is remove head"
+      ],
+      "widgets_values_named": {
+        "Constant": "is remove head"
+      }
+    },
+    {
+      "id": 742,
+      "type": "MpiIfElse",
+      "pos": [
+        -4297.263920739941,
+        8208.28188722014
+      ],
+      "size": [
+        270,
+        78
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 81,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "true",
+          "type": "*",
+          "link": 1776
+        },
+        {
+          "name": "false",
+          "type": "*",
+          "link": 1777
+        },
+        {
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "boolean"
+          },
+          "link": 1528
+        }
+      ],
+      "outputs": [
+        {
+          "name": "output",
+          "type": "*",
+          "links": [
+            1778
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1",
+        "Node name for S&R": "MpiIfElse"
+      },
+      "widgets_values": [
+        true
+      ],
+      "widgets_values_named": {
+        "boolean": true
+      }
+    },
+    {
+      "id": 882,
+      "type": "PreviewImage",
+      "pos": [
+        -3964.02549920571,
+        8208.255202853426
+      ],
+      "size": [
+        694.920468277696,
+        516.4480839411115
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 86,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 1778
+        }
+      ],
+      "outputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "links": []
+        }
+      ],
+      "title": "Output_Image",
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.50",
+        "Node name for S&R": "PreviewImage",
+        "enableTabs": false,
+        "tabWidth": 65,
+        "tabXOffset": 10,
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "secondTabOffset": 80,
+        "secondTabWidth": 65,
+        "ue_properties": {
+          "version": "7.0.1",
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {}
+        }
+      },
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 850,
+      "type": "GetNode",
+      "pos": [
+        -5227.168090914195,
+        8323.24024539446
+      ],
+      "size": [
+        210,
+        58
+      ],
+      "flags": {},
+      "order": 38,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": [
+            1698
+          ]
+        }
+      ],
+      "title": "Get_inpaint mask",
+      "properties": {
+        "Node name for S&R": "GetNode",
+        "aux_id": "kijai/ComfyUI-KJNodes"
+      },
+      "widgets_values": [
+        "inpaint mask"
+      ],
+      "widgets_values_named": {
+        "Constant": "inpaint mask"
+      },
+      "color": "#1c5715",
+      "bgcolor": "#1f401b"
+    },
+    {
+      "id": 883,
+      "type": "ImageCompositeMasked",
+      "pos": [
+        -4670.600535766388,
+        8034.081810150399
+      ],
+      "size": [
+        271.64609375,
+        146
+      ],
+      "flags": {},
+      "order": 75,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "destination",
+          "type": "IMAGE",
+          "link": 1766
+        },
+        {
+          "name": "source",
+          "type": "IMAGE",
+          "link": 1775
+        },
+        {
+          "name": "mask",
+          "shape": 7,
+          "type": "MASK",
+          "link": 1769
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            1776
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.31.0",
+        "Node name for S&R": "ImageCompositeMasked"
+      },
+      "widgets_values": [
+        0,
+        0,
+        true
+      ],
+      "widgets_values_named": {
+        "x": 0,
+        "y": 0,
+        "resize_source": true
+      }
+    },
+    {
+      "id": 737,
+      "type": "MpiSimpleBoolean",
+      "pos": [
+        -2852.12722897724,
+        7277.088247481086
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 39,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "boolean",
+          "type": "BOOLEAN",
+          "links": [
+            1527
+          ]
+        }
+      ],
+      "title": "Input_Remove_Head",
+      "properties": {
+        "cnr_id": "ComfyUi-MpiNodes",
+        "ver": "aaa1d2d9fa713decae6843e64f5a81b84f9f443d",
+        "Node name for S&R": "MpiSimpleBoolean"
+      },
+      "widgets_values": [
+        true
+      ],
+      "widgets_values_named": {
+        "boolean": true
+      },
+      "color": "#432",
+      "bgcolor": "#653"
     },
     {
       "id": 755,
@@ -3720,7 +5063,7 @@
           "name": "masks",
           "type": "MASK",
           "links": [
-            1553
+            1781
           ]
         },
         {
@@ -3731,1034 +5074,62 @@
       ],
       "title": "head + hat, unioned",
       "properties": {
-        "Node name for S&R": "SAM3_Detect",
         "cnr_id": "comfy-core",
-        "ver": "0.28.0"
+        "ver": "0.28.0",
+        "Node name for S&R": "SAM3_Detect"
       },
       "widgets_values": [
         0.5,
         2,
         false
-      ]
+      ],
+      "widgets_values_named": {
+        "threshold": 0.5,
+        "refine_iterations": 2,
+        "individual_masks": false
+      }
     },
     {
-      "id": 756,
-      "type": "SolidMask",
+      "id": 893,
+      "type": "MpiMaskFillHoles",
       "pos": [
-        -4126.491066481982,
-        6923.273803281135
+        -4289.041466023427,
+        7180.089985862789
       ],
       "size": [
         270,
-        106
+        58
       ],
       "flags": {},
-      "order": 54,
+      "order": 84,
       "mode": 0,
       "inputs": [
         {
-          "name": "width",
-          "type": "INT",
-          "widget": {
-            "name": "width"
-          },
-          "link": 1550
-        },
-        {
-          "name": "height",
-          "type": "INT",
-          "widget": {
-            "name": "height"
-          },
-          "link": 1551
+          "name": "mask",
+          "type": "MASK",
+          "link": 1781
         }
       ],
       "outputs": [
         {
-          "name": "MASK",
+          "name": "mask",
           "type": "MASK",
           "links": [
-            1552
+            1782
           ]
         }
       ],
-      "title": "empty sheet-sized canvas",
       "properties": {
-        "Node name for S&R": "SolidMask",
-        "cnr_id": "comfy-core",
-        "ver": "0.28.0"
-      },
-      "widgets_values": [
-        0,
-        512,
-        512
-      ]
-    },
-    {
-      "id": 752,
-      "type": "MpiBox",
-      "pos": [
-        -4730.815244751773,
-        6940.975908073101
-      ],
-      "size": [
-        270.4146484375,
-        130
-      ],
-      "flags": {},
-      "order": 63,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "width",
-          "type": "INT",
-          "widget": {
-            "name": "width"
-          },
-          "link": 1579
-        },
-        {
-          "name": "height",
-          "type": "INT",
-          "widget": {
-            "name": "height"
-          },
-          "link": 1580
-        }
-      ],
-      "outputs": [
-        {
-          "name": "mpi_box",
-          "type": "MPI_BOX",
-          "links": [
-            1545
-          ]
-        }
-      ],
-      "title": "the far-left region (front body only)",
-      "properties": {
-        "Node name for S&R": "MpiBox",
         "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "7d58def84882c6d2e376fe4096f7104012ebc6ec"
+        "ver": "1f808a94f1167e1b3aa1352180918d5d7d23a1b2",
+        "Node name for S&R": "MpiMaskFillHoles"
       },
       "widgets_values": [
-        512,
-        512,
-        0,
         0
-      ]
-    },
-    {
-      "id": 774,
-      "type": "MpiMath",
-      "pos": [
-        -5273.520558179213,
-        6894.896383385612
       ],
-      "size": [
-        295.386328125,
-        128
-      ],
-      "flags": {},
-      "order": 47,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "a",
-          "type": "*",
-          "link": 1578
-        },
-        {
-          "name": "b",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        },
-        {
-          "name": "c",
-          "shape": 7,
-          "type": "*",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "result",
-          "type": "*",
-          "links": [
-            1579
-          ]
-        }
-      ],
-      "title": "left 25% of the sheet width",
-      "properties": {
-        "Node name for S&R": "MpiMath",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "7d58def84882c6d2e376fe4096f7104012ebc6ec"
-      },
-      "widgets_values": [
-        "a // 4"
-      ]
-    },
-    {
-      "id": 758,
-      "type": "MpiBoxCrop",
-      "pos": [
-        -4413.654337745736,
-        6923.138672710201
-      ],
-      "size": [
-        250,
-        78
-      ],
-      "flags": {},
-      "order": 72,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 1561
-        },
-        {
-          "name": "mpi_box",
-          "type": "MPI_BOX",
-          "link": 1545
-        }
-      ],
-      "outputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "links": [
-            1548
-          ]
-        },
-        {
-          "name": "mpi_box",
-          "type": "MPI_BOX",
-          "links": []
-        }
-      ],
-      "title": "crop to the far-left region",
-      "properties": {
-        "Node name for S&R": "MpiBoxCrop",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "7d58def84882c6d2e376fe4096f7104012ebc6ec"
-      },
-      "widgets_values": [
-        false
-      ]
-    },
-    {
-      "id": 744,
-      "type": "GetNode",
-      "pos": [
-        -5984.630500038655,
-        6697.3426832836385
-      ],
-      "size": [
-        210,
-        58
-      ],
-      "flags": {},
-      "order": 27,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "INT",
-          "type": "INT",
-          "links": [
-            1551,
-            1580
-          ]
-        }
-      ],
-      "title": "Get_H",
-      "properties": {
-        "Node name for S&R": "GetNode",
-        "aux_id": "kijai/ComfyUI-KJNodes"
-      },
-      "widgets_values": [
-        "H"
-      ],
-      "color": "#1b4669",
-      "bgcolor": "#29699c"
-    },
-    {
-      "id": 759,
-      "type": "MpiBlocker",
-      "pos": [
-        -5665.766464024663,
-        6672.1109090524105
-      ],
-      "size": [
-        270,
-        58
-      ],
-      "flags": {},
-      "order": 48,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "input",
-          "type": "*",
-          "link": 1559
-        },
-        {
-          "name": "boolean",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "boolean"
-          },
-          "link": 1566
-        }
-      ],
-      "outputs": [
-        {
-          "name": "output",
-          "type": "*",
-          "links": [
-            1561,
-            1569
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "MpiBlocker",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1"
-      },
-      "widgets_values": [
-        true
-      ]
-    },
-    {
-      "id": 112,
-      "type": "MpiText",
-      "pos": [
-        -8148.673075542925,
-        7000.06486931079
-      ],
-      "size": [
-        554.275529025053,
-        196.90800028317108
-      ],
-      "flags": {},
-      "order": 28,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "Text",
-          "type": "STRING",
-          "links": [
-            1442
-          ]
-        }
-      ],
-      "title": "Input_Positive",
-      "properties": {
-        "Node name for S&R": "MpiText",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "4501c5f3911e26c884b2d876e2e80c03c566f56d",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.7"
-        }
-      },
-      "widgets_values": [
-        "An eighty-year-old wizard with a long beard a pointy hat and fully white eyes with no iris, holding a large staff with a blue jewel on its handle. "
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 617,
-      "type": "MpiSimpleBoolean",
-      "pos": [
-        -2848.192976353702,
-        7154.826181797127
-      ],
-      "size": [
-        270,
-        58
-      ],
-      "flags": {},
-      "order": 29,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "boolean",
-          "type": "BOOLEAN",
-          "links": [
-            1290
-          ]
-        }
-      ],
-      "title": "Input_is_Turbo",
-      "properties": {
-        "Node name for S&R": "MpiSimpleBoolean",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "aaa1d2d9fa713decae6843e64f5a81b84f9f443d"
-      },
-      "widgets_values": [
-        false
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 669,
-      "type": "PrimitiveStringMultiline",
-      "pos": [
-        -9198.493057125492,
-        7680.504510675639
-      ],
-      "size": [
-        560,
-        420
-      ],
-      "flags": {},
-      "order": 30,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "STRING",
-          "type": "STRING",
-          "links": [
-            1440
-          ]
-        }
-      ],
-      "title": "Recipe_Cartoon",
-      "properties": {
-        "Node name for S&R": "PrimitiveStringMultiline",
-        "cnr_id": "comfy-core",
-        "ver": "0.27.0"
-      },
-      "widgets_values": [
-        "2D cartoon character reference sheet of [CHARACTER PROMPT], drawn as a hero character for an animated series, one continuous illustration containing three views of the same character arranged side by side in a single unbroken frame, the same character in every view with identical face, hair and wardrobe. The character is drawn with bold clean outlines and solid colour fills with clear soft shading that gives the figure depth and form, its colours and values kept distinctly deeper and richer than the background so the silhouette reads cleanly against it. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, the whole nose clearly visible with both nostrils, both cheeks visible, both eyes visible and looking at the viewer, neutral expression, mouth closed, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Behind all three views the background is a plain seamless light grey studio card, smooth and evenly lit with no gradient, no vignette and no shadow falling on it. Model-sheet clarity."
-      ]
-    },
-    {
-      "id": 854,
-      "type": "GrowMask",
-      "pos": [
-        -4987.858350061263,
-        8294.599520653222
-      ],
-      "size": [
-        270,
-        82
-      ],
-      "flags": {},
-      "order": 58,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "mask",
-          "type": "MASK",
-          "link": 1698
-        }
-      ],
-      "outputs": [
-        {
-          "name": "MASK",
-          "type": "MASK",
-          "links": [
-            1769
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "GrowMask",
-        "cnr_id": "comfy-core",
-        "ver": "0.31.0"
-      },
-      "widgets_values": [
-        6,
-        true
-      ]
-    },
-    {
-      "id": 668,
-      "type": "PrimitiveStringMultiline",
-      "pos": [
-        -9209.588615677343,
-        7192.1447299625415
-      ],
-      "size": [
-        560,
-        420
-      ],
-      "flags": {},
-      "order": 31,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "STRING",
-          "type": "STRING",
-          "links": [
-            1439
-          ]
-        }
-      ],
-      "title": "Recipe_Anime",
-      "properties": {
-        "Node name for S&R": "PrimitiveStringMultiline",
-        "cnr_id": "comfy-core",
-        "ver": "0.27.0"
-      },
-      "widgets_values": [
-        "Anime character reference sheet of [CHARACTER PROMPT], drawn as a key character for an animated feature, one continuous cel-shaded illustration containing three views of the same character arranged side by side in a single unbroken frame, the same character in every view with identical face, hair and wardrobe. The character is drawn with crisp line art and cel-shaded colour fills with clear soft shading that gives the figure depth and form, its colours and values kept distinctly deeper and richer than the background so the silhouette reads cleanly against it, clean anime eyes with a small bright highlight in each pupil. The right half of the image is filled by a head and shoulders portrait with the head turned only slightly, about thirty degrees to camera left, the whole nose clearly visible with both nostrils, both cheeks visible, both eyes visible and looking at the viewer, neutral expression, mouth closed, hair fully visible from the crown down. The left half holds two narrow full-body standing views of equal width, one seen from the front and one from directly behind, arms relaxed at the sides, hands open and resting against the thighs, feet planted, generous headroom. Behind all three views the background is a plain seamless mid grey studio card, smooth and evenly lit with no gradient, no vignette and no shadow falling on it. Model-sheet clarity."
-      ]
-    },
-    {
-      "id": 671,
-      "type": "MpiInt",
-      "pos": [
-        -8376.58863009265,
-        6892.4671471314505
-      ],
-      "size": [
-        270,
-        58
-      ],
-      "flags": {},
-      "order": 32,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "int",
-          "type": "INT",
-          "links": [
-            1436
-          ]
-        }
-      ],
-      "title": "Input_Recipe",
-      "properties": {
-        "Node name for S&R": "MpiInt",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1"
-      },
-      "widgets_values": [
-        3
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 890,
-      "type": "GetNode",
-      "pos": [
-        -5124.802768530936,
-        8153.134597926215
-      ],
-      "size": [
-        210,
-        60
-      ],
-      "flags": {
-        "collapsed": true
-      },
-      "order": 33,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "INT",
-          "type": "INT",
-          "links": [
-            1773
-          ]
-        }
-      ],
-      "title": "Get_W",
-      "properties": {
-        "Node name for S&R": "GetNode",
-        "aux_id": "kijai/ComfyUI-KJNodes"
-      },
-      "widgets_values": [
-        "W"
-      ],
-      "color": "#1b4669",
-      "bgcolor": "#29699c"
-    },
-    {
-      "id": 891,
-      "type": "GetNode",
-      "pos": [
-        -5123.1531132647615,
-        8192.75482684242
-      ],
-      "size": [
-        210,
-        50
-      ],
-      "flags": {
-        "collapsed": true
-      },
-      "order": 34,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "INT",
-          "type": "INT",
-          "links": [
-            1774
-          ]
-        }
-      ],
-      "title": "Get_H",
-      "properties": {
-        "Node name for S&R": "GetNode",
-        "aux_id": "kijai/ComfyUI-KJNodes"
-      },
-      "widgets_values": [
-        "H"
-      ],
-      "color": "#1b4669",
-      "bgcolor": "#29699c"
-    },
-    {
-      "id": 889,
-      "type": "ImageScale",
-      "pos": [
-        -4993.986221307218,
-        8092.828392717352
-      ],
-      "size": [
-        270,
-        130
-      ],
-      "flags": {},
-      "order": 69,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 1772
-        },
-        {
-          "name": "width",
-          "type": "INT",
-          "widget": {
-            "name": "width"
-          },
-          "link": 1773
-        },
-        {
-          "name": "height",
-          "type": "INT",
-          "widget": {
-            "name": "height"
-          },
-          "link": 1774
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            1775
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "ImageScale"
-      },
-      "widgets_values": [
-        "nearest-exact",
-        512,
-        512,
-        "disabled"
-      ]
-    },
-    {
-      "id": 887,
-      "type": "Image Crop Location Exact",
-      "pos": [
-        -5484.911583040137,
-        8092.828392717339
-      ],
-      "size": [
-        278.0171875,
-        174
-      ],
-      "flags": {},
-      "order": 57,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "link": 1770
-        }
-      ],
-      "outputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "links": [
-            1772
-          ]
-        },
-        {
-          "name": "crop_data",
-          "type": "CROP_DATA",
-          "links": null
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "Image Crop Location Exact"
-      },
-      "widgets_values": [
-        0,
-        0,
-        32,
-        32,
-        "original"
-      ]
-    },
-    {
-      "id": 884,
-      "type": "GetNode",
-      "pos": [
-        -5731.276536720617,
-        8031.3433817358255
-      ],
-      "size": [
-        210,
-        58
-      ],
-      "flags": {},
-      "order": 35,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "*",
-          "type": "*",
-          "links": [
-            1766,
-            1770
-          ]
-        }
-      ],
-      "title": "Get_sheet output",
-      "properties": {
-        "Node name for S&R": "GetNode",
-        "aux_id": "kijai/ComfyUI-KJNodes"
-      },
-      "widgets_values": [
-        "sheet output"
-      ]
-    },
-    {
-      "id": 892,
-      "type": "GetNode",
-      "pos": [
-        -4601.044272577852,
-        8232.5529707277
-      ],
-      "size": [
-        210,
-        58
-      ],
-      "flags": {},
-      "order": 36,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "*",
-          "type": "*",
-          "links": [
-            1777
-          ]
-        }
-      ],
-      "title": "Get_sheet output",
-      "properties": {
-        "Node name for S&R": "GetNode",
-        "aux_id": "kijai/ComfyUI-KJNodes"
-      },
-      "widgets_values": [
-        "sheet output"
-      ]
-    },
-    {
-      "id": 741,
-      "type": "GetNode",
-      "pos": [
-        -4590.383441815848,
-        8348.590454679255
-      ],
-      "size": [
-        210,
-        58
-      ],
-      "flags": {},
-      "order": 37,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "BOOLEAN",
-          "type": "BOOLEAN",
-          "links": [
-            1528
-          ]
-        }
-      ],
-      "title": "Get_is remove head",
-      "properties": {
-        "Node name for S&R": "GetNode",
-        "aux_id": "kijai/ComfyUI-KJNodes"
-      },
-      "widgets_values": [
-        "is remove head"
-      ]
-    },
-    {
-      "id": 742,
-      "type": "MpiIfElse",
-      "pos": [
-        -4297.263920739941,
-        8208.28188722014
-      ],
-      "size": [
-        270,
-        78
-      ],
-      "flags": {
-        "collapsed": false
-      },
-      "order": 81,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "true",
-          "type": "*",
-          "link": 1776
-        },
-        {
-          "name": "false",
-          "type": "*",
-          "link": 1777
-        },
-        {
-          "name": "boolean",
-          "type": "BOOLEAN",
-          "widget": {
-            "name": "boolean"
-          },
-          "link": 1528
-        }
-      ],
-      "outputs": [
-        {
-          "name": "output",
-          "type": "*",
-          "links": [
-            1778
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "MpiIfElse",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "3e455e881fa7de777cab2dd0cc6f1828a4a36ff1"
-      },
-      "widgets_values": [
-        true
-      ]
-    },
-    {
-      "id": 882,
-      "type": "PreviewImage",
-      "pos": [
-        -3964.02549920571,
-        8208.255202853426
-      ],
-      "size": [
-        694.920468277696,
-        516.4480839411115
-      ],
-      "flags": {
-        "collapsed": false
-      },
-      "order": 86,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 1778
-        }
-      ],
-      "outputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "links": []
-        }
-      ],
-      "title": "Output_Image",
-      "properties": {
-        "Node name for S&R": "PreviewImage",
-        "cnr_id": "comfy-core",
-        "ver": "0.3.50",
-        "enableTabs": false,
-        "tabWidth": 65,
-        "tabXOffset": 10,
-        "hasSecondTab": false,
-        "secondTabText": "Send Back",
-        "secondTabOffset": 80,
-        "secondTabWidth": 65,
-        "ue_properties": {
-          "version": "7.0.1",
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {}
-        }
-      },
-      "widgets_values": [],
-      "color": "#432",
-      "bgcolor": "#653"
-    },
-    {
-      "id": 850,
-      "type": "GetNode",
-      "pos": [
-        -5227.168090914195,
-        8323.24024539446
-      ],
-      "size": [
-        210,
-        58
-      ],
-      "flags": {},
-      "order": 38,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "MASK",
-          "type": "MASK",
-          "links": [
-            1698
-          ]
-        }
-      ],
-      "title": "Get_inpaint mask",
-      "properties": {
-        "Node name for S&R": "GetNode",
-        "aux_id": "kijai/ComfyUI-KJNodes"
-      },
-      "widgets_values": [
-        "inpaint mask"
-      ],
-      "color": "#1c5715",
-      "bgcolor": "#1f401b"
-    },
-    {
-      "id": 883,
-      "type": "ImageCompositeMasked",
-      "pos": [
-        -4670.600535766388,
-        8034.081810150399
-      ],
-      "size": [
-        271.64609375,
-        146
-      ],
-      "flags": {},
-      "order": 75,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "destination",
-          "type": "IMAGE",
-          "link": 1766
-        },
-        {
-          "name": "source",
-          "type": "IMAGE",
-          "link": 1775
-        },
-        {
-          "name": "mask",
-          "shape": 7,
-          "type": "MASK",
-          "link": 1769
-        }
-      ],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            1776
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "ImageCompositeMasked",
-        "cnr_id": "comfy-core",
-        "ver": "0.31.0"
-      },
-      "widgets_values": [
-        0,
-        0,
-        true
-      ]
-    },
-    {
-      "id": 737,
-      "type": "MpiSimpleBoolean",
-      "pos": [
-        -2852.12722897724,
-        7277.088247481086
-      ],
-      "size": [
-        270,
-        58
-      ],
-      "flags": {},
-      "order": 39,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "boolean",
-          "type": "BOOLEAN",
-          "links": [
-            1527
-          ]
-        }
-      ],
-      "title": "Input_Remove_Head",
-      "properties": {
-        "Node name for S&R": "MpiSimpleBoolean",
-        "cnr_id": "ComfyUi-MpiNodes",
-        "ver": "aaa1d2d9fa713decae6843e64f5a81b84f9f443d"
-      },
-      "widgets_values": [
-        true
-      ],
-      "color": "#432",
-      "bgcolor": "#653"
+      "widgets_values_named": {
+        "max_hole_size": 0
+      }
     }
   ],
   "links": [
@@ -5467,14 +5838,6 @@
       "MASK"
     ],
     [
-      1553,
-      755,
-      0,
-      757,
-      1,
-      "MASK"
-    ],
-    [
       1556,
       757,
       0,
@@ -5681,6 +6044,22 @@
       882,
       0,
       "IMAGE"
+    ],
+    [
+      1781,
+      755,
+      0,
+      893,
+      0,
+      "MASK"
+    ],
+    [
+      1782,
+      893,
+      0,
+      757,
+      1,
+      "MASK"
     ]
   ],
   "groups": [
@@ -5723,16 +6102,16 @@
   ],
   "config": {},
   "extra": {
-    "frontendVersion": "1.48.7",
+    "frontendVersion": "1.49.6",
     "VHS_latentpreview": false,
     "VHS_latentpreviewrate": 0,
     "VHS_MetadataImage": true,
     "VHS_KeepIntermediate": true,
     "ds": {
-      "scale": 0.31384283767210186,
+      "scale": 0.7400249944258216,
       "offset": [
-        7625.627022353307,
-        -6034.380096638545
+        6036.9554010164165,
+        -6763.739183767164
       ]
     }
   },

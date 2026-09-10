@@ -141,6 +141,12 @@ mask it was handed, `fillMaskHoles()` stays for an explicit opt-in, and
 `tests/mask-composite.test.cjs` guards both directions. If a THIRD copy of this behaviour turns
 up, it is the same bug again — the sweep is "who else closes a hole without being asked".
 
+**`MpiMaskFillHoles` passes that sweep — "without being asked" is the whole test** (MPI-714,
+2026-09-10). It fills nothing unless an author places it, and repairs a mask the app never drew:
+a SAM3 `face` detection missing its lips (`masking-sam3.md` § Text masking). MPI-431 banned the
+DEFAULT, not the capability — it turns into the third copy the day it is a flag on an existing
+node or a template default.
+
 `holeFlood()` in `managers/holeFlood.js` **floods the background inward from the border**; whatever
 the flood never reaches is enclosed, and that is the definition of a hole — no contour tracing.
 Iterative on a typed-array stack, because 1536² blows recursion. The alpha cut is `>= 128`,

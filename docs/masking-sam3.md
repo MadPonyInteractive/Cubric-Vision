@@ -153,5 +153,42 @@ widget — which is also why no `MpiText` relay is needed here: the encoder is n
   and the chip strip collapses to a single thumb.
 - Text uses the detector's **normal detect-then-pick** flow (N results to choose between),
   not the points tool's auto-pick-0. Empty prompt is gated app-side, same as zero dots.
-- No erode/dilate pair on this branch — detector masks come back clean. Add the `-4/+4` only
-  if specks show up.
+- No erode/dilate pair on this branch — detector masks come back clean at the EDGE. Add the
+  `-4/+4` only if specks show up. They are **not** clean on the inside — see the next bullet.
+- **A `face` / `head` mask arrives with the lips and teeth punched out of it, and NO widget
+  on the node fixes that.** The hole is in the detector's own concept mask, so the two
+  parameters that look like the fix both miss:
+  - `threshold` gates a detection **score** — which objects survive the pick. It never
+    decides which pixels a kept mask covers, so lowering it adds detections and changes
+    nothing inside one.
+  - `refine_iterations` **cannot carve anything**. `_refine_mask` returns
+    `((full_mask[0] > 0) | (coarse_full[0] > 0))` — `comfy_extras/nodes_sam3.py:84`. The SAM
+    decoder's result is **unioned** with the coarse mask, so refinement only ever ADDS
+    pixels; at 0 the same coarse mask comes back through `_coarse_fallback`, hole included.
+    Reaching for it is the natural move and it is a dead end in both directions.
+
+  Two fixes, covering different failures — a mask that is holed AND bitten needs both:
+  - **Enclosed hole** (mouth closed, gap surrounded by mask): `MpiMaskFillHoles`. Fills only
+    what the mask already surrounds, so the silhouette is untouched. Prefer it to a
+    `GrowMask +N / -N` close, which reaches a hole only as a side effect of dilating
+    everything: it is capped by its iteration count, costs `abs(expand)` scipy passes per
+    frame each way (~200ms/frame at 768x1344 for ±12, against ~10ms), and welds shut any
+    outer concavity narrower than 2N — the chin-to-hair gap goes first.
+  - **Bite out of the silhouette** (mouth open, gap reaching the jaw line): no fill can see
+    it, because it is not enclosed. Name it in the vocabulary — `head, hat, mouth`.
+    `SAM3_Detect` unions every comma-separated category's mask when `individual_masks` is
+    off (`nodes_sam3.py:244`), at one extra detector pass per frame per category.
+
+  On video the hole is frame-dependent, so it reads as flicker rather than as a bad mask —
+  and flicker at a seam invites blaming the compositor. Found 2026-09-10 on a Bernini video
+  graph; node written as MPI-7 in `ComfyUi-MpiNodes` (that repo's changelog carries the
+  measurements).
+
+  **This does NOT reopen MPI-431.** That ruling — "the app is now the only thing that closes
+  a hole", `masking-adjust.md` § Fill Holes — is about hole-closing that runs **without being
+  asked**: `mask_fill_holes` defaulted on inside raw templates and turned a deliberate ring
+  mask into a disc before the sampler saw it, and `compositeThroughMask()` was found holding a
+  second copy of the same default. `MpiMaskFillHoles` is the opposite shape — a node an author
+  places, on a branch they chose, repairing a mask the app never drew. Nothing acquires
+  hole-filling by default. Keep it that way: the day it becomes a flag on an existing node, or
+  a default in a shipped template, it IS the third copy.

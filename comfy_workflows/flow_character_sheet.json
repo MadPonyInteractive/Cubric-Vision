@@ -789,7 +789,7 @@
         0
       ],
       "source": [
-        "755",
+        "893",
         0
       ]
     },
@@ -997,6 +997,19 @@
     "class_type": "ImageScale",
     "_meta": {
       "title": "Upscale Image"
+    }
+  },
+  "893": {
+    "inputs": {
+      "max_hole_size": 0,
+      "mask": [
+        "755",
+        0
+      ]
+    },
+    "class_type": "MpiMaskFillHoles",
+    "_meta": {
+      "title": "Mpi Mask Fill Holes"
     }
   }
 }
