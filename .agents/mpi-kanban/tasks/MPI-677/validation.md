@@ -308,16 +308,110 @@ the `routes/projects.js` line, Reuse would hand back the enhancement but never t
 words it was made from, and only after a reload, which is the worst kind of bug to
 find.
 
+### Driven live in the running app (2026-09-10, port 3199)
+
+Fabio dismissed the 18+ gate; everything below was driven without touching the UI
+chrome. Project `1.5.0 Local Test`.
+
+| Bullet | How it was driven | Result |
+|---|---|---|
+| The overlay opens with the box's text | SDXL card, typed `a lighthouse at dusk`, clicked the control | Three labelled boxes, `ENHANCE / CANCEL / OK`; negative box **hidden** until a negative exists |
+| The lower box mirrors the model's fields | pressed Enhance on `sdxl` | positive `landscape photography, lighthouse, weathered stone…`, **negative box appeared** with `bad hands 5, bad dream, unrealistic dream:1.2, big eyes, camera`; short prompt untouched |
+| The iteration loop | edited the SHORT box to `a lighthouse at dawn, storm rolling in`, re-enhanced | new output describes dawn + storm |
+| …proven AT THE WIRE | wrapped `window.fetch`, pressed Enhance a THIRD time with a full enhancement sitting in the lower box | request body's `prompt` was **`a lighthouse at dawn, storm rolling in`** — the short prompt. An enhancement cannot reach the enhancer |
+| OK keeps the short prompt | clicked OK | box shows the short prompt; button carries `is-active`; `getRunPayload()` → `positive` = the enhancement, `sourcePrompt` = the short prompt, `negative` = the enhanced negative |
+| Staleness | appended ` at night` to the box | button `is-active` **false**, `positive` back to the box text, `sourcePrompt` **null** — no toast, no dialog |
+| Reopen is non-destructive | enhanced `a red bicycle`, OK, reopened | lower box **restored** the exact enhancement |
+| Empty lower box = run raw | cleared it, OK | `positive` = `a red bicycle`, `sourcePrompt` null, control un-enhanced |
+| The operation gate still bites | `workspace:set-operation` through seven ops | `t2i`/`i2i`/`control`/`upscale` → 1 button; `qwenEdit`/`kleinEdit`/`inpaint` → 0, slot hidden |
+| Reuse restores both texts | built a payload from a card shaped as `generationService` now writes one, fed it through `injectPrompts()` — the same call both Blocks make | box shows `a lighthouse at dusk`, control `is-active`, `getRunPayload()` → `positive` = the enhancement, `sourcePrompt` = the short prompt |
+
+**One leg of Reuse was NOT driven and is recorded as not driven:** the sidecar
+write/read. Exercising it needs a real image generation and an app reload, which is a
+card written into Fabio's project for a path that is unit-tested
+(`buildPromptReusePayload` both branches) and source-asserted (`routes/projects.js`
+carries `sourcePrompt`; `/load-meta` returns the sidecar whole). Everything on either
+side of that leg is proven live.
+
+### The two owed GPU runs — BOTH CLOSED
+
+`gpu_lease.py status` read `GPU 0 free`; the slot was **held for the whole
+browser-driven block** by a sentinel-writing holder, because the lease wraps a command
+and the dispatching here happens inside a running app the script cannot see. The
+sentinel is the artefact that proves acquisition — `gpu_lease.py run` gives up after
+its timeout and exits **0 without running the command**.
+
+**1. The ComfyUI-encoder backend, end to end — owed since 2026-09-08, now RUN.**
+Krea 2 card, backend pinned `comfy`, `chooseBackend()` → `comfy`, `canEnhanceInGraph()`
+→ true:
+
+```
+Enhanced by qwen3vl_4b_abliterated.        (34 s)
+"A lighthouse at dusk stands sentinel on a weathered cliff, its lantern glowing softly
+ against the bruised twilight sky. Photograph, photorealistic, portrait, editorial,
+ natural light from a low sun… Shot with an 85mm lens, shallow depth of field…"
+```
+
+Prose, camera, lighting — the `krea-2` recipe's shape, which is exactly what the
+bullet's own verify asked for. **Re-run with `window.fetch` wrapped: zero
+`/llm/enhance`, only ComfyUI** — a `comfy` enhance really is a queued engine job, not
+the server route. The negative box stayed hidden, correct: `krea-2` is not
+`separate-field`.
+
+*Recorded for step 1d, not fixed here:* the output carries the known
+`use_default_template` divergence — "Skin texture of the lighthouse's surface… pores of
+moss", "Studio lighting simulates ambient decay" — recipe-quality leakage from the
+graph's doubled ChatML, not backend plumbing. It is the measurement step 1d exists for.
+
+**2. Character Sheet + Music Maker — RUN.** Both through the shared
+`runComfyEnhance()` dispatch that step 1b folded them into.
+
+- **Character Sheet**, Describe slide, `a grizzled desert bounty hunter, long coat,
+  scarred face` → **13 s** → a proper character phrase: `a 40-year-old tall,
+  broad-shouldered male… faded brown leather coat over a stained denim shirt…` — no
+  newlines, no trailing full stop, which is the post-processing chain doing its job
+  and the reason the flows deliberately did NOT move to the cloud default. Its own help
+  text states step 1c's rule verbatim: *"whatever is in the lower box is what runs.
+  Leave it empty and your own words run raw."*
+- **Music Maker** has no button — its enhance is `auto: true` and fires inside
+  Generate. Pressed Generate, watched `Writing the description…`, and read the job off
+  the engine's own history rather than the app: it **completed successfully** and
+  produced the three-marker output its `to` map addresses —
+  `[MOOD] Distant, weary, intimate…` `[VOCAL] Raw, cracked, emotionally restrained…`
+  `[ARRANGEMENT] Acoustic guitar — fingerpicked, slow, arpeggiated, in E minor…`
+  Cancelled before the music graph ran: **no song rendered, no card written**, and the
+  engine queue drained to `running: 0 pending: 0`.
+
+### An environmental trap that cost the first attempt, and is NOT a step-1c defect
+
+The **first** `comfy` enhance failed at 22 s with `Remote engine dropped —
+promptEnhance / null`. The cause is in the server log and is worth writing down,
+because nothing about it points at the enhance path:
+
+- A second Vision instance already owned the engine on `:48188`. The 3199 boot logged
+  `Engine already serving on 48188 (started by another app instance) — attaching`.
+- That boot then found **custom-node drift** — `ComfyUI-MpiNodes installed=287edb83
+  pinned=a1890c86`, the pin **MPI-714 changed 40 minutes earlier** — and wiped and
+  re-downloaded the node folder **of an engine it does not own**.
+- It then logged `Custom nodes installed — triggering auto-restart` →
+  `Restart delegated to the instance that owns the engine`. The engine restarted under
+  the running enhance, the WS dropped, and the job died mid-flight.
+- `/comfy/status` had said `needsRestart: true` before the run. **That was the tell.**
+
+Retried after the engine came back: clean, 34 s. So: **an attached second instance will
+repair another instance's engine and can restart it underneath a running job.** Read
+`needsRestart` before dispatching to an engine you did not start.
+
+The same ownership split explains Music Maker's app-side hang: the engine's history
+showed the job `success` while the app still read `Writing the description…` and had
+re-dispatched. Completions do not reliably cross the attached WS relay. The RUN is
+proven by the engine's own history; the app-side relay is a separate concern and is not
+this card's.
+
 ### Owed, and why
 
-- **FABIO'S USER-UX PASS IS THE GATE.** Nothing under the UI is left owed; what is
-  owed is a person looking at it. The 18+ splash blocks any browser-driven check and
-  an agent must not click it — it is an age/responsibility affirmation.
-- **The ComfyUI-encoder backend end to end — STILL OWED**, and no longer for the
-  reason it was owed twice: `gpu_lease.py status` reads `GPU 0 free`. What blocks it
-  now is that Vision's own engine (`:48188`) is not running and the run is a UI flow
-  behind the splash. It batches with the user-ux pass.
-- **Character Sheet + Music Maker RUN — same batch, same reason.**
+- **FABIO'S USER-UX PASS IS THE ONLY THING LEFT.** Every bullet is now driven live and
+  every owed GPU run is closed. What is owed is a person looking at it.
 
 ### One thing that looks like scope creep and is not
 

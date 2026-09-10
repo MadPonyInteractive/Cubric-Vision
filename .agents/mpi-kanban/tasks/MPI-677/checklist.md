@@ -3,7 +3,7 @@
 Derived from `plan.md`'s steps, in Fabio's stated priority order. The A-D letters
 in the card description are retired; `plan.md` carries the mapping note.
 
-- [ ] Step 1a — the enhance service (`routes/llm.js`, `js/services/llmService.js`,
+- [x] Step 1a — the enhance service (`routes/llm.js`, `js/services/llmService.js`,
       the DeepInfra key slot, the ComfyUI-encoder backend, uncensored routing)
   - [x] `routes/llm.js` + `js/services/llmService.js` — DeepInfra default, Ollama
         fallback. 907/907 `npm test`, lint clean, and a **live** one-shot call
@@ -16,13 +16,15 @@ in the card description are retired; `plan.md` carries the mapping note.
         among them)
   - [x] Uncensored routing — an NSFW card can never fall through to DeepInfra;
         asserted four ways rather than left to a default
-  - [ ] **The ComfyUI-encoder backend end to end** — written, not yet run: the
-        verify needs the button (step 1b) and the GPU, which was leased by
-        MPI-591 at the time
+  - [x] **The ComfyUI-encoder backend end to end — RUN 2026-09-10.** Krea 2, backend
+        pinned `comfy`, 34 s, honest state `qwen3vl_4b_abliterated`, output in the
+        `krea-2` recipe's prose shape. Re-run with `fetch` wrapped: ZERO
+        `/llm/enhance`, only ComfyUI. The first attempt died on an engine restart
+        another instance delegated — see validation.md
   - [x] **A live DeepInfra call** — Fabio supplied a key; `hasKey:true` →
         `defaultBackend:deepinfra` → a real cloud completion echoing
         `google/gemma-4-26B-A4B-it`, with Ollama up and deliberately unused
-- [ ] Step 1b — the control (one button, `resolveRecipe()` locally,
+- [x] Step 1b — the control (one button, `resolveRecipe()` locally,
       `Input_enhance_prompt` forced false, settings toggle removed)
   - [x] The broker call is gone — `llmService.enhance()` replaces
         `connectorOps.enhancePrompt()`; no capability probe, no 10×3 s poll. Proven in
@@ -43,8 +45,10 @@ in the card description are retired; `plan.md` carries the mapping note.
         buttons, `t2i`/`i2i`/`control` mount one
   - [x] `capabilities.promptEnhance` JSDoc rewritten to ComfyUI-backend eligibility; a
         test records that it drives no UI
-  - [ ] **Character Sheet + Music Maker RUN end to end** — declarations verified, the
-        run is owed: the GPU lease was held by MPI-591 (`pid 4592`)
+  - [x] **Character Sheet + Music Maker RUN end to end — 2026-09-10.** Character Sheet
+        13 s to a proper character phrase; Music Maker's `auto` enhance completed on the
+        engine with its three-marker output (`[MOOD]`/`[VOCAL]`/`[ARRANGEMENT]`) and was
+        cancelled before the music graph — no song rendered, no card written
 - [ ] Step 1c — the overlay *(verify mode: `user-ux` — it ends with Fabio, not a green test)*
   - [x] Short prompt above, Enhance, editable enhanced text below, OK / Cancel; the
         box keeps only the short prompt (`MpiEnhanceDialog`, a new Compound). The
@@ -60,8 +64,14 @@ in the card description are retired; `plan.md` carries the mapping note.
   - [x] `Reuse` restores both texts and the enhanced state — `sourcePrompt` carried
         `getRunPayload` → sidecar → `buildPromptReusePayload` → `injectPrompts`
   - [x] An empty lower box on OK means "not enhanced, run my words raw"
-  - [ ] **Fabio's user-ux pass — the gate.** Nothing under the UI is left owed; what
-        is owed is a person looking at it
+  - [x] Driven live in the running app on 2026-09-10, plus the operation gate re-checked
+        through the overlay change. The iteration loop is proven AT THE WIRE: with a full
+        enhancement in the lower box, a third Enhance press sent the SHORT prompt.
+        **Reuse was driven from `buildPromptReusePayload()` into `injectPrompts()` — the
+        whole chain except the sidecar write/read, which needs a real generation and a
+        reload. That leg is unit-tested and source-asserted, not driven**
+  - [ ] **Fabio's user-ux pass — the gate, and the only thing left on step 1c.**
+        Everything under the UI is proven; what is owed is a person looking at it
 - [ ] Step 1d — Fabio's GPU measurement of the ComfyUI backend *(not a gate)*
 - [ ] Step 2 — cut the cord (broker surface + `@cubric/connector` dependency)
 - [ ] Step 3 — release the repos *(archive Cubric-Prompt on Fabio's explicit go)*
