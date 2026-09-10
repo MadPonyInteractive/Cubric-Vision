@@ -73,7 +73,28 @@ in the card description are retired; `plan.md` carries the mapping note.
   - [ ] **Fabio's user-ux pass — the gate, and the only thing left on step 1c.**
         Everything under the UI is proven; what is owed is a person looking at it
 - [ ] Step 1d — Fabio's GPU measurement of the ComfyUI backend *(not a gate)*
-- [ ] Step 2 — cut the cord (broker surface + `@cubric/connector` dependency)
+- [x] Step 2 — cut the cord (broker surface + `@cubric/connector` dependency)
+  - [x] Deleted `services/brokerBoot.js`, `services/connectorResponder.js`,
+        `js/shell/connectorOps.js`, `POST /connector/enhance` and the
+        `promptEnhance` field on `/connector/capabilities`. The `MpiPromptBox`
+        wand block the plan also named was already gone — step 1b removed it
+  - [x] Removed the `@cubric/connector` **broker-SDK** dependency from
+        `package.json` + `package-lock.json`, its exclusion rule in
+        `scripts/build-portable.mjs`, and its boot in `server.js`
+  - [x] **The four KEEP routes still answer**, verified live on a booted server:
+        `/connector/generate` and `/connector/open-project` return their own
+        `BAD_REQUEST` (the route ran and validated its body),
+        `/connector/jobs/:id/result` returns `{received:false}`,
+        `/connector/jobs/stream` returns `event: connected`.
+        `/connector/enhance` is **404**
+  - [x] `models.js` JSDoc reworded — `type` / `enhanceRecipe` **keep their values**
+        and now name the local `resolveRecipe()` index, not a sibling app
+  - [x] Enhance still works after the cut: live `/llm/enhance` on the booted
+        server, `ok:true`, honest state `deepinfra / google/gemma-4-26B-A4B-it`
+  - [ ] *Not a gate, recorded in validation.md:*
+        `resources/cubric/connector-manifest.json` still advertises four broker
+        capabilities nothing serves. Left in place because the portable build
+        reads and hashes it (`assertConnectorManifest`) — step 5 owns its fate
 - [ ] Step 3 — release the repos *(archive Cubric-Prompt on Fabio's explicit go)*
 - [ ] Step 4 — the corpus, the skill split (MPI-593 owns it), the build/heal loop
 - [ ] Step 5 — the agent that talks to the user *(gets its own plan when reached)*

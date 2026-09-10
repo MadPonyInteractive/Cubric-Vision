@@ -6,8 +6,9 @@
  * THIS IS WHAT RETIRES CUBRIC PROMPT. The Enhance button used to call out over
  * the broker to a sibling app; the recipe layer landed here in MPI-35, so the
  * whole round trip collapses into: resolve the recipe → fill a system prompt →
- * run an LLM → hand back the text. `js/shell/connectorOps.js` is the thing this
- * replaces; step 1b repoints the button.
+ * run an LLM → hand back the text. `js/shell/connectorOps.js` was the thing this
+ * replaced; step 1b repointed the button and step 2 DELETED it, along with the
+ * broker boot, the connector responder and the `@cubric/connector` dependency.
  *
  * THREE BACKENDS, ONE DECISION FUNCTION (`chooseBackend`). Fabio, 2026-09-08:
  * backend is a SETTING, not per-model behaviour, and the user sees one system

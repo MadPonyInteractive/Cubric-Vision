@@ -78,8 +78,26 @@ splitter, staleness detection and `sourcePrompt` through to the sidecar;
 - One leg is recorded as NOT driven: Reuse's sidecar write/read needs a real
   generation plus a reload. Unit-tested and source-asserted only.
 
-**So step 2 is the next buildable thing**, and it is cheaper than written: the
-step-2 grep now hits only 7 files, and `connectorOps.js` is a deletion.
+**Step 2 was done by ANOTHER SESSION on 2026-09-10, in parallel with this one —
+do not start it.** It landed in the shared working tree while step 1c was being
+handed off: `js/shell/connectorOps.js`, `services/brokerBoot.js`,
+`services/connectorResponder.js` and `tests/connector-responder.test.cjs`
+deleted, `@cubric/connector` out of `package.json`, and the four KEEP routes
+live-verified with `/connector/enhance` returning 404. That session's checklist
+block is the record; it owns the commit.
+
+**Step 1c is untouched by it** — the prompt box still mounts `MpiEnhanceDialog`,
+and the only edit to a file this card owns was a three-line comment correction in
+`llmService.js`'s header, moving "connectorOps is the thing this replaces" to past
+tense. That is right.
+
+**Worth carrying, because it cost this session a wrong handoff.** A whole plan
+step can be complete on disk and invisible in `git log` — the deletions were
+staged in a shared index, not committed. This card's handoff was written saying
+"step 2 is the next buildable thing" and had to be corrected twice within the
+hour. **Read the WORKING TREE, not just the history, before claiming any step's
+state.** And a user-ux pass on 1c now exercises the post-step-2 tree, not the
+`8059690a` state it was measured on.
 
 **What is left in step 1 is the OVERLAY (1c) and one GPU measurement (1d).**
 Until 1c lands, the control writes the enhanced text straight back into the

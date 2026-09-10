@@ -527,9 +527,6 @@ function createWindow() {
     } else {
       mainWindow.show();
     }
-    // MPI-10: report window visibility to the broker (via the server fork) so
-    // it can track the family-wide window count for last-window teardown.
-    serverProcess?.send?.({ type: 'cubric-window-state', visible: true });
   };
 
   const revealWhenReady = () => {
@@ -594,10 +591,6 @@ function createWindow() {
         mainWindow.loadURL(SERVER_ORIGIN);
       }
     }, 500);
-  });
-
-  mainWindow.on('closed', () => {
-    serverProcess?.send?.({ type: 'cubric-window-state', visible: false });
   });
 
   mainWindow.on('close', (event) => {
@@ -999,13 +992,6 @@ app.on('ready', () => {
     if (msg === 'server-ready') {
       logger.info('main', 'Server signaled ready.');
       onReady();
-      return;
-    }
-
-    // system.shutdown (MPI-10): broker asked Vision to quit cleanly.
-    if (msg && typeof msg === 'object' && msg.type === 'cubric-shutdown') {
-      logger.info('system', 'Broker requested Vision shutdown — quitting.');
-      app.quit();
       return;
     }
   });

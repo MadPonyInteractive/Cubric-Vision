@@ -30,8 +30,8 @@ const logger = require('./logger');
 const { ask } = require('./forkBridge');
 
 // `services/llmEngines.mjs` is ESM and this router is CJS, so it loads through a
-// dynamic import — the same thing server.js already does for axios and
-// @cubric/connector. Cached after the first call.
+// dynamic import — the same thing server.js already does for axios. Cached after
+// the first call.
 let _enginesPromise = null;
 function engines() {
     if (!_enginesPromise) _enginesPromise = import('../services/llmEngines.mjs');

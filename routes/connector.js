@@ -1,16 +1,15 @@
 'use strict';
 
 /**
- * routes/connector.js — Vision's caller-side connector HTTP surface (MPI-5).
+ * routes/connector.js — Vision's external-caller HTTP surface (MPI-5).
  *
- * The broker client lives in this (forked server.js) process. The renderer
- * reaches it over the existing localhost:3000 surface:
- *   GET  /connector/capabilities  -> { promptEnhance, generationSubmit }  (UI gating)
- *   POST /connector/enhance       -> the prompt.enhance response envelope
- *
- * The client is injected by server.js after the responder connects (mirrors
- * comfy's setAxios pattern). No broker / no Prompt => promptEnhance:false and
- * /connector/enhance returns a clean unavailable response — never a 500.
+ * MPI-677 cut the broker out of this file. It used to carry a `prompt.enhance`
+ * caller pair — `POST /connector/enhance` plus a `promptEnhance` flag on
+ * /connector/capabilities — that reached Cubric Prompt over the Cubric hub
+ * broker. Enhancement is local now (`js/services/llmService.js`), so there is no
+ * broker client to inject and nothing left here needs one. What remains is the
+ * generation relay, which never did: it is plain HTTP, it is an external-caller
+ * surface, and it is the agent's hands.
  *
  * MPI-546 adds the generation relay:
  *   POST /connector/generate        -> submit a generation, resolve on its outcome
@@ -45,10 +44,6 @@ const router = express.Router();
 const { randomUUID } = require('node:crypto');
 
 const logger = require('./logger');
-const { isPromptEnhanceAvailable, requestEnhance } = require('../services/connectorResponder');
-
-let _client = null;
-function setClient(client) { _client = client; }
 
 // --- generation relay state ------------------------------------------------
 
@@ -152,9 +147,12 @@ function _dispatchToRenderer(capability, input) {
   });
 }
 
-router.get('/connector/capabilities', async (_req, res) => {
-  const promptEnhance = await isPromptEnhanceAvailable(_client);
-  res.json({ promptEnhance, generationSubmit: _jobSubscribers.size > 0 });
+// `generationSubmit` is the only capability left: it says a renderer is
+// subscribed to the SSE relay, so a submitted job has somewhere to land.
+// MPI-677 removed the `promptEnhance` flag — it reported whether a SIBLING APP
+// was live, and there is no sibling any more.
+router.get('/connector/capabilities', (_req, res) => {
+  res.json({ generationSubmit: _jobSubscribers.size > 0 });
 });
 
 /**
@@ -261,30 +259,4 @@ router.post('/connector/jobs/:id/result', (req, res) => {
   res.json({ received: settled });
 });
 
-router.post('/connector/enhance', async (req, res) => {
-  if (!_client) {
-    return res.json({
-      ok: false,
-      error: { code: 'APP_UNAVAILABLE', message: 'Connector broker not connected.' },
-    });
-  }
-  try {
-    const { prompt, negativePrompt, targetModelId, operation, injectionParams } = req.body || {};
-    const resp = await requestEnhance(_client, {
-      prompt: prompt || '',
-      negativePrompt: negativePrompt || '',
-      targetModelId,
-      operation,
-      injectionParams,
-    });
-    res.json(resp);
-  } catch (err) {
-    res.json({
-      ok: false,
-      error: { code: 'RUNTIME_ERROR', message: err && err.message ? err.message : 'Enhance failed.' },
-    });
-  }
-});
-
 module.exports = router;
-module.exports.setClient = setClient;

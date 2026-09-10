@@ -345,18 +345,12 @@ export function shouldExcludeAppPath(relPath, entryName, excludeNodeModules = fa
   const rootName = normalized.split('/')[0] || entryName;
   if (APP_COPY_EXCLUDES.has(rootName)) return true;
   if (excludeNodeModules && rootName === 'node_modules') return true;
-  // MPI-416 (absorbed MPI-417): `@cubric/connector` is a `file:` dependency on a
-  // SIBLING REPO, so npm leaves a symlink here — dangling on CI, where the sibling
-  // does not exist, and dangling on every user machine even when it does. The copy
-  // below faithfully recreates symlinks and macOS `ditto` preserves them, so the
-  // shipped .zip carried a link to `../../../Cubric-Studio/...`. It never crashed
-  // anything (all three consumers dynamic-import it in try/catch and run standalone
-  // without it), but our own documented first-run command,
-  // `xattr -dr com.apple.quarantine <folder>`, printed "No such file" at this path
-  // for EVERY Mac user, who reasonably reads that as a broken download.
-  // Excluded, not dereferenced: a shipped build has never had the SDK, so copying
-  // the real files in would be a behaviour change nobody asked for.
-  if (normalized === 'node_modules/@cubric' || normalized.startsWith('node_modules/@cubric/')) return true;
+  // MPI-677 removed the `node_modules/@cubric/**` exclusion that stood here: the
+  // `@cubric/connector` `file:` dep on a SIBLING REPO is gone from package.json, so
+  // npm leaves no symlink to exclude. `assertNoDanglingSymlinks` below is the real
+  // guard and it still runs — a stale @cubric link left in an un-reinstalled
+  // node_modules will now FAIL the build instead of being quietly skipped, which is
+  // the honest outcome: run `npm ci`.
   if (rootName.startsWith('.env')) return true;
   if (normalized.endsWith('.log')) return true;
   return false;

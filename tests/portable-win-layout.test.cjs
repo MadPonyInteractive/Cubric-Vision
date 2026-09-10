@@ -116,19 +116,16 @@ test('main.js derives the portable roots without a start script', () => {
   assert.ok(!/'update\.bat'/.test(main), 'run-update still spawns the blocked update.bat');
 });
 
-// -- MPI-416 (absorbed MPI-417): the connector symlink ---------------------------
-// `@cubric/connector` is a `file:` dep on a SIBLING REPO, so npm leaves a symlink in
-// node_modules - dangling on CI, where the sibling does not exist. copyAppTree
-// recreates symlinks and macOS ditto preserves them, so a VERIFIED 1.3.0 artifact
-// shipped a link to ../../../Cubric-Studio/... Nothing crashed (every consumer
-// dynamic-imports it in try/catch), but our own documented first-run command,
-// `xattr -dr com.apple.quarantine <folder>`, printed "No such file" for every Mac user.
-test('the @cubric file: dependency is excluded from the staged app tree', async () => {
+// -- MPI-677: node_modules is not over-excluded ----------------------------------
+// MPI-416's `node_modules/@cubric/**` case is gone with the `@cubric/connector`
+// dependency itself (it was a `file:` dep on a SIBLING REPO, so npm left a symlink
+// that shipped dangling in a VERIFIED 1.3.0 macOS artifact). What is worth keeping
+// is the inverse property: a SCOPED package is not excluded just for being scoped -
+// the app does not run without its node_modules. `assertNoDanglingSymlinks` below is
+// the guard that actually caught that bug, and it is untouched.
+test('node_modules still ships, scoped packages included', async () => {
     const { shouldExcludeAppPath } = await import(
         pathToFileURL(path.join(REPO_ROOT, 'scripts', 'build-portable.mjs')).href);
-    assert.equal(shouldExcludeAppPath('node_modules/@cubric/connector', 'connector'), true);
-    assert.equal(shouldExcludeAppPath('node_modules/@cubric', '@cubric'), true);
-    // Everything else in node_modules still ships - the app does not run without it.
     assert.equal(shouldExcludeAppPath('node_modules/express/index.js', 'index.js'), false);
     assert.equal(shouldExcludeAppPath('node_modules/@babel/runtime', 'runtime'), false);
 });

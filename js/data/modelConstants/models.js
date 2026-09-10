@@ -4,8 +4,8 @@
  * @property {string}   id           - Unique identifier
  * @property {string}   name         - Display name
  * @property {string}   [dropdownMeta] - Short UI category shown in compact model selectors
- * @property {string}   [type]       - Model family (e.g. 'sdxl', 'wan'); also the default Cubric Prompt enhancer-recipe key
- * @property {string}   [enhanceRecipe] - Explicit Cubric Prompt enhancer-recipe id, overriding `type` when they diverge (MPI-5)
+ * @property {string}   [type]       - Model family (e.g. 'sdxl', 'wan'); also the default enhancer-recipe key
+ * @property {string}   [enhanceRecipe] - Explicit enhancer-recipe id, overriding `type` when they diverge. Both keys are read by `resolveRecipe()` in `js/data/recipes/registry.js` — the LOCAL recipe index (MPI-35, MPI-677). They used to name a recipe inside the sibling Cubric Prompt app (MPI-5); the recipes moved here, so the keys kept their values and changed their address.
  * @property {'image'|'video'} mediaType
  * @property {'low'|'balanced'|'high'} [sizeTier] - Weight-size tier (MPI-168). Shown as a Low/Balanced/High badge + L/B/H marker. A model has ONE tier; siblings ship as separate cards. Absent → treated as 'balanced' by UI.
  * @property {string}   [modelFamily] - Soft grouping key for same-base-model tier variants, e.g. 'LTX-2.3' (MPI-168). Drives tier clustering + the "show L/B/H only when 2+ tiers of a family installed" rule. UI-only; no resolver effect.
@@ -196,9 +196,9 @@ export const MODELS = [
         defaultUpscale: '4x-AnimeSharp',
         image: 'sdxl-anime-08.webp',
         type: 'sdxl',
-        enhanceRecipe: 'illustrious',   // Prompt's Illustrious tag-grammar recipe (MPI-25,
+        enhanceRecipe: 'illustrious',   // the Illustrious tag-grammar recipe (MPI-25,
                                        // Stage 1 green 24/24). WITHOUT this line the bare
-                                       // type 'sdxl' matches Prompt's SDXL PHOTOGRAPHY
+                                       // type 'sdxl' matches the SDXL PHOTOGRAPHY
                                        // recipe exactly, so no alias can reach here.
         supportedOps: ['t2i', 'i2i', 'control', 'inpaint', 'upscale', 'detail'],
         // Batch multiplies EmptyLatentImage only, and t2i is now the ONLY branch that
@@ -276,9 +276,9 @@ export const MODELS = [
         defaultUpscale: '4x-AnimeSharp',
         image: 'sdxl-anime-06.webp',
         type: 'sdxl',
-        enhanceRecipe: 'illustrious',   // Prompt's Illustrious tag-grammar recipe (MPI-25,
+        enhanceRecipe: 'illustrious',   // the Illustrious tag-grammar recipe (MPI-25,
                                        // Stage 1 green 24/24). WITHOUT this line the bare
-                                       // type 'sdxl' matches Prompt's SDXL PHOTOGRAPHY
+                                       // type 'sdxl' matches the SDXL PHOTOGRAPHY
                                        // recipe exactly, so no alias can reach here.
         supportedOps: ['t2i', 'i2i', 'control', 'inpaint', 'upscale', 'detail'],
         // Batch multiplies EmptyLatentImage only, and t2i is now the ONLY branch that
@@ -356,9 +356,9 @@ export const MODELS = [
         defaultUpscale: '4x-AnimeSharp',
         image: 'sdxl-pony-13.webp',
         type: 'sdxl',
-        enhanceRecipe: 'pony',   // Prompt's Pony V6 XL tag-grammar recipe (MPI-25,
+        enhanceRecipe: 'pony',   // the Pony V6 XL tag-grammar recipe (MPI-25,
                                  // Stage 1 green 24/24). WITHOUT this line the bare
-                                 // type 'sdxl' matches Prompt's SDXL PHOTOGRAPHY
+                                 // type 'sdxl' matches the SDXL PHOTOGRAPHY
                                  // recipe exactly, so no alias can reach here.
         supportedOps: ['t2i', 'i2i', 'control', 'inpaint', 'upscale', 'detail'],
         // Batch multiplies EmptyLatentImage only, and t2i is now the ONLY branch that
@@ -645,8 +645,8 @@ export const MODELS = [
         image: 'krea2-turbo-sfw.webp',
         defaultUpscale: '4x-NMKD-Siax',
         type: 'krea2',
-        enhanceRecipe: 'krea-2',   // Prompt's own Krea 2 recipe (MPI-16). Note the id is
-                                   // 'krea-2', NOT 'krea2' — Prompt matches on its exact
+        enhanceRecipe: 'krea-2',   // the Krea 2 recipe (MPI-16). Note the id is
+                                   // 'krea-2', NOT 'krea2' — resolveRecipe() matches on the exact
                                    // modelId and silently falls back to the FLUX recipe on a miss.
         supportedOps: ['t2i', 'i2i', 'control', 'krea2Edit', 'inpaint', 'upscale', 'detail'],
         loraStrengths: ['model'],   // style LoRAs are model-only (no CLIP side)
@@ -969,7 +969,7 @@ export const MODELS = [
         image: 'klein-4b.webp',
         defaultUpscale: '4x-NMKD-Siax',
         type: 'klein',
-        enhanceRecipe: 'flux',   // Cubric Prompt has no 'klein' recipe
+        enhanceRecipe: 'flux',   // no 'klein' recipe is registered
         supportedOps: ['t2i', 'i2i', 'control', 'kleinEdit', 'inpaint', 'detail', 'upscale'],
         loraStrengths: ['model'],   // MpiLoraModel is model-only; no CLIP side
         capabilities: {
@@ -1215,7 +1215,7 @@ export const MODELS = [
         mediaType: 'image',
         image: 'boogu-edit-high.webp',
         type: 'boogu',
-        enhanceRecipe: 'flux',   // Cubric Prompt has no 'boogu' recipe; keep 'boogu' out of the sweep
+        enhanceRecipe: 'flux',   // no 'boogu' recipe is registered; keep 'boogu' out of the sweep
         supportedOps: ['edit'],
         loraStrengths: ['model'],
         capabilities: { multiStage: false, audio: false, negativePrompt: true },
@@ -1689,7 +1689,7 @@ export const MODELS = [
         // baked in the workflow). No high/low staging (5B is dense, not MoE) → no
         // loraStages; user LoRA slots are flat model-strength only.
         loraStrengths: ['model'],
-        // Reuse the wan enhance recipe (Cubric Prompt has no 'wan5b' recipe).
+        // Reuse the wan enhance recipe (no 'wan5b' recipe is registered).
         enhanceRecipe: 'wan',
         // SINGLE-STAGE ops (t2v/i2v, NOT the multi-stage t2v_ms/i2v_ms) — matches
         // capabilities.multiStage:false. First video model to use the non-_ms ops.
@@ -1736,7 +1736,7 @@ export const MODELS = [
         mediaType: 'image',
         image: 'qwen-edit.webp',
         type: 'qwen',
-        enhanceRecipe: 'flux',   // Cubric Prompt has no 'qwen' recipe; keep 'qwen' out of the sweep
+        enhanceRecipe: 'flux',   // no 'qwen' recipe is registered; keep 'qwen' out of the sweep
         // MPI-365: TWO ops now, both branches of the one master graph. Pose and depth
         // are not separate ops — they are the two `controlTypes` below.
         supportedOps: ['qwenEdit', 'control'],

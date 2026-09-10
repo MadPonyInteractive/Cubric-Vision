@@ -119,18 +119,12 @@ test('no call pairs windowsHide with detached — Windows ignores the flag then'
     assert.deepStrictEqual(offenders, [], `detached:true cancels windowsHide:\n${offenders.join('\n')}`);
 });
 
-test('the broker is spawned through a GUI binary, not bare node', () => {
-    // ensureBroker spawns DETACHED and must stay that way (a non-detached broker
-    // dies with whichever app started it — measured 2026-08-28). DETACHED_PROCESS
-    // makes Windows ignore windowsHide, so the only way to keep the broker
-    // window-less is to hand it a GUI-subsystem binary: our own Electron, run as
-    // Node. `['node', cliPath]` is console-subsystem and pops a terminal.
-    const src = fs.readFileSync(path.join(ROOT, 'services', 'brokerBoot.js'), 'utf8');
-    const call = src.slice(src.indexOf('ensureBroker({'));
-    assert.ok(call.includes('process.execPath'), 'brokerCommand must use process.execPath');
-    assert.ok(call.includes('ELECTRON_RUN_AS_NODE'), 'the spawned broker needs ELECTRON_RUN_AS_NODE');
-    assert.ok(!/brokerCommand:\s*\[\s*'node'/.test(call), "brokerCommand must not be bare 'node'");
-});
+// MPI-677 deleted the 'broker is spawned through a GUI binary' test with
+// services/brokerBoot.js: Vision no longer spawns a broker at all. The rule it
+// enforced was specific to that spawn (DETACHED_PROCESS makes Windows ignore
+// windowsHide, so a detached child needs a GUI-subsystem binary); the general
+// `detached:true cancels windowsHide` scan above still covers every other
+// child_process call site in the repo.
 
 test('the scanner actually catches a bare call (it would pass on a broken regex)', () => {
     const bare = "const { spawn } = require('child_process');\nspawn('nvidia-smi', ['-L']);\n";

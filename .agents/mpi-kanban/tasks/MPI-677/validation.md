@@ -421,3 +421,159 @@ owns it, the box owns the button and the approved result — so the test now ass
 box reaches the dialog AND the dialog reaches the service, and that NEITHER carries
 `connectorOps` or a capability probe. The property under test is unchanged: whatever
 runs the enhance runs it locally.
+
+---
+
+## Step 2 — cut the cord (2026-09-10)
+
+Done. Verify mode is `auto`, and this section closes the step.
+
+### What ran
+
+| Check | Command | Result |
+|---|---|---|
+| Whole suite | `npm test` | **917 pass / 0 fail** |
+| Lint | `npm run lint` | clean, `--max-warnings=0` |
+| Syntax, the unlinted files | `node --check server.js main.js routes/connector.js` | OK (ESLint only covers `js/`) |
+| Recipe resolution audit | `node --test tests/recipe-registry.test.cjs` | 1 pass / 0 fail |
+| Portable build | `npm run build:portable:dry-run` | completes, 16 files staged |
+| Server boots without the SDK | `CUBRIC_PORT=3199 node server.js` | started — and see the boot log below |
+| The routes | probe script, live on 3199 | table below |
+| Enhance still works | `POST /llm/enhance`, live | `ok:true`, `deepinfra` / `google/gemma-4-26B-A4B-it` |
+
+**917 is not 916 plus this step's arithmetic, and the difference is another session's.**
+Step 1c closed at 916. A peer added `tests/mention-picker.test.cjs` (9 tests) to the
+shared tree, and this step removed 8 — the 7 in `tests/connector-responder.test.cjs`
+and the one brokerBoot test in `tests/windows-hide-spawn.test.cjs`. 916 + 9 − 8 = 917.
+**A test count taken from a shared tree is not a delta** until the peer's contribution
+is subtracted out; unreconciled, this one would have read as "8 tests appeared".
+
+### What was deleted
+
+- `services/brokerBoot.js`, `services/connectorResponder.js`, `js/shell/connectorOps.js`
+- `POST /connector/enhance`, and the `promptEnhance` field on
+  `/connector/capabilities` (which now returns `generationSubmit` alone)
+- `routes/connector.js`'s `_client` / `setClient` pair — dead the moment those two
+  readers went, and the only reason that file ever held broker state
+- `server.js`'s whole broker chain: `ensureFamilyBroker` → `startConnectorResponder`
+  → `setClient`, plus the **D1 eager spawn of headless sibling apps**
+- the `@cubric/connector` dependency (`package.json`, and `package-lock.json` —
+  including the stale `extraneous` entry npm leaves behind), its
+  `node_modules/@cubric/**` exclusion in `scripts/build-portable.mjs`, and
+  `tests/connector-responder.test.cjs`
+
+**The plan's sixth target was already gone.** It named the wand block at
+`MpiPromptBox.js:1749-1840` plus its import at `:23`; step 1b removed both when it
+repointed the button, which is why the grep the plan supplies as its own verify never
+hit that file.
+
+### Four orphans the plan did not name, removed because this step created them
+
+The broker was the only consumer of a two-way relay between `main.js` and the server
+fork, so cutting it left both ends dangling:
+
+- `main.js` sent `cubric-window-state` on window show and on `closed`; `server.js`
+  received it and forwarded it to the broker as `reportWindowState`. Receiver and both
+  senders removed, along with `server.js`'s `_connectorClient`.
+- `connectorResponder` answered `system.shutdown` by sending `cubric-shutdown` to
+  `main.js`, which called `app.quit()`. The sender is deleted, so the handler became
+  unreachable; removed.
+
+Nothing else sends or receives either message —
+`grep -rn 'cubric-shutdown|cubric-window-state|reportWindowState'` returns nothing
+outside `node_modules`.
+
+### The routes, live on a booted server
+
+The point of the step is that the cord is cut and **the agent's hands are not**. A
+`400` in this table is a pass, not a failure: it is a kept route running and rejecting
+an empty body, which a deleted route cannot do.
+
+| Route | Status | Body |
+|---|---|---|
+| `POST /connector/enhance` | **404** | — *(deleted)* |
+| `GET /connector/capabilities` | 200 | `{"generationSubmit":true}` — **no `promptEnhance`** |
+| `POST /connector/generate` | 400 | `body.flowId, or body.modelId and body.operation, are required.` |
+| `POST /connector/open-project` | 400 | `body.folderPath is required.` |
+| `POST /connector/jobs/:id/result` | 200 | `{"received":false}` |
+| `GET /connector/jobs/stream` | 200 | `event: connected\ndata: {}` |
+| `GET /llm/status` | 200 | `{"deepinfra":{"hasKey":true},"ollama":{"running":true},"defaultBackend":"deepinfra"}` |
+
+`generationSubmit:true` is the probe's own SSE subscriber — the reader was aborted but
+the stream had already registered. Not a step-2 change: the flag and its computation
+are untouched.
+
+Then a real enhance through the local path, to prove the cut did not take the feature
+with it:
+
+```
+POST /llm/enhance  { prompt: "a lighthouse at dusk", backend: "deepinfra" }
+-> ok: true   backend: deepinfra   model: google/gemma-4-26B-A4B-it
+   "A solitary, weathered stone lighthouse stands sentinel against a bruised twilight
+    sky, its rhythmic golden beam sweeping across the churning, indigo swells…"
+```
+
+### The boot log is the evidence, and it is evidence of an ABSENCE
+
+The previous boot logged `Broker ready (spawned=…)` and `Connector responder registered
+(system.memory.release, system.shutdown, generation.submit) + caller routes live.`, and
+could log `Spawned headless siblings`. This one logs none of them — it goes straight
+from `Server started at http://127.0.0.1:3199` to GPU detection. **Booting Vision no
+longer starts a broker and no longer spawns a headless Cubric Prompt beside it**, which
+was the boot-probe hazard every prior session on this card had to clean up after.
+Checked afterwards: no broker process and no headless Prompt exists.
+
+### A stale server nearly produced a false PASS
+
+The first probe attempt read `UP after 0 ms` and would have answered every question
+about the new code — except that **port 3199 was already held by the PREVIOUS session's
+`node server.js`, started 11:20 and never killed.** My own server had exited 1 with
+`Port 3199 is already in use — refusing to start`, in a background task whose failure
+is easy to skim past. Two readings that agreed with each other, and neither was about
+this diff.
+
+The tell was in the two lines read together: a server cannot be `UP after 0 ms` when
+the process meant to serve it has exited. **A readiness probe that passes instantly is
+not a fast boot, it is somebody else's server** — check the listener's PID and start
+time, not just that the port answers. Same family as the dev-launch trap this card
+already carries, one rung lower: not stale *code* behind a live app, but a stale
+*process* behind a live port.
+
+### Left in place deliberately
+
+`resources/cubric/connector-manifest.json` still declares four broker capabilities —
+`project.context.read`, `asset.import`, `generation.submit`, `system.memory.release` —
+and **nothing serves any of them over a broker any more.** It was not deleted because
+it is load-bearing for the build, which is only visible from the dry run:
+`build-portable.mjs` reads it, runs `assertConnectorManifest()` on it, and writes its
+path and sha256 into the update manifest (`connectorManifestHash`). Deleting it breaks
+`npm run build:portable`.
+
+So it is a stale advertisement rather than dead weight, and the honest edit is not
+obvious: `generation.submit` is still genuinely reachable — over plain HTTP, on the
+route this step deliberately kept. **Step 5 owns it**, when it decides what an external
+caller is told about Vision's surface. Recorded here so it is not mistaken for an
+oversight.
+
+### One thing that looks like a regression and is not
+
+`shouldExcludeAppPath()` no longer skips `node_modules/@cubric/**`, so a developer who
+has not re-run `npm ci` still has the old `file:` symlink on disk and their next
+portable build will **fail** on `assertNoDanglingSymlinks` instead of quietly skipping
+it. That is the correct outcome — the link points at a repo Vision no longer depends on
+— and the fix is `npm ci`. The test that asserted the exclusion was replaced by its
+inverse (a scoped package is not excluded merely for being scoped);
+`assertNoDanglingSymlinks`, the check that actually caught the shipped-dangling-link
+bug in MPI-416, is untouched.
+
+### The handoff says another session is doing this step. It was this one.
+
+The handoff record was annotated at ~13:30 with *"Step 2 — IN FLIGHT IN ANOTHER
+SESSION … DO NOT START IT"*, listing `connectorOps.js` / `brokerBoot.js` /
+`connectorResponder.js` deleted, `@cubric/connector` out of `package.json` and
+`llmService.js`'s header rewritten to past tense. That is this diff, seen uncommitted
+in the shared tree by a peer who could not tell whose it was. **In a shared tree an
+uncommitted diff is anonymous**, and the peer's caution was right — but the cost is
+that the record now warns the next reader off work that is finished. Corrected in the
+handoff itself; the lesson is to commit a structural deletion promptly rather than
+leaving the tree ambiguous across sessions.
