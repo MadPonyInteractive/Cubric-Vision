@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-717", "at": "2026-09-10T19:43:14+01:00", "actor": "claude", "column": "todo", "title": "One slow install, three defects on the local download path - telemetry first, then the retry budget and the cancel race"}

@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-719", "at": "2026-09-10T19:43:36+01:00", "actor": "claude", "column": "todo", "title": "cancel() races every concurrent disk scan - a two-step delete under unguarded fs.stat readers, surfacing as a 500 on /comfy/models/check"}

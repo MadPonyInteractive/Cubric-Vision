@@ -58,7 +58,7 @@ The same log's run 1 shows extract times consistent with it (two small node zips
 and that is the defect being fixed. Ruled out on the way: an AV folder exclusion changed
 nothing, the user is on fiber, the parallel cap is not implicated (one model at a time
 reproduces it), and our own per-dep tree walk is bucket-scoped since MPI-654
-(`routes/shared.js:562`) so it is not large enough to do this.
+(`resolveComfyPath` in `routes/shared.js`) so it is not large enough to do this.
 
 ## Why no existing guard catches it
 
@@ -73,8 +73,9 @@ told nothing.
 Three lines of telemetry, all on our side, none of which ask the user for anything:
 
 1. **Free space**, on the models root and the userData volume, at boot and at each install
-   start. `fs.statfs` is already wired for the disk gate (`routes/downloadManager.js:1802`);
-   today it only speaks when it refuses an install, so a volume filling up is invisible.
+   start. `fs.statfs` is already wired for the disk gate (`_freeDiskBytes` in
+   `routes/downloadManager.js`); today it only speaks when it refuses an install, so a
+   volume filling up is invisible.
 2. **Slow-stream WARN** — rate, host, resolved IP, and the `cf-ray` response header. `cf-ray`
    carries the Cloudflare POP code, so one line says whether a user landed on a far or sick
    edge instead of his nearest one. Logged once per dep when the rate stays under a floor,
@@ -92,26 +93,30 @@ With those three, the next report of this shape is a thirty-second read.
   MPI-657 § Not in scope asked for that to be filed on its own evidence; this card produces
   the evidence, it does not spend it.
 - **Raising `LOCAL_DOWNLOAD_CONCURRENCY`.** Considered and rejected on the record:
-  `routes/downloadManager.js:628` documents that parallel pulls "fought over throttled
-  bandwidth and made each other worse", and the user reproduces the crawl with a single
+  the `LOCAL_DOWNLOAD_CONCURRENCY` comment in `routes/downloadManager.js` documents that
+  parallel pulls "fought over throttled bandwidth and made each other worse", and the user reproduces the crawl with a single
   model, so the cap is not the variable.
 
-## Two sibling findings from the same investigation, NOT yet carded
+## Two sibling findings from the same investigation — carded 2026-09-10
 
-Both are real, both were confirmed in code, neither is this card's job:
+Both are real, both were confirmed in code (a code trace, not executed — repro is step one
+on each card), neither is this card's job. Carded the same day under umbrella **MPI-717**
+(this card is its Phase 1): **MPI-719** (cancel race) and **MPI-718** (retry budget).
 
-- **`cancel()` races every concurrent disk scan.** It deletes the partial and its
+- **`cancel()` races every concurrent disk scan — MPI-719.** It deletes the partial and its
   `.cubricdl` marker in two non-atomic steps, while two readers stat what it just removed:
-  `findFileRecursive` (`routes/shared.js:532`, `readdir` then unguarded `fs.stat` per entry)
-  and `getPartialDownloadState` (`routes/downloadCompletion.js:63`, two `pathExists` then an
+  `findFileRecursive` (`routes/shared.js`, `readdir` then unguarded `fs.stat` per entry)
+  and `getPartialDownloadState` (`routes/downloadCompletion.js`, two `pathExists` then an
   unguarded `fs.stat`). Both throws reached `/comfy/models/check` as a 500 in the captured
-  logs, 102 ms after a cancel, which drops one `syncModelInstalled` reconcile
-  (`js/data/modelRegistry.js:281`). `findFileRecursive` is shared, so it is one primitive at
-  two call sites. Belongs under the MPI-513 umbrella.
-- **The same-url retry budget never resets.** `_attempts` is touched in four places in
-  `routes/downloadManager.js` (743, 925, 927, 928) and reset in none, so MPI-460's
-  `[2s, 5s, 15s]` is a per-file lifetime budget. On a link that blips every few minutes a
-  large dep exhausts it regardless of progress: in the captured log `qwen3-8b-clip` sat at
-  2/3 spent with 3.42 GB on disk. MPI-460's design assumed a blip is rare; this amends that
+  logs, 102 ms after a cancel — one stat on a weight, one on a marker — each dropping one
+  `syncModelInstalled` reconcile (`js/data/modelRegistry.js`). `findFileRecursive` is
+  shared, so it is one primitive at every call site. Same symptom family as MPI-513, NOT a
+  member of it: MPI-513's single-writer plan does not close a filesystem window.
+- **The same-url retry budget never resets — MPI-718.** `FileDownloader._attempts` is set
+  to 0 in the constructor and incremented in the `'error'` handler, and reset nowhere, so
+  MPI-460's `[2s, 5s, 15s]` is a per-file lifetime budget. On a link that blips every few
+  minutes a large dep exhausts it regardless of progress: in the captured log
+  `qwen3-8b-clip` resumed from 2.56 GB after retry 1 and 3.42 GB after retry 2, six minutes
+  apart, budget at 2/3. MPI-460's design assumed a blip is rare; this amends that
   assumption rather than contradicting it. Budget should mean three failures WITHOUT
   progress.

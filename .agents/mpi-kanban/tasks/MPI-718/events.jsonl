@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-718", "at": "2026-09-10T19:43:26+01:00", "actor": "claude", "column": "todo", "title": "The same-url retry budget never resets - MPI-460's three attempts are a per-file lifetime, not three failures without progress"}
