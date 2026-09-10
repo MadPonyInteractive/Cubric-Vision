@@ -55,7 +55,7 @@ const videoConcatRoutes = require('./routes/videoConcat');
 const videoReverseRoutes = require('./routes/videoReverse');
 const videoGifRoutes = require('./routes/videoGif');
 const videoTrimInputRoutes = require('./routes/videoTrimInput');
-const { router: downloadManagerRoutes, cancelAllDownloads } = require('./routes/downloadManager');
+const { router: downloadManagerRoutes, cancelAllDownloads, logBootDiskSpace } = require('./routes/downloadManager');
 const { router: runpodRemoteRoutes } = require('./routes/runpodRemote');
 const { router: remoteEngineRoutes } = require('./routes/remoteEngine');
 const { router: remoteProxyRoutes } = require('./routes/remoteProxy');
@@ -109,6 +109,11 @@ process.on('unhandledRejection', (reason) => {
 // ── Startup ────────────────────────────────────────────────────────────────────
 
 const httpServer = app.listen(port, '127.0.0.1', () => {
+    // Free space on the models root and on the userData volume, once per boot.
+    // Deliberately OUTSIDE the axios import below: a failed dynamic import must not
+    // be what costs us the disk telemetry. It swallows its own errors. (MPI-716)
+    logBootDiskSpace();
+
     // Dynamic import for ESM-only axios
     import('axios').then(mod => {
         const axios = mod.default;

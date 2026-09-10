@@ -1198,3 +1198,71 @@ mid-body, and the test asserts the retry's request carries `Range: bytes=<partia
 the finished file matches the expected sha256. It drives `forceStall()` directly because
 NDH v2.1.11 does **not** emit `error` on a socket that dies mid-body (re-measured 2026-08-06,
 the same finding MPI-291 built the watchdog on).
+
+
+## A slow install must be readable from the log alone (MPI-716)
+
+Every guard on this path fires on **dead**: NDH's `timeout: 30000` is socket-inactivity,
+the MPI-291 watchdog wants `STALL_MS` of zero bytes, the MPI-460 retry wants an error. A
+stream at 20-40 KB/s is *alive*, so it trips none of them and runs indefinitely — and
+until MPI-716 the log said nothing about it. A 2026-09-10 beta report had to be diagnosed
+by differencing `resuming <dep> from N GB on disk` offsets against their timestamps, a
+trick that only works when a stall fires, which is exactly the case it cannot describe.
+Diagnosis stalled on asking the user to run `curl -w %{speed_download}`.
+
+Three lines, all on our side, none of which ask the user for anything. Grep them:
+
+| Line | Grep | The question it answers |
+|---|---|---|
+| Free space | `grep '\[download\].*free space'` | Was the volume full — and is it the SAME volume as `userData`? |
+| Slow-stream WARN | `grep '\[download\].*slow stream'` | How slow, from which origin, which peer IP, which Cloudflare POP |
+| Write probe | `grep '\[download\].*write probe'` | **Disk or network?** |
+
+**Free space** — one line per volume at boot (`server.js` calls `logBootDiskSpace()` in the
+`app.listen` callback, deliberately outside the axios dynamic import so a failed import
+cannot cost the telemetry), and one per install start after the MPI-99 disk gate passes.
+`_diskSpace()` is the single `statfs` primitive and returns free AND total, so the
+percentage costs no second syscall; `_freeDiskBytes()` is the free-only shape the gate
+consumes. Percent is what makes a filling volume readable at a glance — a bare "41 GB free"
+does not. Both volumes are printed because they are usually the same drive: `userData`
+holds Electron's Chromium cache and LevelDB, so one slow disk degrades the downloads and
+the boot together, and only these lines can say whether that is what happened.
+
+**Slow-stream WARN** — `FileDownloader._checkSlowStream()`, off NDH's own per-dep
+`stats.speed` in the `'progress'` handler. Not `_modelSpeedLabel` (that is the per-MODEL
+EMA the drawer shows) and not per NDH chunk. `SLOW_STREAM_FLOOR_BPS` (1 MB/s) sustained
+`SLOW_STREAM_WINDOW_MS` (60 s) latches `_slowWarned` for exactly one line per stream; a
+genuinely slow link pays one WARN per dep and nothing more. Thresholds come from the
+capture, not from taste: healthy baseline on that host was 16.51 MB/s aggregate against a
+worst dep of 0.05 MB/s, with the run's other two at 0.29 and 0.78 MB/s.
+
+- The **host** is read at WARN time from `depJob.url`, because MPI-429 mutates it on a
+  mirror failover — the line must name whichever origin is streaming now.
+- The **peer IP and `cf-ray`** come off NDH's raw `http.IncomingMessage`
+  (`this._downloader.__response`), stashed in the `'download'` handler. NDH assigns
+  `__response` in `__downloadRequest` before it emits `'download'`, so it is live there. A
+  `dns.lookup` on our side can only approximate the peer, and nothing on our side can
+  produce `cf-ray` at all — its trailing token is the Cloudflare POP, the one field that
+  answers "did this user land on his nearest edge". **Private NDH field, same class of
+  dependency as `__isResumed` above and pinned the same way: node-downloader-helper
+  2.1.11. Re-check it on an NDH bump.** Absent either, the line degrades to `-`.
+- `_rearm()` clears the latch alongside the stall clock, so every restart — retry, mirror
+  failover, resume — gets a fresh window and may warn again on its own merits.
+
+**Write probe** — `_writeProbe()`, 8 MB written into the dep's own directory, **`fsync`ed**,
+timed end to end, then unlinked. Without the `fsync` Windows reports the page-cache rate
+and the number says nothing about the disk, which would be worse than no line because it
+would look like an answer. Gated on the same latch, so it runs at most once per dep: a
+probe on a timer is a probe that competes with the download it is measuring. It stands
+down (and says so) under `PROBE_MIN_FREE_BYTES` — the ENOSPC handler in `server.js`
+cancels every active download, and a probe must never be what trips it. Local engine only
+by construction; `FileDownloader` never runs for the remote engine, so there is no twin.
+
+Read the three together: a slow probe on a volume that is also nearly full is one finding,
+not two.
+
+Guard: `tests/download-retry.test.cjs` — the same local server as the retry case, with the
+body dribbled out a chunk per interval instead of cut, plus a direct call proving a probe
+that cannot open its file logs and resolves rather than rejecting into the progress
+handler. `_setSlowStreamThresholdsForTests` compresses the 60 s window; production never
+reassigns those.

@@ -1,0 +1,1 @@
+{ "schema": "mpi-kanban/files/v1", "files": ["routes/downloadManager.js", "server.js", "tests/download-retry.test.cjs", "docs/download-manager.md", ".agents/mpi-kanban/tasks/MPI-716/"] }

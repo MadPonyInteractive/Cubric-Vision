@@ -23,7 +23,8 @@ re-reads those two files.
 
 ## Current State
 
-Not started, all three `planned`. MPI-716 was carded first (2026-09-10 19:25) with the
+**Phase 1 (MPI-716) shipped 2026-09-10 and its card is `done`.** MPI-718 and
+MPI-719 remain `planned`, in that order. MPI-716 was carded first (2026-09-10 19:25) with the
 other two recorded in its `brief.md` as "confirmed in code, not carded"; this sweep carded
 them and re-checked every claim against the working tree and the captured logs:
 
@@ -62,9 +63,25 @@ NOT a member of MPI-513 (install state that lies to the user): same symptom fami
 MPI-513's root is two writers for one install and its plan is "single writer first, then
 re-test" — a single writer does not close a readdir-then-stat window.
 
-## Phase 1: Telemetry — MPI-716
+## Phase 1: Telemetry — MPI-716 — SHIPPED 2026-09-10
 
-Three log lines, no behaviour change. Plan and thresholds: `tasks/MPI-716/plan.md`.
+Three log lines, no behaviour change. Plan and thresholds: `tasks/MPI-716/plan.md`;
+executed evidence: `tasks/MPI-716/validation.md`.
+
+Landed as planned: free space at boot and at install start (one `_diskSpace` statfs
+returning free AND total), a `_slowWarned` latch on NDH's per-dep `stats.speed` carrying
+rate/host/peer/`cf-ray`, and an fsynced 8 MB write probe gated on that same latch. The
+harness gained a throttled body rather than a second server, as this plan required.
+917/917 suite, eslint clean, Phase 1 confirmed in a live isolated app boot.
+
+**What Phase 2 inherits:** the WARN and the probe both hang off `_checkSlowStream`, and
+`_rearm()` now clears `_slowSince`/`_slowWarned` beside the MPI-291 stall clock — so a
+retry-budget change that alters how often `_rearm()` runs also alters how often a stream
+may re-warn. `_setSlowStreamThresholdsForTests` is on the module for the harness.
+
+**What Phase 3 inherits:** the probe's `unlink` brushes the very race MPI-719 fixes; it is
+named in a comment beside that unlink. The probe is not a new cause — `cancel()` opens a
+far wider window — but MPI-719's reader-side fix closes both.
 
 Owns: `routes/downloadManager.js` (`FileDownloader._bindEvents`, `_rearm`, the install
 start after the disk gate, a new probe helper), `server.js` (the boot line beside
@@ -106,4 +123,9 @@ nothing. Run them in order; a single session can carry all three.
 
 ## Plan Drift
 
-(none yet)
+- **2026-09-10, Phase 1.** No drift in scope. Two implementation choices worth recording:
+  `_freeDiskBytes` was KEPT as a thin wrapper over the new `_diskSpace` rather than
+  renamed, so nothing downstream (including a comment in `tests/disk-full-message.test.cjs`,
+  a file Phase 1 did not own) drifts; and the write probe targets the dep's OWN directory
+  rather than the models root — same volume by construction, already writable, and it
+  measures the exact path in use.

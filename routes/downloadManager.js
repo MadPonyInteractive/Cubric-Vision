@@ -742,6 +742,16 @@ class FileDownloader {
         // in-place restarts of THIS dep; a mirror failover spends its own walk.
         this._attempts = 0;
         this._retryTimer = null;
+        // MPI-716 — slow-stream latch (see _checkSlowStream). _slowSince is when the
+        // rate first went under the floor; _slowWarned makes it ONE line per stream.
+        // Both cleared in _rearm(), which every restart — retry, mirror failover,
+        // resume — already goes through, so the latch re-arms on a resume for free.
+        this._slowSince = null;
+        this._slowWarned = false;
+        // MPI-716 — the peer the socket actually reached and Cloudflare's POP, stashed
+        // in the 'download' handler. Nulls until the first response lands.
+        this._peerAddress = null;
+        this._cfRay = null;
         // MPI-296 — SHA256 computed incrementally while the file streams in, so the
         // post-download verify never re-reads the whole file (killed a 35s wall on a
         // 6.6GB weight). Valid only for FRESH streams (pipe sees every byte once, in
@@ -766,6 +776,19 @@ class FileDownloader {
         // forwards every chunk unchanged — a Writable would swallow the bytes and
         // starve the file stream. Hash on the way through, pass the chunk along.
         this._downloader.on('download', (evt) => {
+            // MPI-716 — the address the socket actually connected to, and Cloudflare's
+            // POP, read off NDH's raw http.IncomingMessage. A dns.lookup on our side can
+            // only approximate the first; nothing on our side can produce the second, and
+            // cf-ray's trailing token is the one field that answers "did this user land on
+            // his nearest edge". NDH assigns __response in __downloadRequest BEFORE it
+            // emits 'download', so it is live here. Private NDH field — same class of
+            // dependency as __isResumed (docs/download-manager.md § Resume contract) and
+            // pinned the same way: node-downloader-helper 2.1.11. Re-check on an NDH bump.
+            // Above the isResumed return on purpose: a resumed stream has a peer too.
+            const response = this._downloader.__response;
+            this._peerAddress = (response && response.socket && response.socket.remoteAddress) || null;
+            this._cfRay = (response && response.headers && response.headers['cf-ray']) || null;
+
             // MPI-317: on a RESUMED stream the pipe only sees bytes from the resume
             // offset — an incremental hash would be tail-only garbage that fails
             // verify and scrubs a good file. Null the hash instead; _verifySha256
@@ -793,6 +816,7 @@ class FileDownloader {
                 this._lastBytes = stats.downloaded;
                 this._lastByteTs = Date.now();
             }
+            this._checkSlowStream(speed); // MPI-716
             this.depJob.downloadedBytes = stats.downloaded;
             this.depJob.totalBytes = stats.total;
             this.depJob.speed = _formatSpeed(speed);
@@ -956,11 +980,53 @@ class FileDownloader {
     // cancel or uninstall (they look the dep up in it), no shutdown stopKeep — while the
     // launcher counted the freed slot and handed it to another dep. That was MPI-429's
     // failover for its whole life; the retry path would have inherited it.
+    // MPI-716 — a stream that is slow but ALIVE trips nothing else on this path: NDH's
+    // timeout:30000 is socket-inactivity, MPI-291's watchdog wants STALL_MS of zero
+    // bytes, MPI-460's retry wants an error. All three fire on DEAD. So a 20-40 KB/s
+    // crawl ran indefinitely and app.log said nothing about it — which is why the
+    // 2026-09-10 report had to be diagnosed by differencing "resuming X from N GB"
+    // offsets, a trick that only works when a stall fires.
+    //
+    // This is a fourth OBSERVER: it logs and returns. It must never be merged with the
+    // ceiling, the watchdog or the retry (MPI-657 § Watch out for). The latch is what
+    // keeps a genuinely slow link to ONE line per dep per stream instead of a log
+    // nobody can read.
+    _checkSlowStream(speed) {
+        if (speed >= SLOW_STREAM_FLOOR_BPS) {
+            this._slowSince = null;
+            return;
+        }
+        const now = Date.now();
+        if (this._slowSince === null) {
+            this._slowSince = now;
+            return;
+        }
+        if (this._slowWarned || now - this._slowSince < SLOW_STREAM_WINDOW_MS) return;
+        this._slowWarned = true;
+        // depJob.url is read HERE, not at construction: MPI-429 MUTATES it on a mirror
+        // failover, so this names whichever origin is streaming now — the one whose
+        // rate we are reporting — rather than the origin we first asked.
+        let host = '?';
+        try { host = new URL(this.depJob.url).host; } catch { /* malformed url — keep '?' */ }
+        const heldSec = Math.round((now - this._slowSince) / 1000);
+        logger.warn('download', `${this.depJob.id}: slow stream — ${_formatSpeed(speed)} sustained ${heldSec}s from ${host} (peer ${this._peerAddress || '-'}, cf-ray: ${this._cfRay || '-'})`);
+        // Gated on the latch, so at most once per stream — a probe on a timer is a probe
+        // that competes with the download it is measuring. Fire-and-forget: it swallows
+        // its own failures, and the progress handler must not wait on a disk write.
+        _writeProbe(path.dirname(this.localPath), this.depJob.id)
+            .catch(err => logger.warn('download', `write probe crashed: ${err.message}`));
+    }
+
     _rearm() {
         this._downloader = null;
         this._eventsBound = false;
         this._lastBytes = -1;
         this._lastByteTs = Date.now();
+        // MPI-716 — re-arm the slow latch with the stall clock. Every restart (retry,
+        // mirror failover, resume) lands here, so a new stream always gets a fresh
+        // window and can warn again on its own merits.
+        this._slowSince = null;
+        this._slowWarned = false;
         _activeDownloaders.set(this.depJob.id, this);
         _startStallWatchdog();
     }
@@ -1101,6 +1167,19 @@ const STALL_MS = 60_000;
 // failure is real and the user sees it. Spaced so a router reboot or a CDN edge blip
 // has time to clear, and short enough that a genuinely dead route is not a 5-minute wait.
 const RETRY_BACKOFF_MS = [2_000, 5_000, 15_000];
+// MPI-716 — slow-stream floor and window (see FileDownloader._checkSlowStream).
+// Both come from the 2026-09-10 capture, not from taste: the healthy baseline on that
+// host was 16.51 MB/s aggregate and the worst crawling dep 0.05 MB/s, two and a half
+// orders apart, with the run's other two at 0.29 and 0.78 MB/s. A 1 MB/s floor catches
+// all three with room on either side; 60s of it makes a transient dip cost nothing.
+// `let` only so the test can compress the 60s window — production never reassigns
+// them (same contract as _setTrashFnForTests).
+let SLOW_STREAM_FLOOR_BPS = 1024 * 1024;
+let SLOW_STREAM_WINDOW_MS = 60_000;
+function _setSlowStreamThresholdsForTests(floorBps, windowMs) {
+    SLOW_STREAM_FLOOR_BPS = floorBps;
+    SLOW_STREAM_WINDOW_MS = windowMs;
+}
 let _watchdogTimer = null;
 
 function _startStallWatchdog() {
@@ -1787,6 +1866,11 @@ router.post('/comfy/models/download/start', async (req, res) => {
     _resetModelSpeed(modelJob);
     _broadcast('download:started', { modelId, status: 'downloading', progress: modelJob.progress });
 
+    // Free space at install start, after the gate passed and before the first dep
+    // moves. The gate above only speaks when it REFUSES; this is the line that says
+    // what the volume looked like on the installs that went ahead. (MPI-716)
+    await _logDiskSpace('models root', customRoot || defaultModelsRoot);
+
     _startPendingDeps();
 
     // Register-before-respond (MPI-276 G8): the job is fully in _modelJobs before we
@@ -1795,20 +1879,112 @@ router.post('/comfy/models/download/start', async (req, res) => {
     res.json({ success: true, jobId: modelId, version: store.version(), job: _serializeModelJob(modelJob) });
 });
 
-// Free bytes available on the filesystem holding `dir`. Returns null on any
-// failure so callers can treat "unknown" as "don't block". (MPI-99)
-async function _freeDiskBytes(dir) {
+// Free AND total bytes on the filesystem holding `dir`, from ONE statfs. Returns
+// null on any failure so callers can treat "unknown" as "don't block".
+// (MPI-99 wired the statfs; MPI-716 added `total` so the telemetry below can print
+// a percentage without a second syscall.)
+// `free` is bavail — space THIS process may actually use — so on a filesystem with
+// root-reserved blocks the percentage reads a shade fuller than `df`. That is the
+// number that matters here, and Windows (where this fired) reserves nothing.
+async function _diskSpace(dir) {
     try {
         const stats = await fs.statfs(dir);
-        return stats.bavail * stats.bsize;
+        return { free: stats.bavail * stats.bsize, total: stats.blocks * stats.bsize };
     } catch (err) {
         logger.warn('download', `statfs failed for ${dir}: ${err.message}`);
         return null;
     }
 }
 
+// Free bytes only — the shape the MPI-99 disk-full gate consumes. (MPI-99)
+async function _freeDiskBytes(dir) {
+    const space = await _diskSpace(dir);
+    return space ? space.free : null;
+}
+
 function _fmtGb(bytes) {
     return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
+}
+
+// ── Free-space telemetry (MPI-716) ─────────────────────────────────────────────
+// statfs has been wired since MPI-99, but it only ever SPOKE when the gate refused
+// an install — so a volume filling up under a running one was invisible in app.log.
+// A 2026-09-10 beta report of installs crawling at 20-40 KB/s could not be diagnosed
+// because of it: with no free-space figure in the log, "is the volume the problem"
+// was unanswerable without asking the user to type commands.
+// Percent is what makes a filling volume readable at a glance; a bare "41 GB free"
+// does not. Logs and returns — never a new failure path.
+async function _logDiskSpace(label, dir) {
+    const space = await _diskSpace(dir);
+    if (!space) return; // _diskSpace already warned
+    const pctUsed = space.total > 0 ? `${((1 - space.free / space.total) * 100).toFixed(1)}%` : '?';
+    logger.info('download', `free space — ${label}: ${_fmtGb(space.free)} free of ${_fmtGb(space.total)} (${pctUsed} used) at ${dir}`);
+}
+
+// ── Timed write probe (MPI-716) ────────────────────────────────────────────────
+// The disk-versus-network split — the one question the 2026-09-10 investigation could
+// not answer, because answering it meant asking a user with work to do to type
+// `curl -w %{speed_download}` into a terminal. Run by the app instead, at the only
+// moment it is worth running: when the slow-stream WARN above has just fired.
+// Read it against the free-space lines: a slow probe on a volume that is also nearly
+// full is ONE finding, not two.
+const PROBE_BYTES = 8 * 1024 * 1024;
+// The disk-full gate's ENOSPC handler in server.js cancels every active download. A
+// probe must never be what trips it, so it stands down with room to spare and says so
+// — "skipped" is itself a useful line when the free-space number is the diagnosis.
+const PROBE_MIN_FREE_BYTES = 1024 ** 3;
+
+async function _writeProbe(dir, depId) {
+    const space = await _diskSpace(dir);
+    if (space && space.free < PROBE_MIN_FREE_BYTES) {
+        logger.warn('download', `${depId}: write probe skipped — only ${_fmtGb(space.free)} free at ${dir}`);
+        return;
+    }
+    // Written into the dep's own directory: same volume as the download by construction,
+    // already created and known writable, and it measures the exact path in use rather
+    // than a cousin of it. The unlink below opens a millisecond-wide window for a
+    // concurrent tree walk to stat a file that just vanished — the reader-side race
+    // MPI-719 fixes in findFileRecursive; it is not introduced here, only brushed.
+    const probePath = path.join(dir, `.cubric-write-probe-${process.pid}-${Date.now()}`);
+    const buf = Buffer.alloc(PROBE_BYTES);
+    let fd = null;
+    try {
+        const t0 = Date.now();
+        fd = await fs.open(probePath, 'w');
+        await fs.write(fd, buf);
+        // WITHOUT the fsync, Windows hands back the page-cache rate and the number says
+        // nothing whatsoever about the disk — which would make this line worse than
+        // absent, because it would look like an answer.
+        await fs.fsync(fd);
+        await fs.close(fd);
+        fd = null;
+        const seconds = (Date.now() - t0) / 1000;
+        logger.info('download', `${depId}: write probe — ${_formatSpeed(PROBE_BYTES / seconds)} writing ${PROBE_BYTES / 1024 ** 2} MB (fsynced) to ${dir}`);
+    } catch (err) {
+        logger.warn('download', `${depId}: write probe failed at ${dir}: ${err.message}`);
+    } finally {
+        if (fd !== null) { try { await fs.close(fd); } catch { /* nothing left to close */ } }
+        // Runs even when the write threw — a probe that leaves 8 MB behind on a volume
+        // it just reported as slow is the last thing this should do.
+        try { await fs.remove(probePath); } catch (err) {
+            logger.warn('download', `write probe cleanup failed for ${probePath}: ${err.message}`);
+        }
+    }
+}
+
+// Both volumes at boot, called from server.js beside `Server started`. They are
+// OFTEN THE SAME DRIVE, and saying so is the point: userData holds Electron's
+// Chromium cache and LevelDB, so one slow or full volume shared with the weights
+// degrades the downloads AND the boot — which is the pair the report showed.
+// (MPI-716)
+async function logBootDiskSpace() {
+    try {
+        await _logDiskSpace('models root', (await getCustomRoot()) || getDefaultModelsRoot());
+        const userData = process.env.APP_USER_DATA;
+        if (userData) await _logDiskSpace('userData', userData);
+    } catch (err) {
+        logger.warn('download', `boot free-space telemetry failed: ${err.message}`);
+    }
 }
 
 // ── Pending Deps Launcher ──────────────────────────────────────────────────────
@@ -3605,6 +3781,7 @@ function clearEngineDownload() {
 module.exports = {
     router,
     cancelAllDownloads,
+    logBootDiskSpace, // MPI-716 — called by server.js at boot
     broadcastEngineEvent,
     FileDownloader,
     registerEngineDownload,
@@ -3629,6 +3806,8 @@ module.exports = {
     _orphanedDepIds, // MPI-462 — exported for unit test (orphan sweep)
     _sweepOrphanedDeps, // MPI-462 — exported for unit test (orphan sweep)
     _setTrashFnForTests, // MPI-500 — exported for unit test only; never call outside tests
+    _setSlowStreamThresholdsForTests, // MPI-716 — exported for unit test only; never call outside tests
+    _writeProbe, // MPI-716 — exported for unit test (the probe's own failure path)
     _sweepOrphanedDepsRemote, // MPI-464 — exported for unit test (orphan sweep, remote twin)
     _startRemoteDownload, // MPI-481 — exported for unit test (stale attach guard)
     _remoteDepIds, // MPI-481 — exported for unit test only; never mutate outside tests

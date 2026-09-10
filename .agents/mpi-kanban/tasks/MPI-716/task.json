@@ -3,14 +3,17 @@
   "id": "MPI-716",
   "title": "A slow install is undiagnosable from app.log - the download path logs no rate, no free space and no response headers",
   "description": "UMBRELLA: MPI-717 - One slow install, three defects on the local download path (consolidation sweep 2026-09-10). Members and phase order: tasks/MPI-717/plan.md.\n\nA beta user on fiber saw installs crawl at 20-40 KB/s against a ~50 MB/s line, and the two app.log captures he sent carry no byte-rate, no free-space figure and no response header - every rate had to be derived by differencing \"resuming X from N GB\" offsets against timestamps, which only works when a stall fires and a slow-but-alive stream never stalls. Adds three log lines: free space on the models + userData volumes, a latched slow-stream WARN carrying rate/host/resolved IP/cf-ray POP, and a timed write probe to the models root on that trigger. Does NOT change download behaviour, does NOT touch the concurrency cap (rejected on the record, the LOCAL_DOWNLOAD_CONCURRENCY comment in routes/downloadManager.js) and does NOT rework the transport (that is MPI-657 Not-in-scope, which this card feeds). Evidence: C:/AI/Mpi/_private/cubric-download-telemetry/. Two sibling findings are recorded in brief.md and are NOT carded yet.",
-  "column": "todo",
-  "maturity": "planned",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
   "created_at": "2026-09-10T19:25:28+01:00",
-  "updated_at": "2026-09-10T19:47:46+01:00",
+  "updated_at": "2026-09-10T22:17:38+01:00",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
+    "checklist": "checklist.md",
+    "files": "files.json",
+    "validation": "validation.md",
     "events": "events.jsonl"
   }
 }
