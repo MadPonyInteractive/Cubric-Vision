@@ -1,0 +1,17 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-713",
+  "title": "MpiMaskPreview - see where a mask lands on a plate, in one node",
+  "description": "New node in the sibling repo ComfyUi-MpiNodes. Paints a flat colour through a MASK onto an IMAGE and previews it in-graph, replacing the EmptyImage -> ImageCompositeMasked -> Preview Image chain that mask debugging currently needs. Takes destination + mask only (no source), with widgets color / invert_mask / alpha / index. No x/y and no resize_source - it is a debug view, not a compositor. index picks one frame out of a batch so a clip does not render one thumbnail per frame. Ends in changelog.md + README.md rows and a push; the node_lock pin stays with the peer agent.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "accepted",
+  "created_at": "2026-09-10T10:20:00+01:00",
+  "updated_at": "2026-09-10T10:55:00+01:00",
+  "links": {
+    "checklist": "checklist.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "validation": "validation.md"
+  }
+}

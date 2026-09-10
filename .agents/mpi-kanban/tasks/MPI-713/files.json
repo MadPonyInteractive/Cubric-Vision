@@ -1,0 +1,9 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "../ComfyUi-MpiNodes/img.py",
+    "../ComfyUi-MpiNodes/__init__.py",
+    "../ComfyUi-MpiNodes/README.md",
+    "../ComfyUi-MpiNodes/changelog.md"
+  ]
+}
