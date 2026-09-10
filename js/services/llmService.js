@@ -212,6 +212,54 @@ export function resolveMode(recipeId, asked) {
     return Object.keys(modes)[0];
 }
 
+/**
+ * Split a `separate-field` recipe's labelled reply into its two channels.
+ *
+ * THE FOUR `separate-field` RECIPES DO NOT AGREE ON A FORMAT, which is why this
+ * anchors on the NEGATIVE label alone and treats everything before it as the
+ * positive half. Measured across the registry rather than assumed from `sdxl`:
+ *
+ *   `sdxl`      `POSITIVE PROMPT: …\nNEGATIVE PROMPT: …` — both labelled, and its
+ *               system prompt states the contract literally ("your reply starts
+ *               with POSITIVE PROMPT: and ends at the end of the NEGATIVE PROMPT
+ *               line").
+ *   `kling-3.0` unlabelled prose, then a trailing `Negative Prompt:` block — a
+ *               DIFFERENT label in a DIFFERENT case, and no positive label at
+ *               all. A splitter written to `sdxl`'s shape reads this as prose and
+ *               welds the negative into the positive, silently.
+ *   `pony`,     declare the field and deliberately emit NO negative block: the
+ *   `illustrious` author's baseline is a constant ladder, and a constant needs no
+ *               LLM to write it. They parse to `null` here and keep their raw
+ *               text, which is correct, not a miss.
+ *
+ * NOTHING ANYWHERE SPLIT IT UNTIL NOW and the whole blob landed in the positive
+ * field. That was not a Vision bug: Cubric-Prompt's broker responder had no
+ * splitter either (grepped across `src/main/`), so it returned the labelled text
+ * as `prompt` and left `negativePrompt` undefined — identical behaviour on both
+ * sides of the retirement, which is why step 1b recorded it as PARITY, not a
+ * regression, and left the fix here where the user can SEE which channel each
+ * half lands in before approving it. `pony.recipe.js:216-227` reached the same
+ * conclusion from the recipe side while deciding to emit no negative block at all.
+ *
+ * Returns `null` when the reply carries no usable positive half — a recipe that
+ * ignored its own format, or a truncated answer. The caller then keeps the raw
+ * text, so a parse miss degrades to exactly what shipped rather than to an empty
+ * box.
+ *
+ * @param {string} text
+ * @returns {{positive: string, negative: string}|null}
+ */
+export function splitLabelledPrompt(text) {
+    // The NEGATIVE label is the only thing all the emitting recipes share, so it is
+    // the anchor; the positive label is stripped if it happens to be there. Lazy
+    // match, so a recipe that names the block twice cuts at the FIRST one.
+    const m = /^([\s\S]*?)[\r\n]*[ \t]*NEGATIVE[ \t]+PROMPT[ \t]*:[ \t]*([\s\S]*)$/i
+        .exec(String(text || ''));
+    if (!m) return null;
+    const positive = m[1].replace(/^[\s]*POSITIVE[ \t]+PROMPT[ \t]*:[ \t]*/i, '').trim();
+    return positive ? { positive, negative: m[2].trim() } : null;
+}
+
 /** `/llm/status` — what the server can actually reach. Never throws. */
 export async function serverStatus() {
     try {
@@ -316,8 +364,12 @@ export async function runComfyEnhance({ prompt, system, injectionParams, modelId
  * @param {string} [a.recipeKey]    defaults to `model.enhanceRecipe ?? model.type`
  * @param {string} [a.mode]         recipe mode; defaults to `t2v`
  * @param {string} [a.backend]      explicit override; defaults to the preference, then automatic
- * @returns {Promise<{ok:boolean, text?:string, backend?:string, model?:string,
- *                    recipeId?:string, fellBack?:boolean, note?:string, error?:string}>}
+ * @returns {Promise<{ok:boolean, text?:string, negativeText?:string, backend?:string,
+ *                    model?:string, recipeId?:string, fellBack?:boolean, note?:string,
+ *                    error?:string}>}
+ *          `negativeText` is present ONLY for a `separate-field` recipe whose reply
+ *          parsed. `text` is then the positive half alone — the caller must not
+ *          re-split it.
  */
 export async function enhance({ prompt, model, recipeKey, mode, backend } = {}) {
     const idea = String(prompt || '').trim();
@@ -354,8 +406,16 @@ export async function enhance({ prompt, model, recipeKey, mode, backend } = {}) 
         clientLogger.warn('prompt', `[llmService] enhance failed on ${chosen}: ${result.error}`);
         return result;
     }
+    // Only a recipe that DECLARES two channels gets its reply split. A prose recipe
+    // that happens to write the words "negative prompt" is not offering a second
+    // field, and cutting its text there would silently delete half the prompt.
+    const split = modeRecipe.negativeHandling === 'separate-field'
+        ? splitLabelledPrompt(result.text)
+        : null;
+
     return {
         ...result,
+        ...(split ? { text: split.positive, negativeText: split.negative } : {}),
         recipeId,
         fellBack,
         // Honest signal, surfaced verbatim: the requested target had no recipe

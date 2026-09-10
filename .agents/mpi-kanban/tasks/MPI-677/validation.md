@@ -214,3 +214,116 @@ and the plan's literal grep passes.
 **The seed rule is why this mattered rather than being tidiness.** `Input_Seed` must be
 spread LAST so no caller can pin it; it was written twice, in two files, and a test now
 asserts the ordering in the one place it survives.
+
+## Step 1c — the overlay (2026-09-10)
+
+Built. **The verify mode is `user-ux`, so this section does NOT close the step** — it
+records what is proven underneath the UI so that Fabio's pass is about the UI and
+nothing else.
+
+### What ran
+
+| Check | Command | Result |
+|---|---|---|
+| Whole suite | `npm test` | **916 pass / 0 fail** (was 915; +1 new file) |
+| New tests | `node tests/enhance-overlay.test.cjs` | **10 pass / 0 fail** |
+| Repointed test | `node tests/enhance-control.test.cjs` | **7 pass / 0 fail** |
+| Lint | `npm run lint` | clean, `--max-warnings=0` |
+| Server boots with the key | `CUBRIC_PORT=3199 node server.js` | `/llm/status` → `{"deepinfra":{"hasKey":true},…,"defaultBackend":"deepinfra"}` |
+
+### The shape
+
+`MpiEnhanceDialog` (a new Compound: `MpiModal` + `MpiInput` ×3 + `MpiButton`). Short
+prompt above, **Enhance**, the enhanced text editable below, OK / Cancel. The prompt
+box keeps only the short prompt and holds the approved enhancement beside it as
+`_enhanced = { source, positive }`.
+
+**The iteration loop is structural, not a rule.** Enhance always reads the UPPER box,
+so editing the short prompt and pressing Enhance again re-runs the recipe on the
+user's own words — there is no code path by which an enhancement can be fed back into
+the enhancer. That was the actual defect in the shipped control: it wrote its result
+over the user's words, so the second press enhanced an enhancement.
+
+**ONLY THE POSITIVE IS HELD BACK.** A `separate-field` recipe's negative half is
+written into the box's own negative field, where it is visible and editable. "Lands in
+its own channel" means the user can SEE it, not that a second hidden value rides along
+— and it leaves the submit path with one source of truth for the negative instead of
+two that can disagree.
+
+**No Enter-to-confirm, deliberately.** `MpiModal` binds `modal.confirm` with
+`allowWhileTyping: true`, so a dialog that listens for it turns the newline key of a
+multi-line editor into OK. This one never subscribes to `confirm`.
+
+### The negative-channel split, measured live rather than reasoned about
+
+Step 1b recorded the labelled blob landing whole in the positive field as **parity, not
+a regression**, and deliberately left it for this step. It is now cut — and the cut was
+proven against the real cloud backend on the booted server, not against a fixture:
+
+| Recipe | `negativeHandling` | Result |
+|---|---|---|
+| `sdxl` | `separate-field` | `POSITIVE PROMPT: landscape photography, lighthouse…` / `NEGATIVE PROMPT: bad hands 5, bad dream…` → **split, both halves clean** |
+| `kling-3.0` | `separate-field` | prose scene, then `Negative Prompt: morphing textures, warped limbs…` → **split** |
+| `chroma` | `none` | prose → **not cut**; the raw text stays in the positive channel |
+
+**THE FOUR `separate-field` RECIPES DO NOT AGREE ON A FORMAT, and a splitter written
+to `sdxl`'s shape is wrong for half of them.** Found by the test sweeping every
+`separate-field` recipe's own `examplePrompts` rather than by reading one recipe:
+
+- `sdxl` labels **both** halves, and its system prompt states the contract literally.
+- `kling-3.0` writes an **unlabelled** positive and a **trailing `Negative Prompt:`
+  block** — a different label, a different case, no positive label at all. An
+  `sdxl`-shaped regex reads that as prose and welds the negative into the positive,
+  silently, which is precisely the defect being fixed.
+- `pony` and `illustrious` declare the field and **emit no negative block at all** —
+  the author's baseline negative is a constant ladder, and a constant needs no LLM to
+  write it. They parse to `null` and keep their raw text, which is correct.
+
+So the splitter anchors on the **negative** label alone and treats everything before it
+as the positive half, stripping a positive label if one is there. It is called only
+when the recipe DECLARES two channels: a prose recipe that happens to write the words
+"negative prompt" is not offering a second field, and cutting there would delete half
+the prompt.
+
+### Staleness is detected, never announced
+
+The box shows the short prompt and the submit path carries the enhanced one, so an edit
+to the short prompt orphans the enhancement — **and the user cannot see that, because
+the thing that changed is not the thing on screen.** Storing the SOURCE the
+enhancement was made from is what makes it checkable at all; the textarea's input
+handler re-checks on every keystroke and the control simply drops back to un-enhanced.
+No toast, no dialog — the state is the message.
+
+### Reuse carries both texts, and the ABSENCE of one is the signal
+
+`sourcePrompt` runs `getRunPayload()` → `startGeneration` → the sidecar
+(`routes/projects.js`) → `buildPromptReusePayload()` → `injectPrompts({ enhanced })`.
+Both Blocks forward it. **Every card generated before this shipped, and every
+un-enhanced run, has no `sourcePrompt`** — so `positive` falls through to `prompt` and
+`enhanced` is null, and reuse behaves exactly as it always did. Both branches are
+asserted.
+
+`project.json` stores only uuid strings, so the sidecar is the durable half — without
+the `routes/projects.js` line, Reuse would hand back the enhancement but never the
+words it was made from, and only after a reload, which is the worst kind of bug to
+find.
+
+### Owed, and why
+
+- **FABIO'S USER-UX PASS IS THE GATE.** Nothing under the UI is left owed; what is
+  owed is a person looking at it. The 18+ splash blocks any browser-driven check and
+  an agent must not click it — it is an age/responsibility affirmation.
+- **The ComfyUI-encoder backend end to end — STILL OWED**, and no longer for the
+  reason it was owed twice: `gpu_lease.py status` reads `GPU 0 free`. What blocks it
+  now is that Vision's own engine (`:48188`) is not running and the run is a UI flow
+  behind the splash. It batches with the user-ux pass.
+- **Character Sheet + Music Maker RUN — same batch, same reason.**
+
+### One thing that looks like scope creep and is not
+
+`tests/enhance-control.test.cjs`'s "the prompt box imports the local service" assertion
+was **repointed, not deleted**. Step 1c moved the CALL one layer down — the overlay
+owns it, the box owns the button and the approved result — so the test now asserts the
+box reaches the dialog AND the dialog reaches the service, and that NEITHER carries
+`connectorOps` or a capability probe. The property under test is unchanged: whatever
+runs the enhance runs it locally.

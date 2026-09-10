@@ -45,7 +45,23 @@ in the card description are retired; `plan.md` carries the mapping note.
         test records that it drives no UI
   - [ ] **Character Sheet + Music Maker RUN end to end** — declarations verified, the
         run is owed: the GPU lease was held by MPI-591 (`pid 4592`)
-- [ ] Step 1c — the overlay *(verify mode: `user-ux`)*
+- [ ] Step 1c — the overlay *(verify mode: `user-ux` — it ends with Fabio, not a green test)*
+  - [x] Short prompt above, Enhance, editable enhanced text below, OK / Cancel; the
+        box keeps only the short prompt (`MpiEnhanceDialog`, a new Compound). The
+        iteration loop is structural: Enhance always reads the UPPER box, so nothing
+        in the overlay can feed an enhancement back into the enhancer
+  - [x] The short prompt is stored beside the enhanced one, and **staleness is
+        detected, never announced** — `_enhanced = { source, positive }`, re-checked
+        on every edit; the control drops to un-enhanced on any difference
+  - [x] The lower box mirrors the model's fields — `splitLabelledPrompt()` cuts a
+        `separate-field` recipe's blob and the negative half gets its own box, then
+        its own channel. **Proven live on three shapes** (validation.md): `sdxl`
+        labelled, `kling-3.0` unlabelled-with-trailing-label, `chroma` left uncut
+  - [x] `Reuse` restores both texts and the enhanced state — `sourcePrompt` carried
+        `getRunPayload` → sidecar → `buildPromptReusePayload` → `injectPrompts`
+  - [x] An empty lower box on OK means "not enhanced, run my words raw"
+  - [ ] **Fabio's user-ux pass — the gate.** Nothing under the UI is left owed; what
+        is owed is a person looking at it
 - [ ] Step 1d — Fabio's GPU measurement of the ComfyUI backend *(not a gate)*
 - [ ] Step 2 — cut the cord (broker surface + `@cubric/connector` dependency)
 - [ ] Step 3 — release the repos *(archive Cubric-Prompt on Fabio's explicit go)*

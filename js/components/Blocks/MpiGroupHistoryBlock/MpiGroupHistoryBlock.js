@@ -1362,7 +1362,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 use.model = false;
                 use.settings = false;
                 targetModel = activeModel;
-                if (!targetModel && use.prompt) _pb?.el?.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '', negativeAudio: payload.negativeAudio || '' });
+                if (!targetModel && use.prompt) _pb?.el?.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '', negativeAudio: payload.negativeAudio || '', enhanced: payload.enhanced });
                 if (!targetModel) return;
             }
             if (use.model && targetModel.mediaType !== modeKind) {
@@ -1402,7 +1402,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _setPromptOperation(targetOperation, { remember: true });
 
             if (use.prompt) {
-                _pb.el.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '', negativeAudio: payload.negativeAudio || '' });
+                _pb.el.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '', negativeAudio: payload.negativeAudio || '', enhanced: payload.enhanced });
             }
             // Reuse the media the user opted into, gated per-type by what the source
             // carries (MPI-212 image → MPI-227 video/audio). A source lacking a type

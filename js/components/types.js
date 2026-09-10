@@ -1668,6 +1668,22 @@
  */
 
 /**
+ * @typedef {Object} MpiEnhanceDialogProps (Compound — js/components/Compounds/MpiEnhanceDialog)
+ * @property {string} [prompt='']  - The user's short prompt, pre-filled into the upper box
+ * @property {Object} [model]      - The model card being generated with; picks the recipe and the backend
+ * @property {{positive?:string, negative?:string}} [enhanced] - An existing enhancement to reopen on, so OK/Cancel are non-destructive
+ *
+ * Instance methods (on instance.el):
+ *   show()    - open the modal
+ *   hide()    - close the modal
+ *   destroy() - release modal listeners
+ *
+ * Emits:
+ *   'apply'  { shortPrompt, positive, negative } - user confirmed. `positive` empty means "run my words raw" (MPI-677 step 1c)
+ *   'cancel' {}                                  - user cancelled; nothing in the prompt box changes
+ */
+
+/**
  * @typedef {Object} MpiCanvasViewerProps (Organism — js/components/Organisms/MpiCanvasViewer)
  * @property {string} [initialImageUrl=''] - URL of the first image to load
  * @property {number} [initialIdx=0]       - History index of the initial image

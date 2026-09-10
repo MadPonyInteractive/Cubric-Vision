@@ -20,7 +20,7 @@ import { qs, qsa, on, off } from '../../../utils/dom.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
 import { remoteEngineClient } from '../../../services/remoteEngineClient.js';
-import { enhance as enhanceLocally } from '../../../services/llmService.js';
+import { MpiEnhanceDialog } from '../../Compounds/MpiEnhanceDialog/MpiEnhanceDialog.js';
 
 /**
  * MpiPromptBox — Prompt input Block with self-composing operation slots.
@@ -43,9 +43,13 @@ import { enhance as enhanceLocally } from '../../../services/llmService.js';
  *   el.swapMediaRoles(roleA, roleB) — flips role tags between two chips (no re-upload)
  *   el.remainingCapacity(mediaType) → number of free media slots for type
  *                                     under the current operation
- *   el.injectPrompts({ positive, negative, negativeAudio })  — negativeAudio is the
- *                                     video-model audio negative (LTX); omitted
- *                                     fields keep their current value
+ *   el.injectPrompts({ positive, negative, negativeAudio, enhanced })  — negativeAudio
+ *                                     is the video-model audio negative (LTX); omitted
+ *                                     fields keep their current value. `enhanced` is
+ *                                     `{ positive }` from a Reuse of an enhanced card
+ *                                     (MPI-677 step 1c); its ABSENCE clears any
+ *                                     standing enhancement, which is why it is read
+ *                                     rather than defaulted
  *   el.setOperation(key)
  *   el.setGenerating(bool)
  *   el.updateContext(ctx)
@@ -142,6 +146,12 @@ export const MpiPromptBox = ComponentFactory.create({
                     positive: positiveValue,
                     negative: negativeValue,
                     negativeAudio: negativeAudioValue,
+                    // MPI-677 step 1c. The box shows the SHORT prompt and submits the
+                    // enhanced one, so a draft that saved only the text would restore a
+                    // box that looks right and runs different words. `_enhanced` is
+                    // `{ source, positive }` — the source is what makes the restore
+                    // checkable rather than trusted.
+                    enhanced: _enhanced,
                 },
             };
         }
@@ -1099,9 +1109,18 @@ export const MpiPromptBox = ComponentFactory.create({
             emit('mode-change', { mode: next });
         }
 
-        el.injectPrompts = ({ positive, negative, negativeAudio }) => {
+        el.injectPrompts = ({ positive, negative, negativeAudio, enhanced }) => {
             positiveValue = positive ?? positiveValue;
             negativeValue = negative ?? negativeValue;
+            // MPI-677 step 1c — Reuse restores BOTH texts and the enhanced state. The
+            // reuse payload carries the enhancement only for a card that was generated
+            // through the overlay (`promptReuse.js` reconstructs it from the sidecar's
+            // `sourcePrompt`), so an ordinary card injects `undefined` and clears any
+            // enhancement standing from the previous prompt — which is correct: the
+            // words in the box are no longer the ones it was made from.
+            _enhanced = enhanced?.positive
+                ? { source: positiveValue, positive: String(enhanced.positive) }
+                : null;
             // MPI-474: no mode-switch rule of its own. A reuse injects every field at
             // once, and the visibility rule below exists for a SINGLE-sided inject —
             // an audio negative arriving alone is not a case any caller produces.
@@ -1121,9 +1140,11 @@ export const MpiPromptBox = ComponentFactory.create({
             }
             textareaEl.value = _readMode();
             updateHeight();
+            _syncEnhancedState();
             _saveDraft();
         };
-        const _onInjectPrompts = ({ positive, negative, negativeAudio }) => el.injectPrompts({ positive, negative, negativeAudio });
+        const _onInjectPrompts = ({ positive, negative, negativeAudio, enhanced }) =>
+            el.injectPrompts({ positive, negative, negativeAudio, enhanced });
 
         let _currentModelType = props.model?.mediaType ?? props.modelList?.[0]?.mediaType ?? null;
 
@@ -1314,6 +1335,11 @@ export const MpiPromptBox = ComponentFactory.create({
         _unsubs.push(on(textareaEl, 'input', () => {
             updateHeight();
             _writeMode(textareaEl.value);
+            // Every edit is a staleness check (MPI-677 step 1c): the box shows the short
+            // prompt and the submit path carries the enhancement, so a changed short
+            // prompt silently orphans it. Nothing is announced — the control just reads
+            // un-enhanced again.
+            _syncEnhancedState();
             _saveDraft();
             _refActive = 0;
             _syncRefPicker();
@@ -1775,8 +1801,25 @@ export const MpiPromptBox = ComponentFactory.create({
         // control is ABSENT rather than present and unhelpful. Vision knows the
         // operation locally, so this is a local check — nothing has to cross a wire to
         // find it out.
+        //
+        // MPI-677 step 1c — THE BOX KEEPS THE SHORT PROMPT; THE ENHANCEMENT IS HELD
+        // BESIDE IT. Clicking opens `MpiEnhanceDialog`; nothing is written over the
+        // user's own words. `_enhanced` is `{ source, positive }`, where `source` is
+        // the short prompt the enhancement was made FROM.
+        //
+        // ONLY THE POSITIVE IS HELD BACK. A `separate-field` recipe's negative half
+        // goes straight into `negativeValue`, where the box's own negative field shows
+        // it — "lands in its own channel" means the user can see and edit it, not that
+        // a second hidden value rides along. That also keeps the submit path with ONE
+        // source of truth for the negative instead of two that can disagree.
         let _enhanceBtn = null;
-        let _enhancing = false;
+        let _enhanceDialog = null;
+        // Restored from the per-workspace draft alongside the text it belongs to, so
+        // navigating away and back does not silently downgrade an approved enhancement
+        // to the short prompt. `_syncEnhancedState()` drops it if the restored text and
+        // the stored source have drifted apart.
+        /** @type {{source: string, positive: string}|null} */
+        let _enhanced = _draft.enhanced?.positive ? { ..._draft.enhanced } : null;
 
         function _enhanceToast(message, variant) {
             const wrapper = document.createElement('div');
@@ -1786,37 +1829,52 @@ export const MpiPromptBox = ComponentFactory.create({
             toast.on('close', () => wrapper.remove());
         }
 
-        async function _runEnhance() {
-            if (_enhancing) return;
-            if (!positiveValue.trim()) { _enhanceToast('Type a prompt to enhance first.', 'warning'); return; }
-            _enhancing = true;
-            _enhanceBtn?.el?.setDisabled?.(true);
-            try {
-                // The recipe key is the model's own: `enhanceRecipe ?? type`, resolved
-                // by `resolveRecipe()` in this repo. llmService applies that default,
-                // so the call site does not restate it and the two cannot drift.
-                const result = await enhanceLocally({ prompt: positiveValue, model });
-                if (result.ok) {
-                    // ponytail: writes straight back into the prompt box, which is what
-                    // the broker path did. Step 1c replaces THIS branch with the
-                    // overlay (short prompt above, the enhanced text editable below,
-                    // OK / Cancel, and the box keeping the user's own words). The seam
-                    // is exactly here — everything above it is backend-agnostic.
-                    el.injectPrompts({ positive: result.text, negative: negativeValue });
-                    emit('input', { positive: positiveValue, negative: negativeValue, negativeAudio: negativeAudioValue, activeMode: promptMode });
-                    // `note` is set when the model's key matched no recipe and the
-                    // pinned fallback answered. The fallback is DESIGNED to answer,
-                    // which is exactly why it hides a miss so well — two MiniMax-H3
-                    // VIDEO cards were enhanced by the `chroma` IMAGE recipe for a week
-                    // and nothing failed loudly. Surface it verbatim.
-                    _enhanceToast(result.note || 'Prompt enhanced.', result.note ? 'info' : 'success');
-                } else {
-                    _enhanceToast(result.error || 'Enhance failed.', 'warning');
-                }
-            } finally {
-                _enhancing = false;
-                _enhanceBtn?.el?.setDisabled?.(false);
-            }
+        /**
+         * STALENESS IS DETECTED, NEVER ANNOUNCED. The submit path carries the ENHANCED
+         * text while the box shows the short prompt, so an edit to the short prompt
+         * leaves an enhancement that no longer describes it — and the user has no way
+         * to see that, because the thing that changed is not the thing on screen.
+         * Comparing against the source the enhancement was made from is what makes it
+         * detectable at all; the control simply drops back to un-enhanced.
+         */
+        function _syncEnhancedState() {
+            if (_enhanced && _enhanced.source !== positiveValue) _enhanced = null;
+            _enhanceBtn?.el?.setActive?.(!!_enhanced);
+        }
+
+        function _openEnhanceDialog() {
+            if (_enhanceDialog) return;
+            _enhanceDialog = MpiEnhanceDialog.mount(document.createElement('div'), {
+                prompt: positiveValue,
+                model,
+                // Reopening on an existing enhancement, so Cancel is non-destructive and
+                // OK is not the only way to keep what is already approved.
+                enhanced: _enhanced
+                    ? { positive: _enhanced.positive, negative: negativeValue }
+                    : undefined,
+            });
+            const _close = () => { _enhanceDialog?.destroy?.(); _enhanceDialog = null; };
+            _enhanceDialog.on('cancel', _close);
+            _enhanceDialog.on('apply', ({ shortPrompt, positive, negative }) => {
+                positiveValue = String(shortPrompt ?? '');
+                // An EMPTY lower box means "not enhanced, run my words raw" — the rule
+                // Character Sheet already states in its own help text. It is how a user
+                // backs out of an enhancement without backing out of their prompt.
+                _enhanced = positive ? { source: positiveValue, positive } : null;
+                // Only a recipe that produced a second channel writes the negative. A
+                // prose recipe returns none, and blanking the user's own negative
+                // because this recipe had nothing to say about it would be a silent
+                // delete.
+                if (negative) negativeValue = negative;
+                if (textareaEl) textareaEl.value = _readMode();
+                updateHeight();
+                _saveDraft();
+                _syncEnhancedState();
+                emit('input', { positive: positiveValue, negative: negativeValue, negativeAudio: negativeAudioValue, activeMode: promptMode });
+                _enhanceToast(_enhanced ? 'Prompt enhanced.' : 'Running your own words.', 'success');
+                _close();
+            });
+            _enhanceDialog.el.show();
         }
 
         // Mounted and unmounted by OPERATION, converging in _refreshOpSlot() beside
@@ -1844,11 +1902,16 @@ export const MpiPromptBox = ComponentFactory.create({
                 icon: 'enhance',
                 info: 'Enhance prompt — rewrite it into the shape this model reads best',
                 size: 'sm', variant: 'primary',
+                // `toggleable` is deliberately off, exactly as on the negative cycle
+                // below: the on-state is not the user toggling a flag, it is whether an
+                // approved enhancement currently exists. `_syncEnhancedState()` owns it.
+                active: !!_enhanced,
             });
-            _enhanceBtn.on('click', () => { void _runEnhance(); });
+            _enhanceBtn.on('click', () => _openEnhanceDialog());
         }
 
         _refreshEnhanceBtn();
+        _syncEnhancedState();
 
         // ── Run / Stop ─────────────────────────────────────────────────────────
         runSlotEl = qs('#bottom-right-slot', el);
@@ -1872,7 +1935,18 @@ export const MpiPromptBox = ComponentFactory.create({
             const previewOnly = !historyMode && previewCtrl?.getValue?.() === true;
             return {
                 operation:  activeOperation,
-                positive:   positiveValue,
+                // MPI-677 step 1c — THE APPROVED ENHANCEMENT IS WHAT RUNS, and the box
+                // deliberately still shows the short prompt. `_enhanced` is cleared the
+                // moment that short prompt is edited, so this can never submit an
+                // enhancement of words the user has since changed.
+                positive:   _enhanced?.positive ?? positiveValue,
+                // The user's own words, carried so the card can be reused back into the
+                // overlay's upper box. Null on every un-enhanced run, which is also what
+                // tells the reuse path there is no enhancement to restore.
+                sourcePrompt: _enhanced ? positiveValue : null,
+                // NOT held back: a `separate-field` recipe's negative half was written
+                // into the negative field itself, so there is one source of truth here
+                // and the user can see and edit what will run.
                 negative:   negativeValue,
                 // Only sent where it can land. A model without capabilities.audio has
                 // no audio-negative node, and its box never let the user type one, so
@@ -2193,6 +2267,10 @@ export const MpiPromptBox = ComponentFactory.create({
             _helpBtn?.destroy?.();
             _opHelpDialog?.el?.destroy?.();
             _opHelpDialog = null;
+            // Same reason as the help dialog above: MpiModal portals to body and holds
+            // an Overlays entry, so an open enhance overlay would outlive its box.
+            _enhanceDialog?.destroy?.();
+            _enhanceDialog = null;
             domObserver.disconnect();
             if (popupNode.parentNode) popupNode.parentNode.removeChild(popupNode);
             _stripEl.remove();

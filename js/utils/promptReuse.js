@@ -144,8 +144,21 @@ export function buildPromptReusePayload(item = {}) {
         return true;
     });
 
+    // MPI-677 step 1c — a card generated through the Enhance overlay stores BOTH texts:
+    // `prompt` is the ENHANCED text (it is what the graph actually got) and
+    // `sourcePrompt` is the user's own words. Reuse must hand the short prompt back to
+    // the box and the enhancement back to the overlay, or the loop is one-way: you
+    // could re-run an enhancement but never iterate on the idea behind it.
+    //
+    // Its ABSENCE is the signal, not a missing field to heal: every un-enhanced run and
+    // every card generated before this shipped has none, and both must reuse exactly as
+    // they always did — `positive` falls through to `prompt` and `enhanced` is null.
+    const _shortPrompt = item.sourcePrompt ?? source.sourcePrompt ?? '';
+    const _enhancedText = item.prompt ?? source.prompt ?? '';
+
     return {
-        positive: item.prompt ?? source.prompt ?? '',
+        positive: _shortPrompt || _enhancedText,
+        enhanced: _shortPrompt ? { positive: _enhancedText } : null,
         negative: item.negativePrompt ?? source.negative ?? '',
         // MPI-474. Absent on every item generated before the third prompt mode
         // shipped, which is why it falls through to '' rather than being required.

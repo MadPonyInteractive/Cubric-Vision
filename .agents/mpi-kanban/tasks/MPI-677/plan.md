@@ -219,11 +219,11 @@ The whole point of the card. Each rung is shippable and verifiable on its own.
 
 ### 1c — the overlay
 
-- [ ] Short prompt above, Enhance, editable enhanced text below, OK / Cancel;
+- [x] Short prompt above, Enhance, editable enhanced text below, OK / Cancel;
       the box keeps the short prompt. **Verify:** the iteration loop works —
       short prompt → Enhance → edit the *short* prompt → Enhance again, without
       ever re-enhancing an enhancement.
-- [ ] **Store the short prompt as well as the enhanced one.** Today only the
+- [x] **Store the short prompt as well as the enhanced one.** Today only the
       enhanced text is persisted (`generationService.js:945` prefers
       `outputInfo.promptText` over `_positiveFromBox`). The submit path now
       carries the *enhanced* text, so the short prompt needs its own field or
@@ -231,19 +231,29 @@ The whole point of the card. Each rung is shippable and verifiable on its own.
       control back to un-enhanced on any difference. **Verify:** OK an
       enhancement, edit the short prompt, and the control reads un-enhanced
       without being told.
-- [ ] **The lower box mirrors the model's fields.** `sdxl`, `kling-3.0`, `pony`
+- [x] **The lower box mirrors the model's fields.** `sdxl`, `kling-3.0`, `pony`
       and `illustrious` are `separate-field` recipes that also emit a negative
       block; one flat box has nowhere to put it, and MPI-35 phase 2 measured
       what happens — the negative silently becomes positive tags. **Verify:** a
       round trip through the overlay on `sdxl` preserves the negative block in
       its own channel.
-- [ ] `Reuse` restores both texts and the enhanced state. **Verify:** reuse a
+- [x] `Reuse` restores both texts and the enhanced state. **Verify:** reuse a
       card enhanced through the overlay and get the short prompt in the box, the
       enhancement stored, and the control reading "on".
-- [ ] An empty lower box on OK means **"not enhanced, run my words raw"** — the
+- [x] An empty lower box on OK means **"not enhanced, run my words raw"** — the
       rule Character Sheet already states in its own help text. **Verify:** OK
       with the box cleared submits the short prompt unmodified and the control
       reads un-enhanced.
+
+**Built 2026-09-10; the step is NOT closed — its verify mode is `user-ux` and
+Fabio's pass is the gate.** Everything under the UI is proven (916/916, lint
+clean, and the negative split measured live on three recipe shapes against
+DeepInfra); see `validation.md` § Step 1c. Two findings worth carrying forward:
+**the four `separate-field` recipes do not agree on a format** — `kling-3.0`
+writes an unlabelled positive and a trailing `Negative Prompt:` block, and `pony`
+and `illustrious` emit no negative block at all — and **`project.json` stores only
+uuid strings**, so `sourcePrompt` had to reach the sidecar or Reuse would lose the
+short prompt on the next reload and nowhere earlier.
 
 ### 1d — measure the ComfyUI backend *(Fabio's, on the GPU)*
 

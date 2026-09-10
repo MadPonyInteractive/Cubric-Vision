@@ -2103,6 +2103,12 @@ router.post('/project/save-generation', async (req, res) => {
             displayName:    filename.replace(/\.[^.]+$/, ''),
             prompt:         meta.prompt        || '',
             negativePrompt: meta.negativePrompt || '',
+            // MPI-677 step 1c — the SHORT prompt behind an approved enhancement. The
+            // sidecar is the durable store (project.json holds only uuid strings), so
+            // without this line Reuse can hand back the enhanced text but never the
+            // words it was made from, and the overlay's upper box has nothing to
+            // iterate on after a reload. Null on every un-enhanced run.
+            sourcePrompt:   meta.sourcePrompt  || null,
             seed:           meta.seed          ?? -1,
             modelId:        meta.modelId       || null,
             generationSettings: materializedGenerationSettings,

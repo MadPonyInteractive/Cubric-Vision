@@ -1225,7 +1225,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 use.model = false;
                 use.settings = false;
                 targetModel = activeModel;
-                if (!targetModel && use.prompt) _pb.el.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '', negativeAudio: payload.negativeAudio || '' });
+                if (!targetModel && use.prompt) _pb.el.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '', negativeAudio: payload.negativeAudio || '', enhanced: payload.enhanced });
                 if (!targetModel) return;
             }
 
@@ -1251,7 +1251,7 @@ export const MpiGalleryBlock = ComponentFactory.create({
             _pb.el.setOperation?.(targetOperation);
 
             if (use.prompt) {
-                _pb.el.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '', negativeAudio: payload.negativeAudio || '' });
+                _pb.el.injectPrompts?.({ positive: payload.positive || '', negative: payload.negative || '', negativeAudio: payload.negativeAudio || '', enhanced: payload.enhanced });
             }
             // Reuse media the user opted into, gated per-type by what the SOURCE
             // actually carries (MPI-212 image gate → MPI-227 video/audio). A card

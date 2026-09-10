@@ -783,11 +783,17 @@ async function _deleteSavedItems(items) {
  * @returns {{ cancel: function }}
  */
 export function startGeneration(config, callbacks = {}, opts = {}) {
-    const { operation, model, positive, negative, negativeAudio, mediaItems = [], maskDataUrl, injectionParams = {} } = config;
+    const { operation, model, positive, negative, negativeAudio, sourcePrompt = null, mediaItems = [], maskDataUrl, injectionParams = {} } = config;
     // The prompt as the user typed it. Everything on the SUBMIT path must use this
     // (it is what feeds the graph). Only the SAVE path may substitute what the
     // encoder actually saw — see the `Output_prompt` note in exec.onComplete.
     const _positiveFromBox = positive;
+    // MPI-677 step 1c — the SHORT prompt behind an approved enhancement, when the run
+    // came through the Enhance overlay. `positive` above is then the ENHANCED text (it
+    // is what the graph gets), so without this the user's own words have nowhere to be
+    // saved and a Reuse could only ever hand back the enhancement — which is not
+    // something you can iterate on. Null on every un-enhanced run, and that null is
+    // also the signal `promptReuse.js` reads to know there is nothing to restore.
 
     // Guard: don't dispatch when a REQUIRED media slot has no asset. The Comfy
     // workflow ships baked-in default filenames on its LoadImage/LoadVideo nodes;
@@ -1190,7 +1196,7 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                         // See getFilePrefix: the strip code wins over the internal key
                         // (MPI-660).
                         filePrefix: _multiAudioLabel(url) || getFilePrefix(operation),
-                        meta: { prompt: positive, negativePrompt: negative, negativeAudioPrompt: negativeAudio, modelId: model.id, seed: exec.seed ?? -1, generationSettings },
+                        meta: { prompt: positive, negativePrompt: negative, negativeAudioPrompt: negativeAudio, sourcePrompt, modelId: model.id, seed: exec.seed ?? -1, generationSettings },
                         generationMs: elapsedMs,
                         pixelDimensions: resolvedDims,
                         mediaType: model.mediaType,
@@ -1227,6 +1233,11 @@ export function startGeneration(config, callbacks = {}, opts = {}) {
                 prompt: positive,
                 negativePrompt: negative,
                 negativeAudioPrompt: negativeAudio,
+                // On the LIVE in-memory item too, not just the sidecar above — the same
+                // reason flowId is duplicated below: the reconciler only hydrates from
+                // the sidecar on RELOAD, so a Reuse of a JUST-generated card would read
+                // undefined and hand back the enhancement as if the user had typed it.
+                sourcePrompt,
                 modelId: model.id,
                 seed: exec.seed ?? -1,
                 generationSettings: savedData?.generationSettings ?? generationSettings,

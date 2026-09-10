@@ -61,12 +61,21 @@ function testEveryEditShapedOpIsExempt() {
 
 function testPromptBoxCallsTheLocalServiceAndNotTheBroker() {
     const src = SRC('js/components/Organisms/MpiPromptBox/MpiPromptBox.js');
-    assert.ok(src.includes("from '../../../services/llmService.js'"),
-        'the prompt box must import the local enhance service');
-    assert.ok(!src.includes('connectorOps'),
-        'the prompt box must not reach the broker — step 2 deletes that surface entirely');
-    assert.ok(!src.includes('checkPromptEnhanceAvailable'),
-        'no capability probe: there is no sibling app for the button to be conditional on');
+    // Step 1c moved the CALL one layer down — the overlay owns it now, and the box
+    // owns the button and the approved result. The property under test is unchanged:
+    // whatever runs the enhance runs it locally. Assert the box reaches the dialog and
+    // the dialog reaches the service, so neither half can quietly grow a broker call.
+    assert.ok(src.includes("from '../../Compounds/MpiEnhanceDialog/MpiEnhanceDialog.js'"),
+        'the prompt box must open the enhance overlay');
+    const dialog = SRC('js/components/Compounds/MpiEnhanceDialog/MpiEnhanceDialog.js');
+    assert.ok(dialog.includes("from '../../../services/llmService.js'"),
+        'the overlay must call the local enhance service');
+    for (const [label, file] of [['prompt box', src], ['overlay', dialog]]) {
+        assert.ok(!file.includes('connectorOps'),
+            `the ${label} must not reach the broker — step 2 deletes that surface entirely`);
+        assert.ok(!file.includes('checkPromptEnhanceAvailable'),
+            `no capability probe in the ${label}: there is no sibling app for the button to be conditional on`);
+    }
     assert.ok(src.includes('opAllowsEnhance(activeOperation)'),
         'the control must be gated on the OPERATION, which Vision knows locally');
 }
