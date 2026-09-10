@@ -741,6 +741,15 @@ class FileDownloader {
         // MPI-460 — same-url retry budget (see the 'error' handler). Counts only
         // in-place restarts of THIS dep; a mirror failover spends its own walk.
         this._attempts = 0;
+        // MPI-718 — the byte offset at which the last attempt was spent, and the whole of
+        // what makes the budget above mean three failures WITHOUT PROGRESS rather than
+        // three per file. MPI-460 reset `_attempts` nowhere but here, so a 25 GB dep on a
+        // link that blips every few minutes could not finish however well it streamed in
+        // between: live 2026-09-10, `qwen3-8b-clip` resumed from 2.56 GB on retry 1 and
+        // 3.42 GB on retry 2, six minutes and 0.86 GB apart, and the third blip would have
+        // ended it. Cleared back to 0 by the 'progress' handler once a stream has moved
+        // past this mark by RETRY_PROGRESS_FLOOR_BYTES.
+        this._attemptBytes = 0;
         this._retryTimer = null;
         // MPI-716 — slow-stream latch (see _checkSlowStream). _slowSince is when the
         // rate first went under the floor; _slowWarned makes it ONE line per stream.
@@ -767,6 +776,16 @@ class FileDownloader {
         if (this._eventsBound) return;
         this._eventsBound = true;
 
+        // MPI-718 — the downloader THESE handlers belong to. Every handler below closes
+        // over `this`, but an in-place restart (_rearm() + download()) replaces
+        // `this._downloader` while the OLD NDH request is still in flight — and its late
+        // events still reach these same closures. Two live faults, both reproduced by the
+        // four-cut harness: a late 'download' read `this._downloader.__response` off null
+        // and took the process down with an uncaught TypeError (MPI-716's peer/POP read),
+        // and a late 'error' spent a SECOND retry for one blip — the budget this card is
+        // about, miscounted at source. A stale stream must not touch the current one.
+        const dh = this._downloader;
+
         // MPI-296 — attach an incremental SHA256 sink to the download stream. DHL pipes
         // the HTTP response through registered pipes BEFORE the file write, so this sees
         // the same bytes the file gets. Fires at each stream start (incl. retry, where
@@ -776,6 +795,7 @@ class FileDownloader {
         // forwards every chunk unchanged — a Writable would swallow the bytes and
         // starve the file stream. Hash on the way through, pass the chunk along.
         this._downloader.on('download', (evt) => {
+            if (this._downloader !== dh) return; // MPI-718 — a replaced stream's late event
             // MPI-716 — the address the socket actually connected to, and Cloudflare's
             // POP, read off NDH's raw http.IncomingMessage. A dns.lookup on our side can
             // only approximate the first; nothing on our side can produce the second, and
@@ -809,12 +829,20 @@ class FileDownloader {
 
         // Progress — forwarded to our onProgress callback
         this._downloader.on('progress', (stats) => {
+            if (this._downloader !== dh) return; // MPI-718 — a replaced stream's late event
             const speed = stats.speed || 0;
             // MPI-291 — only a real byte advance resets the stall clock. A repeated
             // same-total tick with no new bytes must NOT count as liveness.
             if (stats.downloaded > this._lastBytes) {
                 this._lastBytes = stats.downloaded;
                 this._lastByteTs = Date.now();
+            }
+            // MPI-718 — an attempt that landed real bytes hands the budget back, so the
+            // next blip starts from `retry 1/3` again. This rides the tick the stall clock
+            // already reads rather than adding a fifth observer (MPI-657 § Watch out for):
+            // no timer, no listener, one comparison, and only while a retry is outstanding.
+            if (this._attempts > 0 && stats.downloaded - this._attemptBytes > RETRY_PROGRESS_FLOOR_BYTES) {
+                this._attempts = 0;
             }
             this._checkSlowStream(speed); // MPI-716
             this.depJob.downloadedBytes = stats.downloaded;
@@ -827,6 +855,7 @@ class FileDownloader {
 
         // Download finished successfully
         this._downloader.on('end', async () => {
+            if (this._downloader !== dh) return; // MPI-718 — a replaced stream's late event
             _activeDownloaders.delete(this.depJob.id);
             // MPI-296 — finalize the incrementally-computed digest so _verifySha256
             // can compare in-memory instead of re-reading the whole file from disk.
@@ -887,6 +916,12 @@ class FileDownloader {
 
         // Error occurred — partial is KEPT (removeOnFail:false) so a retry resumes.
         this._downloader.on('error', (err) => {
+            // MPI-718 — a replaced stream's late error. The restart it would report is
+            // already running (or already scheduled behind the backoff), so letting it
+            // through spends a second attempt for ONE blip — and _activeDownloaders would
+            // lose the live downloader with it, the exact MPI-460 invisibility _rearm()
+            // exists to prevent.
+            if (this._downloader !== dh) return;
             _activeDownloaders.delete(this.depJob.id);
             if (this.depJob.status === 'paused' || this.depJob.status === 'cancelled') return;
             // MPI-317: 416 Range Not Satisfiable = the on-disk partial is LARGER than
@@ -949,6 +984,12 @@ class FileDownloader {
             const delay = RETRY_BACKOFF_MS[this._attempts];
             if (hasProgress && !permanent && delay !== undefined) {
                 this._attempts += 1;
+                // MPI-718 — where this attempt was spent. The 'progress' handler hands the
+                // budget back once a later stream passes this by RETRY_PROGRESS_FLOOR_BYTES.
+                // After a 416 scrub the next attempt restarts from zero against a mark that
+                // is now stale, so the reset simply waits until it climbs past the old one:
+                // conservative, and 416 is the garbage-partial path, not the blippy link.
+                this._attemptBytes = this.depJob.downloadedBytes || 0;
                 logger.warn('download', `${this.depJob.id}: ${err.message} — retry ${this._attempts}/${RETRY_BACKOFF_MS.length} in ${delay / 1000}s (resumes from disk)`);
                 this._rearm();
                 this._retryTimer = setTimeout(() => {
@@ -1166,7 +1207,29 @@ const STALL_MS = 60_000;
 // MPI-460 — same-url retry schedule. Length IS the budget: three restarts, then the
 // failure is real and the user sees it. Spaced so a router reboot or a CDN edge blip
 // has time to clear, and short enough that a genuinely dead route is not a 5-minute wait.
-const RETRY_BACKOFF_MS = [2_000, 5_000, 15_000];
+// MPI-718 — three restarts WITHOUT PROGRESS. The length did not change; what the
+// attempts are counted against did.
+const _REAL_RETRY_BACKOFF_MS = Object.freeze([2_000, 5_000, 15_000]);
+let RETRY_BACKOFF_MS = [..._REAL_RETRY_BACKOFF_MS];
+// MPI-718 — how much NEW data an attempt must land before the budget is handed back.
+// From the 2026-09-10 capture, not from taste: 0.86 GB streamed between the two blips,
+// while a resume that dies on its first chunk moves a few KB. 8 MB sits two orders under
+// the one and far above the other.
+//
+// It is ALSO why no separate attempt ceiling is needed. Every reset costs 8 MB of new
+// bytes ON DISK, so a file can spend at most `3 + size / 8 MB` attempts however badly the
+// link behaves — a bound by construction, and every attempt inside it left 8 MB behind.
+// The pathology on the other side (a stream that dribbles and dies) never clears the
+// floor, never resets, and still goes terminal at 3/3 exactly as it does today.
+let RETRY_PROGRESS_FLOOR_BYTES = 8 * 1024 * 1024;
+// `let` only so the test can shrink the floor and compress the backoff — production never
+// reassigns either (same contract as _setSlowStreamThresholdsForTests). The schedule is
+// re-derived from the frozen original by MAP, so a test can make the budget FASTER but
+// can never make it longer or shorter: its length is the budget (MPI-480).
+function _setRetryTuningForTests(floorBytes, backoffMs) {
+    RETRY_PROGRESS_FLOOR_BYTES = floorBytes;
+    RETRY_BACKOFF_MS = backoffMs === null ? [..._REAL_RETRY_BACKOFF_MS] : _REAL_RETRY_BACKOFF_MS.map(() => backoffMs);
+}
 // MPI-716 — slow-stream floor and window (see FileDownloader._checkSlowStream).
 // Both come from the 2026-09-10 capture, not from taste: the healthy baseline on that
 // host was 16.51 MB/s aggregate and the worst crawling dep 0.05 MB/s, two and a half
@@ -3807,6 +3870,7 @@ module.exports = {
     _sweepOrphanedDeps, // MPI-462 — exported for unit test (orphan sweep)
     _setTrashFnForTests, // MPI-500 — exported for unit test only; never call outside tests
     _setSlowStreamThresholdsForTests, // MPI-716 — exported for unit test only; never call outside tests
+    _setRetryTuningForTests, // MPI-718 — exported for unit test only; never call outside tests
     _writeProbe, // MPI-716 — exported for unit test (the probe's own failure path)
     _sweepOrphanedDepsRemote, // MPI-464 — exported for unit test (orphan sweep, remote twin)
     _startRemoteDownload, // MPI-481 — exported for unit test (stale attach guard)

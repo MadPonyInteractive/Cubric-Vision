@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "id": "MPI-718",
+  "source": "Ownership: lines in tasks/MPI-717/plan.md, Phase 2",
+  "files": [
+    "routes/downloadManager.js",
+    "tests/download-retry.test.cjs",
+    "docs/download-manager.md",
+    ".agents/mpi-kanban/tasks/MPI-718/checklist.md",
+    ".agents/mpi-kanban/tasks/MPI-718/validation.md",
+    ".agents/mpi-kanban/tasks/MPI-718/files.json",
+    ".agents/mpi-kanban/tasks/MPI-717/plan.md"
+  ],
+  "note": "MPI-717 Phase 2. FileDownloader constructor plus the 'error' and 'progress' handlers only; cancel(), the mirror walk (_triedUrls) and the MPI-427 zero-bytes gate are NOT touched. The MPI-716 harness gets one more knob, never a second server."
+}

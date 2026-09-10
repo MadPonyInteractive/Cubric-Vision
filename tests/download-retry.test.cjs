@@ -22,11 +22,31 @@ const path = require('node:path');
 const fs = require('fs-extra');
 
 const logger = require('../routes/logger.js');
-const { FileDownloader, _setSlowStreamThresholdsForTests, _writeProbe } = require('../routes/downloadManager.js');
+const {
+    FileDownloader,
+    _setSlowStreamThresholdsForTests,
+    _setRetryTuningForTests,
+    _writeProbe,
+} = require('../routes/downloadManager.js');
 
 const BODY = crypto.randomBytes(200 * 1024);
 const BODY_SHA = crypto.createHash('sha256').update(BODY).digest('hex');
 const CUT_AT = 50 * 1024;
+
+// MPI-718 — startServer()'s three knobs. Defaults reproduce the MPI-460 case exactly.
+//
+// `cutQuiet` is the one that matters, and it is a finding: NDH's own `resumeOnIncomplete`
+// (default TRUE, `resumeOnIncompleteMaxRetry: 5`) silently re-requests a body that arrives
+// short, so a DESTROYED socket is absorbed inside the downloader and never reaches our
+// retry budget at all — measured here, five server requests for two logged retries. A
+// socket that goes QUIET holding the response open produces no short body to resume, so
+// it reaches the budget the only way it does in production: through MPI-291's watchdog.
+// That is also the shape the 2026-09-10 capture logged (`Download stalled — no data
+// received.`), so the new cases below use it and the MPI-460 case above keeps the destroy.
+let cutsLeft = 1;
+let cutSegment = CUT_AT;
+let cutQuiet = false;
+const heldSockets = new Set();
 
 const requests = [];
 
@@ -41,25 +61,38 @@ function startServer() {
         }
         requests.push(req.headers.range || null);
         const range = /^bytes=(\d+)-/.exec(req.headers.range || '');
-        if (range) {
-            const from = Number(range[1]);
-            res.writeHead(206, {
-                'Content-Type': 'application/octet-stream',
-                'Content-Length': String(BODY.length - from),
-                'Content-Range': `bytes ${from}-${BODY.length - 1}/${BODY.length}`,
-                'Accept-Ranges': 'bytes',
-            });
+        const from = range ? Number(range[1]) : 0;
+        const headers = {
+            'Content-Type': 'application/octet-stream',
+            'Content-Length': String(BODY.length - from),
+            'Accept-Ranges': 'bytes',
+        };
+        if (range) headers['Content-Range'] = `bytes ${from}-${BODY.length - 1}/${BODY.length}`;
+        res.writeHead(range ? 206 : 200, headers);
+        // MPI-718 — the SAME server, one more knob: how many times it cuts, and how much
+        // it serves before each cut. `cutsLeft = 1, cutSegment = CUT_AT` is the MPI-460
+        // case above, byte for byte. More than one cut is a link that blips repeatedly
+        // with real bytes landing in between — the shape of the 2026-09-10 capture.
+        if (cutsLeft <= 0) {
             res.end(BODY.subarray(from));
             return;
         }
-        // First attempt: promise the whole file, deliver a slice, then kill the socket —
-        // the shape of every mid-stream transport failure (and of a forceStall() stop).
-        res.writeHead(200, {
-            'Content-Type': 'application/octet-stream',
-            'Content-Length': String(BODY.length),
-            'Accept-Ranges': 'bytes',
-        });
-        res.write(BODY.subarray(0, CUT_AT), () => req.socket.destroy());
+        cutsLeft -= 1;
+        // Promise the whole remainder, deliver a slice, then kill the socket — the shape of
+        // every mid-stream transport failure (and of a forceStall() stop). A zero-length
+        // segment is MPI-427's case: a route that connects, promises, and delivers nothing.
+        const slice = BODY.subarray(from, Math.min(from + cutSegment, BODY.length));
+        if (cutQuiet) {
+            heldSockets.add(req.socket);
+            req.socket.on('close', () => heldSockets.delete(req.socket));
+            if (slice.length > 0) res.write(slice);
+            return; // no end(), no destroy — the stream just stops moving
+        }
+        if (slice.length === 0) {
+            req.socket.destroy();
+            return;
+        }
+        res.write(slice, () => req.socket.destroy());
     });
     return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve(server)));
 }
@@ -171,6 +204,141 @@ async function testSlowStreamWarn() {
     console.log('  ok  the write probe fires once off that latch, names an fsynced rate, and cleans up');
 }
 
+// MPI-718 — one run of the cut server, with the budget's two constants compressed. The
+// point under test is WHAT the attempts are counted against, never the wall clock, so the
+// backoff is squeezed to 50ms (the setter maps the real schedule, so its LENGTH — the
+// budget itself — cannot be changed by a test) and the 8 MB floor down to something this
+// 200 KB body can cross.
+const TEST_FLOOR = 16 * 1024;
+const TEST_BACKOFF_MS = 50;
+// Six cuts of 32 KB across a 200 KB body: more cuts than the budget has attempts, and the
+// tail is still unsent when the fourth one lands. Each segment clears TEST_FLOOR, so every
+// attempt made real progress — the whole point.
+const SEG = 32 * 1024;
+
+async function runCuts({ cuts, segment }) {
+    cutsLeft = cuts;
+    cutSegment = segment;
+    cutQuiet = true;
+    requests.length = 0;
+    _setRetryTuningForTests(TEST_FLOOR, TEST_BACKOFF_MS);
+
+    const server = await startServer();
+    const port = server.address().port;
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'mpi-718-'));
+    const localPath = path.join(dir, 'weight.safetensors');
+    const depJob = {
+        id: 'test-budget-dep',
+        modelId: 'test-model',
+        url: `http://127.0.0.1:${port}/file.bin`,
+        localPath,
+        sha256Expected: BODY_SHA,
+        status: 'downloading',
+        downloadedBytes: 0,
+        totalBytes: 0,
+    };
+    const dl = new FileDownloader(depJob, localPath);
+
+    // The retry WARN is the claim this card is judged on — "would the 17:32 blip have read
+    // `retry 1/3`?" — so assert on the line the user's app.log actually gets.
+    const warns = [];
+    const realWarn = logger.warn.bind(logger);
+    logger.warn = (category, message) => { warns.push(String(message)); };
+
+    // MPI-291's watchdog with its 60s window compressed to 400ms — NDH v2.1.11 does not
+    // emit 'error' on a socket that dies mid-body, so the sweep is what actually routes a
+    // dead stream into the error path (the same reason the case above calls forceStall()
+    // by hand). forceStall() no-ops while `_downloader` is null, and `_rearm()` restarts
+    // `_lastByteTs`, so a retry backoff is never mistaken for a stall.
+    const sweep = setInterval(() => {
+        if (Date.now() - dl._lastByteTs >= 250) dl.forceStall().catch(() => {});
+    }, 50);
+
+    try {
+        await dl.download();
+        const deadline = Date.now() + 30_000;
+        while (depJob.status === 'downloading' && Date.now() < deadline) {
+            await new Promise(r => setTimeout(r, 50));
+        }
+    } finally {
+        clearInterval(sweep);
+        logger.warn = realWarn;
+        for (const socket of heldSockets) socket.destroy();
+        heldSockets.clear();
+        server.close();
+        cutsLeft = 1;
+        cutSegment = CUT_AT;
+        cutQuiet = false;
+        _setRetryTuningForTests(8 * 1024 * 1024, null);
+    }
+    return {
+        dl,
+        depJob,
+        dir,
+        localPath,
+        ranges: [...requests],
+        retryLines: warns.filter(m => m.includes('resumes from disk')),
+    };
+}
+
+// MPI-718 — the bug, reproduced: four blips with real bytes between them. MPI-460 spent
+// its [2s, 5s, 15s] once per FILE, so the fourth was terminal however much had landed —
+// live 2026-09-10, qwen3-8b-clip resumed from 2.56 GB on retry 1 and 3.42 GB on retry 2.
+async function testBudgetResetsOnProgress() {
+    const { depJob, dir, localPath, ranges, retryLines } = await runCuts({ cuts: 6, segment: SEG });
+
+    assert.equal(depJob.status, 'complete',
+        `six blips with progress between them must finish, ended ${depJob.status}: ${depJob.error || ''}`);
+    // The line the captured 2026-09-10 log would have carried: every blip reads 1/3,
+    // because every one of them was preceded by real bytes landing on disk.
+    assert.equal(retryLines.length, 6, `one retry per blip, got ${retryLines.length}`);
+    for (const line of retryLines) {
+        assert.match(line, /retry 1\/3 in/, `each blip starts the budget over: ${line}`);
+    }
+    assert.equal(ranges.length, 7, `one request per blip plus the tail, got ${ranges.length}: ${ranges.join(' | ')}`);
+    assert.equal(ranges[0], null, 'first attempt is a plain GET');
+    assert.deepEqual(ranges.slice(1), [1, 2, 3, 4, 5, 6].map(n => `bytes=${SEG * n}-`),
+        'every retry RESUMES from the partial, each one further in than the last');
+
+    const onDisk = await fs.readFile(localPath);
+    assert.equal(onDisk.length, BODY.length, 'file is whole');
+    assert.equal(crypto.createHash('sha256').update(onDisk).digest('hex'), BODY_SHA,
+        'four resumes appended real bytes, not garbage (MPI-258 Bug 2 guard)');
+
+    await fs.remove(dir);
+    console.log('  ok  six blips with real progress between them complete, budget reset each time');
+}
+
+// MPI-427 — the gate that must NOT move. A route that connects and delivers nothing buys
+// no budget at all: the user needs the remedy, not 22s of silence before it.
+async function testZeroBytesStillTerminal() {
+    const { dl, depJob, dir, ranges } = await runCuts({ cuts: 3, segment: 0 });
+
+    assert.equal(depJob.status, 'failed', `zero bytes must stay terminal, got ${depJob.status}`);
+    assert.equal(dl._attempts, 0, 'a route that delivered nothing spends no retry (MPI-427)');
+    assert.equal(ranges.length, 1, `no retry request may be made, got ${ranges.length}`);
+
+    await fs.remove(dir);
+    console.log('  ok  zero bytes on disk still fails immediately — MPI-427 gate unmoved');
+}
+
+// MPI-718 — the other side of the floor, and why no separate attempt ceiling exists. A
+// stream that dribbles UNDER the floor and dies never resets, so the budget still means
+// three failures and the dep goes terminal at 3/3 exactly as it did before this card.
+async function testUnderFloorDribbleStillTerminal() {
+    const { dl, depJob, dir, ranges, retryLines } = await runCuts({ cuts: 6, segment: TEST_FLOOR / 4 });
+
+    assert.equal(depJob.status, 'failed',
+        `an under-floor dribble must still go terminal, got ${depJob.status}`);
+    assert.equal(dl._attempts, 3, `the full budget is spent and no more, got ${dl._attempts}`);
+    assert.deepEqual(retryLines.map(l => /retry (\d\/\d)/.exec(l)[1]), ['1/3', '2/3', '3/3'],
+        'the budget counts up and is never handed back under the floor');
+    assert.equal(ranges.length, 4, `three retries and no fourth, got ${ranges.length}`);
+
+    await fs.remove(dir);
+    console.log('  ok  a dribble under the floor never resets and still dies at 3/3');
+}
+
 // MPI-716 — the probe's failure path. Telemetry must never become a new way to fail, so
 // a probe that cannot even open its file logs and resolves; it does not reject into the
 // progress handler that called it, and it leaves nothing behind.
@@ -243,7 +411,10 @@ async function main() {
 
     await testSlowStreamWarn();
     await testWriteProbeSurvivesItsOwnFailure();
-    console.log('\n4 passed');
+    await testBudgetResetsOnProgress();
+    await testZeroBytesStillTerminal();
+    await testUnderFloorDribbleStillTerminal();
+    console.log('\n7 passed');
 }
 
 main().catch((err) => {

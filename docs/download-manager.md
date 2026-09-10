@@ -1160,6 +1160,40 @@ Now: three retries of the SAME url on `RETRY_BACKOFF_MS = [2s, 5s, 15s]`, re-ent
 - The retry timer is cleared by `cancel()`/`stopKeep()`, so a cancel during the backoff
   cannot resurrect the download.
 
+**Three failures WITHOUT PROGRESS, not three per file (MPI-718).** `_attempts` was zeroed
+in the constructor and incremented in the `'error'` handler, and reset nowhere else — so
+the budget was spent once per FILE, however much landed in between. Live 2026-09-10:
+`qwen3-8b-clip` resumed from 2.56 GB on retry 1 and from 3.42 GB on retry 2, six minutes
+and 0.86 GB apart; the third blip would have failed the install with 3.42 GB of good bytes
+on disk. Now the `'progress'` handler hands the budget back once a stream passes
+`_attemptBytes` (where the last attempt was spent) by `RETRY_PROGRESS_FLOOR_BYTES` = 8 MB.
+
+- **The budget did not get bigger** — its length is still three, and what changed is what
+  the three are counted against. The rule above still stands: never fix a class of bug by
+  widening it.
+- **The floor is also the ceiling, which is why there is no separate attempt cap.** Every
+  reset costs 8 MB of NEW bytes on disk, so a file spends at most `3 + size / 8 MB`
+  attempts however badly the link behaves, and each of them left 8 MB behind. A stream
+  that dribbles UNDER the floor never resets and still dies at 3/3 — making that
+  pathology visible is MPI-716's slow-stream WARN's job, not the retry's to absorb.
+- **The MPI-427 zero-bytes gate is untouched.** A reset needs bytes; that gate fires
+  before any attempt is spent at all.
+
+**A replaced stream's late events used to land on the live one (MPI-718).** `_rearm()`
+swaps `this._downloader` while the old NDH request is still in flight, and every handler
+closes over `this`. Two live faults, both caught by the multi-cut harness: a late
+`'download'` read `__response` off a null `_downloader` and took the process down with an
+uncaught TypeError (MPI-716's peer/POP read), and a late `'error'` spent a SECOND retry
+for one blip. Each handler now captures its own downloader at bind time and returns when
+it is no longer the current one.
+
+**NDH absorbs a broken body before our budget ever sees it.** `resumeOnIncomplete` defaults
+to **true** with `resumeOnIncompleteMaxRetry: 5`, so a socket that DIES mid-body is
+silently re-requested up to five times inside the downloader — measured 2026-09-10, five
+server requests for two logged retries. One of our attempts is worth up to five of NDH's,
+and a test that wants to reach our retry path must make the socket go QUIET (the MPI-291
+watchdog's shape) rather than kill it.
+
 **This matters most where there is no second origin**, and the catalogue is NOT uniformly
 "R2 primary, HF fallback" in either direction (counted 2026-08-06):
 
@@ -1197,7 +1231,11 @@ Guard: `tests/download-retry.test.cjs` — a local server kills the first connec
 mid-body, and the test asserts the retry's request carries `Range: bytes=<partial>-` and
 the finished file matches the expected sha256. It drives `forceStall()` directly because
 NDH v2.1.11 does **not** emit `error` on a socket that dies mid-body (re-measured 2026-08-06,
-the same finding MPI-291 built the watchdog on).
+the same finding MPI-291 built the watchdog on). MPI-718 gave that same server three knobs
+(`cutsLeft`, `cutSegment`, `cutQuiet`) and three more cases: six blips with 32 KB between
+them now finish with every line reading `retry 1/3`; a route delivering zero bytes still
+fails immediately with no retry at all; and a dribble under the floor still counts
+`1/3, 2/3, 3/3` and goes terminal.
 
 
 ## A slow install must be readable from the log alone (MPI-716)

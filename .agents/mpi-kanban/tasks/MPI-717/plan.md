@@ -23,10 +23,27 @@ re-reads those two files.
 
 ## Current State
 
-**Phase 1 (MPI-716) shipped 2026-09-10 and its card is `done`.** MPI-718 and
-MPI-719 remain `planned`, in that order. MPI-716 was carded first (2026-09-10 19:25) with the
-other two recorded in its `brief.md` as "confirmed in code, not carded"; this sweep carded
-them and re-checked every claim against the working tree and the captured logs:
+**Phases 1 and 2 have shipped. Phase 3 (MPI-719, the cancel race) is the single next
+action** — still `planned`, brief at `tasks/MPI-719/brief.md`, and untouched by either
+phase. Nothing is blocked.
+
+Phase 2 (MPI-718) landed 2026-09-10: the budget now means three failures WITHOUT progress
+(`_attemptBytes` + an 8 MB `RETRY_PROGRESS_FLOOR_BYTES` reset in the `'progress'` handler),
+its length unchanged at three, and the MPI-427 zero-bytes gate unmoved. Evidence:
+`tasks/MPI-718/validation.md`. Two things a fresh session needs that the diff does not say:
+
+- **The four-cut repro found two live faults in the same handlers and both are fixed here**
+  — a replaced stream's late `'download'` crashed the process on MPI-716's `__response`
+  read, and its late `'error'` spent a second retry for one blip. Every handler in
+  `_bindEvents` now captures its own downloader (`const dh`) and returns when
+  `this._downloader !== dh`. Phase 3 touches different files, but any future work in
+  `_bindEvents` must keep that guard.
+- **NDH absorbs a dead socket before our code sees it.** `resumeOnIncomplete` defaults to
+  true with `resumeOnIncompleteMaxRetry: 5`, so a test that wants to reach our retry path
+  must make the socket go QUIET, not kill it. That is what `cutQuiet` in the harness is.
+
+The 2026-09-10 sweep carded all three members and re-checked every claim against the
+working tree and the captured logs:
 
 - `FileDownloader._attempts` is set to 0 in the constructor and incremented in the `'error'`
   handler; nothing else touches it. The log shows `qwen3-8b-clip` resuming from 2.56 GB
@@ -90,10 +107,17 @@ start after the disk gate, a new probe helper), `server.js` (the boot line besid
 → verify: the card's own definition of done — name the line each addition WOULD have
 written into the captured logs and the question it answers.
 
-## Phase 2: Retry budget — MPI-718
+## Phase 2: Retry budget — MPI-718 — SHIPPED 2026-09-10
 
-After Phase 1 lands. The budget resets on progress since the last spent attempt; the
-MPI-427 zero-bytes gate is untouched. Brief: `tasks/MPI-718/brief.md`.
+The budget resets on progress since the last spent attempt; the MPI-427 zero-bytes gate is
+untouched. Brief: `tasks/MPI-718/brief.md`; executed evidence: `tasks/MPI-718/validation.md`.
+
+Landed as planned, plus the two stale-event faults the repro turned up (above). **The open
+question in the brief — a hard attempt ceiling, or accept the trickle — was answered "no
+ceiling", and the reason is on the card:** every reset costs 8 MB of new bytes on disk, so
+a file spends at most `3 + size / 8 MB` attempts by construction, and a stream that
+dribbles UNDER the floor never resets and still dies at 3/3. The floor is the ceiling.
+7 test cases, 917/917 suite, eslint clean, both captured deps re-read.
 
 Owns: `routes/downloadManager.js` (`FileDownloader` constructor, `'error'` and
 `'progress'` handlers), `tests/download-retry.test.cjs`, `docs/download-manager.md`.
@@ -123,6 +147,14 @@ nothing. Run them in order; a single session can carry all three.
 
 ## Plan Drift
 
+- **2026-09-10, Phase 2.** Scope grew by two defects, both in the handlers this phase
+  already owned and both surfaced by its own repro rather than by inspection: a replaced
+  stream's late `'download'` crashing on MPI-716's `__response` read, and its late
+  `'error'` double-spending the budget. Folding them in was the cheaper and more honest
+  call — the second one IS this card's subject, and the first is an uncaught exception on
+  the retry path this card exercises. The harness also needed a knob the plan did not
+  anticipate (`cutQuiet`): NDH's own `resumeOnIncomplete` swallows a killed socket, so a
+  cut had to become a quiet socket to reach our budget at all.
 - **2026-09-10, Phase 1.** No drift in scope. Two implementation choices worth recording:
   `_freeDiskBytes` was KEPT as a thin wrapper over the new `_diskSpace` rather than
   renamed, so nothing downstream (including a comment in `tests/disk-full-message.test.cjs`,
