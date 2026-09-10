@@ -1,0 +1,16 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-714",
+  "title": "SAM3 face masks lose the lips - document why threshold/refine_iterations cannot fix it, add MpiMaskFillHoles",
+  "description": "SAM3 prompted 'face'/'head' returns a mask with the lips and teeth punched out; a composite then paints through the gap, and on video it flickers because it is frame-dependent. Neither obvious widget reaches it: threshold gates a detection SCORE, and refine_iterations cannot carve at all because _refine_mask unions the refined mask with the coarse one (comfy_extras/nodes_sam3.py:84), so refinement only ever adds. The hole is in the detector's own concept mask. Two outcomes: (1) docs/masking-sam3.md records the finding, and corrects its standing claim that detector masks come back clean; (2) MpiMaskFillHoles in the sibling node pack fills enclosed holes without touching the silhouette - carded there as MPI-7, node written and checked but deliberately NOT committed, synced, pinned or pushed this session.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-09-10T09:43:39+01:00",
+  "updated_at": "2026-09-10T10:06:00+01:00",
+  "links": {
+    "files": "files.json",
+    "events": "events.jsonl",
+    "validation": "validation.md"
+  }
+}

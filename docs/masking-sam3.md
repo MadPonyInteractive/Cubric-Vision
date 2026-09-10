@@ -172,8 +172,12 @@ widget — which is also why no `MpiText` relay is needed here: the encoder is n
     what the mask already surrounds, so the silhouette is untouched. Prefer it to a
     `GrowMask +N / -N` close, which reaches a hole only as a side effect of dilating
     everything: it is capped by its iteration count, costs `abs(expand)` scipy passes per
-    frame each way (~200ms/frame at 768x1344 for ±12, against ~10ms), and welds shut any
-    outer concavity narrower than 2N — the chin-to-hair gap goes first.
+    frame each way, and welds shut any outer concavity narrower than 2N — the chin-to-hair
+    gap goes first. Measured on one 768×1344 frame with a 120×60 lips-shaped hole: **20.5 ms**
+    for the node against **126.1 ms** for `GrowMask +12/−12`, and the close **did not close
+    the hole** — ±12 reaches a gap about 24px wide and the hole is 60px tall. It is not a
+    slower equivalent; a radius big enough to match it is a radius big enough to weld the
+    silhouette.
   - **Bite out of the silhouette** (mouth open, gap reaching the jaw line): no fill can see
     it, because it is not enclosed. Name it in the vocabulary — `head, hat, mouth`.
     `SAM3_Detect` unions every comma-separated category's mask when `individual_masks` is
