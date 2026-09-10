@@ -4,6 +4,23 @@
 line of it was built.** Read `brief.md` first (licences + the measured VRAM facts — unchanged
 and still binding), and `../MPI-664/research/stable-audio-3-bench.md` for every bench fact.
 
+## Current State — 2026-09-10, FABIO SAYS THIS CARD CAN CLOSE
+
+🟢 **"694 can be closed"** (Fabio, 2026-09-10), and he has cleared the licence gate himself in
+another test. Nothing buildable is left.
+
+🔴 **THE TWO RELEASE OBLIGATIONS DO NOT CLOSE WITH THE CARD, and that is consistent rather than
+a conflict** — both were always recorded as blocking a RELEASE, not a build:
+1. **Registration with Stability** — §III, any Commercial Purpose, NO revenue floor.
+2. **The Gemma §3.1 EULA clause** — §3.2's restrictions as an enforceable provision in our own
+   terms, not only in the dialog.
+They live in the `STABLE_AUDIO_3` comment block in `js/data/modelConstants/licences.js`, which
+survives this card. **Whoever closes it must confirm they still do** — a closed card is where an
+obligation goes to be forgotten.
+
+🟡 **THIS CARD HAS NO `validation.md`** (MPI-664 has one). Close-out resolves a card against a
+validation record, so that wants writing before it moves.
+
 ## Current State — 2026-09-09 (later), THE DOCS SHIPPED. Nothing is left but two decisions.
 
 🟢 **BOTH `existing-flows` PAGES ARE WRITTEN** — `song.md` and `sound-and-music.md`, 200 lines

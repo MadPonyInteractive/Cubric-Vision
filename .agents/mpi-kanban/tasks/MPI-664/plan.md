@@ -3,7 +3,52 @@
 Design settled with Fabio 2026-08-30. Capability facts live in `research/minimax-music-3.md` —
 read it first, and do not re-search it.
 
-## Current State
+## Current State — 2026-09-10, THE OWED RUN IS DONE AND ONE NEW DEFECT IS NAMED
+
+🟢 **FABIO HAS RUN THE SONG FLOW IN HIS OWN APP** (2026-09-10, his words). That is the item
+`validation.md` ends on — *"Item 1 and 2 above still need Fabio's press and Fabio's ears"* — and
+the only thing this card was actually waiting for. **His verdict on what came out is NOT yet
+recorded here; ask for it before ticking the checklist.**
+
+🔴 **NEW, AND IT IS THE REASON THIS CARD DID NOT CLOSE TODAY: `@` DOES NOTHING IN THE LYRICS
+BOX.** Fabio typed `@` in the Song step's Lyrics field and no picker appeared.
+
+**Root cause found, and it is a MISSING FEATURE, not a regression.** The `@` ref-tag picker was
+never extracted out of `MpiPromptBox`:
+
+- `matchRefTagQuery` (`js/data/commandRegistry.js:1780`) has exactly ONE caller in the whole
+  tree — `MpiPromptBox.js:1294`. Nothing else references it.
+- `buildField`'s `'text'` branch (`js/utils/declaredFields.js:676`) mounts a bare `MpiInput`
+  with a single `input` listener. No keydown, no `@` handling, no picker DOM.
+- This is **checklist line 30**, filed 2026-08-30 as tier 3 and never built: *"`@` picker
+  extracted from `MpiPromptBox` onto `MpiInput` (tier 3, purely additive on tier 2).
+  `matchRefTagQuery` is reusable verbatim; only the DOM/keyboard/insert needs extracting."*
+
+🔴 **A PRODUCT FORK ONLY FABIO CAN SETTLE, AND IT MUST BE ASKED BEFORE ANY CODE.** Extracting
+onto `MpiInput` gives `@` to **every declared flow text field in every flow** — Sound & Music's
+"Describe it", the Song brief, Voice notes, the lyrics. Is that wanted everywhere, or only in
+specific boxes? And what should `@` insert in a LYRICS box: a ref tag (character/location), or
+a voice from this flow's own roster? MiniMax's own voice syntax is `<Singer A>`, not `@`, and
+`Strip_Voice_Markers` deletes `<…>` before the encoder — so a ref tag and a voice marker are
+different mechanisms with different fates. **Do not pick one.**
+
+🟡 **`js/utils/declaredFields.js` IS UNDER A PEER'S UNRELEASED CLAIM** — `0928f1f4`, MPI-591,
+status `needs_verification`, alongside `MpiBaseFlow.js` and `flowsRegistry.js`. Any fix here
+touches at least the first two. Content-anchored hunk staging + `git commit -n`, or message the
+peer first.
+
+🟢 **THE BARE-TAGS ITEM (checklist L187) IS UNREACHABLE, NOT OPEN.** MPI-694 took Instrumental
+off this flow, and the runtime graph proves the path is dead: node 73 `Input_Instrumental` is
+baked `false`, so `Lyrics_Gate` (103) always takes the FALSE arm (node 77); `Bare_Tags` (105)
+sits on the TRUE arm fed by `Input_Structure` (104) baked `""`, and `MpiIfElse` is lazy, so it
+can never execute. Record it moot at close-out rather than leaving it open forever.
+
+🟢 **THE DOC ITEM (checklist L132) SHIPPED** as `docs/playbooks/add-flow/existing-flows/song.md`
+(`921e2f7b`, 2026-09-09) — written, not renamed. **There was never a `minimax-music.md`;** a
+previous handoff read that unchecked checklist line as an existing file and sent a session to
+rename a file that is in no commit. The graphics item (L131) shipped as `8c4754d1`.
+
+## Current State — 2026-09-03
 
 🟢 **2026-09-03, fifth session — THE LYRICS GATE IS PROVEN ON THE LIVE GPU, AND REUSE WAS WELDING
 THE ENHANCER SHUT.**
