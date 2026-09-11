@@ -58,6 +58,16 @@ mandatory user-facing copy gates). The version file edits belong to
   diverge on purpose: master has none (so a build from it emits a FULL bundle),
   the maintenance line carries them (so it emits a delta). See
   `release-baselines/README.md` § Current baselines.
+- **`1.6.x` is RESERVED — never cut a real 1.6 release.** Master was stamped
+  `1.6.0` on 2026-09-11 (MPI-722) purely as a dev-line marker, so a build handed
+  to one beta tester orders above every published release and still takes the 2.0
+  prompt. It is not published: no tag, no GitHub Release, no manifest. A genuine
+  1.6.0 cut from the release line would collide with installs already reporting
+  that version, and `assertBundleApplies` (`scripts/portable/apply-update.cjs`)
+  would then match a delta against the wrong build. Master's next real release is
+  2.0.0 — and that release owes a **full** bundle (`fromVersion: null`) alongside
+  its delta, because the ordinary 1.5.0 → 2.0.0 delta correctly refuses a 1.6.0
+  install.
 - The user-facing changes are feature-complete and `docs/releases/UNRELEASED.md`
   holds the accumulated notes since the last release.
 - You know the digit to bump (table above).

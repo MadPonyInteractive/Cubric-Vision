@@ -1,0 +1,10 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/core/appVersion.js",
+    "package.json",
+    "package-lock.json",
+    ".claude/skills/mpi-release/SKILL.md",
+    ".agents/mpi-kanban/tasks/MPI-720/brief.md"
+  ]
+}

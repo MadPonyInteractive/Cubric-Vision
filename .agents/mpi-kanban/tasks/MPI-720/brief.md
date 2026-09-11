@@ -29,17 +29,16 @@ Measured 2026-09-11, master `78400b06` vs the shipped `v1.5.0`:
    1.5.0's 16.** His first boot after the update will install the extra nodes and their python
    deps. Tell him up front: it is a download, it is expected, and it happens to exercise the
    very path under test.
-3. **master's `APP_VERSION` is `1.4.2` — LOWER than the 1.5.0 he is running.** Left alone, his
+3. **master's `APP_VERSION` was `1.4.2` — LOWER than the 1.5.0 he is running.** Left alone, his
    app reports a downgrade and `updateChecker.js` (`compareSemVer(latest, current) <= 0` gates
    the prompt) would offer him 1.5.0 as an upgrade, quietly reverting the build under test.
-   **This is MPI-722's job, not this card's — do that one first** and master will stamp
-   `1.6.0` on its own: above every published release, below the 2.0 master is heading for,
-   never itself published, and ordered so his install still takes the real 2.0 update when it
-   ships. If MPI-722 has not landed, pass `--version 1.6.0` at build time as a stopgap
-   (`build-portable.mjs` defaults to `package.json` only when the flag is absent) — and never
-   a `-dev` suffix, which parses to NaN in `compareSemVer`. The build also warns when the
-   baseline's `toVersion` is not older than the version being stamped, which is the same
-   problem telling you about itself.
+   **MPI-722 landed on 2026-09-11 and master now reads `1.6.0`** — above every published
+   release, below the 2.0 master is heading for, never itself published, and ordered so his
+   install still takes the real 2.0 update when it ships. So **pass no `--version` flag**:
+   `build-portable.mjs` defaults to `package.json`, which is already stamped, and a flag here
+   could only reintroduce drift. Never a `-dev` suffix, which parses to NaN in `compareSemVer`.
+   The build warns when the baseline's `toVersion` is not older than the version being stamped,
+   which is the same problem telling you about itself.
 4. **The 1.5.0 baseline manifest is NOT on master** — `release-baselines/` there holds only
    `README.md`. It lives on the release line: `release-baselines/win32-x64.json` at branch
    `1.4.2`, restamped to the shipped 1.5.0 by `8df1c9b3`. Pull that file out and hand it to
