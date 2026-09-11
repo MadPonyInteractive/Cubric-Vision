@@ -7,7 +7,7 @@
   "maturity": "validating",
   "status": "active",
   "created_at": "2026-09-11T01:29:02+01:00",
-  "updated_at": "2026-09-11T03:02:18+01:00",
+  "updated_at": "2026-09-11T03:02:55+01:00",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -17,5 +17,10 @@
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "research": "research/"
+  },
+  "attention": {
+    "state": "required",
+    "reason": "Fabio owns the next move: send the 15.5 MB delta + READ-ME-FIRST from D:/CubricStudio/Vision/Builds, then bring back the reporter app.log. Card stays validating until that lands. If the crawl is still there, the next hand-delivered build is 1.6.1 (mpi-release SKILL.md, Preconditions).",
+    "updated_at": "2026-09-11T03:02:55+01:00"
   }
 }
