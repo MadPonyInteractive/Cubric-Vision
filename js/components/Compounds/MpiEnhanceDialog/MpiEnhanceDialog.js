@@ -2,6 +2,7 @@ import { ComponentFactory } from '../../factory.js';
 import { MpiModal } from '../../Primitives/MpiModal/MpiModal.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
+import { MpiSpinner } from '../../Primitives/MpiSpinner/MpiSpinner.js';
 import { enhance as enhanceLocally } from '../../../services/llmService.js';
 import { qs } from '../../../utils/dom.js';
 
@@ -30,6 +31,13 @@ import { qs } from '../../../utils/dom.js';
  * AN EMPTY LOWER BOX ON OK MEANS "RUN MY WORDS RAW" — the rule Character Sheet
  * already states in its own help text. Clearing it is how a user backs out of an
  * enhancement without backing out of their prompt.
+ *
+ * THE FEEDBACK IS THE SPINNER, NOT A TOAST (Fabio, 2026-09-11). A spinner covers
+ * the enhanced box while a run is in flight — that box is the thing about to
+ * change, and the wait was the only part of the flow with no signal in it. The
+ * toast the prompt box fired on OK is gone: confirming an action the user just
+ * took is noise, and the control's own enhanced state already says whether an
+ * enhancement is standing.
  *
  * NO ENTER-TO-CONFIRM, deliberately. `MpiModal` binds `modal.confirm` with
  * `allowWhileTyping: true`, so a dialog that listens for it turns the newline key
@@ -74,7 +82,10 @@ export const MpiEnhanceDialog = ComponentFactory.create({
                     <span class="mpi-enhance-dialog__note" id="enhance-note"></span>
                     <div id="enhance-run-slot"></div>
                 </div>
-                <div id="enhance-positive-slot"></div>
+                <div class="mpi-enhance-dialog__field">
+                    <div id="enhance-positive-slot"></div>
+                    <div class="mpi-enhance-dialog__busy hide" id="enhance-busy-slot"></div>
+                </div>
                 <div class="hide" id="enhance-negative-slot"></div>
             </div>
             <div class="mpi-enhance-dialog__foot" id="enhance-actions-slot"></div>
@@ -98,8 +109,15 @@ export const MpiEnhanceDialog = ComponentFactory.create({
         // touches it, because it describes the text, not the last button press.
         let lastNote  = props.enhanced?.note || null;
 
-        const noteEl    = qs('#enhance-note', el);
-        const negSlotEl = qs('#enhance-negative-slot', el);
+        const noteEl     = qs('#enhance-note', el);
+        const negSlotEl  = qs('#enhance-negative-slot', el);
+        // THE WAIT IS WHERE THE FEEDBACK BELONGS (Fabio, 2026-09-11). The enhanced box
+        // is the thing about to change, so the spinner sits over it rather than in a
+        // toast after the fact. Its scrim also takes the pointer, so a run cannot be
+        // typed into and then overwritten by its own result.
+        const busySlotEl = qs('#enhance-busy-slot', el);
+        MpiSpinner.mount(busySlotEl, { size: 'md', variant: 'primary' });
+        const _busy = (on) => busySlotEl.classList.toggle('hide', !on);
 
         const shortInput = MpiInput.mount(qs('#enhance-short-slot', el), {
             type: 'textarea',
@@ -144,6 +162,7 @@ export const MpiEnhanceDialog = ComponentFactory.create({
             if (busy) return;
             if (!shortText.trim()) { _note('Type a prompt first.', 'warn'); return; }
             busy = true;
+            _busy(true);
             runBtn.el.setDisabled?.(true);
             runBtn.el.setLabel?.('Enhancing…');
             _note('');
@@ -174,6 +193,7 @@ export const MpiEnhanceDialog = ComponentFactory.create({
                 _note(lastNote.text, lastNote.kind);
             } finally {
                 busy = false;
+                _busy(false);
                 runBtn.el.setDisabled?.(false);
                 runBtn.el.setLabel?.('Enhance');
             }

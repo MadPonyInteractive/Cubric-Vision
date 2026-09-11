@@ -200,6 +200,27 @@ function testAFailedRunDoesNotRewriteProvenance() {
         'the failure path must still call _note directly, without recording it as provenance');
 }
 
+// ── 5. Feedback lives in the wait, not after it ──────────────────────────────
+// Fabio, 2026-09-11: OK fired a toast every press. A confirmation for an action
+// the user just took is noise; the signal was missing DURING the run instead.
+// Both halves are asserted because re-adding the toast is the obvious "fix" for
+// a future reader who sees an action with no confirmation.
+function testOkDoesNotToast() {
+    const box = SRC('js/components/Organisms/MpiPromptBox/MpiPromptBox.js');
+    assert.ok(!box.includes('_enhanceToast'),
+        'OK must not toast — the control\'s enhanced state is the confirmation');
+}
+
+// A spinner that never clears is worse than none: the box would read as busy
+// forever after one failed run. The clear belongs in `finally`, not beside the
+// success path, so assert on that specifically rather than on its presence.
+function testTheSpinnerClearsOnEveryExitPath() {
+    const src = SRC('js/components/Compounds/MpiEnhanceDialog/MpiEnhanceDialog.js');
+    assert.ok(src.includes('_busy(true);'), 'a run must raise the spinner');
+    assert.ok(/finally\s*\{[\s\S]*?_busy\(false\);/.test(src),
+        'the spinner must be cleared in `finally`, so a failed run does not leave the box busy');
+}
+
 const tests = [
     testSplitsTheLabelledBlob,
     testEverySeparateFieldExemplarParses,
@@ -214,6 +235,8 @@ const tests = [
     testTheNoteIsCarriedOutOfTheDialog,
     testTheNoteIsRestoredOnReopen,
     testAFailedRunDoesNotRewriteProvenance,
+    testOkDoesNotToast,
+    testTheSpinnerClearsOnEveryExitPath,
 ];
 
 let failed = 0;

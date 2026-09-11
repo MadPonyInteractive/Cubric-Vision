@@ -46,6 +46,25 @@
     color: var(--accent-heat);
 }
 
+/* The spinner sits OVER the enhanced box, because that box is the thing about to
+   change. Feedback during the wait replaced a toast fired after it (Fabio,
+   2026-09-11): a confirmation for an action the user just took is noise, and the
+   wait was the part carrying no signal. The scrim takes the pointer as well as the
+   eye, so a run cannot be typed into and then overwritten by its own result. */
+.mpi-enhance-dialog__field {
+    position: relative;
+}
+
+.mpi-enhance-dialog__busy {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--r-1);
+    background: color-mix(in oklch, var(--surface-1) 72%, transparent);
+}
+
 /* The enhanced half is the one being read and edited, so it gets the height.
    The short prompt above is autoHeight and stays as small as its content. */
 .mpi-enhance-dialog__body #enhance-positive-slot .mpi-input__field--textarea {

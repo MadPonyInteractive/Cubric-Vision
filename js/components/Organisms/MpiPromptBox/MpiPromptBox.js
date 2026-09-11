@@ -1988,14 +1988,6 @@ export const MpiPromptBox = ComponentFactory.create({
         /** @type {{source: string, positive: string, note?: {text: string, kind: string}}|null} */
         let _enhanced = _draft.enhanced?.positive ? { ..._draft.enhanced } : null;
 
-        function _enhanceToast(message, variant) {
-            const wrapper = document.createElement('div');
-            wrapper.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;';
-            document.body.appendChild(wrapper);
-            const toast = MpiToast.mount(wrapper, { message, variant });
-            toast.on('close', () => wrapper.remove());
-        }
-
         /**
          * STALENESS IS DETECTED, NEVER ANNOUNCED. The submit path carries the ENHANCED
          * text while the box shows the short prompt, so an edit to the short prompt
@@ -2044,7 +2036,11 @@ export const MpiPromptBox = ComponentFactory.create({
                 _saveDraft();
                 _syncEnhancedState();
                 emit('input', { positive: positiveValue, negative: negativeValue, negativeAudio: negativeAudioValue, activeMode: promptMode });
-                _enhanceToast(_enhanced ? 'Prompt enhanced.' : 'Running your own words.', 'success');
+                // NO TOAST ON OK (Fabio, 2026-09-11). Every press fired one, and a
+                // confirmation for an action the user just took is noise: the control's
+                // own enhanced state already says whether an enhancement is standing.
+                // The feedback the user actually needs is DURING the wait, not after it
+                // — that is the spinner in the dialog's enhanced box.
                 _close();
             });
             _enhanceDialog.el.show();
