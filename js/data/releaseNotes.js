@@ -38,6 +38,30 @@
  * @type {Record<string, ReleaseNotes>}
  */
 export const RELEASE_NOTES = {
+  // 1.6.0 is a DEV-LINE MARKER, not a published release (MPI-722). It exists so a
+  // hand-delivered verification build orders above 1.5.0 and below 2.0, and it is
+  // never tagged or released. This entry exists only because a non-dry-run build
+  // refuses to run without one (scripts/release-notes-approval.mjs), and because
+  // the overlay fires once per APP_VERSION — so the single person running this
+  // build does read it. It is NOT the 2.0 changelog: docs/releases/UNRELEASED.md
+  // still owns that. Once APP_VERSION passes 1.6.0 this entry is inert (lookup is
+  // by exact key) and can be deleted with the matching .approved-1.6.0.json token.
+  '1.6.0': {
+    version: '1.6.0',
+    whatIsNew: [],
+    breakingChanges: [],
+    importantChanges: [
+      'This is a verification build of the development line, not a public release. It is numbered 1.6.0 so it sits above 1.5.0 and below the next release - you will still be offered the real 2.0 update when it ships.',
+    ],
+    fixes: [
+      'Slow dependency downloads now explain themselves. The log records the measured rate, the origin it came from, and a disk write probe - so a stalled disk can be told apart from a slow link instead of guessed at.',
+      'A dropped connection mid-download no longer burns the retry budget. The budget resets once real progress is made, so a large file survives a blip instead of dying on the third one.',
+      'Cancelling a download no longer leaves a false "models check failed" error behind it.',
+    ],
+    engineNotes: [
+      'This build pins five more custom nodes than 1.5.0. The first launch after updating installs them and their Python dependencies - that download is expected.',
+    ],
+  },
   '1.4.2': {
     version: '1.4.2',
     whatIsNew: [
