@@ -35,15 +35,26 @@ import { qs } from '../../../utils/dom.js';
  * `allowWhileTyping: true`, so a dialog that listens for it turns the newline key
  * of a multi-line editor into OK. This one never subscribes to `confirm`.
  *
+ * PROVENANCE BELONGS TO THE TEXT, NOT TO THE RUN (Fabio, 2026-09-11). The note
+ * line is emitted on apply and restored on reopen, because it is the only place
+ * the FALLBACK WARNING is ever shown: when a model's key matches no recipe, the
+ * pinned fallback answers anyway, and the warning is what says so. It used to be
+ * written by `_run()` alone, so reopening an approved enhancement showed the text
+ * with a blank note — the enhancement kept, the statement of where it came from
+ * dropped. Only a SUCCESSFUL run updates it; a failed re-run leaves the previous
+ * text standing, so the previous text's provenance must stand with it.
+ *
  * Props:
  * @param {string}  [prompt='']     the user's short prompt, pre-filled into the upper box
  * @param {object}  [model]         the model card — picks the recipe and the backend
- * @param {{positive?: string, negative?: string}} [enhanced]
+ * @param {{positive?: string, negative?: string, note?: {text: string, kind: string}}} [enhanced]
  *                                  an existing enhancement to reopen on, restored into
- *                                  the lower boxes so OK / Cancel are non-destructive
+ *                                  the lower boxes so OK / Cancel are non-destructive.
+ *                                  `note` is the provenance line the run that produced
+ *                                  `positive` displayed
  *
  * Emits:
- *   'apply'  { shortPrompt, positive, negative }  — `positive` empty means "run raw"
+ *   'apply'  { shortPrompt, positive, negative, note }  — `positive` empty means "run raw"
  *   'cancel' {}
  *
  * Instance methods (on instance.el): show(), hide()
@@ -82,6 +93,10 @@ export const MpiEnhanceDialog = ComponentFactory.create({
         let posText   = String(props.enhanced?.positive || '');
         let negText   = String(props.enhanced?.negative || '');
         let busy      = false;
+        // The provenance of `posText`, carried in and back out. Null until a run
+        // succeeds; a transient error (empty prompt, engine unreachable) never
+        // touches it, because it describes the text, not the last button press.
+        let lastNote  = props.enhanced?.note || null;
 
         const noteEl    = qs('#enhance-note', el);
         const negSlotEl = qs('#enhance-negative-slot', el);
@@ -116,6 +131,8 @@ export const MpiEnhanceDialog = ComponentFactory.create({
             noteEl.textContent = text || '';
             noteEl.className = `mpi-enhance-dialog__note${kind ? ` mpi-enhance-dialog__note--${kind}` : ''}`;
         };
+        // Reopening on an approved enhancement shows the note that produced it.
+        if (lastNote) _note(lastNote.text, lastNote.kind);
 
         const runBtn = MpiButton.mount(qs('#enhance-run-slot', el), {
             text: 'Enhance',
@@ -148,9 +165,13 @@ export const MpiEnhanceDialog = ComponentFactory.create({
                 // fallback answered. The fallback is DESIGNED to answer, which is
                 // exactly why it hides a miss so well — two MiniMax-H3 VIDEO cards were
                 // enhanced by the `chroma` IMAGE recipe for a week and nothing failed
-                // loudly. Surface it verbatim, in the dialog, before OK.
-                _note(result.note || `Enhanced by ${result.model || result.backend || 'the enhancer'}.`,
-                    result.note ? 'warn' : '');
+                // loudly. Surface it verbatim, in the dialog, before OK — and keep it
+                // with the text, so reopening does not drop the warning.
+                lastNote = {
+                    text: result.note || `Enhanced by ${result.model || result.backend || 'the enhancer'}.`,
+                    kind: result.note ? 'warn' : '',
+                };
+                _note(lastNote.text, lastNote.kind);
             } finally {
                 busy = false;
                 runBtn.el.setDisabled?.(false);
@@ -175,6 +196,7 @@ export const MpiEnhanceDialog = ComponentFactory.create({
                 shortPrompt: shortText,
                 positive: posText.trim(),
                 negative: negText.trim(),
+                note: lastNote,
             });
             el.hide();
         });

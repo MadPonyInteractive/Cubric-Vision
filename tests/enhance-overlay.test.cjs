@@ -156,8 +156,48 @@ function testEveryEditRechecksStaleness() {
 
 function testAnEmptyLowerBoxMeansRunMyWordsRaw() {
     const src = SRC('js/components/Organisms/MpiPromptBox/MpiPromptBox.js');
-    assert.ok(src.includes('_enhanced = positive ? { source: positiveValue, positive } : null'),
+    assert.ok(src.includes('_enhanced = positive ? { source: positiveValue, positive, note: note || null } : null'),
         'clearing the enhanced box on OK must drop the enhancement, not keep the previous one');
+}
+
+// ── 4. Provenance survives a reopen ──────────────────────────────────────────
+// Found by Fabio's user-ux pass, 2026-09-11: reopening an APPROVED enhancement
+// restored the text with a BLANK note. The note is not decoration — it is the
+// only surface the fallback warning has ("this model matched no recipe, the
+// pinned fallback answered"), and the fallback is DESIGNED to answer, so losing
+// the warning loses the only signal that anything was wrong. Four links, each of
+// which drops the note silently if it breaks, and none of which a person can see
+// by looking at a dialog that otherwise renders correctly.
+function testTheNoteIsCarriedOutOfTheDialog() {
+    const src = SRC('js/components/Compounds/MpiEnhanceDialog/MpiEnhanceDialog.js');
+    assert.ok(/emit\('apply',\s*\{[\s\S]*?note:\s*lastNote/.test(src),
+        'apply must carry the note — without it the box has no provenance to store');
+    assert.ok(src.includes('lastNote = {'),
+        'a successful run must RECORD the note, not only render it');
+}
+
+function testTheNoteIsRestoredOnReopen() {
+    const src = SRC('js/components/Compounds/MpiEnhanceDialog/MpiEnhanceDialog.js');
+    assert.ok(src.includes('let lastNote  = props.enhanced?.note || null;'),
+        'the dialog must seed its note from the enhancement it reopens on');
+    assert.ok(src.includes('if (lastNote) _note(lastNote.text, lastNote.kind);'),
+        'a seeded note must actually be rendered at mount, not merely held');
+    const box = SRC('js/components/Organisms/MpiPromptBox/MpiPromptBox.js');
+    assert.ok(box.includes('negative: negativeValue, note: _enhanced.note'),
+        'the box must pass the stored note back when it reopens the dialog');
+}
+
+// A transient failure must NOT overwrite the provenance of the text still in the
+// box: a re-run that errors leaves the PREVIOUS enhancement standing, so the
+// previous enhancement's note is still the true one. Only the success path and
+// the prop seed may assign.
+function testAFailedRunDoesNotRewriteProvenance() {
+    const src = SRC('js/components/Compounds/MpiEnhanceDialog/MpiEnhanceDialog.js');
+    const assignments = src.match(/lastNote\s*=[^=]/g) || [];
+    assert.strictEqual(assignments.length, 2,
+        `lastNote must be assigned exactly twice (the prop seed and the success path), found ${assignments.length}`);
+    assert.ok(src.includes("_note(result.error || 'Enhance failed.', 'warn');"),
+        'the failure path must still call _note directly, without recording it as provenance');
 }
 
 const tests = [
@@ -171,6 +211,9 @@ const tests = [
     testTheApprovedEnhancementIsWhatRuns,
     testEveryEditRechecksStaleness,
     testAnEmptyLowerBoxMeansRunMyWordsRaw,
+    testTheNoteIsCarriedOutOfTheDialog,
+    testTheNoteIsRestoredOnReopen,
+    testAFailedRunDoesNotRewriteProvenance,
 ];
 
 let failed = 0;

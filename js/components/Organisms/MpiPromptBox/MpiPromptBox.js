@@ -9,6 +9,7 @@ import { renderIcon } from '../../../utils/icons.js';
 import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel, matchRefTagQuery, stripOrdinalMediaRoles, modelShowsStyleRack, modelShowsRatio, modelShowsBatch, modelControlTypes, getOpHelp, isTextOnlyOp, pickTextOnlyOp, opAllowsEnhance } from '../../../data/commandRegistry.js';
 import { MpiOpHelpDialog } from '../../Compounds/MpiOpHelpDialog/MpiOpHelpDialog.js';
 import { MpiMediaPicker } from '../../Compounds/MpiMediaPicker/MpiMediaPicker.js';
+import { MpiLoraRack } from '../../Compounds/MpiLoraRack/MpiLoraRack.js';
 import { getModelDepStatus, tierLetterFor } from '../../../data/modelRegistry.js';
 import { usesQualityTier } from '../../../utils/ratios.js';
 import { deriveInstalledOps } from '../../../data/modelConstants/resolveModelDeps.js';
@@ -1248,6 +1249,9 @@ export const MpiPromptBox = ComponentFactory.create({
             // `sourcePrompt`), so an ordinary card injects `undefined` and clears any
             // enhancement standing from the previous prompt — which is correct: the
             // words in the box are no longer the ones it was made from.
+            // No `note` here, deliberately: the sidecar stores `sourcePrompt` and
+            // nothing else, so a reused card has no record of which engine answered.
+            // A blank provenance line is the honest reading of that — do not invent one.
             _enhanced = enhanced?.positive
                 ? { source: positiveValue, positive: String(enhanced.positive) }
                 : null;
@@ -1499,6 +1503,14 @@ export const MpiPromptBox = ComponentFactory.create({
         const popupEl = document.createElement('div');
         popupEl.innerHTML = MpiPopup.template({ active: false, position: 'top' }, `
             <div class="mpi-prompt-box__settings">
+                <!-- The LoRAs this model is running (MPI-724). FIRST child, and the
+                     one exception to the "a top section jumps under the cursor" note
+                     below: it only changes when the MODEL changes, which the op strip
+                     at the bottom cannot cause, and _refreshLoraRack re-anchors the
+                     popup afterwards. Read-out plus two knobs — picking a LoRA file
+                     stays on the model card (MPI-356). Renders nothing when the model
+                     has none. -->
+                <div id="settings-lora-slot"></div>
                 <div class="mpi-prompt-box__settings-grid">
                     <!-- "?" for the ACTIVE op (MPI-360). LAST item of the control
                          row, not a row of its own: margin-left:auto pins it to the
@@ -1568,8 +1580,17 @@ export const MpiPromptBox = ComponentFactory.create({
             });
         };
 
+        /** MpiLoraRack, mounted below once cogBtn exists. */
+        let _loraRack = null;
+
         const openPopup = () => {
             popupActive = true;
+            // No rack refresh here, deliberately (MPI-724). Its own listener is
+            // subscribed whether this popup is shown or not, so an edit made in the
+            // LoRA & Upscale overlay while it was shut has already landed — and a
+            // read on open lands inside projectService's ~300ms debounce, which is
+            // measurably WORSE than not reading: it showed an empty rack for LoRAs
+            // that had just been set.
             positionPopup();
             popupNode.classList.add('is-active');
             cogBtn.el.classList.add('is-active');
@@ -1635,6 +1656,17 @@ export const MpiPromptBox = ComponentFactory.create({
         cogBtn.on('click', () => {
             if (popupActive) closePopup(); else openPopup();
         });
+
+        // ── LoRA rack (MPI-724) ────────────────────────────────────────────────
+        // Mounted here, after cogBtn, because a row-count change re-anchors the
+        // popup and positionPopup() measures against the cog. The 'resized'
+        // listener is attached AFTER mount on purpose: mount runs its first render
+        // synchronously, and a listener present by then would call positionPopup
+        // before `cogBtn` is even assigned.
+        _loraRack = MpiLoraRack.mount(qs('#settings-lora-slot', popupNode), {
+            modelId: model?.id ?? null,
+        });
+        _loraRack.on('resized', () => { if (popupActive) positionPopup(); });
 
         // A click that STARTED inside the popup, recorded in the capture phase —
         // before any handler can re-render. The op strip in the popup header
@@ -1840,6 +1872,11 @@ export const MpiPromptBox = ComponentFactory.create({
             // live by setModel/setModelList without a remount. Both converge here.
             _refreshNegToggle();
 
+            // MPI-724: the LoRA rack is model-gated in the same way — a different
+            // model means different LoRAs, or none. One call site, here, because
+            // every path that reassigns `model` funnels through this function.
+            _loraRack?.el.setModel(model?.id ?? null);
+
             // The enhance control is OP-gated (edit and inpaint get none at all), and
             // the op is reassigned live by setOperation. Same convergence point.
             _refreshEnhanceBtn();
@@ -1948,7 +1985,7 @@ export const MpiPromptBox = ComponentFactory.create({
         // navigating away and back does not silently downgrade an approved enhancement
         // to the short prompt. `_syncEnhancedState()` drops it if the restored text and
         // the stored source have drifted apart.
-        /** @type {{source: string, positive: string}|null} */
+        /** @type {{source: string, positive: string, note?: {text: string, kind: string}}|null} */
         let _enhanced = _draft.enhanced?.positive ? { ..._draft.enhanced } : null;
 
         function _enhanceToast(message, variant) {
@@ -1978,19 +2015,25 @@ export const MpiPromptBox = ComponentFactory.create({
                 prompt: positiveValue,
                 model,
                 // Reopening on an existing enhancement, so Cancel is non-destructive and
-                // OK is not the only way to keep what is already approved.
+                // OK is not the only way to keep what is already approved. `note` rides
+                // along because it is the only surface the FALLBACK WARNING has: without
+                // it, reopening showed the enhancement with a blank provenance line and
+                // the "this model matched no recipe" warning silently vanished.
                 enhanced: _enhanced
-                    ? { positive: _enhanced.positive, negative: negativeValue }
+                    ? { positive: _enhanced.positive, negative: negativeValue, note: _enhanced.note }
                     : undefined,
             });
             const _close = () => { _enhanceDialog?.destroy?.(); _enhanceDialog = null; };
             _enhanceDialog.on('cancel', _close);
-            _enhanceDialog.on('apply', ({ shortPrompt, positive, negative }) => {
+            _enhanceDialog.on('apply', ({ shortPrompt, positive, negative, note }) => {
                 positiveValue = String(shortPrompt ?? '');
                 // An EMPTY lower box means "not enhanced, run my words raw" — the rule
                 // Character Sheet already states in its own help text. It is how a user
                 // backs out of an enhancement without backing out of their prompt.
-                _enhanced = positive ? { source: positiveValue, positive } : null;
+                // `note` is the provenance of THIS text, so it is stored with it and
+                // dropped with it — a cleared box and a stale enhancement both leave
+                // nothing behind to mis-describe the next run.
+                _enhanced = positive ? { source: positiveValue, positive, note: note || null } : null;
                 // Only a recipe that produced a second channel writes the negative. A
                 // prose recipe returns none, and blanking the user's own negative
                 // because this recipe had nothing to say about it would be a silent
@@ -2416,6 +2459,10 @@ export const MpiPromptBox = ComponentFactory.create({
             _picker?.el?.destroy?.();
             _picker = null;
             _addBtn?.destroy?.();
+            // MPI-724: the rack holds an Events subscription, so dropping popupNode
+            // below would leak it — it lives inside the portaled popup, not in `el`.
+            _loraRack?.el?.destroy?.();
+            _loraRack = null;
             domObserver.disconnect();
             if (popupNode.parentNode) popupNode.parentNode.removeChild(popupNode);
             _stripEl.remove();
