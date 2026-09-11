@@ -1,13 +1,13 @@
 {
   "schema": "mpi-kanban/task-card/v1",
   "id": "MPI-720",
-  "title": "Build an UNRELEASED 1.5.1 off the release line and hand the beta user a delta bundle to verify the slow-install fixes",
-  "description": "MPI-717's three download fixes (MPI-716 telemetry, MPI-718 retry budget, MPI-719 scan race) can only be verified on the reporter's own machine: no link here sustains 20-40 KB/s and no harness can fake his disk. Port them onto the release line, stamp 1.5.1, BUILD but do NOT release - he applies the 1.5.0 -> 1.5.1 delta bundle offline with update-from-zip.bat, keeping his projects, models and engine, then sends back app.log. Procedure and every trap: tasks/<id>/brief.md. Cut the real release only after he confirms.",
+  "title": "Build a 1.5.0 -> master update delta so the reporter can verify the download fixes - no 1.5.1, the fix ships to everyone in 2.0",
+  "description": "MPI-717's three download fixes (MPI-716 telemetry, MPI-718 retry budget, MPI-719 scan race) can only be verified on the reporter's own machine: no link here sustains 20-40 KB/s and nothing here reproduces real mid-transfer blips. Fabio 2026-09-11: NO 1.5.1 - the 1.5.x line is already set up so its next update is 2.0, and a patch release there is the whole release loop for one verification. He gets MASTER as an update-only delta over his 1.5.0 install; the fix then ships to everyone in 2.0 with his run as the evidence. Measured: SCHEMA_VERSION is 4 both sides so his projects are safe, engine core pin is identical but master adds 5 custom nodes, and master's APP_VERSION 1.4.2 is LOWER than his 1.5.0 - so the build must be stamped ahead with --version or the update checker offers him 1.5.0 and reverts it. Procedure and every trap: tasks/MPI-720/brief.md.",
   "column": "todo",
   "maturity": "planned",
   "status": "active",
   "created_at": "2026-09-11T01:29:02+01:00",
-  "updated_at": "2026-09-11T01:29:02+01:00",
+  "updated_at": "2026-09-11T01:44:52+01:00",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",

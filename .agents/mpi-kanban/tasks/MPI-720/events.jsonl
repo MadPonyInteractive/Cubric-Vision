@@ -1,1 +1,2 @@
 {"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-720", "at": "2026-09-11T01:29:02+01:00", "actor": "claude", "column": "todo", "title": "Build an UNRELEASED 1.5.1 off the release line and hand the beta user a delta bundle to verify the slow-install fixes"}
+{"schema": "mpi-kanban/event/v1", "type": "task.updated", "id": "MPI-720", "at": "2026-09-11T01:44:52+01:00", "actor": "claude", "fields": ["title", "description"], "reason": "Retargeted from an unreleased 1.5.1 to a 1.5.0 -> master delta (Fabio, 2026-09-11)."}

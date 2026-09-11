@@ -342,6 +342,21 @@
   now offers **Remove files** next to Install whenever it is holding files, and removing
   them still keeps anything another installed model needs.
 
+- A big download survives a shaky connection. Vision retries a download that drops, but the
+  three attempts were counted once per file for the life of the install — so a large model on
+  a connection that hiccups every few minutes ran out of attempts and failed, however much of
+  it had arrived in between. One install lost a 25 GB model with over 3 GB already on disk.
+  The attempts are now spent on failures that make no progress: a download that gets a
+  meaningful amount further before dropping again gets its retries back, and picks up from
+  where it stopped rather than starting over. A connection that delivers nothing at all still
+  gives up as quickly as it did before.
+
+- Cancelling an install no longer leaves the Model Library showing the wrong thing. Cancelling
+  deletes the part-downloaded file and its marker, and a library refresh that happened to be
+  reading the models folder at that moment failed outright — so the library kept showing
+  whatever it showed before the cancel until something else refreshed it. Reading that folder
+  now expects files to come and go while an install is running.
+
 - Clicking away closes a panel now, wherever you are. Settings, Hotkeys and About stayed
   open until you found the X or pressed Escape, while other panels in the app closed the
   moment you clicked outside them — the same gesture did two different things depending on

@@ -155,6 +155,11 @@ When creating or editing cards (`.agents/mpi-kanban/tasks/<id>/task.json`):
     Members otherwise stay untouched — same column, same maturity, same `files.json`. An
     umbrella never closes, merges or moves its members; each closes when the phase covering
     it lands.
+    **The umbrella itself closes when its last member does** — it moves `todo -> done` like
+    any other card, carrying no code of its own, so its `validation.md` records the ordering
+    that justified it and what it leaves behind, not fresh evidence. "An umbrella never moves"
+    is a misreading of the line above (it never moves its MEMBERS) and it cost MPI-717 a
+    handoff asserting the container should outlive them.
     Do not copy the shape off a neighbouring card, the same trap as rule 5: MPI-542 (`done`)
     carries `children` + a `labels: ["umbrella"]` from an older convention, and MPI-541
     carried a matching `parent` until 2026-08-14. Both predate the current shape; MPI-552 /
