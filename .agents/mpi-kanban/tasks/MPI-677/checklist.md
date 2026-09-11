@@ -71,7 +71,14 @@ in the card description are retired; `plan.md` carries the mapping note.
         whole chain except the sidecar write/read, which needs a real generation and a
         reload. That leg is unit-tested and source-asserted, not driven**
   - [ ] **Fabio's user-ux pass — the gate, and the only thing left on step 1c.**
-        Everything under the UI is proven; what is owed is a person looking at it
+        Everything under the UI is proven; what is owed is a person looking at it.
+        **UNDERWAY 2026-09-11, two defects found and fixed** (validation.md):
+        provenance was dropped on reopen, taking the fallback warning with it
+        (`4f493f4f`); the toast on OK is gone and the feedback moved into the wait
+        as a spinner over the enhanced box (`238d3081`). **Still owed:**
+        `OK → reopen → Cancel → reopen`, the separate-field negative channel (needs
+        an SDXL / Pony / Illustrious / Kling card), the operation gate, and Reuse
+        **after an app reload** — the one leg nothing has ever driven
 - [ ] Step 1d — Fabio's GPU measurement of the ComfyUI backend *(not a gate)*
 - [x] Step 2 — cut the cord (broker surface + `@cubric/connector` dependency)
   - [x] Deleted `services/brokerBoot.js`, `services/connectorResponder.js`,

@@ -577,3 +577,82 @@ uncommitted diff is anonymous**, and the peer's caution was right — but the co
 that the record now warns the next reader off work that is finished. Corrected in the
 handoff itself; the lesson is to commit a structural deletion promptly rather than
 leaving the tree ambiguous across sessions.
+
+---
+
+## Step 1c — what Fabio's user-ux pass has found so far (2026-09-11)
+
+The pass is UNDERWAY, not finished. Two defects found and fixed; the step stays open.
+
+### 1. Reopening an approved enhancement dropped its provenance (`4f493f4f`)
+
+`_note()` was only ever called inside `_run()`, and nothing seeded it from
+`props.enhanced`. So reopening restored the enhanced text into the lower box with a
+**blank** note line.
+
+That line is not decoration — **it is the only surface the fallback warning has.**
+When a model's key matches no recipe the pinned fallback answers anyway, which is
+exactly how two MiniMax-H3 *video* cards were enhanced by the `chroma` *image*
+recipe for a week without anything failing loudly. On reopen the enhancement was
+kept and the warning about it silently vanished.
+
+Provenance now belongs to the **text**, not to the run: recorded on a successful
+run, emitted with `apply`, stored on `_enhanced`, seeded back on reopen, and
+dropped exactly when the text is. A failed re-run still renders its error without
+recording it, because the previous text is still standing and its provenance is
+still the true one. Reuse deliberately gets none — the sidecar stores `sourcePrompt`
+and nothing else, so a blank line is the honest reading there.
+
+### 2. A toast on every OK, and no signal during the run (`238d3081`)
+
+Fabio: the toast fired on every press and was annoying. It was also in the wrong
+place — a confirmation for an action the user just took is noise, and the part of
+the flow with no signal in it was the **wait**. `_enhanceToast` had exactly one
+call site and went with it; `MpiSpinner` now covers the enhanced box while a run is
+in flight. Raised before the call, cleared in **`finally`** — a spinner that
+survives a failed run leaves the box reading busy forever, which is worse than no
+spinner. Its scrim takes the pointer too, so a run cannot be typed into and then
+overwritten by its own result.
+
+### A test-script defect that was mine, not the app's
+
+My step-4 instruction said "Cancel, then reopen, the enhancement should still be
+there" and Fabio correctly reported it as a failure. **Cancel is supposed to
+discard.** `_enhanced` is set only on `apply`; the property that exists is narrower
+— *Cancel is non-destructive to an ALREADY-APPROVED enhancement*, i.e. `OK → reopen
+→ Cancel → reopen` keeps it. What was driven live in the original pass was `OK →
+reopen`, and the script generalised it into something the code never claimed.
+**A user-ux script derived from a validation table must quote the table's
+precondition, not just its outcome** — otherwise the tester spends a cycle
+reporting a false defect, and the next reader cannot tell it was false.
+
+### Verified
+
+3 + 2 new source-contract tests in `tests/enhance-overlay.test.cjs` (**15/15** in
+that file), `npm test` **921/921**, `npm run lint` clean. Each of the five
+provenance assertions was run against **HEAD's pre-fix source** and confirmed to
+FAIL there — a source-contract test that passes on both versions proves nothing.
+
+### Still owed on 1c
+
+`OK → reopen → Cancel → reopen`; the separate-field negative channel (needs an
+**SDXL / Pony / Illustrious / Kling** card — the pass so far ran on a prose recipe,
+which cannot produce a second channel); the operation gate; and **Reuse after an
+app reload**, still the one leg nothing has ever driven.
+
+### A shared-index mistake worth writing down, because the rule as written does not prevent it
+
+`238d3081` **swept in nine files that were not mine** — `docs/proprietary-models-research/**`,
+3,098 lines belonging to the concurrent session. They staged them in the shared
+index in the gap between my `git status` check and my `git commit`. Their content
+is intact on master, but under my commit message and earlier than they chose. Not
+unpicked: undoing another live session's files mid-flight is a second uncoordinated
+action on work already disturbed once.
+
+**`behaviour.md` says stage by pathspec and forbids `git commit --only` — and in a
+shared index those two rules collide.** `git add <paths>` does not constrain what
+`git commit` writes; the commit takes the whole index, including anything a peer
+staged a second ago. `git commit -- <paths>` is the only form that commits *what
+you named*, and it is the form the rule bans. The ban was written against sweeping
+work in; here it is what allows it. Checking `git status` first does not help — the
+race is between the check and the commit.

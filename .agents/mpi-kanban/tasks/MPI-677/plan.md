@@ -99,10 +99,35 @@ hour. **Read the WORKING TREE, not just the history, before claiming any step's
 state.** And a user-ux pass on 1c now exercises the post-step-2 tree, not the
 `8059690a` state it was measured on.
 
-**What is left in step 1 is the OVERLAY (1c) and one GPU measurement (1d).**
-Until 1c lands, the control writes the enhanced text straight back into the
-prompt box, exactly as the broker path did; the seam is marked in
-`MpiPromptBox.js` with a `ponytail:` comment.
+**STEP 2 IS COMMITTED AND PUSHED — `3b8052d6` (code) + `6e01befb` (card).** The
+four KEEP routes were verified live on a booted server, `/connector/enhance`
+returns 404, and `POST /llm/enhance` still answers `ok:true`. Full account in
+`validation.md`'s step-2 section.
+
+**FABIO'S STEP-1C USER-UX PASS IS UNDERWAY and has already found two things,
+both fixed and pushed** (`4f493f4f`, `238d3081`):
+
+1. **Reopening an approved enhancement showed a BLANK provenance line.** `_note()`
+   was only ever called inside `_run()`. That line is the only surface the
+   FALLBACK WARNING has, so reopening kept the enhancement and silently dropped
+   the warning that it came from a recipe the model never matched. Provenance now
+   travels with the text: recorded on a successful run, emitted with `apply`,
+   stored on `_enhanced`, seeded back on reopen. Reuse deliberately gets none —
+   the sidecar stores `sourcePrompt` and nothing else, so a blank line is honest.
+2. **The toast on OK is gone, and the feedback moved into the wait.** A
+   confirmation for an action the user just took is noise; the part of the flow
+   carrying no signal was the RUN. `MpiSpinner` now covers the enhanced box while
+   a run is in flight, cleared in `finally` so a failed run cannot leave the box
+   reading busy forever.
+
+**What is left in step 1 is THE REST OF FABIO'S 1C PASS and one GPU measurement
+(1d).** The steps he has not reached: OK → reopen → Cancel → reopen (the
+Cancel-is-non-destructive property, which holds only for an ALREADY-APPROVED
+enhancement — an unapproved one is *supposed* to be discarded, and a test script
+that says otherwise will report a false defect), the separate-field negative
+channel (needs an SDXL / Pony / Illustrious / Kling card — a Krea/Chroma card
+cannot show it), the operation gate, and Reuse **after an app reload**, which is
+the one leg nothing has ever driven.
 
 **Renames in flight (Fabio, 2026-09-08) — another agent is carding these; do not
 create those cards and do not rename anything from this card.**
