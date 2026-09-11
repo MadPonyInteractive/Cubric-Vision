@@ -180,7 +180,11 @@ export const Events = new EventBus();
  * 'settings:tool:update'  { toolKey: string,  key: string, value: any } — partial tool setting update (queued + debounced)
  *
  * Media events:
- * 'media:imported'        { url: string, filename: string, mediaType: string } — file imported via PromptBox drop
+ * 'media:imported'        { url, filename, itemId, mediaType, thumbPath, thumbPathLg, proxyPath,
+ *                           pixelDimensions, fps, duration, frameCount, hasAudio }
+ *                                                                  — a media file finished importing. ONE listener builds the
+ *                                                                    ItemGroup: mediaImportService (app-lifetime, started from
+ *                                                                    shell.js). Never add a second one inside a Block (MPI-723).
  * 'media:deleted'         { count: number }                                    — media files removed from disk
  *
  * Project stats events (consumed by projectStatsService):

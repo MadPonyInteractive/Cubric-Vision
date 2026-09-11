@@ -1,0 +1,22 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-723",
+  "title": "A media import outside the Gallery never becomes a card - move the ItemGroup build out of MpiGalleryBlock",
+  "description": "media:imported has exactly ONE listener and it lives inside MpiGalleryBlock, but one block is mounted at a time - so an import from the history workspace (PromptBox drop, the MPI-721 + picker's upload card, Record) writes the file and its sidecar to disk and never builds the ItemGroup. Split that listener: the item/group/addGroup half moves to an app-lifetime service, the grid repaint stays in the block. The importer must NOT navigate - a drop in an image history group adds the gallery card and leaves the user on the group they are editing. Plan: plan.md",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "created_at": "2026-09-11T02:34:41+01:00",
+  "updated_at": "2026-09-11T03:55:00+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  },
+  "activeSessionTitle": "MPI-723 move the ItemGroup build out of MpiGalleryBlock"
+}

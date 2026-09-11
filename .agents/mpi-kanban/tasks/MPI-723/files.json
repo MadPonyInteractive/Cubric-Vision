@@ -1,0 +1,19 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "id": "MPI-723",
+  "source": "Paths named by tasks/MPI-723/plan.md - Implementation",
+  "files": [
+    "js/services/mediaImportService.js",
+    "js/shell.js",
+    "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
+    "js/shell/navigation.js",
+    "js/components/Compounds/MpiProjectName/MpiProjectName.js",
+    "js/events.js",
+    "docs/gallery.md",
+    ".agents/mpi-kanban/tasks/MPI-723/",
+    "tests/media-import-single-listener.test.cjs",
+    "docs/events.md",
+    "tests/desktop/media-import-outside-gallery.spec.js"
+  ],
+  "note": "The ItemGroup build moves to js/services/mediaImportService.js, started once from js/shell.js like projectStatsService. MpiGalleryBlock keeps only the grid repaint (its existing project:group-added listener already does it). The media:imported EMIT sites (MpiPromptBox, MpiGroupHistoryBlock, MpiAudioRecorder, MpiMediaDropOverlay) are NOT owned - nothing about the emit changes. MpiMediaDropOverlay/_fillPlaceSlotFromFile untouched (MPI-454 Place arming)."
+}

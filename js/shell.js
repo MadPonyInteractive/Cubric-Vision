@@ -41,6 +41,7 @@ import { initProjectUI, loadProjectGrid } from './shell/projectUI.js';
 import { initHeroStats } from './shell/heroStats.js';
 import { initHeroQuote } from './shell/heroQuote.js';
 import { start as startProjectStats } from './services/projectStatsService.js';
+import { start as startMediaImport } from './services/mediaImportService.js';
 import { triggerMemoryRelease, bindMemoryHotkeys } from './shell/memoryOps.js';
 import { StatusBar } from './shell/statusBar.js';
 import { initNavigation, handleNavigation, updateTitlebarProject } from './shell/navigation.js';
@@ -191,6 +192,7 @@ export async function initShell() {
   initHeroStats();
   initHeroQuote();   // MPI-696 — one draw per boot, never per navigation
   startProjectStats();
+  startMediaImport();  // MPI-723 - the media:imported -> ItemGroup build, app-lifetime
   StatusBar.init();
   StatusBar.listen();
   bindWindowControls();

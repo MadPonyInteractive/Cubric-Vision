@@ -45,9 +45,7 @@ import { addGroup, updateGroup, removeGroup, persistGroups, validatePreviewAsset
 import { trackConcatJob } from '../../../services/concatProgress.js';
 import { buildPromptReuseSettings, resolvePromptReuseMediaItems, payloadHasReusableImages, payloadHasReusableVideos, payloadHasReusableAudio } from '../../../utils/promptReuse.js';
 import {
-    createImageItem,
     createVideoItem,
-    createAudioItem,
     createItemGroup,
     appendToHistory,
     getSelectedItem,
@@ -144,8 +142,9 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // The button itself lives in the grid's toolbar beside the volume — that
         // row is the only gallery toolbar that reaches the DOM, because the grid's
         // mount sets `el.innerHTML` and wipes this block's own header (pre-existing,
-        // left alone). The recorder stays here: the block owns the project and
-        // already listens for the `media:imported` the import fires.
+        // left alone). The recorder stays here because the block owns the project;
+        // the ItemGroup a recording becomes is built by mediaImportService, not
+        // here — one app-lifetime listener for every ingest surface (MPI-723).
         //
         // The gallery is where a recording belongs and the only place it can be
         // reached today: a clip is project media like any other, and from a card the
@@ -1687,76 +1686,23 @@ export const MpiGalleryBlock = ComponentFactory.create({
 
         // Settled, not completed: this fires on failure too, so a refused import
         // clears its card instead of spinning forever beside the ui:danger toast.
-        // It lands just BEFORE the `media:imported` that mounts the real card —
+        // It lands just BEFORE the `media:imported` that starts the real card —
         // the service settles in a `finally`, the caller emits `imported` on the
-        // next microtask — so the two setGroups drain before the frame paints and
-        // the swap is not visible as a gap.
+        // next microtask. Since MPI-723 the real card arrives one step later
+        // still, on the `project:group-added` that mediaImportService's addGroup
+        // emits once project.json is written, so the swap costs one persist
+        // round-trip rather than a microtask.
         _unsubs.push(Events.on('media:import-settled', ({ tempId }) => {
             if (!_importPlaceholders.delete(tempId)) return;
             grid.el.setGroups([..._leadingGroups(), ..._visibleProjectGroups()]);
         }));
 
-        // ── media:imported listener — registered unconditionally.
-        // Must not be gated by promptBox presence; PromptBox may be remounted
-        // later (post-install) and drops need to create cards regardless.
-        _unsubs.push(Events.on('media:imported', ({ url, filename, itemId, thumbPath, thumbPathLg, proxyPath, mediaType, pixelDimensions, fps, duration, frameCount, hasAudio }) => {
-            if (!state.currentProject) return;
-
-            const isVideo = mediaType === 'video';
-            const isAudio = mediaType === 'audio';
-            const dims = pixelDimensions?.w > 0 && pixelDimensions?.h > 0
-                ? pixelDimensions
-                : null;
-            const displayName = filename
-                ? filename.replace(/\.[^.]+$/, '')
-                : (isVideo ? 'Imported Video' : isAudio ? 'Imported Audio' : 'Imported Image');
-
-            const id = itemId || filename.replace(/\.[^.]+$/, '');
-            const item = isVideo
-                ? createVideoItem({
-                    id,
-                    filePath: url,
-                    thumbPath,
-                    proxyPath,
-                    uploaded: true,
-                    operation: 'imported',
-                    pixelDimensions: dims || { w: 0, h: 0 },
-                    // Server-probed metadata so the card shows fps/duration on
-                    // the very first import without a reload (MPI-83 Bug 2).
-                    fps:        fps        ?? 0,
-                    duration:   duration   ?? 0,
-                    frameCount: frameCount ?? 0,
-                    hasAudio:   hasAudio   ?? false,
-                })
-                : isAudio
-                ? createAudioItem({
-                    id,
-                    filePath: url,
-                    uploaded: true,
-                    operation: 'imported',
-                    duration: duration ?? 0,
-                })
-                : createImageItem({
-                    id,
-                    filePath: url,
-                    thumbPath,
-                    thumbPathLg,
-                    uploaded: true,
-                    operation: 'imported',
-                    pixelDimensions: dims || { w: 0, h: 0 },
-                });
-
-            const group = createItemGroup(mediaType, {
-                name: displayName,
-                ...(dims ? { width: dims.w, height: dims.h } : {}),
-            });
-            const finalGroup = appendToHistory(group, item);
-
-            const currentGroups = state.currentProject?.itemGroups || [];
-            addGroup(finalGroup);
-
-            grid.el.setGroups([..._leadingGroups(), finalGroup, ...currentGroups]);
-        }));
+        // media:imported has NO listener here (MPI-723). Building the ItemGroup
+        // from inside a Block meant an import from any other workspace wrote the
+        // file and its sidecar to disk and never became a card - one Block is
+        // mounted at a time. The build is app-lifetime now
+        // (js/services/mediaImportService.js); the addGroup it calls emits
+        // project:group-added, which the listener above repaints this grid from.
 
 
         // ── Selection mode: show/hide PromptBox ────────────────────────────────
