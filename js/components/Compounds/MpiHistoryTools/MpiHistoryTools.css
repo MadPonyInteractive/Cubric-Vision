@@ -8,6 +8,11 @@
     flex-direction: column;
     align-items: center;
     gap: 0.25rem;
+    /* The rail's width, not the icons'. Both this and its parent centre their
+       children, so without it this box shrank to the widest ICON (~32px) — and the
+       labels below, being `width: 100%` of THAT, overflowed centred and lost their
+       first letter to the rail's `overflow-x: hidden` ("RANSFORM", "OMPOSITE"). */
+    width: 100%;
 }
 
 .mpi-history-tools__label {

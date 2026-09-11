@@ -49,6 +49,17 @@ Opened when user clicks a card from gallery. Lazy-loaded by `js/shell/navigation
 
 **PromptBox gating:** `_hasPromptOps()` — true iff active model exposes ≥1 enabled prompt op. Recomputed on model/install-state changes. Video groups with prompt-capable models get PromptBox too.
 
+**Media contract — IMAGE groups (MPI-721).** The media strip IS the slot order, and nothing a run consumes is off-screen.
+- The **active entry is an ordinary numbered chip**, pinned: no remove pill, still reorderable. `_setCurrentIdx()` is the ONE place the selection moves and it re-points the chip through `_syncEntryChip()` → `promptBox.el.setPinnedMedia()`. A new site that writes `_currentIdx` directly is a stale chip.
+- Reference media arrives through the **`+` card** at the head of the strip (`stageMedia: true` → `MpiMediaPicker`), or by dropping onto the PromptBox itself. **Order is meaning:** `_withAssignedRoles` fills the op's slots by strip position, so chip 1 is an edit's base — but on `control` it is the depth/pose map and the subject sits behind it. Reorder to choose.
+- `mediaItems` is passed to the dispatch **as-is**. No prepend, no discard — prepending the entry would double it. This supersedes MPI-351's clear-at-mount + discard-at-run workaround, and does it structurally: that bug was an INVISIBLE chip owning `Input_Image`, and there are no invisible chips here.
+- **Nothing persists.** `workspaceKey: 'history'` writes no `state.promptMedia` slot and restores none; the entry is rebuilt on every mount, references are per-edit.
+- `_baseCtx.imageCount` has no `Math.max(1, …)` floor — the entry is counted as a chip. The initial `{ imageCount: 1 }` stays: it is the bootstrap that unlocks the op list before any PromptBox exists.
+
+**The two drop zones are separate, and deliberately so.** `MpiMediaDropOverlay` (`inset: 0` on the *block root*) takes the full-area OS-file drop and fills the **Place** slot (MPI-454). The PromptBox stages a **chip** — `#prompt-box-mount` is shell-level (`index.html`), *outside* the block root, so the full-area overlay never covers it. Video groups keep the chip path on both (start/end frames).
+
+**VIDEO groups are not this.** Their source clip is never a chip: frames come from `MpiToolOptionsPrompt`'s dedicated start/end slots, the strip stays CSS-hidden, and `_generationFromPromptPayload` still resolves the current item in code. The two branches are split on purpose — do not collapse them.
+
 ## Shell-level singletons (always present)
 Mounted once in `js/shell.js`, independent of active workspace:
 - `MpiErrorDialog` — shown on `ui:error` event

@@ -8,6 +8,7 @@ import { Events } from '../../../events.js';
 import { renderIcon } from '../../../utils/icons.js';
 import { commands, getAvailableCommands, getCommandComponents, getCommandMediaInputs, filterMediaInputsForModel, matchRefTagQuery, stripOrdinalMediaRoles, modelShowsStyleRack, modelShowsRatio, modelShowsBatch, modelControlTypes, getOpHelp, isTextOnlyOp, pickTextOnlyOp, opAllowsEnhance } from '../../../data/commandRegistry.js';
 import { MpiOpHelpDialog } from '../../Compounds/MpiOpHelpDialog/MpiOpHelpDialog.js';
+import { MpiMediaPicker } from '../../Compounds/MpiMediaPicker/MpiMediaPicker.js';
 import { getModelDepStatus, tierLetterFor } from '../../../data/modelRegistry.js';
 import { usesQualityTier } from '../../../utils/ratios.js';
 import { deriveInstalledOps } from '../../../data/modelConstants/resolveModelDeps.js';
@@ -38,6 +39,10 @@ import { MpiEnhanceDialog } from '../../Compounds/MpiEnhanceDialog/MpiEnhanceDia
  *   el.clearMedia()
  *   el.removeMedia(id)
  *   el.injectMedia({ url, mediaType, role?, name? })  — role tags chip to a slot key (e.g. 'startFrame', 'endFrame'); name is the user-facing chip label (customName/derived)
+ *   el.setPinnedMedia({ url, name? } | null)  — the WORKSPACE'S OWN image as an ordinary
+ *                                     numbered chip: no remove pill, still reorderable.
+ *                                     Replaces in place (keeps its strip position), or
+ *                                     inserts at the head the first time; null removes it
  *   el.getMediaByRole(role)         — returns role-assigned item or undefined
  *   el.removeMediaByRole(role)      — removes the chip currently assigned to that role
  *   el.swapMediaRoles(roleA, roleB) — flips role tags between two chips (no re-upload)
@@ -110,6 +115,15 @@ export const MpiPromptBox = ComponentFactory.create({
         const _wsId = props.workspaceId ?? null;
         const _matchesSlot = (saved) => (saved?.id ?? null) === _wsId;
 
+        // MPI-721: this box stages its own reference media. Two effects, one prop,
+        // because they are the same statement: a `+` button at the head of the strip
+        // (MpiMediaPicker — the project's own gallery, plus the filesystem through its
+        // upload card), and the strip itself made visible in history mode, where CSS
+        // otherwise hides it because MpiToolOptionsPrompt owns the video frame thumbs.
+        // Default OFF: the gallery box keeps drag-drop as its only origin.
+        const _stageMedia = props.stageMedia === true;
+        if (_stageMedia) el.classList.add('mpi-prompt-box--stage-media');
+
         const _draftSlot = state.promptDraft?.[_wsKey] || {};
         const _draft = _matchesSlot(_draftSlot) ? _draftSlot : {};
         let positiveValue      = props.value || _draft.positive || '';
@@ -165,6 +179,12 @@ export const MpiPromptBox = ComponentFactory.create({
         // 404 if restored.
         function _saveMedia() {
             if (_restoringMedia) return;
+            // MPI-721: history persists NOTHING. Its chips are the active entry (rebuilt
+            // from the group on every mount) plus the references the user picked for THIS
+            // edit — neither survives leaving the workspace by design. Persisting them is
+            // exactly what let a stale invisible chip own Input_Image for hours (MPI-351).
+            // Gallery still persists: it has no entry to rebuild itself from.
+            if (_wsKey === 'history') return;
             const items = el.getMediaItems()
                 .filter(m => typeof m.url === 'string' && !m.url.startsWith('blob:'))
                 .map(({ url, mediaType, role, name }) => ({ url, mediaType, role, name }));
@@ -465,14 +485,24 @@ export const MpiPromptBox = ComponentFactory.create({
                 if (sameRole) _removeItem(sameRole.id, { silent: true });
             }
 
-            const afterRoleDrop = _mediaItems.filter(m => m.mediaType === mediaType);
+            // MPI-721: capacity never evicts the pinned chip. It is the workspace's own
+            // image — the thing the box generates FROM — so dropping it to make room
+            // would silently run the edit on something else. The MPI-292 up-jump above is
+            // the correct response to a slot shortage; when the model has no bigger op
+            // there is genuinely nowhere for the new chip to go, so say so and stop.
+            const pinnedCount = _mediaItems.filter(m => m.mediaType === mediaType && m.pinned).length;
+            const evictable = _mediaItems.filter(m => m.mediaType === mediaType && !m.pinned);
+            if (pinnedCount >= maxCount) {
+                _showMediaToast('No free slot for another image on this operation.');
+                return;
+            }
             if (maxCount === 1) {
-                afterRoleDrop.forEach(item => _removeItem(item.id, { silent: true }));
-            } else if (afterRoleDrop.length >= maxCount) {
+                evictable.forEach(item => _removeItem(item.id, { silent: true }));
+            } else if (pinnedCount + evictable.length >= maxCount) {
                 // MPI-292: evict the LAST chip, not the first. Chip 1 is the edit's
                 // base image — a drop at capacity replaces the trailing chip and
                 // leaves the base intact.
-                _removeItem(afterRoleDrop[afterRoleDrop.length - 1].id, { silent: true });
+                _removeItem(evictable[evictable.length - 1].id, { silent: true });
             }
 
             const item = { id: crypto.randomUUID(), url, file: file || null, mediaType, source };
@@ -480,6 +510,36 @@ export const MpiPromptBox = ComponentFactory.create({
             if (name) item.name = name; // user-facing name (customName/derived) for chip label
             _mediaItems.push(item);
             _emitMediaChange();
+        }
+
+        /**
+         * Bring an OS file in: upload it into the project when there is one, stage it,
+         * and announce the import. Shared by the drop handler and the `+` picker's own
+         * upload card, so a file reaches the strip identically whichever surface
+         * brought it — the same split MpiToolOptionsPlace makes with `place.importFile`.
+         */
+        async function _importMediaFile(file, mediaType) {
+            const project = state.currentProject;
+            const uploaded = project
+                ? await uploadMediaFile(file, mediaType, project.folderPath, project.id)
+                : null;
+            // No project → a blob: url, which _saveMedia deliberately never persists.
+            _tryAddMedia({
+                url: uploaded ? uploaded.filePath : URL.createObjectURL(file),
+                file,
+                mediaType,
+                source: 'file',
+            });
+            if (!uploaded) return;
+            emit('media-imported', { url: uploaded.filePath, filename: uploaded.filename, itemId: uploaded.itemId, mediaType, source: 'file' });
+            Events.emit('media:imported', {
+                url: uploaded.filePath,
+                filename: uploaded.filename,
+                itemId: uploaded.itemId,
+                thumbPath: uploaded.thumbPath,
+                pixelDimensions: uploaded.pixelDimensions,
+                mediaType,
+            });
         }
 
         // ── Drop events (on root el; overlay toggled via root modifier) ───────
@@ -546,27 +606,7 @@ export const MpiPromptBox = ComponentFactory.create({
                 if (!mediaType) return;
                 if (!_acceptsMediaType(mediaType)) { _showIncompatibleToast(); return; }
 
-                const project = state.currentProject;
-                const uploaded = project
-                    ? await uploadMediaFile(file, mediaType, project.folderPath, project.id)
-                    : null;
-                const fileUrl = uploaded
-                    ? uploaded.filePath
-                    : URL.createObjectURL(file);
-
-                _tryAddMedia({ url: fileUrl, file, mediaType, source: 'file' });
-
-                if (uploaded) {
-                    emit('media-imported', { url: uploaded.filePath, filename: uploaded.filename, itemId: uploaded.itemId, mediaType, source: 'file' });
-                    Events.emit('media:imported', {
-                        url: uploaded.filePath,
-                        filename: uploaded.filename,
-                        itemId: uploaded.itemId,
-                        thumbPath: uploaded.thumbPath,
-                        pixelDimensions: uploaded.pixelDimensions,
-                        mediaType,
-                    });
-                }
+                await _importMediaFile(file, mediaType);
             }
 
             _unsubs.push(on(el, 'drop', (e) => {
@@ -580,7 +620,11 @@ export const MpiPromptBox = ComponentFactory.create({
         el.imageCount    = 0;
         el.videoCount    = 0;
         el.getMediaItems = () => _withAssignedRoles();
-        el.clearMedia    = () => [..._mediaItems].forEach(m => _removeItem(m.id));
+        // MPI-721: clears STAGED media. The pinned chip is not staged — it is the
+        // workspace's own image, owned by the block through setPinnedMedia — so a caller
+        // resetting the rail (Reuse Prompt, assets:cleaned) must not be able to orphan
+        // the strip from the canvas it generates on. Drop it with setPinnedMedia(null).
+        el.clearMedia    = () => _mediaItems.filter(m => !m.pinned).forEach(m => _removeItem(m.id));
         el.removeMedia   = (id) => _removeItem(id);
         el.getMediaByRole = (role) => _withAssignedRoles().find(m => m.role === role);
         el.removeMediaByRole = (role) => {
@@ -778,6 +822,44 @@ export const MpiPromptBox = ComponentFactory.create({
         _stripEl.className = 'mpi-prompt-box-media-strip';
         el.prepend(_stripEl);
 
+        // MPI-721: the `+` card. Created ONCE and re-appended by _renderStrip (which
+        // wipes the strip's innerHTML), so it survives every repaint and always sits
+        // at the head. Its presence also means a stageMedia strip is never `:empty`,
+        // which is what keeps the affordance on screen with no chips staged.
+        let _picker = null;
+        const _addBtn = _stageMedia
+            ? mountButton({
+                variant: 'ghost',
+                extraClasses: 'mpi-prompt-box-media-strip__add',
+            }, renderIcon('plus', 'md'))
+            : null;
+        if (_addBtn) {
+            _addBtn.title = 'Add a reference image';
+            _addBtn.setAttribute('aria-label', 'Add a reference image');
+            _unsubs.push(on(_addBtn, 'click', () => _openMediaPicker()));
+        }
+
+        /**
+         * The strip's second origin: project media the user is not currently looking
+         * at, plus the filesystem through the picker's own upload card. It portals to
+         * document.body and tears itself down on either outcome, so it never rides
+         * this box's lifecycle — but a workspace switch mid-pick would still orphan
+         * it, which is what the `destroy()` below covers.
+         */
+        function _openMediaPicker() {
+            _picker?.el?.destroy?.();
+            _picker = MpiMediaPicker.mount(document.createElement('div'), {
+                mediaType: 'image',
+                onPick: ({ filePath }) => el.injectMedia({ url: filePath, mediaType: 'image' }),
+                onImport: (files) => { if (files?.[0]) _importMediaFile(files[0], 'image'); },
+            });
+            const close = () => { _picker?.el?.destroy?.(); _picker = null; };
+            _picker.el.addEventListener('pick', close);
+            _picker.el.addEventListener('import', close);
+            _picker.el.addEventListener('cancel', close);
+            _picker.el.show();
+        }
+
         // Best-effort display name for an audio chip: the user-facing name
         // carried on the item (group customName/derived — MPI-130), else the
         // dropped File's name, else the basename of its project URL.
@@ -856,6 +938,7 @@ export const MpiPromptBox = ComponentFactory.create({
             }
 
             _stripEl.innerHTML = '';
+            if (_addBtn) _stripEl.appendChild(_addBtn);
             items.forEach((item, idx) => {
                 const chip = document.createElement('div');
                 chip.className = `mpi-prompt-box-media-strip__chip mpi-prompt-box-media-strip__chip--${item.mediaType}`;
@@ -910,24 +993,33 @@ export const MpiPromptBox = ComponentFactory.create({
                     rolePill.setAttribute('aria-label', _isEnd ? 'Use as start frame' : 'Use as last frame');
                     chip.appendChild(rolePill);
                 }
-                const removePill = mountButton({
-                    icon: 'close',
-                    size: 'sm',
-                    variant: 'ghost',
-                    extraClasses: 'mpi-prompt-box-media-strip__remove',
-                });
-                removePill.title = 'Remove';
-                chip.appendChild(removePill);
+                // MPI-721: a pinned chip is the WORKSPACE'S OWN image — the thing the
+                // box generates from — so there is no remove pill. It stays reorderable,
+                // because slot 1 is not always the base: on `control`, slot 1 is the
+                // depth/pose map and the subject sits behind it.
+                if (!item.pinned) {
+                    const removePill = mountButton({
+                        icon: 'close',
+                        size: 'sm',
+                        variant: 'ghost',
+                        extraClasses: 'mpi-prompt-box-media-strip__remove',
+                    });
+                    removePill.title = 'Remove';
+                    chip.appendChild(removePill);
+                }
                 if (items.length > 1) _makeChipReorderable(chip, item.id);
                 // Belt + suspenders: kill any drag that escapes draggable=false
                 // (browsers ignore the attr on some media elements during specific
                 // gesture sequences). Prevents the strip from acting as a source
                 // for OS-style file drags that would re-import on the gallery.
                 chip.addEventListener('dragstart', (e) => e.preventDefault());
-                on(qs('.mpi-prompt-box-media-strip__remove', chip), 'click', (e) => {
-                    e.stopPropagation();
-                    el.removeMedia?.(item.id);
-                });
+                const removeBtn = qs('.mpi-prompt-box-media-strip__remove', chip);
+                if (removeBtn) {
+                    on(removeBtn, 'click', (e) => {
+                        e.stopPropagation();
+                        el.removeMedia?.(item.id);
+                    });
+                }
                 // Mutate the LIVE item — `items` are role-assigned copies. Clearing the
                 // tag (rather than setting 'startFrame') lets the positional fill own the
                 // default, which is what keeps a lone untagged image on startFrame.
@@ -1061,22 +1153,60 @@ export const MpiPromptBox = ComponentFactory.create({
         // Init-time history-mode class (props.context may carry historyMode at mount)
         if (_context.historyMode === true) el.classList.add('mpi-prompt-box--history-mode');
 
-        function _showIncompatibleToast() {
+        function _showMediaToast(message) {
             const wrapper = document.createElement('div');
             wrapper.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;';
             document.body.appendChild(wrapper);
             const toast = MpiToast.mount(wrapper, {
-                message: 'Media type not supported for this model.',
+                message,
                 variant: 'warning',
                 duration: 3000,
             });
             toast.on('close', () => wrapper.remove());
         }
 
+        function _showIncompatibleToast() {
+            _showMediaToast('Media type not supported for this model.');
+        }
+
         el.injectMedia = ({ url, mediaType, role, name }) => {
             if (!_acceptsMediaType(mediaType)) { _showIncompatibleToast(); return false; }
             _tryAddMedia({ url, file: null, mediaType, source: 'app', role, name });
             return true;
+        };
+
+        /**
+         * MPI-721: point the pinned chip at the workspace's own image, or drop it.
+         *
+         * This is what lets the strip BE the slot order. MPI-351 closed a bug where an
+         * invisible staged chip silently owned Input_Image for every later run; the
+         * answer here is the opposite of hiding chips — the workspace's image becomes
+         * an ordinary numbered one, so nothing the run consumes is off-screen.
+         *
+         * Deliberately NOT routed through _tryAddMedia: this chip is not a user drop,
+         * so it must not trigger the capacity eviction or the MPI-292 op up-jump.
+         *
+         * @param {{url: string, name?: string}|null} value
+         */
+        el.setPinnedMedia = (value) => {
+            const idx = _mediaItems.findIndex(m => m.pinned);
+            if (!value?.url) {
+                if (idx !== -1) _removeItem(_mediaItems[idx].id);
+                return;
+            }
+            // A FRESH id on every re-point, deliberately: _renderStrip's reorder fast
+            // path keys on the item set, so reusing the id would skip the repaint and
+            // leave the previous entry's <img src> on screen under the new one's meaning.
+            const item = { id: crypto.randomUUID(), url: value.url, file: null, mediaType: 'image', source: 'app', pinned: true };
+            if (value.name) item.name = value.name;
+            // Replace IN PLACE. The chip's position is the user's slot choice — chip 1
+            // is an edit's base, but on `control` the depth/pose map leads and the
+            // subject sits behind it — so a re-point must not send it back to the head.
+            // Spliced rather than _removeItem'd: source is always 'app' (a project
+            // path), so there is no object URL to revoke, and the index must survive.
+            if (idx === -1) _mediaItems.unshift(item);
+            else _mediaItems.splice(idx, 1, item);
+            _emitMediaChange();
         };
 
         // Remaining slots for `mediaType` under the current operation. Used by
@@ -2209,7 +2339,17 @@ export const MpiPromptBox = ComponentFactory.create({
         // even if the initial op is text-only — adding it then auto-switches to a
         // media op via _emitMediaChange. Reuse Prompt clears+replaces these after
         // mount, so it always wins over a restore.
-        {
+        if (_wsKey === 'history') {
+            // MPI-721: history restores nothing — see _saveMedia. Existing installs still
+            // carry a slot an older build wrote (the very chip MPI-351 had to clear at
+            // mount), so sweep it once here rather than leaving something that only looks
+            // inert until someone re-enables the restore.
+            if (state.promptMedia?.history) {
+                const next = { ...state.promptMedia };
+                delete next.history;
+                state.promptMedia = next;
+            }
+        } else {
             const _mediaSlot = state.promptMedia?.[_wsKey] || {};
             const _saved = _matchesSlot(_mediaSlot) ? (_mediaSlot.items || []) : [];
             if (_saved.length) {
@@ -2271,6 +2411,11 @@ export const MpiPromptBox = ComponentFactory.create({
             // an Overlays entry, so an open enhance overlay would outlive its box.
             _enhanceDialog?.destroy?.();
             _enhanceDialog = null;
+            // MPI-721: same reason again — MpiMediaPicker portals to body, so an open
+            // pick would outlive the box that opened it.
+            _picker?.el?.destroy?.();
+            _picker = null;
+            _addBtn?.destroy?.();
             domObserver.disconnect();
             if (popupNode.parentNode) popupNode.parentNode.removeChild(popupNode);
             _stripEl.remove();

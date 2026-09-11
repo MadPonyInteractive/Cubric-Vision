@@ -291,7 +291,11 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         function _syncBaseCtxFromPromptBox() {
             const img = Number(_pb?.el?.imageCount) || 0;
             const vid = Number(_pb?.el?.videoCount) || 0;
-            _baseCtx.imageCount = isVideo ? img : Math.max(1, img);
+            // MPI-721: no `Math.max(1, img)` for an image group any more. The active
+            // entry IS one of the chips now, so the old floor would count it twice —
+            // three references plus the entry would offer a 4-image op on a 3-slot model.
+            // Video keeps its floor: its source clip is never a chip.
+            _baseCtx.imageCount = img;
             _baseCtx.videoCount = isVideo ? Math.max(1, vid) : vid;
         }
 
@@ -925,7 +929,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             _refreshOpOptions();
             const _wasReplace = _group.history?.some(entry => entry.id === item.id);
             _group = group;
-            _currentIdx = _group.selectedIndex;
+            _setCurrentIdx(_group.selectedIndex);
             if (_wasReplace) {
                 historyList.el.replaceEntry?.(item);
             } else {
@@ -953,7 +957,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             if (groupId !== _group.id || !item || !group) return;
             const viewedId = _group.history?.[_currentIdx]?.id;
             _group = group;
-            _currentIdx = _group.selectedIndex;
+            _setCurrentIdx(_group.selectedIndex);
             historyList.el.replaceEntry?.(item);
             Events.emit('history:stats-dirty', { group: _group });
             if (item.id === viewedId) {
@@ -1103,6 +1107,38 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         const _settingsOverlay = MpiModelSettings.mount(document.createElement('div'));
         let _pb = null;
 
+        /**
+         * MPI-721: the ONE place `_currentIdx` moves.
+         *
+         * The active entry renders as a pinned chip in the PromptBox strip, which means
+         * the selection and the chip have to move together — and `_currentIdx` was
+         * assigned at ten separate sites (the viewer's entry-loaded, the list's select,
+         * delete, reuse, snapshot, …). Funnelling them through here is what stops the
+         * chip going stale on whichever path a later change forgets: a new site that
+         * writes the field directly would not compile past lint's no-unused rules, but
+         * more usefully it would not typecheck against the reader's expectation that the
+         * strip matches the canvas.
+         */
+        function _setCurrentIdx(idx) {
+            _currentIdx = Number.isInteger(idx) ? idx : 0;
+            _syncEntryChip();
+        }
+
+        /**
+         * Point the PromptBox's pinned chip at the active entry, or drop it.
+         *
+         * Image groups only. A video group's source clip is NOT a chip — its frames come
+         * from MpiToolOptionsPrompt's dedicated start/end slots, and a video entry cannot
+         * fill i2v's required IMAGE slot anyway, so the two paths stay split.
+         */
+        function _syncEntryChip() {
+            if (isVideo || !_pb?.el?.setPinnedMedia) return;
+            const item = _group.history?.[_currentIdx];
+            _pb.el.setPinnedMedia(item?.filePath
+                ? { url: resolveMediaUrl(item.filePath), name: _group.name || undefined }
+                : null);
+        }
+
         // Block-side bookkeeping after the active model changed. Called by the
         // PromptBox's own model-change AND by the MPI-356 picker below.
         // markAsLast: false — History is a typed workspace (image or video group).
@@ -1223,6 +1259,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 includeNegative: true,
                 workspaceKey: 'history',
                 workspaceId: _group.id,
+                // MPI-721: image groups stage their own reference media — the `+` card
+                // opens MpiMediaPicker and the strip becomes visible. Video groups do
+                // not: MpiToolOptionsPrompt owns their start/end frame thumbs.
+                stageMedia: !isVideo,
             });
             _pb?.el?.hide();
 
@@ -1232,12 +1272,13 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 filterNoInputOps: true,
                 historyMode: true,
             });
-            // MPI-351: the PromptBox restores chips persisted under
-            // state.promptMedia[wsKey] at mount. In an image History group nothing
-            // legitimately stages one, and existing projects still carry the chip
-            // that used to hijack Input_Image — drop it so the rail matches what the
-            // workspace actually generates from (the selected entry).
-            if (!isVideo) _pb?.el?.clearMedia?.();
+            // MPI-721 retires MPI-351's clear-on-mount. That workaround existed because
+            // the PromptBox re-injected chips persisted under state.promptMedia[wsKey],
+            // and an invisible one silently owned Input_Image for every later run. The
+            // box no longer persists or restores anything for 'history' (_saveMedia), so
+            // there is nothing to clear — and the entry it generates from is now a chip
+            // the user can see. Seed it here; _setCurrentIdx re-points it after that.
+            _syncEntryChip();
 
             _unsubs.push(_pb.on('model-change', ({ model }) => _adoptModel(model)));
             _unsubs.push(_pb.on('operation-change', ({ operation, programmatic }) => {
@@ -1488,36 +1529,37 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             const currentItem = _group.history[_currentIdx];
             const currentMediaType = isVideo ? 'video' : 'image';
             const mediaSlots = getCommandMediaInputs(operation);
-            const wantsStartFrame = mediaSlots.some(slot => slot.key === 'startFrame');
             const wantsCurrentType = mediaSlots.some(slot => slot.mediaType === currentMediaType && slot.required !== false);
-            // MPI-351: History runs ONE op on the SELECTED entry — that entry is the
-            // only image this workspace ever feeds a graph. PromptBox chips are
-            // PERSISTED per workspace (state.promptMedia, re-injected on every mount)
-            // and the old guard treated "rail holds an image" as "the user supplied
-            // the input", so ONE stale chip silently owned Input_Image for every later
-            // run: upscale_002-007 all ran on a two-hour-old kleinEdit output while a
-            // fresh crop was the active entry, and the chip is invisible behind the
-            // prompt rail tool. Multi-image ops belong in the gallery. Video keeps its
-            // start/end frames — they come from the dedicated slots in
-            // MpiToolOptionsPrompt (and the Extend/New-shot last-frame capture), and a
-            // video entry can never fill i2v's required IMAGE slot itself.
+            // MPI-721 supersedes MPI-351's discard, and does it structurally.
+            //
+            // MPI-351 threw image-group chips away because they were PERSISTED per
+            // workspace and re-injected on every mount, so one stale INVISIBLE chip
+            // silently owned Input_Image for run after run (upscale_002-007 all ran on a
+            // two-hour-old kleinEdit output while a fresh crop was the active entry).
+            // The answer here is the opposite of hiding chips: the active entry is itself
+            // a pinned, numbered chip (`_syncEntryChip`), and the box persists nothing
+            // for 'history'. So for an image group `mediaItems` IS the whole slot truth —
+            // strip order is slot order, and nothing a run consumes is off-screen. There
+            // is no prepend, because prepending the entry would now double it.
+            //
+            // Video is deliberately NOT collapsed into this. Its source clip never
+            // appears in the strip: frames come from MpiToolOptionsPrompt's dedicated
+            // start/end slots (and the Extend / New-shot last-frame capture), and a video
+            // entry cannot fill i2v's required IMAGE slot itself — so it still resolves
+            // the current item in here.
             const stagedMedia = isVideo
                 ? mediaItems.filter(m => m.mediaType !== 'image' || m.role === 'startFrame' || m.role === 'endFrame')
-                : [];
+                : mediaItems;
             const hasCurrentTypeMedia = stagedMedia.some(m => m.mediaType === currentMediaType);
             let resolvedMedia = stagedMedia;
 
-            if (currentItem?.filePath) {
+            if (isVideo && currentItem?.filePath && !hasCurrentTypeMedia) {
                 const currentMedia = {
                     url: resolveMediaUrl(currentItem.filePath),
                     mediaType: currentMediaType,
                     source: 'history',
                 };
-                if (!isVideo && wantsStartFrame) {
-                    resolvedMedia = [{ ...currentMedia, role: 'startFrame' }, ...stagedMedia];
-                } else if (wantsCurrentType && !hasCurrentTypeMedia) {
-                    resolvedMedia = [currentMedia, ...stagedMedia];
-                } else if (!mediaSlots.length && !hasCurrentTypeMedia) {
+                if (wantsCurrentType || !mediaSlots.length) {
                     resolvedMedia = [currentMedia, ...stagedMedia];
                 }
             }
@@ -1804,7 +1846,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 if (!res.ok || !data.success) throw new Error(data.error || `HTTP ${res.status}`);
 
                 _group = appendToHistory(_group, data.item);
-                _currentIdx = _group.selectedIndex;
+                _setCurrentIdx(_group.selectedIndex);
                 _persistGroup();
                 historyList.el.appendEntry(data.item);
 
@@ -1854,7 +1896,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 if (!res.ok || !data.success) throw new Error(data.error || `HTTP ${res.status}`);
 
                 _group = appendToHistory(_group, data.item);
-                _currentIdx = _group.selectedIndex;
+                _setCurrentIdx(_group.selectedIndex);
                 _persistGroup();
                 historyList.el.appendEntry(data.item);
 
@@ -1941,7 +1983,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 _syncViewerToolMode();
                 viewer.el.setMaskHidden?.(false);
             }
-            _currentIdx = idx;
+            _setCurrentIdx(idx);
             _group = promoteHistoryEntry(_group, idx);
             _persistGroup();
             _options?.el?.setCurrentItem?.(item);
@@ -2095,7 +2137,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                     ...(data.thumbPathLg ? { thumbPathLg: data.thumbPathLg } : {}),
                 });
                 _group = appendToHistory(_group, item);
-                _currentIdx = _group.selectedIndex;
+                _setCurrentIdx(_group.selectedIndex);
                 _persistGroup();
                 historyList.el.appendEntry(item);
                 Events.emit('history:stats-dirty', { group: _group });
@@ -2289,7 +2331,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 });
                 // History workspace: append to current group (video group only).
                 _group = appendToHistory(_group, newItem);
-                _currentIdx = _group.selectedIndex;
+                _setCurrentIdx(_group.selectedIndex);
                 _persistGroup();
                 historyList.el.appendEntry(newItem);
                 viewer.el.loadVideo?.(resolveMediaUrl(newItem.filePath), { fps: newItem.fps || _group.fps || 24, trim: newItem.trim });
@@ -2404,7 +2446,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
 
             for (const idx of deletedIndices) _group = removeHistoryEntry(_group, idx);
 
-            _currentIdx = _group.selectedIndex ?? 0;
+            _setCurrentIdx(_group.selectedIndex ?? 0);
             _persistGroup();
             historyList.el.removeEntries(deletedIndices, _currentIdx);
             _currentSelectionIndices = [];
@@ -2492,7 +2534,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             // wrote — same append, same selection, same reload.
             const _appendViewerEntry = (item) => {
                 _group = appendToHistory(_group, item);
-                _currentIdx = _group.selectedIndex;
+                _setCurrentIdx(_group.selectedIndex);
                 _persistGroup();
                 historyList.el.appendEntry(item);
                 viewer.el.loadEntry?.(item, _currentIdx);
@@ -2507,7 +2549,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             viewer.on('place-applied', ({ item }) => _appendViewerEntry(item));
 
             viewer.on('entry-loaded', ({ idx, hasMask }) => {
-                _currentIdx = idx;
+                _setCurrentIdx(idx);
                 _canvasHasMask = hasMask;
                 _pb?.el?.updateContext({
                     ..._baseCtx,

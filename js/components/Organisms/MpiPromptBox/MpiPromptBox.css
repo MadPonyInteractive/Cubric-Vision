@@ -419,7 +419,15 @@
     gap: 0.5rem;
     padding: 0.5rem var(--s-6);
     justify-content: flex-start;
-    pointer-events: auto;
+    /* MPI-721: the strip is a full-width band anchored at `bottom: 100%` of a
+       SHELL-level #prompt-box-mount, so its empty right/left run sits directly over
+       the history workspace's tool rail. While history hid the strip that cost
+       nothing; now that it is visible, an `auto` band swallowed every click on the
+       bottom of the rail (Composite's three tools). Only the chips and the `+` card
+       are interactive — the gradient is backdrop, so it must not hit-test.
+       Trade: wheel-scrolling the 2-row overflow now needs the cursor over a chip
+       rather than the gap between them. */
+    pointer-events: none;
     box-sizing: border-box;
     /* Continues the bar's surface upward and fades out, so chips read against a
        settled backdrop instead of clashing with whatever gallery art is behind
@@ -444,13 +452,25 @@
 }
 
 /* History workspace: toolbar organism (MpiToolOptionsPrompt) owns frame thumbs.
- * Strip stays in DOM with chip data intact; only rendering suppressed. */
-.mpi-prompt-box--history-mode .mpi-prompt-box-media-strip {
+ * Strip stays in DOM with chip data intact; only rendering suppressed.
+ * MPI-721: unless the box stages its own media, in which case the strip IS the
+ * surface — the `+` card and the numbered chips, entry included, live in it. */
+.mpi-prompt-box--history-mode:not(.mpi-prompt-box--stage-media) .mpi-prompt-box-media-strip {
     display: none;
+}
+
+/* …and when it IS shown there, it starts past the tool rail. The band is anchored at
+ * a SHELL-level #prompt-box-mount, so `left: 0` is the window's edge, not the
+ * workspace's: the first chip landed on Composite's tools. Same --history-rail-w the
+ * block's grid column reads, so widening the rail moves the chips with it. */
+.mpi-prompt-box--history-mode.mpi-prompt-box--stage-media .mpi-prompt-box-media-strip {
+    padding-left: calc(var(--history-rail-w) + var(--s-3));
 }
 
 .mpi-prompt-box-media-strip__chip {
     position: relative;
+    /* Re-enabled against the strip's `pointer-events: none` band — see there. */
+    pointer-events: auto;
     width: 5rem;
     height: 5rem;
     border-radius: 0;
@@ -461,6 +481,29 @@
     /* Reorder is pointer-driven; suppress the browser's own drag/scroll gesture. */
     touch-action: none;
     user-select: none;
+}
+
+/* MPI-721: the `+` card — a chip-shaped slot at the head of the strip that opens
+ * MpiMediaPicker. Dashed and unfilled so it reads as an empty place to put
+ * something, never as a staged image. */
+.mpi-btn.mpi-prompt-box-media-strip__add {
+    /* Re-enabled against the strip's `pointer-events: none` band — see there. */
+    pointer-events: auto;
+    width: 5rem;
+    height: 5rem;
+    flex-shrink: 0;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    border: 3px dashed var(--line);
+    color: var(--ink-3);
+    transition: border-color var(--t-base) var(--ease), color var(--t-base) var(--ease);
+}
+
+.mpi-btn.mpi-prompt-box-media-strip__add:hover:not(:disabled) {
+    background: transparent;
+    border-color: var(--accent-heat);
+    color: var(--accent-heat);
 }
 
 /* Reorderable chips: grab affordance + the lifted ghost under the cursor. */

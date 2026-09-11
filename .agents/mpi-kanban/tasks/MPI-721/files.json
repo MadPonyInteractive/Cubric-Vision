@@ -1,0 +1,20 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "id": "MPI-721",
+  "source": "Paths named by tasks/MPI-721/plan.md § Scope and § Implementation",
+  "files": [
+    "js/components/Organisms/MpiPromptBox/MpiPromptBox.js",
+    "js/components/Organisms/MpiPromptBox/MpiPromptBox.css",
+    "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js",
+    "js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.css",
+    "js/components/Compounds/MpiHistoryTools/MpiHistoryTools.css",
+    "styles/01_base.css",
+    "js/components/types.js",
+    "docs/workspaces.md",
+    ".agents/mpi-kanban/tasks/MPI-721/plan.md",
+    ".agents/mpi-kanban/tasks/MPI-721/checklist.md",
+    ".agents/mpi-kanban/tasks/MPI-721/validation.md",
+    ".agents/mpi-kanban/tasks/MPI-721/files.json"
+  ],
+  "note": "History workspace media staging. MpiMediaPicker and MpiToolOptionsPlace are READ as precedent, never edited. MpiMediaDropOverlay is deliberately NOT owned - the workspace-area OS-file drop keeps filling the Place slot (MPI-454). Video history groups untouched: the isVideo branches at MpiGroupHistoryBlock.js:1043 and :1504 stay split. No live peer claim on either owned JS file (MPI-664's claim 62da4764 explicitly excludes MpiPromptBox.js)."
+}

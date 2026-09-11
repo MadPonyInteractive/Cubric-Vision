@@ -117,6 +117,13 @@
   /* Shell */
   --titlebar-h: 32px;
   --statusbar-h: 32px;
+  /* Group History's left tool rail. A var because TWO owners must agree on it and
+     they do not live in the same file: the block's own grid column, and the
+     PromptBox media strip — a full-width band anchored at a SHELL-level
+     #prompt-box-mount, which has to be inset past the rail or its chips sit on the
+     tools. 88px, not 72px: the section labels ("TRANSFORM", "COMPOSITE") are 9px
+     uppercase at 0.18em tracking and were clipping. */
+  --history-rail-w: 88px;
 }
 
 

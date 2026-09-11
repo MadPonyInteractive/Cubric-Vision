@@ -687,12 +687,33 @@
  *   when the slot's stored id matches this — so opening a different history card
  *   shows a clean box, never the previous card's text/chips. Gallery omits it
  *   (id null = always matches = persistent). See component-state.md.
+ * @property {boolean} [stageMedia=false]
+ *   Does this box stage its OWN reference media (MPI-721)? Two effects, one prop,
+ *   because they are the same statement: a `+` card at the head of the media strip
+ *   opening MpiMediaPicker, and the strip made visible in history mode — where CSS
+ *   otherwise hides it because MpiToolOptionsPrompt owns the video frame thumbs.
+ *   Image history groups turn it on; the gallery leaves it off and keeps drag-drop
+ *   as its only origin. NOTE: `workspaceKey: 'history'` persists NO chips at all —
+ *   the entry is rebuilt on every mount and references are per-edit by design.
  *
  * Instance methods (on instance.el):
  *   imageCount    {number}
  *   videoCount    {number}
  *   getMediaItems()
  *   clearMedia()
+ *     — Clears STAGED media only. A pinned item survives (MPI-721): it is the
+ *       workspace's own image, owned by the block through setPinnedMedia, so a
+ *       caller resetting the rail (Reuse Prompt, assets:cleaned) cannot orphan the
+ *       strip from the canvas it generates on.
+ *   setPinnedMedia({ url, name? } | null)
+ *     — The workspace's OWN image, rendered as an ordinary numbered chip: no remove
+ *       pill, still reorderable, and exempt from every capacity eviction path.
+ *       Replaces in place (keeps its strip position) or inserts at the head the
+ *       first time; null removes it. Mints a fresh chip id on every re-point — the
+ *       strip's reorder fast path keys on the item set, so a reused id would skip
+ *       the repaint and leave the previous image on screen. This is what lets the
+ *       strip BE the slot order: with the active entry visible and numbered, no
+ *       chip a run consumes is off-screen (MPI-721, superseding MPI-351).
  *   setOperation(key)
  *   setGenerating(bool)
  *   setModel(model)       — sync internal model dropdown to a new model (no remount)
