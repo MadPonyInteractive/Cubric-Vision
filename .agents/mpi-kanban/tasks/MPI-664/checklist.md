@@ -200,3 +200,13 @@ Design settled 2026-08-30 (hybrid). See `plan.md` for the full field surface and
       `bench/sim_caption.py` case B now `'[Intro]\n\n\n\n[Chorus]\n\n'` with `[Drop]` and all
       prose gone. **Needs one Generate with Instrumental ON: still nothing sung, and the
       sections now land where he put them**
+
+- [x] 🟢 **THE ENHANCER READS THE CAST — BUILT 2026-09-11, Fabio: *"you can build it."*** Three
+      edits, all committed together. `from` gains `Input_Voices` + `Input_Voice_Notes` (the lyrics
+      stay out: `from` is the cache key). `MpiBaseFlow._enhanceSourceLine` serialises every
+      source through `mapDeclaredValue` instead of `String(v)` — the root cause one layer below
+      the list, since a roster's UI value is ROWS and `String(rows)` is `[object Object]`. The
+      recipe gains the closed-cast rule and `[VOCAL]` now covers every voice, worded POSITIVELY
+      because teaching by negation is what degenerates the 4B. 923/923 unit (2 new, both proven
+      to fail on the pre-fix file), 13/13 desktop flow specs, eslint + lint:components clean.
+      **NOT ear-verified: no GPU run has happened. That is the owed song run.**

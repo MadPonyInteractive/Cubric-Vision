@@ -341,9 +341,19 @@ const MINIMAX_MUSIC_ENHANCE_PARAMS = {
         '',
         'EVERY INSTRUMENT MUST COME FROM THE USER. Never take one from these instructions. Where the user names instruments — in the brief, or in a Song structure — THAT LIST IS CLOSED: name no others in any block, and add nothing "to fill it out". Where they name none, choose instruments that suit the brief and keep the set small.',
         '',
+        // 🔴 THE CAST RULE, AND IT FIXED A REAL DEFECT (MPI-664, 2026-09-11). Until this
+        // card the roster never reached the enhancer at all, so it wrote "[VOCAL] Female
+        // lead … no harmonies, no ad-libs, no layered backing vocals" over Fabio's own
+        // two-singer cast and the caption's LAST clause won. It is worded as a positive
+        // instruction — name them, carry the notes through — with one prohibition, the
+        // one the defect actually needed. The recipe's habit of teaching by negation is
+        // a known cause of the 4B's repetition loop; do not answer a new defect here
+        // with another "No X" line.
+        'THE CAST COMES FROM THE USER THE SAME WAY. A "Voices:" line lists every singer on its own line as Name (Type), where a bare name means the user left the type open. Write [VOCAL] for exactly that cast: give each named voice its own phrases, and where a "Voice notes:" line describes timbre, delivery, harmonies or backing vocals, carry those words through into your phrases. THAT LIST IS CLOSED IN BOTH DIRECTIONS — introduce no singer they did not cast, and leave none of theirs out. Never state that the track lacks a vocal the user asked for.',
+        '',
         'Output EXACTLY three blocks, in this order, each opening with its marker on the same line:',
         '[MOOD] Feel and listening occasion in a few phrases, then the production texture: mix, room, grain. Name no instruments here and do not describe the running order.',
-        '[VOCAL] Timbre, delivery and backing vocals, as phrases.',
+        '[VOCAL] Timbre, delivery and backing vocals, as phrases, covering every voice in the cast.',
         '[ARRANGEMENT] Open with the core instrument bed as one list, then describe how that bed develops and what carries each part, in phrases. Write no section lines and name no sections.',
         '',
         'Rules:',
@@ -2264,17 +2274,34 @@ export const FLOWS = [
         // reads `action` and `auto` as implied, because a declaration nobody can press
         // can only be automatic.
         //
-        // `from` IS A LIST, and it is also the CACHE KEY. The enhancer writes an
-        // arrangement, so it has to know the genre. Those three are therefore exactly
-        // the fields whose change makes the previous answer stale, which is why the
-        // frame re-runs on a change to any of them and skips otherwise.
+        // `from` IS A LIST, and it is also the CACHE KEY: these are exactly the fields
+        // whose change makes the previous answer stale, which is why the frame re-runs
+        // on a change to any of them and skips otherwise. The enhancer writes an
+        // arrangement, so it has to know the genre; it writes the [VOCAL] block, so it
+        // has to know who sings.
+        //
+        // 🔴 THE CAST JOINED `from` ON 2026-09-11, AND IT IS A BUG FIX. Without
+        // `Input_Voices`/`Input_Voice_Notes` the enhancer wrote the vocal block BLIND:
+        // Fabio cast a man and a woman, and it returned *"Female lead, breathy,
+        // restrained … no harmonies, no ad-libs, no layered backing vocals"* having
+        // never seen there were two singers. `Cat_Vocal_Body` (node 87) concatenates
+        // roster + voice notes + this prose IN THAT ORDER, so the invented sentence came
+        // LAST and negated both facts before it, and `Strip_Voice_Markers` (77) had
+        // already taken `<man>`/`<woman>` out of the lyrics — one woman, no harmonies,
+        // exactly what he heard. The staleness side effect is the correct one: editing
+        // the cast now marks the vocal block stale, exactly as editing the brief does.
+        //
+        // 🟡 DO NOT "FIX" THIS BY REORDERING `Cat_Vocal_Body` so the prose comes first.
+        // Which clause wins inside one prose blob is a coin flip; the defect was that
+        // the rewriter could not see the cast at all.
         //
         // 🔴 `Input_Instrumental` AND `Input_Structure` LEFT `from` ON 2026-09-05, with
         // the controls (see the step below). Tempo is NOT here either: the graph states
         // the BPM
         // verbatim and a 4B asked to carry "78 BPM" through prose rounds it to "around
-        // 80". Lyrics and the voice roster are not here either — they reach the caption
-        // on their own wires and never through the rewriter.
+        // 80". THE LYRICS ARE STILL NOT HERE and must not be added: they reach the
+        // caption on their own wire, and as a cache key a 16-row box would restage the
+        // enhancer on every keystroke of the one field the user types most.
         //
         // 🔴 THIS IS WHY `qwen3vl-abliterated-clip` IS IN `requiredDeps` (see above).
         // While Enhance was a button, an install without the enhancer lost a button
@@ -2290,7 +2317,7 @@ export const FLOWS = [
         // caption. The running order is the user's, stated in their lyrics, and the
         // rewriter's job stops at texture.
         enhance: {
-            from: ['positive', 'Input_Style', 'Input_Style_Custom'],
+            from: ['positive', 'Input_Style', 'Input_Style_Custom', 'Input_Voices', 'Input_Voice_Notes'],
             to: {
                 MOOD: 'Input_Mood',
                 VOCAL: 'Input_Vocal',

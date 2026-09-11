@@ -3,6 +3,43 @@
 Design settled with Fabio 2026-08-30. Capability facts live in `research/minimax-music-3.md` —
 read it first, and do not re-search it.
 
+## Current State — 2026-09-11, THE CAST FIX IS BUILT. THE SONG RUN IS STILL OWED.
+
+🟢 **FABIO SAID BUILD IT (2026-09-11) AND IT IS BUILT.** The fix proposed under *"THE ENHANCER
+CANNOT SEE THE CAST"* below shipped as three edits, and the block below is now HISTORY — read it
+for the root cause, not for the next action.
+
+1. `js/data/flowsRegistry.js` — `from` is now
+   `['positive', 'Input_Style', 'Input_Style_Custom', 'Input_Voices', 'Input_Voice_Notes']`.
+   The stale comment that said *"Lyrics and the voice roster are not here either"* was rewritten
+   rather than left lying; the lyrics are still OUT and the comment now says why (`from` is the
+   cache key, and a 16-row box would restage the enhancer on every keystroke).
+2. `js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js` — **the real root cause, and it was one
+   layer below the `from` list.** `_enhanceSourceText` read every source with `String(v)`, and a
+   `voices` roster's UI value is ROWS: adding the cast to `from` on its own would have sent
+   `Voices: [object Object],[object Object]`. The new `_enhanceSourceLine` serialises through
+   `mapDeclaredValue` — the same call the graph payload makes — so BOTH branches (single source
+   and labelled list) are fixed in one pass and any field type added later arrives serialised
+   for free.
+3. The recipe (`MINIMAX_MUSIC_ENHANCE_PARAMS`) gained the closed-cast rule, mirroring the
+   closed-instrument rule, and `[VOCAL]` now says *covering every voice in the cast*. It is
+   worded as a POSITIVE instruction with exactly one prohibition — the recipe's habit of
+   teaching by negation is the known cause of the loop below, so a new defect must not be
+   answered here with another *"No X"* line. That comment is now in the source.
+
+🟢 **CHECKS GREEN ON THIS HEAD:** `npm test` 923/923 (the count moved again — peers landed work
+mid-session, as always), 13/13 desktop flow specs (mandatory, `flowsRegistry.js` was touched),
+eslint + `lint:components` clean. The two new asserts were proven to FAIL against the pre-fix
+file rather than assumed to: `git show HEAD:…MpiBaseFlow.js` matched the old `String(_fieldValues[`
+shortcut and lacked `_enhanceSourceLine`.
+
+🔴 **WHAT IS NOT VERIFIED: the GPU has not run.** No song has been generated with the cast in
+`from`, so the claim *"the enhancer now names both singers"* is a code claim, not an ear claim.
+**ASK FABIO BEFORE ANY GPU WORK** — that rule does not lapse because he approved the build.
+
+🟡 Also shipped this session, at his word: the `MpiButton` `label`-vs-`text` trap is now in
+`docs/component-contracts.md`. The `@` popup anchoring is CLOSED — *"pop-up is fine where it is."*
+
 ## Current State — 2026-09-10 (later), THE `@` PICKER IS BUILT. THE SONG RUN NEVER HAPPENED.
 
 🔴 **THE OWED SONG RUN DID NOT HAPPEN, AND THE BLOCK ABOVE IS WRONG.** Straight from Fabio,
@@ -134,7 +171,11 @@ named drums, synths, distortion, glitch and clipping.
 DIRECTORY LISTING (`_cache`, line 21), never file contents, so the graph is read fresh per
 request; `flowsRegistry.js` is renderer-side. No restart, no rebuild.
 
-## 🔴 THE ENHANCER CANNOT SEE THE CAST — found 2026-09-10, ROOT-CAUSED, NOT BUILT
+## ✅ THE ENHANCER CANNOT SEE THE CAST — found 2026-09-10, BUILT 2026-09-11
+
+> **SHIPPED — see the Current State at the top of this file.** Kept for the root cause, which is
+> the part worth reading twice. One thing it did NOT know: `String(v)` on a roster one layer
+> below `from`, which would have made step 1 alone send `[object Object]`.
 
 **Fabio: *"I did ask for a man and a woman, and I only got a woman."*** He is right, and it is a
 second defect independent of the loop above.

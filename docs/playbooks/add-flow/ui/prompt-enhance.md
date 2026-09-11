@@ -65,7 +65,7 @@ nobody can press can only be automatic — and there is no control on screen at 
 
 ```js
 enhance: {
-    from: ['positive', 'Input_Style', 'Input_Instrumental'],
+    from: ['positive', 'Input_Style', 'Input_Style_Custom', 'Input_Voices', 'Input_Voice_Notes'],
     to: { MOOD: 'Input_Mood', VOCAL: 'Input_Vocal', ARRANGEMENT: 'Input_Arrangement' },
     injectionParams: MY_RECIPE,
 },
@@ -77,6 +77,24 @@ the fields whose change makes the previous answer stale, so `_setFlowField` empt
 own targets when any of them changes and leaves them alone otherwise. **There is no second cache**:
 a full target set means the answer on file still matches its inputs, an empty one means re-run.
 Press Generate twice on an unchanged brief and the music graph runs twice, the enhancer once.
+
+**A source is serialised by its own declaration, not by `String(value)`** (`_enhanceSourceLine` →
+`mapDeclaredValue`, the same call the graph payload makes). It matters the moment you put a
+non-scalar field in `from`: a `voices` roster's UI value is ROWS, so the blind `String()` this
+used to do would have sent the cast as `Voices: [object Object],[object Object]` — and silently,
+since nothing on that path throws. Two consequences when choosing sources:
+
+- **A field with a serialiser is safe to list**, and a field type added later is safe for free.
+- **The value the model reads is the value the GRAPH reads**, so what you see in the caption is
+  what the rewriter saw. That is the point of routing both through one helper.
+
+**Choosing what goes in `from` is a cache decision as much as a content one.** Song leaves
+`Input_Lyrics` out deliberately: it is a 16-row box and the field the user types in most, so as a
+cache key it would restage the enhancer on every keystroke. The test of a good source is whether
+changing it should make the previous answer WRONG — not merely whether the model would like to
+know. And a field the enhancer writes a block ABOUT belongs in `from`: Song's cast was missing for
+a week and the `[VOCAL]` block was written blind, contradicting the roster the graph pasted above
+it (MPI-664).
 
 Two things this costs, and both are non-negotiable:
 

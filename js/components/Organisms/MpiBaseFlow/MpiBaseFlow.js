@@ -1134,16 +1134,32 @@ export const MpiBaseFlow = ComponentFactory.create({
          */
         function _enhanceSourceText(d) {
             const ids = _enhanceSources(d).filter(id => !_hiddenNow().has(id));
-            if (ids.length === 1) return String(_fieldValues[ids[0]] ?? '').trim();
             const byId = new Map(_allDecls.map(f => [f.id, f]));
-            return ids.map((id) => {
-                const v = _fieldValues[id];
-                if (v === true) return byId.get(id)?.label || id;
-                if (v === false || v === null || v === undefined) return '';
-                const text = String(v).trim();
-                if (!text) return '';
-                return `${byId.get(id)?.label || id}: ${text}`;
-            }).filter(Boolean).join('\n');
+            const bare = ids.length === 1;
+            return ids.map(id => _enhanceSourceLine(byId.get(id), id, bare))
+                .filter(Boolean).join('\n');
+        }
+
+        /**
+         * ONE enhance source → the line the model reads for it.
+         *
+         * 🔴 THE DECLARATION'S OWN SERIALISER, NEVER `String(v)` (MPI-664, 2026-09-11).
+         * A `voices` roster's UI value is ROWS — it is held that way so Reuse can rebuild
+         * the control — and `String(rows)` is `[object Object],[object Object]`. Sending
+         * the cast as a source without this is worse than not sending it: the enhancer
+         * reads noise where the singers should be. `mapDeclaredValue` is the very call
+         * the graph payload makes, so the cast the rewriter reads and the cast the
+         * caption states are ONE string built in ONE place, which is what that helper
+         * exists for. Every field type added later arrives serialised for free.
+         */
+        function _enhanceSourceLine(f, id, bare) {
+            const v = mapDeclaredValue(f, _fieldValues[id]);
+            if (v === false || v === null || v === undefined) return '';
+            const label = f?.label || id;
+            if (v === true) return label;
+            const text = String(v).trim();
+            if (!text) return '';
+            return bare ? text : `${label}: ${text}`;
         }
 
         /**

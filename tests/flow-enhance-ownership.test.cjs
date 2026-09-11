@@ -25,6 +25,7 @@ const path = require('node:path');
 
 const repo = p => path.join(__dirname, '..', p);
 const frame = () => fs.readFileSync(repo('js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js'), 'utf8');
+const esm = p => import('file://' + repo(p).replace(/\\/g, '/'));
 
 test('the snapshot carries enhancer ownership out', () => {
     const src = frame();
@@ -76,4 +77,58 @@ test('invalidation still refuses to clear text the enhancer does not own', () =>
         /if \(!_fieldValues\[t\] \|\| !_enhanceWrote\.has\(t\)\) return;/,
         '_setFlowField must only clear the enhancer\'s own output',
     );
+});
+
+// ── the sources the enhancer reads (MPI-664, 2026-09-11) ────────────────────
+
+test('an enhance source is serialised by its own declaration, never String(v)', () => {
+    const src = frame();
+
+    // THE BUG THIS PINS: a `voices` roster's UI value is ROWS, and `String(rows)` is
+    // "[object Object],[object Object]". The moment the cast became a source, a blind
+    // `String()` stopped being a cosmetic shortcut and started feeding the rewriter
+    // noise where the singers are. `mapDeclaredValue` is the same call the graph
+    // payload makes, so both read one string built once.
+    assert.match(
+        src,
+        /function _enhanceSourceLine\([^)]*\)\s*\{\s*\n\s*const v = mapDeclaredValue\(f, _fieldValues\[id\]\);/,
+        '_enhanceSourceLine must serialise through mapDeclaredValue',
+    );
+
+    // And the old shortcut must not survive anywhere on the source path — the single-
+    // source branch had its own copy, which is exactly how one of two branches rots.
+    assert.ok(
+        !/_enhanceSources\(d\)[\s\S]{0,400}?String\(_fieldValues\[/.test(src),
+        'no enhance source may be read with a bare String(_fieldValues[...])',
+    );
+});
+
+test('the Song enhancer is given the cast, and still not the lyrics', async () => {
+    const mod = await esm('js/data/flowsRegistry.js');
+    const flows = mod.FLOWS || mod.flows || mod.default;
+    const flow = flows.find(f => f.id === 'minimax-music');
+    assert.ok(flow, 'the minimax-music FlowDef must exist');
+
+    const from = flow.enhance?.from || [];
+    assert.ok(Array.isArray(from), 'the Song enhance decl must keep a LIST of sources');
+
+    // Fabio cast a man and a woman and heard one woman: without these two the enhancer
+    // wrote "[VOCAL] Female lead ... no harmonies" having never seen the roster, and
+    // `Cat_Vocal_Body` puts that prose AFTER the roster, so it negated it.
+    assert.ok(from.includes('Input_Voices'), 'the roster must feed the enhancer');
+    assert.ok(from.includes('Input_Voice_Notes'), 'the voice notes must feed the enhancer');
+
+    // `from` is also the CACHE KEY. The lyrics box is 16 rows and the field the user
+    // types in most; as a source it would restage the enhancer on every keystroke.
+    assert.ok(!from.includes('Input_Lyrics'), 'the lyrics must NOT be an enhance source');
+
+    // A source naming a field that does not exist is silent — it is simply dropped,
+    // and the enhancer goes back to writing that block blind.
+    const declared = new Set([
+        ...(flow.fields || []),
+        ...(flow.steps || []).flatMap(s => s.fields || []),
+    ].map(f => f.id));
+    from.filter(id => id !== 'positive').forEach((id) => {
+        assert.ok(declared.has(id), `enhance source ${id} must be a declared field`);
+    });
 });

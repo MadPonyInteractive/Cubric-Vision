@@ -23,7 +23,9 @@ flow, which had not been run at all. Do not let that recombine.
 - **The licence gate**, cleared in his own test. It is keyed on the flow's `flowDepKey` in
   `js/data/modelConstants/licences.js`, and 🔴 **a lookup miss there is SILENT** — the gate
   simply never appears — so a human seeing it fire is the only real check of that wiring.
-- **Both flow tiles** (`8c4754d1`, `a9efcfa2`): purpose-built `preview` + `video`, no gradient
+- **Both flow tiles** (`8c4754d1` — all four binaries and the two FlowDef property pairs are in
+  that one commit; `a9efcfa2` is card bookkeeping only, corrected at close-out 2026-09-11 after
+  the claim auditor caught it miscredited): purpose-built `preview` + `video`, no gradient
   fallback. Sound & Music's pair are a TIME RULER — a row's width IS its length — off four new
   runs, one per category, with the durations MEASURED off the files: **10.031 / 10.031 / 4.087 /
   2.043 s** for 10 / 10 / 4 / 2 asked. The exact-length claim is verified, not assumed.
