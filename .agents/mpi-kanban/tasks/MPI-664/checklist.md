@@ -27,8 +27,15 @@ Design settled 2026-08-30 (hybrid). See `plan.md` for the full field surface and
       (`serialiseVoices`), so the agent connector shares the widget's path. 819/819, lint clean.
       **DOM half still unproven in the app** — no FlowDef declares it yet, same caveat as
       `hiddenWhen` and `format: 'duration'`; all three close together on the live run
-- [ ] `@` picker extracted from `MpiPromptBox` onto `MpiInput` (tier 3, purely additive on tier 2).
-      `matchRefTagQuery` is reusable verbatim; only the DOM/keyboard/insert needs extracting
+- [x] `@` picker — BUILT 2026-09-10, but **NOT** the way this line proposed. Onto `MpiInput`
+      would have given it to every declared text field in every flow; Fabio's answer was
+      *"only the lyrics box gets it"*, so it is opt-in per field (`mentions: 'Input_Voices'`)
+      via a new `js/utils/mentionPicker.js`. It inserts a VOICE (`<Singer A>`), not a ref tag.
+      `matchRefTagQuery` was indeed reusable verbatim. Checks: 9/9 new + 917/917 + 13 desktop.
+      🟢 **VERIFIED IN THE APP** — Fabio, 2026-09-10: *"The @ symbol now works."* Lists
+      `man (Male)` / `woman (Female)`, inserts `<man>` on its own line. One bug in between:
+      `MpiButton`'s `label` is ICON-mode only, so text-mode rows mounted EMPTY and silent
+      (`text` is the prop). 🟡 Cosmetic and open: the popup covers the step title.
 
 ## Deps and licence (GAP — not in the original plan)
 

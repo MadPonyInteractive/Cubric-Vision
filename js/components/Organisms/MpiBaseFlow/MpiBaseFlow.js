@@ -964,8 +964,35 @@ export const MpiBaseFlow = ComponentFactory.create({
         // vocabulary, and the same capabilities are being duplicated as Flows. One
         // renderer, or the two surfaces drift the way MPI-572's two surfaces did.
         // `block` defaults to this component's, so nothing here restyles.
+        /**
+         * Read ONE declared field's current value, wherever it was declared — the
+         * mirror of `_writeDeclaredField` (MPI-664 checklist L30).
+         *
+         * 🔴 IT MUST BE A LOOKUP, NEVER A CAPTURED VALUE. `_writeDeclaredField`
+         * REPLACES `_stepValues[role]` with a fresh object on every keystroke, so a
+         * closure that captured the `value` its field was built with holds the roster
+         * as it looked at mount — rename a singer and the `@` picker would still offer
+         * the old name.
+         *
+         * @param {string} id
+         * @returns {*}
+         */
+        function _readDeclaredField(id) {
+            if (_flowStoreIds.has(id)) return _fieldValues[id];
+            for (const role of (_stepRolesById.get(id) || [])) {
+                const v = _stepValues[role]?.fields?.[id];
+                if (v !== undefined) return v;
+            }
+            return undefined;
+        }
+
         const _buildField = (f, cur, onChange, unsubs) =>
-            buildField(f, cur, onChange, unsubs, { namespace: flow.id });
+            buildField(f, cur, onChange, unsubs, {
+                namespace: flow.id,
+                // What a `mentions` field reads its list from. Passed for every field
+                // because the vocabulary decides who uses it, not this call site.
+                readField: _readDeclaredField,
+            });
 
         // ── Enhance: a declared ACTION on a button field (MPI-504) ─────────────
         /**

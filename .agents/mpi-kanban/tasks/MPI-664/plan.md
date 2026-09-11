@@ -3,9 +3,176 @@
 Design settled with Fabio 2026-08-30. Capability facts live in `research/minimax-music-3.md` —
 read it first, and do not re-search it.
 
+## Current State — 2026-09-10 (later), THE `@` PICKER IS BUILT. THE SONG RUN NEVER HAPPENED.
+
+🔴 **THE OWED SONG RUN DID NOT HAPPEN, AND THE BLOCK ABOVE IS WRONG.** Straight from Fabio,
+2026-09-10: *"I didn't run a song run because when I ran it, I want to make sure everything is
+working properly. That's why I stopped as soon as I saw that the `@` wasn't working."* **The run
+that DID happen was Sound & Music — MPI-694's** (*"exactly. What ran was the sound and music.
+That one is done."*). The previous handoff collapsed the two flows into one run and credited it
+to this card. So `validation.md`'s closing line still stands unchanged: item 1 and 2 need
+Fabio's press and Fabio's ears, and **the press is what the `@` fix unblocks.** Tick nothing
+about the run.
+
+That is the SECOND premise from that handoff line to fail a check (the first was the phantom
+`minimax-music.md` rename). Both were unchecked checklist lines read as facts.
+
+🟢 **CHECKLIST L30 IS BUILT — the `@` picker, LYRICS BOX ONLY.** Fabio's two answers,
+2026-09-10, and the second one killed the option the handoff was leaning toward:
+- **WHICH FIELDS:** *"Only the lyrics box gets it. Why would it leak into sound and music?"* So
+  it is NOT extracted onto `MpiInput`, which is what checklist L30 proposed and what would have
+  given `@` to every declared text field in every flow. The gate is a **field descriptor key**,
+  `mentions: 'Input_Voices'`, and Sound & Music declares nothing.
+- **WHAT IT INSERTS:** the VOICE, not a ref tag. *"When I use the `@` symbol, I'm looking for
+  the correct voice because the syntax needs to be placed in a certain manner (`<Singer A>`)."*
+
+**What shipped, five files:**
+- `js/utils/mentionPicker.js` (NEW) — the popup, the four listeners, and `spliceMentionTag`.
+  `matchRefTagQuery` is imported and **unchanged**: voice names map onto its `{tag}` shape
+  verbatim, which is the one thing the handoff got right about the reuse.
+- `js/utils/declaredFields.js` — the `'text'` branch attaches the picker **only when the field
+  declares `mentions`**, plus `mentionTagsFrom` (rows → entries, mirroring `serialiseVoices`:
+  blanks dropped, `Any` emits the bare name, duplicate names collapse). That last part closes
+  the `ponytail:` note on `nextVoiceName`, which named the insertion point as the place to
+  settle duplicates.
+- `js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js` — `_readDeclaredField(id)`, the mirror of
+  `_writeDeclaredField`, passed down as `opts.readField`. 🔴 **It must stay a LOOKUP:**
+  `_writeDeclaredField` replaces `_stepValues[role]` with a fresh object on every keystroke, so
+  a captured `value` would offer a singer's OLD name after a rename.
+- `MpiBaseFlow.css` — `position: relative` on `field-text` plus the popup, anchored `bottom:
+  100%` like the prompt box's (below would fall off the slide on a 16-row box).
+- `js/data/flowsRegistry.js` — `mentions: 'Input_Voices'` on `Input_Lyrics`. Four lines of
+  comment saying that key IS the gate.
+
+🟢 **`MpiPromptBox` KEEPS ITS OWN COPY, deliberately** (Fabio's call). One implementation would
+be better, but its picker works, it is wired into that organism's draft/mode/emit plumbing, and
+MPI-677 had just landed there. Repoint it the next time that file is open for a real reason —
+the two behave identically, so the diff is a deletion.
+
+🟢 **CHECKS: `tests/mention-picker.test.cjs` 9/9, `npm test` 917/917, `npx eslint` clean,
+`lint:components` clean, and the 13 flow desktop specs pass** — those last ones are not optional
+after a `flowsRegistry.js` edit (`mpi-message` `dc6b2779`: skipping them cost a red master and
+four blocked hours). Two of the nine tests are pins rather than logic: the roster id still
+resolving in the same step (a rename would kill `@` in silence), and **no other field anywhere
+carrying `mentions`**, which is Fabio's lyrics-only rule made enforceable.
+
+🟢 **VERIFIED IN THE APP — Fabio, 2026-09-10: *"The @ symbol now works."*** The picker lists
+`man (Male)` / `woman (Female)` off a live roster and inserts `<man>` / `<woman>` each on its own
+line, which also closes checklist L28's *"DOM half still unproven in the app"* for the `text`
+field type. He started a Song generation immediately after, so the RUN is still pending his ears.
+
+🔴 **IT SHIPPED BROKEN ONCE, AND THE BUG IS WORTH MORE THAN THE FIX: `MpiButton` has TWO MODES
+AND `label` BELONGS TO THE ICON ONE.** `MpiButton.mount(host, { label })` with no `icon` mounts a
+real, styled, correctly-classed, **EMPTY** button — text mode renders `props.text` and nothing
+else (`MpiButton.js:45` vs `:59`). No error, no warning, no log. On Fabio's screen the popup
+opened as a pink bar with three zero-height rows, which read as "the picker is broken" when in
+fact it was working perfectly and rendering nothing. The screenshot is what diagnosed it: the
+`--active` row painted `--accent-heat`, so the DOM, the listeners, the live roster read and the
+match were all provably fine.
+- **Why the roster's own rows never hit this:** the voices branch passes `icon: 'plus'` alongside
+  `label`, so it is in icon mode where `label` is the right prop. `MpiPromptBox`'s picker dodged
+  it too, by passing inner HTML instead of either prop. Two working call sites, both for reasons
+  that do not transfer.
+- **The generalisable rule:** a Primitive prop that is silently ignored in one mode is a defect
+  the tests cannot see. `text` for a text button, `label` only beside an `icon`.
+
+🟢 **THE HINT NOW TEACHES ROUND BRACKETS (Fabio, 2026-09-10: *"the hints it should talk about
+()"*).** He read ComfyUI's template lyrics — `(rain on the window)`, `(take your time, take your
+time)` — and reasonably inferred `(…)` was a channel for telling the model what to play. It is
+not: `normalize_lyrics` (`engine/…/comfy/ldm/minimax_music/prompt.py:49`) splits on SQUARE
+brackets only, lowercases those, and passes **everything else through verbatim** into
+`<|lyrics_start|>`. A round-bracket run is a BACKING VOCAL in the lyric-sheet convention the
+model was trained on — which is exactly what the template uses it for. The hint said only
+*"every line outside a tag is sung"* and left the inference open; it now names `(…)` explicitly,
+sends instruments to Your song / Style, and states the one real instruction the box can carry:
+**a bare tag with nothing under it buys a section with no vocals.**
+
+Two incidentals from that same function, found reading it: `[Chorus]` reaches the model
+lowercased as `[chorus]`, and **`" ^ "` is silently converted to a newline** — an undocumented
+separator that would surprise anyone who put a caret in a lyric.
+
+🟡 **OPEN, COSMETIC: the popup is anchored `bottom: 100%` and covers the step's "Write the song"
+title.** Visible in Fabio's screenshot. Below the box was rejected because a 16-row box already
+reaches the bottom of its column, so the real fix is probably an inset top-left rather than a
+flip. Not changed without his word.
+
+## 🔴 THE ENHANCER DEGENERATES — found 2026-09-10 from Fabio's own run, HALF FIXED
+
+He asked what the enhancer had written, having watched a `1400/1400` bar for ~90 s. Read out of
+Comfy `/history` on 48188 (a GET; it spends nothing), prompt `a3090650`:
+
+**Brief in:** `Your song: Sweet and caring pop song` + `Style: Contemporary pop ballad`.
+**Out:** three sane blocks, then an unbounded repetition loop — *"No instrumentation changes
+after the last 30 seconds. No instrumentation changes before the last 30 seconds."* to the cap.
+**6,606 characters, 106.81 s. It ran to `max_length` because it never emitted a stop token.**
+
+🔴 **NOT A ONE-OFF, and the previous one was worse.** Prompt `d375d26a` (`a slow desert blues…`)
+ends `No clipping.` ×21 — and that caption reached the music graph as `Input_Arrangement`
+(node 100), where **that graph ERRORED** (`status: "error"`, no outputs).
+
+**Three causes stacking, and only two are fixed:**
+1. 🟢 **Sampling had nothing to push it out.** `repetition_penalty` 1.05 (barely above off) and
+   `presence_penalty` 0. `No X` is self-similar and cheap to continue. **FIXED → 1.15 / 0.6, in
+   the shared enhancer GRAPH, both forms** (`comfy_workflows/qwen3vl_4b_prompt_enhancer.json` +
+   `raw/`), because degeneration is every caller's problem — `llmService.js` drives the same
+   graph at `max_length: 2048` and had the same exposure.
+2. 🟢 **The cap was 2.3× the contract.** **FIXED → `max_length` 1400 → 800** at
+   `flowsRegistry.js` `MINIMAX_MUSIC_ENHANCE_PARAMS`. Not 400: the recipe asks for 250–450 words
+   and 450 words ≈ 620 tokens, so 800 is a guard with ~30% headroom, not a budget.
+3. 🔴 **THE RECIPE TEACHES BY NEGATION, AND THIS IS THE ROOT CAUSE — NOT FIXED.** Its own system
+   prompt is a stack of prohibitions (*"No similes, no metaphors, no 'like a…', no scene-setting
+   sentences"*), and a 4B copies that register into its answer. Compounding it: the rules demand
+   **250–450 words**, three honest blocks for a simple brief come to ~200, so the model pads —
+   in the register it was taught. `/create-enhancer-recipe` owns this loop.
+
+🔴 **AND IT POISONS THE CAPTION, not just the clock.** MiniMax's caption is prose into a text
+encoder — **there is no negative channel**. A tail of "no cymbals, no reverb, no clipping" puts
+those words in front of the encoder. Fabio's brief said *sweet and caring pop song*; the caption
+named drums, synths, distortion, glitch and clipping.
+
+🟡 **A RELOAD IS ENOUGH to pick both fixes up** — `routes/workflowStatic.js` caches only the
+DIRECTORY LISTING (`_cache`, line 21), never file contents, so the graph is read fresh per
+request; `flowsRegistry.js` is renderer-side. No restart, no rebuild.
+
+## 🔴 THE ENHANCER CANNOT SEE THE CAST — found 2026-09-10, ROOT-CAUSED, NOT BUILT
+
+**Fabio: *"I did ask for a man and a woman, and I only got a woman."*** He is right, and it is a
+second defect independent of the loop above.
+
+```
+from: ['positive', 'Input_Style', 'Input_Style_Custom']
+```
+
+`Input_Voices`, `Input_Voice_Notes` and `Input_Lyrics` are **not** sources. So the enhancer wrote
+`[VOCAL] Female lead … no harmonies, no ad-libs, no layered backing vocals` having never seen
+that there were two singers. Then `Cat_Vocal_Body` (node 87) concatenates **roster + voice notes
++ the enhancer's prose, in that order**, so the caption read:
+
+> `Vocal Details: man (Male) woman (Female) Raspy and close-miked, conversational in the verses,
+> layered harmonies on the chorus Female lead, breathy, restrained … no harmonies, no ad-libs,
+> no layered backing vocals.`
+
+The enhancer's sentence comes LAST and negates both facts before it. And
+`Strip_Voice_Markers` (77) had already deleted `<man>` / `<woman>` from the lyrics, so the roster
+line was the ONLY thing left saying two people sing. One woman, no harmonies — exactly what he
+heard.
+
+**THE PROPOSED FIX, awaiting Fabio's word and one GPU run:**
+1. Add `Input_Voices` and `Input_Voice_Notes` to the enhance decl's `from`. The side effect is
+   the correct one: editing the cast then marks the vocal block stale, exactly as editing the
+   brief does (`_setFlowField`).
+2. A recipe rule mirroring the closed-instrument rule it already has: **the CAST is closed** —
+   name every voice the user listed, invent none, never negate a vocal the user asked for.
+
+🟡 Do NOT "fix" this by reordering `Cat_Vocal_Body` so the enhancer's prose comes first. Which
+clause wins in prose is a coin flip; the defect is that the enhancer writes BLIND.
+
 ## Current State — 2026-09-10, THE OWED RUN IS DONE AND ONE NEW DEFECT IS NAMED
 
-🟢 **FABIO HAS RUN THE SONG FLOW IN HIS OWN APP** (2026-09-10, his words). That is the item
+⚠️ **SUPERSEDED — read the block above. Its first claim is FALSE:** the run Fabio made was
+MPI-694's Sound & Music, not this card's Song. Kept for the root-cause work below, which held.
+
+🟢 ~~**FABIO HAS RUN THE SONG FLOW IN HIS OWN APP**~~ (2026-09-10, his words). That is the item
 `validation.md` ends on — *"Item 1 and 2 above still need Fabio's press and Fabio's ears"* — and
 the only thing this card was actually waiting for. **His verdict on what came out is NOT yet
 recorded here; ask for it before ticking the checklist.**
@@ -1269,6 +1436,20 @@ E. 🟡 **`MpiInput` and `MpiDropdown` do not agree on control height — a PRIM
 so a 220 cap would clip real material. Do not "tidy" it down to a textbook range.
 
 ## Plan Drift
+
+**2026-09-10 — checklist L30 named the wrong shape, and building it as written would have been a
+product decision nobody made.** The line said *"extracted from `MpiPromptBox` onto `MpiInput`"*.
+`MpiInput` is the Primitive every declared text field mounts, so that phrasing quietly meant
+`@` in every flow's every text box. Fabio's answer was the opposite — *"only the lyrics box gets
+it. Why would it leak into sound and music?"* — so the picker is opt-in on the FIELD DESCRIPTOR
+and `MpiInput` was never touched. The general lesson for the vocabulary: a capability added to a
+Primitive is added to every declaration that names it, and only a per-field key can say no.
+
+**2026-09-10 — a handoff credited this card with a live run that belonged to MPI-694.** The
+Song run has never happened; Fabio aborted it the moment `@` failed, and the run he reported was
+Sound & Music's. Twice now this card's checklist has been read as a record of fact — the phantom
+`minimax-music.md` rename, and now the run — and both times an unchecked line was the source.
+A checklist item is a to-do, and a to-do is not evidence.
 
 **2026-09-03 — "an instrumental run must send NO lyrics" was one word too strong, and that word
 cost the model's strongest channel.** The plan, the injection guard and `sim_caption.py` all

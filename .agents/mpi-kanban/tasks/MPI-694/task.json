@@ -4,13 +4,14 @@
   "title": "Stable Audio 3: SFX, one-shots, instruments, instrumental music",
   "description": "Ship Stable Audio 3 as the non-vocal half of Music Maker. Bench-approved by Fabio across all four modes; both licences read; the VRAM fix is measured. Split out of MPI-664.",
   "column": "doing",
-  "maturity": "in-progress",
+  "maturity": "validating",
   "status": "active",
   "created_at": "2026-09-05T09:55:00Z",
-  "updated_at": "2026-09-05T12:37:46+01:00",
+  "updated_at": "2026-09-10T12:31:07+01:00",
   "links": {
     "brief": "brief.md",
     "events": "events.jsonl",
-    "plan": "plan.md"
+    "plan": "plan.md",
+    "validation": "validation.md"
   }
 }

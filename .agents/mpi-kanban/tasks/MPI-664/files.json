@@ -28,6 +28,9 @@
     "tests/flow-output-filename.test.cjs",
     "docs/playbooks/add-flow/ui/prompt-enhance.md",
     "tests/flow-uninstall-guard.test.cjs",
-    "tests/shared-dep-uninstall-direction.test.cjs"
+    "tests/shared-dep-uninstall-direction.test.cjs",
+    "js/utils/mentionPicker.js",
+    "tests/ref-tag-picker.test.cjs",
+    "tests/mention-picker.test.cjs"
   ]
 }

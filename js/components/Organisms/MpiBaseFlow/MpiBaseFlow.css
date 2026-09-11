@@ -618,6 +618,8 @@
    slide the user is already meant to be looking past, at the preview. MPI-572. */
 .mpi-base-flow__field-text {
     width: 100%;
+    /* The `@` picker is absolutely positioned against this host (MPI-664). */
+    position: relative;
 }
 .mpi-base-flow__field-text .mpi-input,
 .mpi-base-flow__field-text .mpi-input__wrapper {
@@ -626,6 +628,52 @@
 .mpi-base-flow__field-text .mpi-input__field {
     resize: none;
     height: 100%;
+}
+
+/* ── The `@` mention picker (MPI-664) ────────────────────────────────────────
+   Typing `@` in the Lyrics box lists the voice roster so a marker can be inserted
+   rather than spelled from memory. ABOVE the box, the same anchor the prompt box's
+   reference picker has used since MPI-475: below it would fall off the slide on a
+   16-row box that already reaches the bottom of its column. */
+.mpi-base-flow__mention-picker {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    min-width: 12rem;
+    max-height: 13rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: var(--s-1);
+    padding: var(--s-1);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    z-index: 3;
+}
+
+/* A picker row, not a labelled button: sentence-case and left-aligned. The `.mpi-btn`
+   prefixes beat the Primitive's own single-class rules without depending on
+   stylesheet order, and the type resets undo its uppercase/600/tracking (MPI-588). */
+.mpi-btn.mpi-base-flow__mention-picker-item {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-2);
+    padding: var(--s-1) var(--s-2);
+    background: none;
+    border: 0;
+    border-radius: 0;
+    text-align: left;
+    color: var(--ink-1);
+    font-size: var(--t-xs);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.mpi-btn.mpi-btn--ghost.mpi-base-flow__mention-picker-item:hover:not(:disabled),
+.mpi-btn.mpi-btn--ghost.mpi-base-flow__mention-picker-item--active {
+    background: var(--accent-heat);
+    color: var(--surface-0);
 }
 /* A textarea is not a row control. On a STEP row every other field is a short
    label-beside-control pair, but a prompt box needs its label above it and real

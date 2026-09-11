@@ -44,6 +44,7 @@ import { MpiProgressBar } from '../components/Primitives/MpiProgressBar/MpiProgr
 import { MpiInput } from '../components/Primitives/MpiInput/MpiInput.js';
 import { MpiDropdown } from '../components/Primitives/MpiDropdown/MpiDropdown.js';
 import { renderIcon } from './icons.js';
+import { attachMentionPicker } from './mentionPicker.js';
 import { clientLogger } from '../services/clientLogger.js';
 
 /**
@@ -149,6 +150,43 @@ export function serialiseVoices(rows) {
         .filter(r => r.name)
         .map(r => (r.type && r.type.toLowerCase() !== 'any' ? `${r.name} (${r.type})` : r.name))
         .join('\n');
+}
+
+/**
+ * A roster's rows → the `@` picker's list (MPI-664 checklist L30).
+ *
+ * The TAG is the bare name, because that is what goes in the angle brackets and what
+ * the lyrics reference. The LABEL carries the type as well, following the same
+ * `Name (Type)` convention `serialiseVoices` writes and dropping it for the catch-all
+ * — the type is what tells two singers apart in the list.
+ *
+ * Blank rows are dropped for the same reason as in `serialiseVoices`: a half-added row
+ * is not a voice yet. Duplicate names collapse to the first — `nextVoiceName` only
+ * enforces uniqueness on ADD, so a rename can produce two, and two identical rows in
+ * the picker would be an unanswerable choice (both insert the same marker anyway).
+ *
+ * Anything that is not an array of rows yields nothing, which is how a `mentions`
+ * pointing at a non-roster field fails: quietly and closed, not thrown.
+ *
+ * @param {Array<{name: string, type: string}>} rows
+ * @returns {Array<{tag: string, label: string}>}
+ */
+export function mentionTagsFrom(rows) {
+    if (!Array.isArray(rows)) return [];
+    const seen = new Set();
+    const out = [];
+    rows.forEach((r) => {
+        const name = String(r?.name ?? '').trim();
+        const type = String(r?.type ?? '').trim();
+        const key = name.toLowerCase();
+        if (!name || seen.has(key)) return;
+        seen.add(key);
+        out.push({
+            tag: name,
+            label: type && type.toLowerCase() !== 'any' ? `${name} (${type})` : name,
+        });
+    });
+    return out;
 }
 
 /**
@@ -696,6 +734,35 @@ export function buildField(f, cur, onChange, unsubs, opts = {}) {
         }
         inst.on('input', ({ value }) => onChange(value));
         unsubs.push(() => inst?.el?.destroy?.());
+
+        // THE `@` PICKER, and it is OPT-IN PER FIELD (Fabio, 2026-09-10: *"only the
+        // lyrics box gets it. Why would it leak into sound and music?"*). This branch
+        // builds every declared text field in every flow, so attaching the picker
+        // unconditionally would put it on Sound & Music's "Describe it", the song brief
+        // and Voice notes as well. `mentions` names the sibling field holding the list,
+        // so a flow ASKS for it and the default is nothing.
+        if (f.mentions) {
+            const field = qs('textarea, input', inst.el);
+            const read = opts.readField;
+            if (field && typeof read === 'function') {
+                unsubs.push(attachMentionPicker(field, {
+                    host,
+                    block,
+                    getTags: () => mentionTagsFrom(read(f.mentions)),
+                    onInsert: (next, caret) => {
+                        // Through the Primitive's setter, not the raw node: it syncs the
+                        // cached prop and re-runs the auto-grow. It also drops the
+                        // selection, so the caret is restored after.
+                        inst?.el?.setValue?.(next);
+                        field.setSelectionRange?.(caret, caret);
+                        field.focus?.();
+                        onChange(next);
+                    },
+                }));
+            } else if (!read) {
+                clientLogger.warn('declaredFields', `field ${f.id} declares mentions but the consumer passed no readField`);
+            }
+        }
         wrap.appendChild(host);
     } else if (f.type === 'voices') {
         // The voice ROSTER (MPI-664) — a cast list of any length, each row a name and

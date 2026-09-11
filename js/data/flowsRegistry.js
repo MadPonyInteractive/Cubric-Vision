@@ -362,7 +362,27 @@ const MINIMAX_MUSIC_ENHANCE_PARAMS = {
     ].join('\n'),
     'Input_Scrub_Negation.regex_pattern': '(?!)',
     'Input_Tidy.regex_pattern': '\\s+$',
-    'Input_Text_Gen.max_length': 1400,
+    // 1400 -> 800 (Fabio, 2026-09-10). The cap is a GUARD, not the budget: the rules
+    // above ask for 250-450 words, and 450 words is ~620 tokens, so 800 leaves ~30%
+    // headroom for a legitimately long [ARRANGEMENT] while halving the worst case.
+    //
+    // 🔴 WHAT IT GUARDS AGAINST, MEASURED: the 4B degenerated and ran to the FULL 1400
+    // tokens — 6,606 characters, 106.81 s — with the tail an unbounded repetition loop
+    // ("No instrumentation changes after the last 30 seconds." over and over; the run
+    // before it was "No clipping." x21, and THAT graph errored). Fabio saw it as a
+    // 1400/1400 progress bar and a 90-second wait for a caption.
+    //
+    // The cap alone does not fix it and is not meant to — the real fix is the sampler's
+    // `repetition_penalty` 1.05 -> 1.15 and `presence_penalty` 0 -> 0.6, in the shared
+    // enhancer graph (`comfy_workflows/qwen3vl_4b_prompt_enhancer.json`), because
+    // anti-degeneration is every caller's problem, not this recipe's.
+    //
+    // 🟡 AND THE WORD BUDGET ABOVE IS ITSELF A CAUSE. Three honest blocks for a simple
+    // brief come to ~200 words; told to reach 250-450, the model pads, and it pads in
+    // the register these instructions taught it — a stack of "No similes, no metaphors,
+    // no scene-setting". `No X` is self-similar and has no natural end. Rewriting the
+    // recipe to stop teaching by negation is the root fix and has NOT been done.
+    'Input_Text_Gen.max_length': 800,
 };
 
 /** @type {FlowDef[]} */
@@ -2295,7 +2315,21 @@ export const FLOWS = [
                 // The hint has to state the thing that cost two GPU runs to learn — text
                 // outside a tag is SUNG — because nothing on screen implies it.
                 title: 'Write the song',
-                hint: 'Mark sections with [Intro] [Verse] [Pre-Chorus] [Chorus] [Post-Chorus] [Bridge] [Instrumental] [Solo] [Outro] — they steer the arrangement rather than guarantee it. Every line outside a tag is sung, and to hand one to a voice put its name in angle brackets on its own line — <Singer A>.',
+                // ROUND BRACKETS ARE THE GAP THIS HINT USED TO LEAVE (Fabio, 2026-09-10).
+                // Reading ComfyUI's own template lyrics — `(rain on the window)`,
+                // `(take your time, take your time)` — the obvious inference is that
+                // `(…)` is a channel for telling the model what to play. It is not:
+                // `normalize_lyrics` splits on SQUARE brackets only, so a round-bracket
+                // run travels in the same stream as any lyric line. In the lyric-sheet
+                // convention the model was trained on it means a BACKING VOCAL, which is
+                // why the template uses it for call-and-response. Left unsaid, the hint
+                // invited exactly the mistake runs 1 and 2 already paid for.
+                //
+                // A BARE TAG is the one real instruction the lyrics box can carry —
+                // `[Instrumental]` with nothing under it buys a section with no vocals.
+                // Said out loud here because it is the answer to "how do I get a guitar
+                // break", and the tag channel is MiniMax's closed nine words or nothing.
+                hint: 'Mark sections with [Intro] [Verse] [Pre-Chorus] [Chorus] [Post-Chorus] [Bridge] [Instrumental] [Solo] [Outro] — they steer the arrangement rather than guarantee it, and a tag with nothing under it buys a section with no vocals. Every line outside a tag is sung, and so is anything in round brackets: (like this) is a backing vocal, not a note to the model, so instruments and production belong in Your song or Style. To hand a line to a voice, put its name in angle brackets on its own line — <Singer A>.',
                 fields: [
                     {
                         // The roster (MPI-664 tier 2). Its `v` values are the CAPTION
@@ -2348,6 +2382,17 @@ export const FLOWS = [
                         // lyrics empty hears that song's words.
                         id: 'Input_Lyrics', type: 'text', rows: 16, label: 'Lyrics',
                         col: 'right',
+                        // `@` LISTS THE CAST (MPI-664 checklist L30, Fabio 2026-09-10).
+                        // The marker's spelling has to be exact for a line to reach the
+                        // voice the user meant, and the step's own hint asks for angle
+                        // brackets — so the names live one field to the left and the box
+                        // offers them rather than asking the user to copy them.
+                        //
+                        // This key is the WHOLE GATE. `buildField`'s text branch builds
+                        // every declared text field in every flow, so the picker is
+                        // opt-in per field: Sound & Music's "Describe it", the song
+                        // brief and Voice notes declare nothing and get nothing.
+                        mentions: 'Input_Voices',
                         placeholder: '[Verse]\nMidnight and the canvas glows…',
                         default: '',
                     },

@@ -21,8 +21,8 @@
       "sampling_mode.top_k": 64,
       "sampling_mode.top_p": 0.95,
       "sampling_mode.min_p": 0.05,
-      "sampling_mode.repetition_penalty": 1.05,
-      "sampling_mode.presence_penalty": 0,
+      "sampling_mode.repetition_penalty": 1.15,
+      "sampling_mode.presence_penalty": 0.6,
       "thinking": false,
       "use_default_template": true,
       "clip": [
