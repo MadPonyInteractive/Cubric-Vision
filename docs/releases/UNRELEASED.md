@@ -276,6 +276,18 @@
   you already run LTX there is nothing to install. Video only, and a long or large clip can
   still exhaust graphics memory — a short clip is the safe first try.
 
+- **You can now mask a picture and give it a reference at the same time.** Changing one thing
+  to match another — her hair like this photo's hair, that jacket in this fabric — needed two
+  things the app never offered together: a mask, and a second picture to copy from. The
+  History workspace had the masking, the gallery had the reference pictures, and neither had
+  both. It does now. Open an image, mask what should change, then use the **+** beside the
+  prompt to add a reference from your project or your computer, and run an Edit. The picture
+  you are working on shows up in the strip as chip 1, numbered like the rest, so you can see
+  exactly what the model is being given. Drag the chips to reorder them when the order
+  matters — on Control, the first one is the pose or depth guide and your subject comes
+  after. The references are for this edit only: leave the workspace and the strip is back to
+  your picture alone.
+
 - **You can now go and get an update instead of waiting to be asked.** When a new version is
   out, Settings shows it at the very top with a button to install it — and that row is only
   there when there is actually something to install. The prompt you get on startup is no
