@@ -32,12 +32,14 @@ Measured 2026-09-11, master `78400b06` vs the shipped `v1.5.0`:
 3. **master's `APP_VERSION` is `1.4.2` — LOWER than the 1.5.0 he is running.** Left alone, his
    app reports a downgrade and `updateChecker.js` (`compareSemVer(latest, current) <= 0` gates
    the prompt) would offer him 1.5.0 as an upgrade, quietly reverting the build under test.
-   **Stamp the build ahead of 1.5.0 with `--version` at build time** — `build-portable.mjs`
-   takes it and defaults to `package.json` only when absent, so nothing on master needs
-   committing. Something like `2.0.0-dev.1`. Confirm `compareSemVer` orders the exact string
-   you pick above `1.5.0` before shipping it; that is a one-line check, not a research task.
-   `build-portable.mjs` also warns when the baseline's `toVersion` is not older than
-   `--version`, which is the same problem telling you about itself.
+   **This is MPI-722's job, not this card's — do that one first** and master will stamp
+   `1.6.0` on its own: above every published release, below the 2.0 master is heading for,
+   never itself published, and ordered so his install still takes the real 2.0 update when it
+   ships. If MPI-722 has not landed, pass `--version 1.6.0` at build time as a stopgap
+   (`build-portable.mjs` defaults to `package.json` only when the flag is absent) — and never
+   a `-dev` suffix, which parses to NaN in `compareSemVer`. The build also warns when the
+   baseline's `toVersion` is not older than the version being stamped, which is the same
+   problem telling you about itself.
 4. **The 1.5.0 baseline manifest is NOT on master** — `release-baselines/` there holds only
    `README.md`. It lives on the release line: `release-baselines/win32-x64.json` at branch
    `1.4.2`, restamped to the shipped 1.5.0 by `8df1c9b3`. Pull that file out and hand it to
@@ -49,9 +51,10 @@ Measured 2026-09-11, master `78400b06` vs the shipped `v1.5.0`:
 
 ## Steps
 
-1. Build on master, no commit to it:
-   `node scripts/build-portable.mjs --version 2.0.0-dev.1 --from-manifest <the 1.5.0 win32-x64
-   baseline> --no-source-manifest`
+0. **MPI-722 first** — master stamped 1.6.0. Everything below assumes it.
+1. Build on master:
+   `node scripts/build-portable.mjs --from-manifest <the 1.5.0 win32-x64 baseline>
+   --no-source-manifest`
    - **`--no-source-manifest` is not optional.** Without it the run mirrors its manifest over
      the tracked `resources/cubric/update-manifest.json`
      (`docs/releases/portable-distribution-contract.md` § verification builds).
@@ -87,6 +90,12 @@ One `app.log` after a download run, plus the four greps that make it readable
 His run is the evidence for all three fixes; they ship to everyone in 2.0 with no further
 work. If the log says the crawl is still there, it now says WHY — which was the point of
 shipping MPI-716 first.
+
+**This bundle never reaches GitHub** (Fabio, 2026-09-11). It is handed over directly and
+nothing about it is published. His route back to the normal channel is the 2.0 release, which
+his 1.6.0 stamp will prompt for — see MPI-722 § Owed later for the one thing 2.0's release
+owes him: a FULL update bundle, since the ordinary 1.5.0 → 2.0.0 delta will refuse a 1.6.0
+install by design.
 
 ## Evidence
 

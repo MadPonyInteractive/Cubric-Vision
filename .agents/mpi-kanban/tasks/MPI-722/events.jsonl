@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-722", "at": "2026-09-11T01:54:54+01:00", "actor": "claude", "column": "todo", "title": "Stamp master 1.6.0 - a dev-line marker that never ships, so a hand-delivered build can still take the 2.0 update"}
