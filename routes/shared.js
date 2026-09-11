@@ -525,11 +525,30 @@ async function runCustomCommand(commandStr, cwd) {
  * Recursively search for a filename within a directory.
  */
 async function findFileRecursive(dir, filename) {
-    if (!(await fs.pathExists(dir))) return null;
-    const files = await fs.readdir(dir);
+    // MPI-719: this walks a LIVE tree. Nothing locks a route's scan against a download's
+    // lifecycle, and nothing should — a scan that blocks behind an install is worse than
+    // the race. So an entry vanishing mid-walk is a DEFINED outcome, not an exception:
+    // `FileDownloader.cancel()` removes the partial and then its `.cubricdl` marker in two
+    // steps (and MPI-716's write probe unlinks its own file), so both the dir and any name
+    // `readdir` just handed back can be gone by the time we stat it. ENOENT means absent
+    // here; every other code (EPERM, EIO, EBUSY) still throws, so a real fault still
+    // surfaces as the 500 it should be.
+    let files;
+    try {
+        files = await fs.readdir(dir);
+    } catch (err) {
+        if (err.code === 'ENOENT') return null;
+        throw err;
+    }
     for (const file of files) {
         const fullPath = path.join(dir, file);
-        const stat = await fs.stat(fullPath);
+        let stat;
+        try {
+            stat = await fs.stat(fullPath);
+        } catch (err) {
+            if (err.code === 'ENOENT') continue;
+            throw err;
+        }
         if (stat.isDirectory()) {
             const found = await findFileRecursive(fullPath, filename);
             if (found) return found;

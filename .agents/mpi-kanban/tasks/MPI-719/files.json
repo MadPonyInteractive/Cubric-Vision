@@ -1,0 +1,9 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "routes/shared.js",
+    "routes/downloadCompletion.js",
+    "tests/download-scan-race.test.cjs",
+    "docs/download-manager.md"
+  ]
+}

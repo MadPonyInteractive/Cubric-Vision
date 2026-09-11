@@ -1304,3 +1304,31 @@ body dribbled out a chunk per interval instead of cut, plus a direct call provin
 that cannot open its file logs and resolves rather than rejecting into the progress
 handler. `_setSlowStreamThresholdsForTests` compresses the 60 s window; production never
 reassigns those.
+
+## A disk scan walks a LIVE tree — ENOENT is absent, not an error (MPI-719)
+
+`FileDownloader.cancel()` removes the partial and then its `.cubricdl` marker in two steps,
+and **nothing locks a route's scan against it** — deliberately: a `/comfy/models/check` that
+blocked behind an install's lifecycle would be worse than the race. So an entry disappearing
+mid-walk is a defined outcome of reading that tree, and the primitives that read it own the
+handling. Captured 2026-09-10: 102 ms after a cancel, two `models/check` calls answered 500
+with ENOENT — one stat on a weight, one on a marker — and each dropped the renderer's
+`syncModelInstalled` reconcile, so the Model Library kept showing pre-cancel state.
+
+Both readers now treat ENOENT as absent and **re-throw every other code**, so EPERM/EIO/EBUSY
+still surface as the 500 they should be (a blanket catch would hide a real fault):
+
+- `findFileRecursive` (`routes/shared.js`) — ENOENT out of `readdir` returns `null` (an absent
+  root is "not found", which `remotePodState`'s extra folders rely on); ENOENT out of the
+  per-entry `fs.stat` skips that entry and the walk continues.
+- `getPartialDownloadState` (`routes/downloadCompletion.js`) — **the stat IS the existence
+  check.** The `pathExists` that preceded it only narrowed the window; ENOENT from the stat
+  is the same `{ resumable: false, reason: 'missing-file' }` verdict.
+
+MPI-716's write probe unlinks its own file and brushes the same window; it is not a second
+cause, and this fix covers it. Node's promise `fs.stat` has no `throwIfNoEntry` (that is
+`statSync` only), so this is a check on `err.code`, never an option flag.
+
+Guard: `tests/download-scan-race.test.cjs` — a `readdir` stubbed to name a file that is not
+there, a marked partial whose file is really deleted, and an EPERM/EACCES control proving
+both readers still throw.

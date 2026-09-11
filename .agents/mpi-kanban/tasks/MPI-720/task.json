@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-720",
+  "title": "Build an UNRELEASED 1.5.1 off the release line and hand the beta user a delta bundle to verify the slow-install fixes",
+  "description": "MPI-717's three download fixes (MPI-716 telemetry, MPI-718 retry budget, MPI-719 scan race) can only be verified on the reporter's own machine: no link here sustains 20-40 KB/s and no harness can fake his disk. Port them onto the release line, stamp 1.5.1, BUILD but do NOT release - he applies the 1.5.0 -> 1.5.1 delta bundle offline with update-from-zip.bat, keeping his projects, models and engine, then sends back app.log. Procedure and every trap: tasks/<id>/brief.md. Cut the real release only after he confirms.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-09-11T01:29:02+01:00",
+  "updated_at": "2026-09-11T01:29:02+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

@@ -23,9 +23,17 @@ re-reads those two files.
 
 ## Current State
 
-**Phases 1 and 2 have shipped. Phase 3 (MPI-719, the cancel race) is the single next
-action** — still `planned`, brief at `tasks/MPI-719/brief.md`, and untouched by either
-phase. Nothing is blocked.
+**All three phases have shipped.** MPI-716, MPI-718 and MPI-719 are closed; the umbrella
+stays in `todo` because an umbrella never moves. The single next action is close-out
+(`mpi-end-session`) — nothing on this plan remains to implement.
+
+Phase 3 (MPI-719) landed 2026-09-11: ENOENT is "absent" in both readers that walk the live
+models tree, every other error code still throws, and `cancel()` was not touched. Evidence:
+`tasks/MPI-719/validation.md`. **One thing the diff does not say: the window is not
+cancel-only.** The second captured `models/check failed` (17:16:49, on a `.cubricdl` marker)
+is a dep COMPLETING, not a cancel — `clearDownloadMarker()` on success removes a marker under
+the same unlocked walk. The reader-side fix covers both, but anything that reasons about this
+race from `cancel()` alone is reasoning from half the cause.
 
 Phase 2 (MPI-718) landed 2026-09-10: the budget now means three failures WITHOUT progress
 (`_attemptBytes` + an 8 MB `RETRY_PROGRESS_FLOOR_BYTES` reset in the `'progress'` handler),
@@ -125,11 +133,19 @@ Owns: `routes/downloadManager.js` (`FileDownloader` constructor, `'error'` and
 → verify: the extended harness — four cuts with progress between them completes with a
 matching SHA; three zero-byte cuts still go terminal.
 
-## Phase 3: Cancel race — MPI-719
+## Phase 3: Cancel race — MPI-719 — SHIPPED 2026-09-11
 
 Independent of Phases 1-2 in code, sequenced after them only because all three write
 `docs/download-manager.md`. Reader-side fix in the two shared primitives, every call
-site in one pass; `cancel()` itself is not touched. Brief: `tasks/MPI-719/brief.md`.
+site in one pass; `cancel()` itself is not touched. Brief: `tasks/MPI-719/brief.md`;
+executed evidence: `tasks/MPI-719/validation.md`.
+
+Landed as planned, with one scope choice worth recording: both readers dropped the
+`pathExists` that preceded the `stat`/`readdir` rather than keeping it and adding a guard.
+The existence check and the stat were the two halves of the window — collapsing them is
+what closes it, and a kept `pathExists` would only have narrowed it again. 3 race cases
+(proven against the pre-fix bodies materialised from HEAD, not merely asserted), 918/918
+suite, eslint clean, both captured errors re-read.
 
 Owns: `routes/shared.js` (`findFileRecursive`), `routes/downloadCompletion.js`
 (`getPartialDownloadState`), a new `tests/download-scan-race.test.cjs`,
@@ -147,6 +163,12 @@ nothing. Run them in order; a single session can carry all three.
 
 ## Plan Drift
 
+- **2026-09-11, Phase 3.** No scope change, one correction to the evidence the brief was
+  written from. Re-reading the captured logs to close the card showed that only the FIRST
+  `models/check failed` follows a cancel (102 ms after it, on a weight); the second, on a
+  `.cubricdl` marker, follows a dep completing 36 s earlier — `clearDownloadMarker()` on
+  success opens the identical window. The fix is unchanged and covers both; the cause is
+  wider than the card's title says, and the plan and `docs/download-manager.md` now say so.
 - **2026-09-10, Phase 2.** Scope grew by two defects, both in the handlers this phase
   already owned and both surfaced by its own repro rather than by inspection: a replaced
   stream's late `'download'` crashing on MPI-716's `__response` read, and its late

@@ -59,8 +59,18 @@ async function clearDownloadMarker(filePath) {
 
 async function getPartialDownloadState(filePath) {
     if (!(await hasDownloadMarker(filePath))) return { resumable: false, reason: 'no-marker' };
-    if (!(await fs.pathExists(filePath))) return { resumable: false, reason: 'missing-file' };
-    const stat = await fs.stat(filePath);
+    // MPI-719: the stat IS the existence check. A `pathExists` before it only narrowed the
+    // window, it never closed one — `FileDownloader.cancel()` removes the partial and its
+    // marker in two unlocked steps, so a file that passed `pathExists` is routinely gone by
+    // the stat, and the throw escaped as a 500 on /comfy/models/check that dropped a
+    // syncModelInstalled reconcile. ENOENT is "not resumable"; anything else still throws.
+    let stat;
+    try {
+        stat = await fs.stat(filePath);
+    } catch (err) {
+        if (err.code === 'ENOENT') return { resumable: false, reason: 'missing-file' };
+        throw err;
+    }
     if (!stat.isFile() || stat.size <= 0) return { resumable: false, reason: 'empty-or-not-file' };
     return {
         resumable: true,
