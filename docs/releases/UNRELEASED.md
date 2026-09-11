@@ -55,6 +55,13 @@
   trick and nothing uses it any more, so Klein no longer downloads it and Vision clears it off
   your disk if you already had it.
 
+- Krea 2 Inpaint is a lot better, and it takes longer. It now goes through the same machinery
+  as Edit: the picture itself is handed to the model as reference and your words are read as
+  an instruction about it, rather than as a description on their own. What comes back sits in
+  the scene it was painted into far more reliably. Reading the source that way costs time, so
+  an inpaint runs slower than it used to — a deliberate trade, and the reason the result is
+  worth the wait. Krea 2 and Krea 2 NSFW both.
+
 - The generation engine moves up three versions, and the update is a small one. Vision now
   runs ComfyUI 0.34.0 instead of 0.31.0. Your engine updates itself in place the first time
   you open this version — a handful of small packages, not the multi-gigabyte reinstall an
@@ -326,6 +333,13 @@
 > latent previews now play everywhere they appear" names the **Flow result pane** alongside the
 > History workspace and the minimised preview window. The last two are real released bugs and
 > the entry is worth keeping; the Flow clause is the part to drop when folding.
+
+- Krea 2 Image to Image works on your whole picture instead of a patch of it. Your input was
+  cut down to the size you picked rather than scaled into it, so a 4000-pixel photo asked for
+  a 1024 square handed the model a 1024-pixel square cut out of the middle and threw the rest
+  away. It is now scaled to the size you asked for first, so the whole frame goes in. A ratio
+  that does not match your picture still trims the long edge to fit, as it has to. Krea 2 and
+  Krea 2 NSFW both.
 
 - Large videos and photos import properly. Dropping a file into a project used to send the
   whole thing through the browser as text, which quietly capped an import at about 75 MB —

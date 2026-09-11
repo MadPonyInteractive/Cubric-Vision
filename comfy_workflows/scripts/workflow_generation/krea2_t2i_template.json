@@ -126,7 +126,7 @@
   },
   "74": {
     "inputs": {
-      "int": 1344
+      "int": 1024
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -135,7 +135,7 @@
   },
   "75": {
     "inputs": {
-      "int": 768
+      "int": 1024
     },
     "class_type": "MpiInt",
     "_meta": {
@@ -156,7 +156,7 @@
   },
   "112": {
     "inputs": {
-      "string": "add a red bikini"
+      "string": "remove the arm"
     },
     "class_type": "MpiText",
     "_meta": {
@@ -438,7 +438,7 @@
   "217": {
     "inputs": {
       "pixels": [
-        "526",
+        "694",
         0
       ],
       "vae": [
@@ -459,7 +459,7 @@
         0
       ],
       "false": [
-        "112",
+        "705",
         0
       ]
     },
@@ -912,7 +912,7 @@
       "string_a": "\n",
       "delimiter": "",
       "string_b": [
-        "112",
+        "705",
         0
       ]
     },
@@ -1129,7 +1129,7 @@
   },
   "502": {
     "inputs": {
-      "float": 0.3
+      "float": 0.6
     },
     "class_type": "MpiFloat",
     "_meta": {
@@ -1187,28 +1187,6 @@
       "title": "Mpi Compare"
     }
   },
-  "526": {
-    "inputs": {
-      "divisible_by": 16,
-      "position": "center",
-      "image": [
-        "553",
-        0
-      ],
-      "width": [
-        "75",
-        0
-      ],
-      "height": [
-        "74",
-        0
-      ]
-    },
-    "class_type": "MpiCrop",
-    "_meta": {
-      "title": "Mpi Crop"
-    }
-  },
   "538": {
     "inputs": {
       "float": 1
@@ -1256,7 +1234,7 @@
   },
   "553": {
     "inputs": {
-      "string": "",
+      "string": "C:\\Users\\Fabio\\Downloads\\beautiful-cyborg-woman-looking-straight_379823-4888-3144925768.jpg",
       "channel": "alpha",
       "block_if_empty": true
     },
@@ -1276,7 +1254,7 @@
   },
   "556": {
     "inputs": {
-      "string": ""
+      "string": "s"
     },
     "class_type": "MpiString",
     "_meta": {
@@ -1381,7 +1359,7 @@
     "inputs": {
       "mode": "one_is_true",
       "a": [
-        "518",
+        "698",
         0
       ],
       "b": [
@@ -2191,7 +2169,7 @@
   },
   "669": {
     "inputs": {
-      "math_expression": "8 if a else 15",
+      "math_expression": "6 if a else 12",
       "a": [
         "617",
         0
@@ -2204,7 +2182,7 @@
   },
   "671": {
     "inputs": {
-      "math_expression": "1.0 if a else 2.0",
+      "math_expression": "1.0 if a else 1.5",
       "a": [
         "617",
         0
@@ -2317,6 +2295,197 @@
     "class_type": "MpiIfElse",
     "_meta": {
       "title": "Mpi If Else"
+    }
+  },
+  "694": {
+    "inputs": {
+      "resize_type": "scale dimensions",
+      "resize_type.crop": "center",
+      "scale_method": "lanczos",
+      "input": [
+        "553",
+        0
+      ],
+      "resize_type.width": [
+        "75",
+        0
+      ],
+      "resize_type.height": [
+        "74",
+        0
+      ]
+    },
+    "class_type": "ResizeImageMaskNode",
+    "_meta": {
+      "title": "Resize Image/Mask"
+    }
+  },
+  "698": {
+    "inputs": {
+      "mode": "one_is_true",
+      "a": [
+        "518",
+        0
+      ],
+      "b": [
+        "674",
+        0
+      ]
+    },
+    "class_type": "MpiBooleanCompare",
+    "_meta": {
+      "title": "Mpi Boolean Compare"
+    }
+  },
+  "701": {
+    "inputs": {
+      "delimiter": "",
+      "string_a": [
+        "714",
+        0
+      ],
+      "string_b": [
+        "112",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Concatenate Text"
+    }
+  },
+  "705": {
+    "inputs": {
+      "any_1": [
+        "112",
+        0
+      ],
+      "any_2": [
+        "112",
+        0
+      ],
+      "any_3": [
+        "112",
+        0
+      ],
+      "any_4": [
+        "707",
+        0
+      ],
+      "any_5": [
+        "713",
+        0
+      ],
+      "any_6": [
+        "112",
+        0
+      ],
+      "any_7": [
+        "112",
+        0
+      ],
+      "select": [
+        "496",
+        0
+      ]
+    },
+    "class_type": "MpiAnySwitch10",
+    "_meta": {
+      "title": "Mpi Any Switch 10"
+    }
+  },
+  "707": {
+    "inputs": {
+      "string_a": "You are a helpful assistant specialized in image editing. ",
+      "delimiter": "",
+      "string_b": [
+        "112",
+        0
+      ]
+    },
+    "class_type": "StringConcatenate",
+    "_meta": {
+      "title": "Concatenate Text"
+    }
+  },
+  "710": {
+    "inputs": {
+      "words": "remove",
+      "text": [
+        "112",
+        0
+      ]
+    },
+    "class_type": "MpiTextContains",
+    "_meta": {
+      "title": "Mpi Text Contains"
+    }
+  },
+  "711": {
+    "inputs": {
+      "string": "You are a helpful assistant specialized in image inpainting, completely remove from the image: "
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Mpi String"
+    }
+  },
+  "712": {
+    "inputs": {
+      "find": "remove",
+      "string": [
+        "112",
+        0
+      ],
+      "replace": [
+        "711",
+        0
+      ]
+    },
+    "class_type": "StringReplace",
+    "_meta": {
+      "title": "Replace Text"
+    }
+  },
+  "713": {
+    "inputs": {
+      "true": [
+        "712",
+        0
+      ],
+      "false": [
+        "701",
+        0
+      ],
+      "boolean": [
+        "710",
+        0
+      ]
+    },
+    "class_type": "MpiIfElse",
+    "_meta": {
+      "title": "Mpi If Else"
+    }
+  },
+  "714": {
+    "inputs": {
+      "string": "You are a helpful assistant specialized in image inpainting, add to the image: "
+    },
+    "class_type": "MpiString",
+    "_meta": {
+      "title": "Mpi String"
+    }
+  },
+  "716": {
+    "inputs": {
+      "source": [
+        "705",
+        0
+      ]
+    },
+    "class_type": "PreviewAny",
+    "_meta": {
+      "title": "Preview as Text"
     }
   }
 }

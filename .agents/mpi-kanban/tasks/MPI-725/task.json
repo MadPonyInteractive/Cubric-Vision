@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-725",
+  "title": "Krea 2 template resync: stronger inpainting (slower) and i2i that resizes instead of cropping",
+  "description": "Fabio re-authored krea2_t2i_template.json in ComfyUI. Convert against the app engine, validate, bake the two runtime files, and write the two user-visible changes into UNRELEASED.md.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-09-11T12:50:09+01:00",
+  "updated_at": "2026-09-11T12:58:23+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
