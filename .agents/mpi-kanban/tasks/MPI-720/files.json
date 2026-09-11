@@ -1,0 +1,7 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    ".agents/mpi-kanban/tasks/MPI-720/"
+  ],
+  "note": "Build-only card: it edits no source file. The build runs out of tree (detached worktree at master HEAD) and writes to D:/CubricStudio/Vision/Builds, and --no-source-manifest keeps it off resources/cubric/update-manifest.json. So the card's whole footprint is its own workspace."
+}
