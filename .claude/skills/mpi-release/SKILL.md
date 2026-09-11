@@ -58,16 +58,23 @@ mandatory user-facing copy gates). The version file edits belong to
   diverge on purpose: master has none (so a build from it emits a FULL bundle),
   the maintenance line carries them (so it emits a delta). See
   `release-baselines/README.md` § Current baselines.
-- **`1.6.x` is RESERVED — never cut a real 1.6 release.** Master was stamped
-  `1.6.0` on 2026-09-11 (MPI-722) purely as a dev-line marker, so a build handed
-  to one beta tester orders above every published release and still takes the 2.0
-  prompt. It is not published: no tag, no GitHub Release, no manifest. A genuine
-  1.6.0 cut from the release line would collide with installs already reporting
-  that version, and `assertBundleApplies` (`scripts/portable/apply-update.cjs`)
-  would then match a delta against the wrong build. Master's next real release is
-  2.0.0 — and that release owes a **full** bundle (`fromVersion: null`) alongside
-  its delta, because the ordinary 1.5.0 → 2.0.0 delta correctly refuses a 1.6.0
-  install.
+- **`1.6.x` is the PRIVATE VERIFICATION LINE — never cut a public 1.6 release.**
+  Master was stamped `1.6.0` on 2026-09-11 (MPI-722) so a build hand-delivered to
+  one beta tester orders above every published release and still takes the 2.0
+  prompt. Nothing on this line is published: no tag, no GitHub Release, no
+  manifest. **Further hand-delivered builds bump the patch digit — 1.6.1, 1.6.2
+  (Fabio, 2026-09-11)** — so each supersedes the last on the tester's machine
+  without ever entering the public ordering. Each one still needs its own
+  `RELEASE_NOTES` entry and `.approved-<ver>.json` token: `build-portable.mjs`
+  refuses a non-dry-run build without both, and the changelog overlay fires once
+  per `APP_VERSION`, so write the entry for that single reader. Leave
+  `docs/releases/UNRELEASED.md` alone — it belongs to 2.0.
+  A genuine 1.6.x cut from the release line would collide with installs already
+  reporting that version, and `assertBundleApplies`
+  (`scripts/portable/apply-update.cjs`) would then match a delta against the wrong
+  build. Master's next real release is 2.0.0 — and that release owes a **full**
+  bundle (`fromVersion: null`) alongside its delta, because the ordinary
+  1.5.0 → 2.0.0 delta correctly refuses any 1.6.x install.
 - The user-facing changes are feature-complete and `docs/releases/UNRELEASED.md`
   holds the accumulated notes since the last release.
 - You know the digit to bump (table above).
