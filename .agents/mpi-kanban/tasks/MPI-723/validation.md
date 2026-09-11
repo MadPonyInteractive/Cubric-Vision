@@ -70,8 +70,26 @@ touches, and its hunks are fused with this card's comment fixes — they cannot 
   comment in its MPI-678-rewritten form. All four are **comment/doc only** — no behaviour of
   this card depends on them. Whoever commits MPI-678 carries them.
 
-## Open
+## User-UX sign-off — PASSED, 2026-09-11
 
-The plan's verify mode is **user-ux**. The runtime behaviour is proven in a real Electron
-instance, but the real-hands check — drop an OS image on the history PromptBox in the running
-app and confirm a card appears in the gallery while the view stays put — is Fabio's.
+Fabio ran three checks in the running app and all three passed:
+
+1. **Big zone, main area** — the drop still arms the Place gizmo to composite the image.
+   Unchanged, which is the point: `MpiMediaDropOverlay` / `_fillPlaceSlotFromFile` were never
+   touched (MPI-454).
+2. **PromptBox drop** — a staged chip **and** a gallery card. This is the bug, gone.
+3. **`+` button → picker → upload an image** — lands in the prompt box **and** the gallery.
+
+The card is closed on this.
+
+## Rule files updated (permission given in the same message)
+
+- `.claude/rules/component-events-blocks.md` — MpiGalleryBlock's `media:imported` entry is
+  replaced by `project:group-added`, stated as a prohibition: this Block must never listen
+  for `media:imported` again. The MPI-671 settled note and the `_leadingGroups()` call-site
+  count (10 → 9) follow it.
+- `.claude/rules/component-events-primitives.md` — `setRecordVisible` no longer cites the
+  one-listener-in-the-Block reason; the gate is recorded as an undecided product question,
+  not to be lifted without asking. **This edit is inside a line MPI-678 added but has not
+  committed, so like the other four files it rides with that card's WIP** — the blocks.md
+  half was separable and is committed here.

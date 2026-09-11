@@ -20,7 +20,7 @@
       `MpiGalleryBlock`" as the reason Record is gallery-only; both are wrong after this.
       `docs/gallery.md:119` says the same. `js/events.js` documents the event.
       **Verify:** `npm run lint`, `npm run lint:components`, `npm test`.
-- [ ] **User-UX verification** (plan § Verification, 6 steps) — run in the user's own app.
+- [x] **User-UX verification** (plan § Verification, 6 steps) — run in the user's own app.
       Steps 1/3/4/6 are covered by `tests/desktop/media-import-outside-gallery.spec.js`
       (negative-controlled); steps 2/5 touch code this card never edited. The real-hands
-      drop is Fabio's — asked 2026-09-11.
+      drop is Fabio's — PASSED 2026-09-11, all three surfaces (see validation.md).
