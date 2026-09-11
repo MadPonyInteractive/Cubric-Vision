@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-721", "at": "2026-09-11T01:40:22+01:00", "actor": "claude", "column": "todo", "title": "History workspace: stage reference images from a + button, with the active entry as a visible numbered chip"}
+{"schema": "mpi-kanban/event/v1", "type": "task.updated", "id": "MPI-721", "at": "2026-09-11T01:42:04+01:00", "actor": "claude", "summary": "Compact plan attached (plan.md): + button opens MpiMediaPicker in the history PromptBox, active entry renders as a numbered chip, strip order is slot order."}
