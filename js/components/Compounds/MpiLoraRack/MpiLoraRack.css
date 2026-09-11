@@ -1,0 +1,117 @@
+/* MpiLoraRack — the current model's LoRAs, at the top of the PromptBox settings
+   popup. Rows are a read-out plus two knobs: no picker, no add, no remove. */
+
+.mpi-lora-rack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+    min-width: 0;
+}
+
+/* Nothing filled → nothing at all. `display: flex` above would otherwise beat the
+   UA's [hidden] rule and leave an empty band inside the popup's own gap. */
+.mpi-lora-rack[hidden] {
+    display: none;
+}
+
+/* `LORAS`, or the stage's own name for a staged model (HIGH NOISE LORAS). */
+.mpi-lora-rack__label {
+    margin: 0;
+    color: var(--ink-3);
+    font-size: var(--t-2xs);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.mpi-lora-rack__label:not(:first-child) {
+    margin-top: var(--s-2);
+}
+
+.mpi-lora-rack__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: var(--s-2);
+    padding: var(--s-1) var(--s-2);
+    background: var(--surface-bar);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+}
+
+/* The name is a label, never a control — nothing here is selectable or clickable,
+   so a stray drag across the popup can't start a text selection. */
+.mpi-lora-rack__name {
+    min-width: 0;
+    user-select: none;
+}
+
+/* inline-block, not block: the badge hugs its name the way every other badge in
+   the app does, and only a long one grows to the column and ellipsizes. */
+.mpi-lora-rack__name .mpi-badge {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mpi-lora-rack__lora-strengths {
+    display: flex;
+    align-items: center;
+    gap: var(--s-1);
+}
+
+.mpi-lora-rack__strength-label {
+    font-size: var(--t-2xs);
+    color: var(--ink-3);
+    white-space: nowrap;
+}
+
+/* MpiInput size="sm" caps the field at 6ch, which clips a 2-decimal strength like
+   -1.00 (5 chars + padding) — same widening as the overlay's slots. */
+.mpi-lora-rack__lora-strengths .mpi-input--sm .mpi-input__field {
+    width: 8ch;
+    padding-left: 0.3rem;
+    padding-right: 0.3rem;
+}
+
+/* ── Bypass toggle ────────────────────────────────────────────────────────
+   Pressed = neutralise this LoRA at generation (inject at zero strength) WITHOUT
+   changing its saved name/values. Same contract as the overlay's button, down to
+   aria-pressed being the only source of truth (MPI-588) — and the same specificity
+   arithmetic: the pressed rule must outrank `.mpi-btn.mpi-ibtn.mpi-btn--ghost:hover
+   :not(:disabled)` at (0,5,0), so it carries four classes AND :not(:disabled). */
+.mpi-btn.mpi-lora-rack__lora-bypass {
+    padding: 4px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+}
+
+.mpi-btn.mpi-lora-rack__lora-bypass:hover:not(:disabled) {
+    color: var(--ink-1);
+    border-color: var(--ink-3);
+}
+
+.mpi-btn.mpi-ibtn.mpi-btn--ghost.mpi-lora-rack__lora-bypass[aria-pressed="true"]:not(:disabled) {
+    color: var(--accent-warn);
+    border-color: var(--accent-warn);
+    background: color-mix(in oklch, var(--accent-warn) 14%, var(--surface-1));
+}
+
+/* Bypassed: dim the name + strengths (values stay readable) and block interaction.
+   The button itself stays live — it is the way back. */
+.mpi-lora-rack__row--bypassed .mpi-lora-rack__name,
+.mpi-lora-rack__row--bypassed .mpi-lora-rack__lora-strengths {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
+/* The saved LoRA file is gone from the configured folders. The rack cannot fix it
+   — re-picking lives in LoRA & Upscale — so it only says so. */
+.mpi-lora-rack__row--missing {
+    border-color: var(--accent-warn);
+}
+
+.mpi-lora-rack__row--missing .mpi-badge {
+    color: var(--accent-warn);
+}

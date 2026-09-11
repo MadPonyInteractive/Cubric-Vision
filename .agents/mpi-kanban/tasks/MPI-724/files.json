@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "id": "MPI-724",
+  "source": "Paths named by tasks/MPI-724/plan.md § Ownership",
+  "files": [
+    "js/components/Compounds/MpiLoraRack/MpiLoraRack.js",
+    "js/components/Compounds/MpiLoraRack/MpiLoraRack.css",
+    "js/components/Compounds/MpiModelSettings/loraSlotParts.js",
+    "js/components/Compounds/MpiModelSettings/MpiModelSettings.js",
+    "js/components/Organisms/MpiPromptBox/MpiPromptBox.js",
+    "js/components/Organisms/MpiPromptBox/MpiPromptBox.css",
+    "js/components/types.js",
+    "docs/component-contracts.md",
+    ".agents/mpi-kanban/tasks/MPI-724/plan.md",
+    ".agents/mpi-kanban/tasks/MPI-724/brief.md",
+    ".agents/mpi-kanban/tasks/MPI-724/checklist.md",
+    ".agents/mpi-kanban/tasks/MPI-724/validation.md",
+    ".agents/mpi-kanban/tasks/MPI-724/files.json"
+  ],
+  "note": "A read-only LoRA rack in the PromptBox settings popup, two-way synced with MpiModelSettings. MPI-721 closed at 02:51 and released its write claim on MpiPromptBox.js/.css (state/files/f2c79865 reads status complete); MPI-664's claim 62da4764 explicitly excludes MpiPromptBox.js. NOT owned, read as precedent only: MpiBadge, MpiInput, MpiButton, MpiTreePicker, modelRegistry, projectModel, projectService. models.js is read for loraStages/loraStrengths and never edited - no model gains or loses a stage in this card. No server route, no comfy_workflows/, no injector: bypass-at-zero injection already shipped with MPI-223."
+}

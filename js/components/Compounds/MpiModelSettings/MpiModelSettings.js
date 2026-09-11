@@ -28,10 +28,16 @@ import { MpiOverlay } from '../../Primitives/MpiOverlay/MpiOverlay.js';
 import { MpiDropdown } from '../../Primitives/MpiDropdown/MpiDropdown.js';
 import { MpiTreePicker } from '../../Primitives/MpiTreePicker/MpiTreePicker.js';
 import { MpiFolderDrop } from '../../Primitives/MpiFolderDrop/MpiFolderDrop.js';
-import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { renderIcon } from '../../../utils/icons.js';
-import { mountButton } from '../../Primitives/MpiButton/MpiButton.js';
-import { qs, on } from '../../../utils/dom.js';
+import { qs } from '../../../utils/dom.js';
+import {
+    buildStrengthsRow,
+    buildBypassBtn,
+    applyBypass,
+    baseName as _baseName,
+    resolveInfo as _resolveInfo,
+    isMissing as _isMissing,
+} from './loraSlotParts.js';
 import { Events } from '../../../events.js';
 import { state } from '../../../state.js';
 import {
@@ -91,114 +97,9 @@ function _upscaleOptions(upscaleModels) {
     return (upscaleModels || []).map(f => ({ label: f, value: f }));
 }
 
-/**
- * Build the strength-inputs row for one LoRA slot. `kinds` is the model's
- * loraStrengths array (e.g. ['model'], ['clip'], or ['model','clip']) — only the
- * listed knobs render. onModel/onClip fire on change. Returns the row element.
- */
-function _buildStrengthsRow(slot, kinds, onModel, onClip) {
-    const strengthsEl = document.createElement('div');
-    strengthsEl.className = 'mpi-model-settings__lora-strengths';
-
-    if (kinds.includes('model')) {
-        const modelLabel = document.createElement('label');
-        modelLabel.className = 'mpi-model-settings__strength-label';
-        modelLabel.textContent = 'Model';
-        const modelInput = MpiInput.mount(document.createElement('div'), {
-            type: 'number', size: 'sm', value: slot.strengthModel,
-            min: -2, max: 2, step: 0.05, decimals: 2,
-        });
-        modelInput.on('change', ({ value }) => onModel(value));
-        strengthsEl.appendChild(modelLabel);
-        strengthsEl.appendChild(modelInput.el);
-    }
-
-    if (kinds.includes('clip')) {
-        const clipLabel = document.createElement('label');
-        clipLabel.className = 'mpi-model-settings__strength-label';
-        clipLabel.textContent = 'Clip';
-        const clipInput = MpiInput.mount(document.createElement('div'), {
-            type: 'number', size: 'sm', value: slot.strengthClip,
-            min: -2, max: 2, step: 0.05, decimals: 2,
-        });
-        clipInput.on('change', ({ value }) => onClip(value));
-        strengthsEl.appendChild(clipLabel);
-        strengthsEl.appendChild(clipInput.el);
-    }
-
-    return strengthsEl;
-}
-
-/**
- * Build the per-slot bypass toggle button. Pressed = neutralise this LoRA at
- * generation (inject strength 0) without changing its saved name/values — the
- * slot's controls grey out (CSS, via the --bypassed class) but stay readable.
- * `bypassed` sets the initial pressed state; `onToggle(next)` fires with the new
- * boolean. (MPI-223)
- */
-function _buildBypassBtn(bypassed, onToggle) {
-    // Not `toggleable`: the pressed state is published as aria-pressed, which is
-    // what the CSS and assistive tech both read here — the Primitive's own
-    // `is-active` class would be a second, silent source of truth (MPI-588).
-    const btn = mountButton({
-        icon: 'negative',
-        size: 'sm',
-        variant: 'ghost',
-        extraClasses: 'mpi-model-settings__lora-bypass',
-    });
-    btn.title = 'Bypass this LoRA (inject at zero strength)';
-    btn.setAttribute('aria-pressed', String(Boolean(bypassed)));
-    on(btn, 'click', () => {
-        const next = btn.getAttribute('aria-pressed') !== 'true';
-        btn.setAttribute('aria-pressed', String(next));
-        onToggle(next);
-    });
-    return btn;
-}
-
-const _baseName = (f) => String(f || '').replace(/\\/g, '/').split('/').pop();
-/** Separator-agnostic full-path key (forward slash, lowercased). */
-const _pathKey = (f) => String(f || '').replace(/\\/g, '/').toLowerCase();
-
-/**
- * Resolve a saved model name to a list entry. Returns { value, healed, ambiguous }:
- *  - exact full-path match (separator-agnostic) → that entry, healed:false.
- *  - exact path gone but ONE same-basename file exists (e.g. the LoRA's subfolder
- *    was removed and the file now sits at root) → heal to it, healed:true.
- *  - MULTIPLE same-basename files (genuinely different files) → ambiguous:true,
- *    value unchanged (caller keeps it red so the user re-picks).
- *  - nothing matches → value unchanged, neither healed nor ambiguous (missing).
- */
-function _resolveInfo(value, available) {
-    if (!value) return { value, healed: false, ambiguous: false };
-    const list = available || [];
-    const want = _pathKey(value);
-    const exact = list.find(f => _pathKey(f) === want);
-    if (exact) return { value: exact, healed: false, ambiguous: false };
-    const base = _baseName(value).toLowerCase();
-    const byName = list.filter(f => _baseName(f).toLowerCase() === base);
-    if (byName.length === 1) return { value: byName[0], healed: true, ambiguous: false };
-    if (byName.length > 1) return { value, healed: false, ambiguous: true };
-    return { value, healed: false, ambiguous: false };
-}
-
 /** Back-compat: resolve to the list string (exact or unique-basename heal). */
 function _resolveToList(value, available) {
     return _resolveInfo(value, available).value;
-}
-
-/**
- * True when `value` is set but cannot be resolved to a loadable list entry —
- * either nothing matches OR the basename is ambiguous (multiple folders, we won't
- * guess). A unique-basename heal counts as PRESENT (not missing).
- */
-function _isMissing(value, available) {
-    if (!value) return false;
-    const info = _resolveInfo(value, available);
-    if (info.ambiguous) return true;          // multiple same-name files → can't resolve
-    if (info.healed) return false;            // unique basename heal → loadable
-    // Neither healed nor ambiguous: present only if an exact entry exists.
-    return !(available || []).some(f => _pathKey(f) === _pathKey(value));
 }
 
 /**
@@ -272,6 +173,24 @@ export const MpiModelSettings = ComponentFactory.create({
 
         /** Per-slot LoRA tracking (mutated by input events); array or staged object */
         let _loraSlots = [];
+
+        /**
+         * Live control handles per slot, keyed `${stageKey}:${index}` (stageKey is ''
+         * for a flat model). MPI-724: MpiLoraRack in the PromptBox popup writes the
+         * SAME `loras` value, and the incoming change is applied through these —
+         * setValue on the input, applyBypass on the button — instead of re-running
+         * _mountLoraSlots. A remount would tear down an open MpiTreePicker mid-search
+         * and steal focus from a half-typed strength.
+         */
+        const _slotHandles = new Map();
+
+        /**
+         * True for the duration of this overlay's OWN emit, so the sync listener
+         * below can skip its own echo. Safe as a flag because Events.emit is
+         * synchronous (events.js) — the listener has already run and the flag is
+         * back down before _autoSave returns.
+         */
+        let _selfWrite = false;
 
         /** Currently selected upscale value (tracked from change event) */
         let _upscaleValue = '';
@@ -348,6 +267,7 @@ export const MpiModelSettings = ComponentFactory.create({
             try {
                 const modelUpscaleValue = _filenameToDep(_upscaleValue) || _upscaleValue || null;
                 const toolUpscaleValue = _upscaleValue || null;
+                _selfWrite = true;
                 if (_context.modelId) {
                     Events.emit('settings:model:update', { modelId: _context.modelId, key: 'loras', value: _loraSlots });
                     Events.emit('settings:model:update', { modelId: _context.modelId, key: 'upscaleModel', value: modelUpscaleValue });
@@ -358,6 +278,56 @@ export const MpiModelSettings = ComponentFactory.create({
             } catch (err) {
                 clientLogger.error('model-settings', 'Failed to emit model settings update', err);
                 Events.emit('ui:error', { message: 'Failed to save settings. Please try again.' });
+            } finally {
+                _selfWrite = false;
+            }
+        }
+
+        // ── Live sync from MpiLoraRack (MPI-724) ──────────────────────────────
+        // The rack only ever adjusts a strength or a bypass — it can never change
+        // which LoRA sits in a slot — so every incoming change is applied in place
+        // through _slotHandles. Nothing is remounted and nothing is re-emitted.
+        _unsubs.push(Events.on('settings:model:update', ({ modelId, key, value }) => {
+            if (_selfWrite || key !== 'loras') return;
+            if (!_context?.modelId || modelId !== _context.modelId) return;
+            _applyIncomingLoras(value);
+        }));
+
+        /**
+         * Write an externally-changed `loras` value into the mounted controls and
+         * into _loraSlots (which _autoSave serialises, so a stale copy here would
+         * undo the rack's change on the overlay's next write).
+         */
+        function _applyIncomingLoras(value) {
+            if (!value) return;
+            const stages = Array.isArray(value)
+                ? [['', value]]
+                : Object.entries(value);
+
+            for (const [stageKey, slots] of stages) {
+                if (!Array.isArray(slots)) continue;
+                const mine = stageKey ? _loraSlots?.[stageKey] : _loraSlots;
+                if (!Array.isArray(mine)) continue;
+
+                slots.forEach((incoming, i) => {
+                    const held = mine[i];
+                    const handles = _slotHandles.get(`${stageKey}:${i}`);
+                    if (!held || !handles || !incoming) return;
+
+                    if (incoming.strengthModel !== held.strengthModel) {
+                        held.strengthModel = incoming.strengthModel;
+                        handles.modelInput?.el.setValue(incoming.strengthModel);
+                    }
+                    if (incoming.strengthClip !== held.strengthClip) {
+                        held.strengthClip = incoming.strengthClip;
+                        handles.clipInput?.el.setValue(incoming.strengthClip);
+                    }
+                    if (Boolean(incoming.bypass) !== Boolean(held.bypass)) {
+                        held.bypass = Boolean(incoming.bypass);
+                        applyBypass(handles.bypassBtn, handles.slotEl, held.bypass,
+                            'mpi-model-settings__lora-slot--bypassed');
+                    }
+                });
             }
         }
 
@@ -406,6 +376,7 @@ export const MpiModelSettings = ComponentFactory.create({
         function _mountLoraSlots(slots, modelType, kinds = ['model', 'clip']) {
             const list = qs('.mpi-model-settings__lora-list', el);
             list.innerHTML = '';
+            _slotHandles.clear();
 
             // Normalise to exactly LORA_COUNT slots
             _loraSlots = Array.from({ length: LORA_COUNT }, (_, i) => {
@@ -432,20 +403,22 @@ export const MpiModelSettings = ComponentFactory.create({
                 const dropHost = document.createElement('div');
                 dropHost.className = 'mpi-model-settings__lora-dropdown';
 
-                const strengthsEl = _buildStrengthsRow(
+                const strengths = buildStrengthsRow(
                     slot, kinds,
                     (value) => { _loraSlots[i].strengthModel = value; _autoSave(); },
                     (value) => { _loraSlots[i].strengthClip = value; _autoSave(); },
                 );
 
-                const bypassBtn = _buildBypassBtn(slot.bypass, (next) => {
+                const bypassBtn = buildBypassBtn(slot.bypass, (next) => {
                     _loraSlots[i].bypass = next;
                     slotEl.classList.toggle('mpi-model-settings__lora-slot--bypassed', next);
                     _autoSave();
                 });
 
+                _slotHandles.set(`:${i}`, { slotEl, bypassBtn, ...strengths });
+
                 slotEl.appendChild(dropHost);
-                slotEl.appendChild(strengthsEl);
+                slotEl.appendChild(strengths.el);
                 slotEl.appendChild(bypassBtn);
                 list.appendChild(slotEl);
 
@@ -497,6 +470,7 @@ export const MpiModelSettings = ComponentFactory.create({
         function _mountStagedLoraSlots(slots, modelType, loraStages, kinds = ['model', 'clip']) {
             const list = qs('.mpi-model-settings__lora-list', el);
             list.innerHTML = '';
+            _slotHandles.clear();
 
             _loraSlots = Object.fromEntries(
                 loraStages.map(stage => [stage.key, _normaliseLoraSlots(slots?.[stage.key])])
@@ -522,20 +496,22 @@ export const MpiModelSettings = ComponentFactory.create({
                     const dropHost = document.createElement('div');
                     dropHost.className = 'mpi-model-settings__lora-dropdown';
 
-                    const strengthsEl = _buildStrengthsRow(
+                    const strengths = buildStrengthsRow(
                         slot, kinds,
                         (value) => { _loraSlots[stage.key][i].strengthModel = value; _autoSave(); },
                         (value) => { _loraSlots[stage.key][i].strengthClip = value; _autoSave(); },
                     );
 
-                    const bypassBtn = _buildBypassBtn(slot.bypass, (next) => {
+                    const bypassBtn = buildBypassBtn(slot.bypass, (next) => {
                         _loraSlots[stage.key][i].bypass = next;
                         slotEl.classList.toggle('mpi-model-settings__lora-slot--bypassed', next);
                         _autoSave();
                     });
 
+                    _slotHandles.set(`${stage.key}:${i}`, { slotEl, bypassBtn, ...strengths });
+
                     slotEl.appendChild(dropHost);
-                    slotEl.appendChild(strengthsEl);
+                    slotEl.appendChild(strengths.el);
                     slotEl.appendChild(bypassBtn);
                     list.appendChild(slotEl);
 
