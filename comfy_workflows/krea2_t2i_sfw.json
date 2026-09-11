@@ -2475,17 +2475,5 @@
     "_meta": {
       "title": "Mpi String"
     }
-  },
-  "716": {
-    "inputs": {
-      "source": [
-        "705",
-        0
-      ]
-    },
-    "class_type": "PreviewAny",
-    "_meta": {
-      "title": "Preview as Text"
-    }
   }
 }

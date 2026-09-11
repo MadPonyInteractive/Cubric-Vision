@@ -1,9 +1,10 @@
 """
-generate_krea2.py — Krea2 handler (t2i / i2i / edit, plus detailer / upscaler).
+generate_krea2.py — Krea2 handler (t2i / i2i / edit / inpaint, plus detailer / upscaler).
 
-Krea2 needs NO op split: ONE universal graph serves t2i + i2i + pose-reference + EDIT,
-switched at RUNTIME by injected values. EDIT is mask-based: an optional Input_Mask
-(painted in the History workspace) drives a masked crop; empty → whole-image edit.
+Krea2 needs NO op split: ONE universal graph serves t2i + i2i + pose-reference + EDIT +
+INPAINT, switched at RUNTIME by injected values. EDIT is mask-based: an optional
+Input_Mask (painted in the History workspace) drives a masked crop; empty → whole-image
+edit. INPAINT is its own branch (wf_type 5) and samples through LanPaint.
 Input_HiRes_Mode (edit only) forces the masked crop to 1024px when a mask is present.
 It ships across ONE axis → TWO runtime files per template:
 
@@ -21,7 +22,7 @@ The source template routes here (registry `krea2_` prefix) — ONE, since MPI-36
 
   (krea2_detailer_template.json and krea2_upscaler_template.json are GONE. Their nodes —
   MaskDetailerPipe, UltimateSDUpscale, UpscaleModelLoader — moved INTO the master
-  template as wf_type branches 6 and 7, so all six ops now build from one source.)
+  template as wf_type branches 6 and 7, so all seven ops now build from one source.)
 
 Per output this handler bakes the four things a hand-export cannot be trusted to carry:
 
@@ -65,7 +66,7 @@ WF_TYPE_TITLE = "Input_wf_type"
 TURBO_TITLE = "Input_is_Turbo"
 
 # Krea2 ships TWO runtime files, both from the ONE master template = {content}. That one
-# graph serves ALL SIX ops — t2i / i2i / depth / edit / detail / upscale — selected by
+# graph serves ALL SEVEN ops — t2i / i2i / depth / edit / inpaint / detail / upscale — selected by
 # Input_wf_type (MPI-365). Both speeds run from the SAME Raw weight: the `Accelerator
 # Lora` (turbo-distill, extracted as an SVD delta FROM Raw) reconstructs the old Turbo
 # transformer at strength 1.0, so speed is a RUNTIME choice too (MPI-316).
@@ -77,9 +78,12 @@ TURBO_TITLE = "Input_is_Turbo"
 #   4. Input_Bypass_Filter_Lora.strength_model — SFW 1.0 / NSFW 0.0 (content-filter bypass)
 #
 # Branch map (runtime-injected by the app's opInject, NOT baked per file):
-#   1 t2i · 2 i2i · 3 depth · 4 edit · 5 UNUSED · 6 detail · 7 upscale
-# Slot 5 is deliberately dead — edit takes an optional Input_Mask, so there is no
-# separate inpaint branch.
+#   1 t2i · 2 i2i · 3 depth · 4 edit · 5 inpaint · 6 detail · 7 upscale
+# Slot 5 is LIVE and is Krea2's own — it is the `inpaint` op (models.js opInject), and it
+# is the one branch of this map that differs from Chroma/Klein, where 5 really is dead.
+# Do not copy their comment back over this one. Since MPI-725 it carries the LanPaint
+# route AND the grounded-edit conditioning (the gate at the `one_is_true` node fires on
+# wf_type 4 OR 5), so it is the most load-bearing slot after 4.
 #
 # Speed map (runtime-injected by the krea2Turbo toggle):
 #   False = quality — cfg 3, working negatives, accelerator LoRA gated OFF (strength 0)
@@ -199,7 +203,7 @@ def _bake_wf_type(workflow: dict, wf_type: int = 1) -> None:
     if node is None:
         raise SystemExit(
             f"[FAIL] No MpiInt titled '{WF_TYPE_TITLE}' — this template drives EVERY op "
-            f"off that node (1 t2i / 2 i2i / 3 depth / 4 edit / 6 detail / 7 upscale). "
+            f"off that node (1 t2i / 2 i2i / 3 depth / 4 edit / 5 inpaint / 6 detail / 7 upscale). "
             f"Without it the app cannot select a branch and every op returns t2i."
         )
     before = node["inputs"].get("int")

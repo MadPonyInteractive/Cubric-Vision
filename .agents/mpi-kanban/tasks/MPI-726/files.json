@@ -1,0 +1,1 @@
+{ "schema": "mpi-kanban/files/v1", "files": ["comfy_workflows/raw/krea2_t2i_template.json", "comfy_workflows/scripts/workflow_generation/krea2_t2i_template.json", "comfy_workflows/scripts/workflow_generation/generate_krea2.py", "comfy_workflows/krea2_t2i_sfw.json", "comfy_workflows/krea2_t2i_nsfw.json", ".agents/mpi-kanban/tasks/MPI-726/"] }

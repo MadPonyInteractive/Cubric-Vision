@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-726",
+  "title": "Krea 2 re-export: drop the debug PreviewAny, and correct the stale 'slot 5 is dead' comments",
+  "description": "Fabio removed the debug Preview as Text node and re-exported. Re-sync, and fix generate_krea2.py's branch map, which still calls Input_wf_type 5 unused while models.js maps inpaint to it.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-09-11T13:20:59+01:00",
+  "updated_at": "2026-09-11T13:23:34+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}
