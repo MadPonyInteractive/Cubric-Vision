@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-715",
+  "title": "Video masking needs an adjust step - a reusable mask gizmo over the clip, and the mask-clip transport",
+  "description": "A reusable mask-adjustment step for VIDEO flows, plus the mask-clip transport it needs. SAM3 already masks a whole clip - proven in the Bernini bench graph, where SAM3_Detect takes a frame batch from MpiListRange and feeds MpiMaskFillHoles / MpiMaskSquareBbox. What is missing is the step BETWEEN detect and generate: play the clip with the mask overlaid (the look MpiMaskPreview already renders - invert_mask on, alpha 0.70), adjust grow / fill holes / re-detect for the whole clip, and brush-fix the individual frames SAM3 got wrong. Measured case (user, 2026-09-10): a person mask whose ARM drops out on a few frames. Shape: a new mask entry in STEP_KINDS - stepKinds.js already reserves the name in its trailing comment - so any Flow opts in with one line and the kind never learns which Flow hosts it. Closest siblings: MpiStepCutout mounts MaskManager + UndoStack + brushDab whole and is the engine to copy; MpiStepPreview is the video surface. Per-frame paint is SPARSE - a Map of frameIndex to override canvas, only touched frames allocate. THE ONE NEW MECHANISM is transport: STEP_MEDIA adapters return ONE composed image per role (stepKinds.js:254), and Input_Mask is MpiString - a single path - present in 14 IMAGE workflows and ZERO video ones. Decision taken with the user: ship the mask as a greyscale CLIP, staged like any other video media, loaded by the same video loader Input_Video uses, ImageToMask after - so Input_Mask stays MpiString and no new staging path is needed. Must be LOSSLESS (FFV1 or a PNG sequence): h264 softens mask edges into grey and a mask wants hard edges. NOT part of MPI-711 - that card evaluates models; this is the UI and transport layer every future video-masking Flow needs.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "idle",
+  "created_at": "2026-09-10T11:53:57+01:00",
+  "updated_at": "2026-09-10T11:55:15+01:00",
+  "links": {
+    "plan": "plan.md",
+    "events": "events.jsonl"
+  }
+}

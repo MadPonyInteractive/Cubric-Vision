@@ -35,9 +35,52 @@ The square-mask failure recorded in `brief.md` is H3-specific and does **not** t
 LanPaint hard-thresholds its mask and conditions on known pixels, so a square removes the
 pixels it needs. Bernini has no mask input at all and conditions on in-context latents.
 
-Next action: the user is porting speed tricks from their existing Wan 2.2 workflow, then
-testing `reference_video` / `ref_image_*`. Phase 3 (rv2v character replacement) is the
-first real use of the new node's slots.
+**2026-09-10 12:15 — the bench graph now takes a mask CLIP** (see `## Completed`). The SAM3
+mask group is intact and simply unconsumed; flipping back is one link drag.
+
+**2026-09-11 — reviewed again after the user's own edits (139 nodes, mtime 20:02).**
+Structurally CLEAN: 0 dangling refs, 0 endpoint mismatches, 0 cycles. The user has SAM3
+re-attached to `GrowMaskWithBlur#1145` for bench testing and `ImageToMask#1150` dead-ended,
+deliberately — he mutes the bench nodes and swaps the loader back before export.
+
+**Rate/count parity SURVIVED his rewire and is now cleaner than what was wired on 09-10:**
+both loaders read `Get_fps` (`#1161` source, `#1162` mask) off `Input_Fps#1160`, and both
+trims read `Get_frames` off `Snap length to 4n+1#1070` (`#1071` source, `#1149` mask). The
+mask cannot disagree with the source on rate or frame count, which is what `InpaintStitch`
+refuses.
+
+**DEFECT found, must be fixed before export — one string is doing two jobs.**
+`Input_Mask_Video#1003` is an `MpiString` (`'person'`) feeding `MpiAnyChecker#1002`, whose
+three consumers are `MpiBlockIfEmptyList#1014 -> CLIPTextEncode "SAM3 vocabulary"#980`,
+`MpiLoadVideo#1148.string` (the clip PATH) and `Set_has_mask#1004`. A segmentation
+vocabulary and a file path cannot be the same value. Split into two titles
+(`Input_Mask_Video` for the clip, a separate one for the bench vocabulary) and decide which
+gates `has_mask`. Inert today only because `#1150` is dead-ended and `block_if_empty` is off.
+
+Smaller, also pre-export: `CLIPTextEncode#980`'s widget reads `'hair'` while its `text` is
+WIRED, so the live vocabulary is `'person'` and the widget is a lie; `MpiLoadVideo#1148`
+`block_if_empty` is `False`, so an empty path yields a blank 1x1 that reaches the crop
+instead of blocking; `Input_Video_2#1086` (reference video) has `force_rate` unwired while
+the other two loaders read `Get_fps`.
+
+Dead, pre-existing, NOT touched: `SetLatentNoiseMask#1116`'s output goes nowhere (orphaned
+on 09-10 too — looks like an H3-route leftover).
+
+**DECIDED 2026-09-11 — grow + fill_holes move UPSTREAM, into the mask-producing workflow.**
+The mask the app sends is the mask the user APPROVED in the adjust step; growing it 6px and
+filling holes afterwards means what ships is not what they approved and the preview lied.
+So the clip goes `ImageToMask` -> straight into `InpaintCropImproved#1028.mask` and
+`MpiMaskSquareBbox#1026.mask`, and `GrowMaskWithBlur#1145` stays as a bench-only unit test.
+Nothing is lost: `InpaintCropImproved` has its own `mask_fill_holes`, `mask_expand_pixels`,
+`mask_blend_pixels` and `mask_hipass_filter` inputs. This matches MPI-715's plan (fill-holes
+always-on upstream, never a toggle in the consumer graph).
+
+Next action: the user tests reference VIDEO (`Input_Video_2#1086`) and MULTIPLE reference
+IMAGES (`Input_Image#1087` .. `Input_Image_4#1090`) — Phase 3, the first real use of
+`MpiBerniniConditioning`'s ref slots. Prompt convention for multiple refs is `image0`,
+`image1`, ... zero-indexed (ByteDance `assets/testcases/r2v/r2v.json`); with a source video
+present the index base is UNVERIFIED upstream, so with ONE ref use their rv2v phrasing,
+"the reference image".
 
 The H3 + LanPaint masked route is closed on measurement (brief.md § The wall). The card is
 now evaluating models with a **native localised-edit task**.
@@ -114,6 +157,18 @@ Only if one wins: whether masking is still wanted on top, and whether the
 
 ## Completed
 
+- 2026-09-10 **Mask clip input wired into the bench graph** (backup
+  `flow_bernini_video_edit.bak-20260910-121510.json`). Added `Input_Mask_Video#1148`
+  (`MpiLoadVideo`) -> `Trim mask to 4n+1#1149` (`ImageFromBatch`) -> `Mask clip to
+  MASK#1150` (`ImageToMask`, channel red) -> `GrowMaskWithBlur#1145.mask`, in a group of
+  its own. `#1145` was the ONLY cut point: everything after it (preview, `MpiMaskSquareBbox`,
+  both `InpaintCropImproved`, `Set_mask`, `SetLatentNoiseMask`) is untouched.
+  **The trim and the force_rate are shared with the source path** — length from
+  `Snap length to 4n+1#1070`, force_rate from `MpiConvert#1067` — so the mask cannot
+  disagree with `Get_input_video` on frame count, which is what `InpaintStitch` refuses.
+  `SAM3_Detect#979` and the whole `Mask` group are LEFT IN PLACE, just unconsumed, so the
+  user flips back with one link drag. Structural check: 0 dangling refs, 0 endpoint
+  mismatches, 0 cycles, 137 nodes.
 - 2026-09-09 Phase 1. Licence, weights, sizes and GPU floor sourced for both candidates,
   every figure carrying its URL — `research/licence-and-weights.md`. Nothing downloaded.
 - 2026-09-09 Bench setup. Bernini-R 1.3B downloaded to `C:/AI/diffusion_models/` and
