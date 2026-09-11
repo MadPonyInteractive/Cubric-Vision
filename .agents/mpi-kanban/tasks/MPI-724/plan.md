@@ -179,6 +179,14 @@ Two smaller drifts: `MpiInput type="number"` commits on **blur/Enter/wheel**, no
 the same for the overlay. And the name badge was `display:block`, which stretched the pill
 across the whole column; `inline-block` lets it hug the name and ellipsize only when long.
 
+**The badge, after Fabio's look.** It read as a different family of control: too rounded,
+and shorter than everything beside it. Both from one prop. `.mpi-badge` is already
+`border-radius: var(--r-2)` — the same 4px the row, the strength fields and the bypass
+button use — so `pill: true` was the entire roundness, and neither a new badge variant nor
+a replacement control was needed. Dropping it, plus `align-self: stretch` on the name cell
+(the row is `align-items: center`, which left the badge at content height) and `height:
+100%` on the badge, puts it flush: measured 26px badge, 26px bypass, 25.6px field.
+
 ## Verification
 
 1. `npm run lint` and `npm run lint:components` clean.

@@ -53,7 +53,17 @@ with MPI-223 and reads the same `bypass` flag off the same `modelSettings[modelI
 key. What the card had to prove is that the rack writes that key in the overlay's exact
 shape — checks 6, 12, 16-18 do, including the overlay reading the rack's own writes back.
 
-## Open for Fabio — one human call
+## The human call — answered, with one fix
 
-Checks 13 and 19 are the only things an agent cannot settle: **does it look right in the
-popup?** Screenshot in the session. Everything else is measured above.
+Fabio's read of check 13: the name **badge was too rounded and did not match the row's
+height**. Both came from one prop — `pill: true`. The base `.mpi-badge` is already
+`border-radius: var(--r-2)`, the same 4px corner the row, the strength fields and the
+bypass button carry, so no new badge variant and no replacement control was needed; the
+pill modifier was the whole problem. The height was the row's `align-items: center`
+leaving the badge at its own content height, fixed with `align-self: stretch` on the name
+cell plus `height: 100%` on the badge, and the label left-aligned while there.
+
+Re-measured live afterwards, same row: **badge 26px, bypass button 26px, strength field
+25.6px, radius 4px** — flush with everything beside it. Fabio then reloaded his own app
+(project `test`, Krea 2, one LoRA `KREA2_DARKBRUSH` at Model 0.70) and confirmed: *"yeah,
+it's looking good."*

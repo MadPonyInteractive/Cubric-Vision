@@ -39,16 +39,20 @@
 }
 
 /* The name is a label, never a control — nothing here is selectable or clickable,
-   so a stray drag across the popup can't start a text selection. */
+   so a stray drag across the popup can't start a text selection.
+   `align-self: stretch` overrides the row's `align-items: center` for this cell
+   only: the badge then matches the height of the strength fields and the bypass
+   button beside it instead of sitting as a short chip in the middle of the row. */
 .mpi-lora-rack__name {
     min-width: 0;
+    align-self: stretch;
     user-select: none;
 }
 
-/* inline-block, not block: the badge hugs its name the way every other badge in
-   the app does, and only a long one grows to the column and ellipsizes. */
 .mpi-lora-rack__name .mpi-badge {
-    display: inline-block;
+    display: flex;
+    justify-content: flex-start;
+    height: 100%;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;

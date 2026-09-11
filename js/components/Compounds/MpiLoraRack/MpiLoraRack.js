@@ -168,7 +168,10 @@ export const MpiLoraRack = ComponentFactory.create({
             // a subfoldered LoRA's folder is still visible here.
             const nameHost = document.createElement('div');
             nameHost.className = `${BEM}__name`;
-            const badge = MpiBadge.mount(nameHost, { label: '', variant: 'secondary', pill: true });
+            // NOT `pill`: the base badge is already `--r-2`, the same corner the row,
+            // the strength fields and the bypass button carry. `pill` was the only
+            // thing making it read as a different family of control.
+            const badge = MpiBadge.mount(nameHost, { label: '', variant: 'secondary' });
             // textContent, not the label prop: a filename is user data and the
             // Primitive interpolates its label straight into the template string.
             badge.el.textContent = baseName(slot.name).replace(/\.(safetensors|ckpt|pt|bin)$/i, '');

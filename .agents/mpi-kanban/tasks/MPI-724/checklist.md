@@ -17,6 +17,9 @@ Plan: `plan.md`. Steps map 1:1 onto its § Implementation.
       header = `${stage.label} LORAS`, empty stage renders nothing
 - [x] Nothing filled / no model / no project → renders NOTHING (no label, zero height)
 - [x] Row = MpiBadge (basename, no extension, `title` = full path) + strengths + bypass
+- [x] Badge NOT `pill` — base `.mpi-badge` is already `--r-2`, matching the row, the
+      strength fields and the bypass button; name cell stretches so the badge is the
+      same height (measured 26 / 26 / 25.6). Fabio confirmed in his own app
 - [x] No picker, no `+`, no clear — the rack can never change the SET
 - [x] `isMissing` → `--missing` + title, never heals
 - [x] Writes emit `settings:model:update { modelId, key:'loras', value }`, same shape as
