@@ -308,6 +308,16 @@
   the job: shots come out more cinematic, and the sound follows what you asked for more
   closely. It adds a 0.29 GB download to that model, and only to that model.
 
+- **The cogwheel by the prompt now shows the LoRAs your model is running.** Each one gets a
+  row of its own: its name, its strength, and a switch that mutes it for the next run without
+  forgetting anything you set. So trying a LoRA a little weaker, or taking one out of the mix
+  for a single take, no longer means leaving the prompt you are working on. Change a strength
+  here and the model's LoRA panel shows the same number, and the other way round — it is one
+  setting seen from two places. Wan lists its high-noise and low-noise LoRAs as separate
+  groups, the way its panel does. A model with no LoRAs loaded shows nothing at all. Adding,
+  removing and swapping LoRAs is unchanged, and still lives in LoRA & Upscale on the model
+  card.
+
 ## Fixes
 
 > **A fix to a FLOW does not belong in this section for this release.** Flows debut here, so

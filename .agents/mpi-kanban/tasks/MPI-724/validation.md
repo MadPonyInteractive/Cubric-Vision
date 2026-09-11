@@ -45,6 +45,27 @@ Project `mpi724` created through the app UI; model **SDXL Realistic**.
 | 19 | empty in the popup | cleared → `hidden`, 0 bytes, 0 height |
 | 20 | console | no error from the rack or the overlay (only a pre-existing SSE reconnect warning) |
 
+## Correction — where the PromptBox half actually landed
+
+The claim auditor caught one false statement in this card's own record. `9103098a`'s subject
+and body describe the rack being mounted in the popup; **those `MpiPromptBox.js` hunks are
+not in that commit.** They went in 34 seconds earlier under `4f493f4f`
+(*"fix(MPI-677): keep an enhancement's provenance when the overlay reopens"*), a peer
+session's commit.
+
+Cause, and it is the trap in `~/.claude/memory/tools/git-shared-tree.md` (2026-09-08): **the
+git index is ONE file shared by every session in the tree.** `git apply --cached` put my six
+filtered hunks into that shared index, and the peer's `git commit` ran before mine and
+carried them off. Staging by pathspec protects the file LIST, not the file's CONTENT, and it
+cannot protect anything that is already sitting in the index when someone else commits.
+
+**Nothing is broken and nothing needs re-doing.** Every line is on `master`, in the intended
+final state — `4f493f4f` + `9103098a` + `bc1f72c1` together are exactly the reviewed change,
+and HEAD matches what was verified below. Only the attribution is wrong, and both commits are
+pushed, so it is left as-is rather than rewritten. The lesson is the one already written
+down: stage nothing you are not committing in the same breath, and verify a commit by its SHA
+rather than by what you meant to put in it.
+
 ## Not re-verified, and why
 
 **Plan item 7 — "bypass → the dispatched graph carries strength 0".** Not run: it needs a

@@ -235,8 +235,18 @@ GLOBAL EMITS (via Events.emit, consumed by projectService):
          `settings:tool:select`  `{ toolKey }`  — emitted in `el.open()` when opened for a tool
          `settings:model:update` `{ modelId, key, value }` — loras + upscaleModel on _autoSave (no `opName`: projectService routes to the model-wide bucket)
          `settings:tool:update`  `{ toolKey, key, value }` — upscaleModel on _autoSave
-LISTENS: (none — reads `state.currentProject`, `state.upscaleModels`, `state.availableLoras`)
+LISTENS: `state:changed` `{ key: 'availableLoras' | 'upscaleModels' }` — live re-render while open; `_rescanning` excludes open()'s OWN loadAssets (MPI-356)
+         `settings:model:update` `{ key: 'loras' }` from **MpiLoraRack** (MPI-724) — the other view of the same value. Applied IN PLACE through a per-slot handle registry (`setValue` / `applyBypass`), never by re-running `_mountLoraSlots`, which would tear down an open `MpiTreePicker` mid-search. Its own emit is skipped via a `_selfWrite` flag — safe as a plain boolean because `Events.emit` is synchronous
+         (otherwise reads `state.currentProject`, `state.upscaleModels`, `state.availableLoras`)
          `ui:error` emitted on save failure via `Events.emit`
+
+### MpiLoraRack — the current model's LoRAs in the PromptBox popup (Compound — js/components/Compounds/MpiLoraRack/MpiLoraRack.js, MPI-724)
+EMITS:   `resized` `{}` — rendered row count changed; the host re-anchors (MpiPromptBox calls `positionPopup()` when the popup is open)
+GLOBAL EMITS:
+         `settings:model:update` `{ modelId, key: 'loras', value }` — a strength or bypass edit, in the SAME shape `MpiModelSettings._autoSave()` writes. Deliberately does NOT emit `upscaleModel`: the rack does not own that value
+LISTENS: `settings:model:update` `{ key: 'loras' }` — filtered to its own `modelId`, own echo skipped via `_selfWrite`. Filled-set signature changed (only the overlay can cause that) → full rebuild; same signature → in-place `setValue`/`applyBypass`
+FLAG:    **No `state:changed` subscription, deliberately.** projectService debounces ~300ms and assigns `state.currentProject` INSIDE the timer, so a listener on that key re-enters on its own echo — the loop that made MpiModelSettings unclosable in MPI-356. Every re-read is guarded by `_dirtyFor`, which keeps the held value while this rack's own write is still in flight; without it `_refreshOpSlot` (which runs on EVERY op change) would revert a strength typed less than 300ms earlier.
+FLAG:    Read-only over the SET — no picker, no add, no clear. `el.refresh()` exists for the one writer its listener cannot hear: Reuse Prompt writes `loras` straight into the project (`projectService.applyPromptReuseSettings`) and arrives via `el.refreshControls()` → `_refreshOpSlot` → `setModel`.
 
 ### MpiModelManager — the Model Library overlay (Compound — js/components/Compounds/LandingPages/MpiModelManager/MpiModelManager.js)
 EMITS:   (none — the hosted MpiOverlay owns its own `close` + `ui:close-all-popups` handling)
