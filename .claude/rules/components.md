@@ -142,6 +142,8 @@ slot.classList.toggle('my-block__slot--hidden', !visible);   // display: none in
 
 **Swapping two elements with `hidden` is how this bites**, and it usually arrives paired with the mount rule above: the second `mount()` into the shared slot already deleted the first, and `hidden` then fails to hide the survivor. Measured 2026-08-04 on `MpiMaskDetectRow` (MPI-421) — a Detect/Stop swap that hit both traps at once and shipped a button that could not be reached. The fix was ONE button re-mounted on the state flip. `docs/masking-adjust.md` records the same `display`-beats-`hidden` trap for an inert slider row.
 
+**The same `inline-flex` also swallows a vertical margin, which is the other half of this trap.** `.mpi-btn` is an ATOMIC INLINE-LEVEL box, so `margin-top` / `margin-bottom` grow the line box around it instead of moving it: the button stays where the baseline puts it and everything BELOW shifts instead. Nudging one needs `position: relative` + `top`, which also leaves the reserved space alone so siblings hold their positions. Measured 2026-09-12 on `MpiFlowLibrary`'s back chip (MPI-729): `margin: -26px 0 calc(var(--s-3) + 26px)` left the chip at its original `y` and pushed the `<h1>` under it down 26px — the exact opposite of the intent, and silent. Restating the `hidden` rule in one line: **do not reason about an MpiButton as a block.** Neither `hidden` nor a vertical margin behaves the way the property name promises.
+
 ---
 
 ## Mount Target Isolation
