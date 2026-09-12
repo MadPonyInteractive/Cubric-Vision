@@ -11,11 +11,13 @@ Landing → Gallery → Group History
 ## Landing (`#page-landing` DOM element)
 Handles project selection and creation. Entry point when no project is open.
 - UI logic lives in `js/shell/projectUI.js` — no separate workspace class.
-- **The project list rows are HAND-BUILT divs, NOT `MpiProjectCard`.** `loadProjectGrid()` →
-  `_buildProjectRow()` creates `.mpi-landing__pl-row` elements directly. `MpiProjectCard` is
-  imported in `projectUI.js` and never instantiated — **editing that component does nothing to
-  the Landing list** (MPI-286 started by looking at it; wrong file). Any row change goes in
-  `_buildProjectRow` + `styles/shell/landing.css` (`.mpi-landing__pl-*`).
+- **The project list rows are HAND-BUILT divs, not a component.** `loadProjectGrid()` →
+  `_buildProjectRow()` creates `.mpi-landing__pl-row` elements directly, so any row change goes
+  in `_buildProjectRow` + `styles/shell/landing.css` (`.mpi-landing__pl-*`). **There is no
+  `MpiProjectCard` to look at** — the Landing list has not rendered from it since the Stage
+  redesign, MPI-739 removed its last mount anywhere (a component-gallery preview), and its
+  directory goes with the dead `projectUI.js` import under that card. MPI-286 lost its first
+  pass reading that component; do not repeat it, and do not re-create one.
 - Thumbnails load through a **cap-3 concurrency queue** (`_runThumbQueue(loaders, 3, signal)`),
   newest-first (the server sorts `updatedAt` desc). Each row shows a per-thumb `.spinner`
   (`--loading`) swapped for media on load and is **open-locked** while loading
