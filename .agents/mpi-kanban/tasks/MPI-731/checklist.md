@@ -5,7 +5,7 @@ for; 7 and 8 close it. Full detail and every trap live in `plan.md` — this is 
 the spec.
 
 - [ ] **Implementation**
-  - [ ] 1. `MpiProgressBar` gains `orientation: 'vertical'` — additive, horizontal path
+  - [x] 1. `MpiProgressBar` gains `orientation: 'vertical'` — additive, horizontal path
         untouched, `writing-mode: vertical-lr` (native in Chromium 142 / Electron 41)
   - [ ] 2. `MpiVolumeControl` compound — mute button + hover-reveal vertical volume, owns no
         media element, three consumers
