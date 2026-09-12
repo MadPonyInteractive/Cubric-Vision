@@ -1,0 +1,8 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/managers/hotkeyRegistry.js",
+    "tests/modal-confirm-textarea.test.cjs",
+    "tests/desktop/notes-enter-newline.spec.js"
+  ]
+}

@@ -355,6 +355,15 @@ export const HOTKEY_REGISTRY = [
         scopeLabel:       'Modal',
         description:      'Confirm modal action',
         allowWhileTyping: true,
+        // NEVER while a MULTI-LINE editor has focus — there Enter is the newline key
+        // (MPI-738). `MpiModal` binds this on every show(), whether or not the dialog
+        // listens for 'confirm', and the manager preventDefaults any bound+eligible
+        // key before dispatch. So without this gate a textarea inside ANY modal lost
+        // Enter outright: the notes editor (project notes and card notes) could not
+        // start a new line. A single-line input still confirms, which is the point.
+        when: ({ activeElement }) =>
+            !(activeElement instanceof HTMLTextAreaElement) &&
+            !activeElement?.isContentEditable,
     },
 
     // ── Crop ──────────────────────────────────────────────────────────────────
