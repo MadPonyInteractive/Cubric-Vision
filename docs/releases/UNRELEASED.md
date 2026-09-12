@@ -74,7 +74,7 @@
   finished result — no workspace to assemble, no settings to know. Open the Flow Library from
   the Flows button at the top of the gallery, from the landing page, or with Tab, which cycles
   the gallery, your last card and the flow you have open, so you can step out to check a
-  picture and land back where you left off. Thirteen to start with:
+  picture and land back where you left off. Fourteen to start with:
 
   - **Head Swap** — put one picture's head on another
   - **Extend Video** — carry on past the last frame
@@ -89,14 +89,15 @@
   - **DramaBox** — describe a speaker and a performance, and hear your line delivered
   - **Text to Speech** — read your text aloud in a voice you pick, in any of 23 languages
   - **Stems** — pull a song apart into bass, drums, vocals and everything else
+  - **Sound & Music** — sound effects, one-shots, instruments and instrumental music
 
   Each flow tells you which models it needs and installs them for you, and most of them run on a
   model the Library already offers — so once you own the model, the flow costs you nothing extra.
   The three video flows all run on LTX 2.3 Balanced, so installing it for one gives you the other
-  two. Five flows are the exception and say so on their card: Head Swap adds a head-swap LoRA on
-  top of Qwen Image Edit, and Voice Changer, DramaBox, Text to Speech and Stems all bring their
-  own weights and need no model from the Library at all. The three voice flows share weights where
-  they can, so owning one makes the next one smaller.
+  two. Six flows are the exception and say so on their card: Head Swap adds a head-swap LoRA on
+  top of Qwen Image Edit, and Voice Changer, DramaBox, Text to Speech, Stems and Sound & Music all
+  bring their own weights and need no model from the Library at all. The three voice flows share
+  weights where they can, so owning one makes the next one smaller.
 
 - **Head Swap** takes a head from one picture and puts it on another. Load the picture you want
   to keep, add the picture with the head you want, draw a square around each head, and run. It
@@ -236,6 +237,17 @@
   The separation is good, not surgical: expect a little vocal to bleed into the "other" track,
   and reverb tails to follow the voice rather than stay behind. That is normal for stem
   splitting, and it is the kind of thing a mix hides.
+
+- **Sound & Music** makes the sound, rather than taking one apart. Describe what you want and
+  pick which of the four it is: a sound effect, a one-shot, a single instrument, or a piece of
+  instrumental music. Set the length in seconds and that is the length you get — a two-second
+  one-shot comes back two seconds long, not two seconds inside a padded ten. It brings its own
+  weights and needs no model from the Library: the effects and one-shots run on a small 2.11GB
+  model, music and instruments on an 8.59GB one, and the two share a 1.11GB encoder, so the
+  second half costs less than it looks.
+
+  Nothing in it sings. It writes no words and no vocal of any kind, which is what keeps a
+  one-shot clean and a bed of music out of the way of whatever you lay over it.
 
 - FLUX.2 Klein now comes in two sizes. The 9B card sits beside the 4B one and does the same
   seven things — generate, reshape, follow a depth reference, edit with up to three reference
