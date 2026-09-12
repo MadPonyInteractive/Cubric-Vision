@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/files/v1",
+  "files": [
+    ".agents/mpi-kanban/tasks/MPI-727/**",
+    "js/components/Compounds/MpiFlowResultDock/MpiFlowResultDock.js",
+    "js/components/Compounds/MpiFlowResultDock/MpiFlowResultDock.css",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.css",
+    "js/shell/preloadStyles.js",
+    "js/components/types.js",
+    "tests/flow-result-dock.test.cjs"
+  ],
+  "notes": "MpiBaseFlow.js is also listed by MPI-664 (doing, last touched 2026-09-10, shipped as f98b38f2). Checked .agents/mpi-kanban/state/index.json on 2026-09-12: NO live file claim on it, and git shows the file clean. Taking it."
+}

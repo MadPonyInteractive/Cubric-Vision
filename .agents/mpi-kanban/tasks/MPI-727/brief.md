@@ -88,3 +88,42 @@ should loop, silently, in the window) and an image flow (a thumbnail).
 
 🔴 **Never take Fabio's app on `:3000`.** Spin your own: `npm run app:isolated` (own profile AND
 port, or it dies at ~2.3s with exit 0 and no window — see `docs/testing.md`).
+
+
+---
+
+## SECOND HALF, added 2026-09-12 after the card was started — Reuse must load the result
+
+Handed over by the MPI-664 session as an `mpi-message`
+(`.agents/mpi-kanban/state/messages/8b3c6f19-42ae-4d70-95c1-0e7f2a6d8b44.json`) because the claim
+on this file was live. Folded in here; it is scope Fabio added, not a suggestion.
+
+> *"The only way we could make it work is if, when we reuse a flow, it loads in the current result
+> until the user presses Generate to replace that with a new result. That solves it."*
+
+**The rule.** Reusing a gallery card opens the flow with **that card's result already in the
+result pane** — not a placeholder, not a thumbnail: the current result, behaving like one, which
+means it also rides in the floating window above. **Only Generate replaces it.** Nothing else
+clears it.
+
+**What it replaces.** He first asked for the Song flow's lyrics to be copied onto the gallery card
+as notes, so he could read them while the song played — then rejected his own idea in favour of
+this one, because the lyrics are *already* in the flow, in the Lyrics box he wrote them in. Reuse a
+card and the result plays in the floating window while he reads and edits the words that produced
+it. No duplicate copy, and it works for every flow rather than just Song. That card-notes item is
+superseded on MPI-664 and points here.
+
+**So the two halves are ONE feature** — the result has to EXIST when the flow opens, and has to
+FOLLOW the user across steps. Judge them together.
+
+🔴 **The trap this half brings:** a loaded-in result is something to LOOK AT, never an input. It
+must not write into the snapshot Reuse restores — `docs/playbooks/add-flow/03-storage-and-reuse.md`
+§ *"Snapshot at Run, never at completion"*; the sidecar's `flowInputs` stays frozen at Run
+deliberately. And the 🔴 above gets likelier, not less: a result loaded on Reuse and then
+re-created into the floating window is the same broken playback wearing a third hat.
+
+### Verification for this half
+
+Reuse a Song card from the gallery: the flow opens on step 1 with the song in the floating window
+and the lyrics restored in the Lyrics box. Press play, edit the lyrics, walk the steps — it keeps
+playing. Press Generate and it is replaced; nothing else replaces it.

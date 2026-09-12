@@ -3,7 +3,6 @@
   "next_id": 728,
   "columns": {
     "todo": [
-      "MPI-727",
       "MPI-715",
       "MPI-710",
       "MPI-708",
@@ -70,6 +69,7 @@
       "MPI-259"
     ],
     "doing": [
+      "MPI-727",
       "MPI-720",
       "MPI-711",
       "MPI-677",
@@ -121,7 +121,7 @@
       "MPI-713"
     ]
   },
-  "updated_at": "2026-09-11T02:36:41+01:00",
+  "updated_at": "2026-09-12T11:05:00Z",
   "events": [
     {
       "at": "2026-09-06T22:45:00Z",
@@ -4775,6 +4775,15 @@
       "task": "MPI-432",
       "actor": "session:540f1f45",
       "note": "Archived out of board.columns.done to .agents/mpi-kanban/tasks/_archived/MPI-432/ (workspace preserved intact). mpi-archive run 2026-09-08."
+    },
+    {
+      "at": "2026-09-12T11:05:00Z",
+      "type": "task.moved",
+      "task": "MPI-727",
+      "actor": "claude-opus-5/2ba108bf",
+      "from": "todo",
+      "to": "doing",
+      "note": "Starting MPI-727 - floating result dock off the last step."
     }
   ]
 }

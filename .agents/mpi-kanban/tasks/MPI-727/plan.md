@@ -1,52 +1,58 @@
 # MPI-727 — Plan: a flow's result follows the user across steps
 
-Read [brief.md](brief.md) first — it carries the user's words, the root cause, and the spec table.
-This file is the route through the code.
+Read [brief.md](brief.md) first — it carries the user's words, the root cause, the spec table, and
+(appended 2026-09-12) the **second half**: Reuse must load the card's result. This file is the
+route through the code.
 
-## Current State — 2026-09-12, CUT AND NOT STARTED
+## Current State — 2026-09-12, BUILT, automated checks green, awaiting Fabio's eyes and ears
 
-Cut from MPI-664's Song run. Nothing built. The root cause is named in the brief and does not need
-re-deriving: the run slide is rebuilt on every navigation and the result pane is closure-held, so
-the media element is destroyed on the way out and never rebuilt on the way back.
+Both halves are in. `npm test` 933/933, `npx eslint` clean on the touched files,
+`npm run lint:components` clean. **Nothing has been judged in the running app yet** — the card is
+`verify: user-ux` and the success test is a sound, so it is Fabio's call.
 
-**The single next action:** read `MpiBaseFlow.js:477-519` (the `_result*` closure vars and
-`_resultView`) and find every site that renders or clears the result pane. That set is the surface
-this card changes.
+### What was built
 
-## The shape of the fix, as far as it is known
+| | |
+|---|---|
+| `js/components/Compounds/MpiFlowResultDock/` | The floating window. Deliberately dumb: a corner and a box. `setContent(node)` / `setOpen(bool)` / `destroy()`, and it only ever DETACHES what it was handed. |
+| `MpiBaseFlow.js` — `_sharedAudioEl` / `_dropSharedAudio` | THE ONE `<audio>` element, keyed by url, moved between the pane and the window. |
+| `MpiBaseFlow.js` — `_dockNode` | Per-kind presentation: video muted + looping, image a thumbnail, audio the shared player. |
+| `MpiBaseFlow.js` — `_syncDock` | The three-condition gate as one predicate. Called from `_renderSlide`, `_showResults`, `_forgetResult` and `_run`. |
+| `flowService.js` — `openFlowFromReuse` | Seeds `s_flowResults[flowId]` with the reused card. The second half. |
+| `tests/flow-result-dock.test.cjs` | 6 source-contract tests pinning the two silent failures. |
 
-Unverified as an implementation plan — confirm against the code before committing to it.
+### The two decisions worth knowing before touching this again
 
-1. **The result has to outlive the slide.** Today it is closure state rebuilt per navigation. It
-   needs one owner that survives a step change, with the slide and the floating window as two
-   VIEWS onto the same media element rather than two elements.
-2. **Move the element, never re-create it.** See the brief's 🔴. `appendChild` of a playing
-   `<audio>`/`<video>` preserves playback; a new element with the same `src` does not. This is the
-   whole card — get it wrong and the symptom survives the fix.
-3. **The gate is three conditions ANDed:** a result exists, the flow is open, the user is not on
-   the last step. Put it in one predicate, not three scattered `if`s.
-4. **Per-type presentation** — video loops muted, image is a thumbnail, audio is the player. That
-   is a property of the result's KIND, and the frame already knows media kinds
-   (`MpiBaseFlow.js:151` matches `^(image|video|audio)\d*$` on a role).
+**1. Only AUDIO is moved.** The brief's 🔴 says move the element, never re-create it — read as
+narrowly as the spec allows, because it decides how much has to exist. The spec kills the sound and
+loops the video in the window, so a fresh muted `<video>` is indistinguishable from the original;
+an image thumbnail likewise. Audio is the one kind where a fresh element is *audibly* the bug. So
+the run slide's heavy surfaces — `MpiVideoViewer` + its control bar, the compare canvas — were left
+exactly where they are, and the window paints its own cheap preview instead. One shared element,
+not four.
 
-## Parking, deliberately
+**2. Why moving works at all, and the invariant it leaves behind.** Removing a media element from
+the document runs the pause steps *"once a stable state is reached"*, not synchronously. So the
+same node re-appended inside one synchronous `_renderSlide` pass never stops. **Every `_syncDock()`
+call site must stay inside that task** — behind a rAF, a promise or a timeout, the bug is back and
+looks identical in every screenshot. `tests/flow-result-dock.test.cjs` pins the rAF case
+specifically, because that rAF is on the very next line.
 
-- Where exactly "top right" sits relative to the flow's own chrome, and whether the window is
-  draggable or dismissible. Fabio said top right; anything beyond that is a question for him, not
-  an invention. Ask before adding a close button — a window the user can dismiss and not get back
-  is a new bug.
-- Multi-result flows (a batch). Today's complaint is one result; do not build for N until asked.
+## Parking, still deliberate
+
+- No close button, and the window is not draggable or dismissible. Fabio said top right; anything
+  beyond that is a question for him. A window the user can dismiss and not get back is a new bug.
+- Multi-result flows (a batch): the window shows item 0 and shares nothing, because
+  `_paintPlainResults` gives all N their own players and there is no single one to share.
 
 ## Verification
 
-**Verify mode:** `user-ux`
-
-See the brief's Verification section for the full list. The one that matters: **press play, change
-step, the sound never breaks.**
+**Verify mode:** `user-ux` — see [checklist.md](checklist.md) for the full list. The one that
+matters: **press play, change step, the sound never breaks.** Then the second half: reuse a Song
+card and the song is already there.
 
 ## Ownership
 
-See [files.json](files.json). 🔴 **`js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js` is
-contended** — MPI-664 is live in that file for two unrelated fixes (the `@` picker's Tab key and
-the voice roster's persistence). Check `.agents/mpi-kanban/state/index.json` for an active claim
-before editing it, and `mpi-message` the owner rather than editing over them.
+See [files.json](files.json). `MpiBaseFlow.js` was contended with MPI-664; that session finished in
+it at `f98b38f2`, released its claim and said so in its handover message. Claim `3a1f7c2e` covers
+this card's files now.

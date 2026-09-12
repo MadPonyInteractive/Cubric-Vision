@@ -1,0 +1,48 @@
+/* MpiFlowResultDock — the Flow's result, parked in the stage's top-right corner
+   while the user is anywhere but the last step (MPI-727).
+
+   Closed by DEFAULT and by `display`, not by `[hidden]`: the component sets its own
+   display, so the UA's `[hidden]` rule would lose to it. `MpiBaseFlow` toggles the
+   `--open` modifier. */
+.mpi-flow-result-dock {
+    display: none;
+    position: absolute;
+    top: var(--s-3);
+    right: var(--s-3);
+    /* Over the slide, under the navigation arrows' z-index: 10 — the arrows sit
+       vertically centred at the stage's edges and must stay clickable if the window
+       ever grows into them. */
+    z-index: 9;
+    padding: var(--s-1);
+    background: var(--surface-viewer);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+}
+.mpi-flow-result-dock--open { display: block; }
+
+/* The box states the size, so an image or a video cannot push the corner around as
+   it loads. The audio player is the exception below: a control has no aspect to fit
+   and wants its own width. */
+.mpi-flow-result-dock__media {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 200px;
+    line-height: 0;
+}
+.mpi-flow-result-dock__media img,
+.mpi-flow-result-dock__media video {
+    display: block;
+    max-width: 100%;
+    max-height: 140px;
+    width: auto;
+    height: auto;
+}
+/* An audio result is a control: it fills the box rather than being sized by it, and
+   the box drops the picture height it has nothing to apply to. Native `<audio>` has
+   a minimum usable width of its own, so the dock is wider in this mode. */
+.mpi-flow-result-dock__media:has(audio) { width: 260px; }
+.mpi-flow-result-dock__media audio {
+    display: block;
+    width: 100%;
+}

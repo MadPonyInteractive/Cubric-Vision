@@ -1853,6 +1853,28 @@
  */
 
 /**
+ * @typedef {Object} MpiFlowResultDockProps (Compound — js/components/Compounds/MpiFlowResultDock, MPI-727)
+ *
+ * No props. The floating window a Flow's result rides in while the user is off the
+ * last step — a corner and a box, nothing more. `MpiBaseFlow` owns the three-condition
+ * gate (a result exists, the flow is open, the user is not on the last step) and the
+ * media node itself.
+ *
+ * THE NODE IS MOVED IN, NOT COPIED. An `<audio>`/`<video>` element re-created with the
+ * same `src` restarts from zero; the same element re-appended inside one synchronous
+ * task keeps playing, because removal only pauses "once a stable state is reached".
+ * That is the whole point of this component, so `setContent` never clones and
+ * `setContent(null)`/`destroy()` only DETACH — the caller still owns what was in here.
+ *
+ * Instance methods (on instance.el):
+ *   setContent(node|null) — replace the media box's single child
+ *   setOpen(bool)         — show/hide (a modifier class; `hidden` would lose to its own display)
+ *   destroy()             — empty the box
+ *
+ * Emits: none.
+ */
+
+/**
  * @typedef {Object} MpiTrimBarProps (Compound — js/components/Compounds/MpiTrimBar)
  * @property {number} [duration=0]   - Total clip length in seconds
  * @property {number} [fps=30]       - Snap granularity for handles + playhead

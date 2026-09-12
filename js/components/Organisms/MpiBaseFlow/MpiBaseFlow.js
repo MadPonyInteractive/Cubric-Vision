@@ -7,6 +7,7 @@ import { MpiModelSettings } from '../../Compounds/MpiModelSettings/MpiModelSetti
 import { MpiCompareView } from '../../Compounds/MpiCompareView/MpiCompareView.js';
 import { MpiVideoViewer } from '../MpiVideoViewer/MpiVideoViewer.js';
 import { MpiVideoControlBar } from '../../Compounds/MpiVideoControlBar/MpiVideoControlBar.js';
+import { MpiFlowResultDock } from '../../Compounds/MpiFlowResultDock/MpiFlowResultDock.js';
 import { Events } from '../../../events.js';
 import { state, AUTO_PIXEL_THRESHOLD } from '../../../state.js';
 import { ViewManager } from '../../Primitives/MpiCanvas/managers/ViewManager.js';
@@ -224,6 +225,26 @@ export const MpiBaseFlow = ComponentFactory.create({
 
         const tickerEl = qs('#flow-ticker', el);
         const slidesEl = qs('#flow-slides', el);
+
+        // ── The floating result window (MPI-727) ────────────────────────────────
+        // Mounted on the STAGE, beside the slides rather than inside one — that IS the
+        // fix. The run slide is rebuilt on every navigation, so a result that lives
+        // only there exists only while the user stands on the last step: Fabio played a
+        // song, stepped back to re-read his lyrics, and the sound stopped with the
+        // slide. `_syncDock()` below decides when it shows and what goes in it; it dies
+        // with the flow in `el.destroy()`.
+        //
+        // Built HERE, at the top, and not down beside `_syncDock`: the seeded-result
+        // probe near `_forgetResult` can clear the window synchronously during setup,
+        // long before the result-painting section is reached.
+        const _dock = MpiFlowResultDock.mount(document.createElement('div'), {});
+        qs('#flow-stage', el).appendChild(_dock.el);
+        /**
+         * THE ONE audio element, shared by the result pane and the floating window —
+         * see `_sharedAudioEl`. Declared up here for the same reason the dock is.
+         * @type {?HTMLAudioElement}
+         */
+        let _audioEl = null;
 
         /**
          * Stop SPACE from activating a navigation button.
@@ -2177,6 +2198,13 @@ export const MpiBaseFlow = ComponentFactory.create({
 
             slidesEl.innerHTML = '';
             slidesEl.appendChild(slide);
+            // SYNCHRONOUS, and it has to stay that way (MPI-727). The line above just
+            // took the old slide — and with it a playing `<audio>` — out of the
+            // document; a media element removed from the document is paused "once a
+            // stable state is reached", so re-appending it inside this same task is
+            // the difference between the song carrying on and the song stopping. Never
+            // move this behind the rAF below.
+            _syncDock();
             // Next frame → the opacity transition actually runs.
             requestAnimationFrame(() => slide.setAttribute('data-active', 'true'));
             _syncChrome();
@@ -2285,6 +2313,105 @@ export const MpiBaseFlow = ComponentFactory.create({
                 _resultEmptyEl.hidden =
                     !!_resultMediaEl?.firstChild || !!_compareView || !!_videoViewer || _running;
             }
+        }
+
+        // ── The floating result window (MPI-727) ────────────────────────────────
+        /**
+         * THE ONE audio element, handed to whichever surface is live.
+         *
+         * This is the whole card. A media element re-created with the same `src`
+         * restarts from zero; the SAME element re-appended somewhere else keeps
+         * playing, because removing one from the document runs the pause steps only
+         * "once a stable state is reached" — after the current task, not during it.
+         *
+         * So every move below happens inside ONE synchronous `_renderSlide` pass, and
+         * none of them may be deferred behind a rAF, a promise or a timeout without
+         * bringing the bug straight back.
+         *
+         * Keyed by URL: a new run is a new file and so a new element. Re-pointing
+         * `src` would be the same restart the whole card exists to avoid.
+         * @param {string} url
+         * @returns {HTMLAudioElement}
+         */
+        function _sharedAudioEl(url) {
+            if (_audioEl && _audioEl.dataset.src === url) return _audioEl;
+            _dropSharedAudio();
+            _audioEl = ce('audio', {
+                className: 'mpi-base-flow__result-audio', src: url, controls: true,
+            });
+            _audioEl.dataset.src = url;
+            return _audioEl;
+        }
+
+        /** Stop and forget the shared element — its result is gone, not merely moved. */
+        function _dropSharedAudio() {
+            if (!_audioEl) return;
+            _audioEl.pause();
+            _audioEl.remove();
+            _audioEl = null;
+        }
+
+        /**
+         * What the window shows, by result KIND (Fabio's spec, 2026-09-12): a video
+         * loops SILENTLY, an image is a thumbnail, audio is the player.
+         *
+         * Only audio is shared. A muted looping video and a still are indistinguishable
+         * from fresh copies, so the run slide's heavier surfaces — MpiVideoViewer plus
+         * its control bar, and the compare canvas — are left exactly where they are and
+         * this paints its own cheap preview instead.
+         *
+         * @param {Object} it
+         * @param {string} path
+         * @param {boolean} shareAudio false for an N-output flow: `_paintPlainResults`
+         *   gives all N their own players, so there is no single one to share.
+         */
+        function _dockNode(it, path, shareAudio) {
+            const url = resolveMediaUrl(path);
+            if (_isAudioResult(it)) {
+                return shareAudio ? _sharedAudioEl(url) : ce('audio', { src: url, controls: true });
+            }
+            if (_isVideoResult(it)) {
+                // `muted` set with (not after) `autoplay`, or the autoplay policy
+                // refuses to start it and the window shows a frozen first frame.
+                return ce('video', {
+                    src: url, muted: true, loop: true, autoplay: true, playsInline: true,
+                });
+            }
+            return ce('img', { src: url, alt: 'result', draggable: false });
+        }
+
+        /**
+         * The gate, as ONE predicate rather than three scattered `if`s: a result
+         * EXISTS, the flow is OPEN, and the user is NOT on the last step.
+         *
+         * "The flow is open" needs no test of its own — the window is mounted inside
+         * the flow's own stage, so closing or suspending the flow takes it off screen
+         * with everything else.
+         *
+         * SYNCHRONOUS BY CONTRACT — see `_sharedAudioEl`.
+         */
+        function _syncDock() {
+            const list = (_lastResults || []).filter(Boolean);
+            const it = list[0];
+            const path = it?.filePath || it?.url;
+            if (!path) {
+                // No result at all: a run just reset it, or the mount probe found the
+                // file gone. Drop the shared element too — no surface is holding it.
+                _dropSharedAudio();
+                _dock.el.setOpen(false);
+                _dock.el.setContent(null);
+                return;
+            }
+            if (_current === _lastIndex()) {
+                // Back on the last step. `_buildRunSlide` has already replayed the
+                // result and taken the audio element back, so this empties a box that
+                // is empty — setContent only ever DETACHES, never destroys.
+                _dock.el.setOpen(false);
+                _dock.el.setContent(null);
+                return;
+            }
+            _dock.el.setContent(_dockNode(it, path, list.length === 1));
+            _dock.el.setOpen(true);
         }
 
         // ── Result zoom / pan ───────────────────────────────────────────────────
@@ -2458,6 +2585,9 @@ export const MpiBaseFlow = ComponentFactory.create({
             _hasPending = false;
             _statusText = '';
             _persistResult();
+            // Before the early return, same reason as in `_showResults`: the window can
+            // be the only thing still showing the result whose file just went missing.
+            _syncDock();
             if (!_resultMediaEl) return;
             _showResults(null, { remember: false });
             _paintPending();
@@ -2478,6 +2608,10 @@ export const MpiBaseFlow = ComponentFactory.create({
                 _lastResults = items == null ? null : (Array.isArray(items) ? items : [items]);
                 _persistResult();
             }
+            // BEFORE the early return, deliberately: that return is exactly the
+            // off-the-last-step case, where there is no pane to paint and the floating
+            // window is the only surface a finishing run can land on (MPI-727).
+            _syncDock();
             if (!_resultMediaEl) return;
             const list = (Array.isArray(items) ? items : [items]).filter(Boolean);
             const withPath = list.map(it => ({ it, path: it?.filePath || it?.url })).filter(x => x.path);
@@ -2573,11 +2707,18 @@ export const MpiBaseFlow = ComponentFactory.create({
             for (const { it, path } of withPath) {
                 const url = resolveMediaUrl(path);
                 if (_isAudioResult(it)) {
-                    _resultMediaEl.appendChild(ce('audio', {
-                        className: 'mpi-base-flow__result-audio',
-                        src: url,
-                        controls: true,
-                    }));
+                    // THE SHARED ELEMENT, appended rather than built (MPI-727) — this
+                    // MOVES the player back out of the floating window, which is what
+                    // keeps a song playing across the step change. A fresh `<audio>`
+                    // here would restart it from zero. An N-output flow is the one
+                    // exception: nothing to share, so each output gets its own.
+                    _resultMediaEl.appendChild(withPath.length === 1
+                        ? _sharedAudioEl(url)
+                        : ce('audio', {
+                            className: 'mpi-base-flow__result-audio',
+                            src: url,
+                            controls: true,
+                        }));
                     // A player has no natural pixels for ViewManager to fit, so it is
                     // pinned at identity and the media layer centres it in CSS. Skipping
                     // this would leave the PREVIOUS result's zoom/pan on the transform.
@@ -3126,6 +3267,12 @@ export const MpiBaseFlow = ComponentFactory.create({
             // (MPI-587) — this path never reaches `_showResults`.
             _lastResults = null;
             _persistResult();
+            // …and take it out of the floating window too, which this path would
+            // otherwise leave showing the superseded result for the whole run — the one
+            // place a Generate is pressed from a step that has no result pane to clear
+            // (MPI-727). Generate is the ONLY thing that replaces a result, so it is
+            // also the only thing that empties the window.
+            _syncDock();
             _paintPending();
             _setGauge(0);
             _setStatus('Generating…');
@@ -3282,6 +3429,11 @@ export const MpiBaseFlow = ComponentFactory.create({
             // otherwise be the one thing the reopen could not restore.
             if (_persistTimer) _persistInputs();
             _teardownSlide();
+            // The floating window outlives every slide by design, so it is the flow's
+            // to bury — and the shared audio element outlives the window, so it is
+            // stopped here rather than left playing into a torn-down tree (MPI-727).
+            _dock?.el?.destroy?.();
+            _dropSharedAudio();
             _previewPlayer.stop();
             _unsubs.forEach(fn => fn?.());
             // _teardownSlide already dropped the buttons; the overlay outlives them.

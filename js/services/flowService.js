@@ -239,6 +239,27 @@ export function openFlowFromReuse(item) {
     if (savedInputs && typeof savedInputs === 'object') {
         state.s_flowInputs = { ...state.s_flowInputs, [flowId]: savedInputs };
     }
+    // THE CARD'S OWN RESULT COMES WITH IT (MPI-727, Fabio 2026-09-12): a reused flow
+    // opens with that result already in the pane, and — because `s_flowResults` is the
+    // one store MpiBaseFlow paints a result from — it rides in the floating window the
+    // moment the user steps off the last step to read the inputs that produced it. That
+    // is the whole point: reuse a song, read and edit the lyrics in the Lyrics box that
+    // wrote them, and listen while you do. Only Generate replaces it.
+    //
+    // It is something to LOOK AT, never an input: this writes `s_flowResults` and never
+    // `s_flowInputs`. The snapshot Reuse restores stays frozen at Run
+    // (docs/playbooks/add-flow/03-storage-and-reuse.md § "Snapshot at Run").
+    //
+    // `pending: false` and no status line — the "Saved to your gallery" note and a
+    // "Done…" line are both claims about a run THIS session never made. A file that is
+    // gone needs nothing extra either: MpiBaseFlow HEAD-probes a seeded result on mount
+    // and falls back to the empty pane.
+    if (item.filePath || item.url) {
+        state.s_flowResults = {
+            ...state.s_flowResults,
+            [flowId]: { items: [item], mode: null, status: '', pending: false },
+        };
+    }
     // Defer the open by a tick: Reuse is triggered from a context menu / reuse
     // dialog whose teardown fires a bare `ui:close-all-popups` AFTER this returns —
     // which the Flow overlay (MpiOverlay) obeys and would immediately hide. Emitting
