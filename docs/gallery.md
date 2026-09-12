@@ -166,6 +166,6 @@ id off `state` and use `getCardByGroupId`, never `list()[0].tempId`. And the gen
 wrapper carries no `data-group-id`; that lives on the ROW wrapper, so `closest()` from the card
 returns null.
 
-## Selection survives setGroups refresh (2026-07-12)
+## Selection + Cue all -> its own doc
 
-`MpiGalleryGrid.setGroups()` used to `_selectedIds.clear()` unconditionally → a generation finishing mid-select (which re-feeds the grid) silently dropped the user's multi-select and kicked them out of selection mode. Fix: reconcile instead of clear — keep selected ids whose group still exists, drop only vanished ones, and `_exitSelectionMode()` only when the set empties. Any grid refresh path that replaces `_groups` must preserve live selection, not reset it.
+Multi-select refresh, click order, and **Cue all** (one queued job per selected card, MPI-733) live in [gallery-selection.md](gallery-selection.md).

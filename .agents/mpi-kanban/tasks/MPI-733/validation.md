@@ -254,3 +254,66 @@ Phase 3's plan verify is deliberately app-level and this card is `**Verify mode:
 `MpiGalleryGrid.js:1528` already runs `if (useSelection) _exitSelectionMode();` after every
 context-menu action. Phase 3's "exit selection mode after" is therefore already handled by
 the grid — do not add a second exit in the Block handler.
+
+## Phase 4 — regression spec + docs: DONE, auto-verified 2026-09-12
+
+### The spec — `tests/desktop/gallery-cue-all.spec.js`
+
+Mounts through **`MpiGalleryBlock`** via `navigate(PAGE_GALLERY)` on a real project folder
+(3 images + 1 video), never the grid alone. `sdxl-realistic` is stubbed installed (a plain flat
+model, so `installed` alone makes it usable) and re-stubbed from a `models:checked` listener
+registered after the app's (testing-desktop-specs trap 5). One test, three legs:
+
+1. Empty box → live op `t2i`, memory POISONED to `i2i` → `Cue all`, disabled,
+   `Cue all does not support the current operation`, 4 selected.
+2. A synthetic `application/mpi-media` drop stages an image, and the box picks `i2i` itself
+   (asserted), memory POISONED to `t2i` → `Cue all (3)`, enabled, 4 selected.
+3. One Cue all click → `peekCueQueue()` holds **3 jobs, all `i2i`, each carrying exactly one
+   image — its own card's still, in click order, the video skipped in place, the staged chip in
+   none**. Held pending by patching `generationStore.getSnapshot` to report both lanes busy
+   (`_laneBusy` reads it), so `_dispatchNextCue` never calls `startGeneration`. No GPU.
+
+`selected` is asserted every read so a right-click that fell outside the selection (the
+single-card fallback) can never read as a pass.
+
+### Mutation — 3 of 3 KILLED (`scripts/mutate-check.mjs`, restored byte-identical)
+
+| mutant | file | killed by |
+|---|---|---|
+| op source → `getSelectedOp(activeModelId)` (the exact bug Fabio hit) | `MpiGalleryBlock.js` | leg 1 label/disabled/info |
+| `mediaItems: staged` (ship the chip, not the card) | `MpiGalleryBlock.js` | leg 3 `not.toContain(STAGED)` |
+| `const eligible = list;` (the plan's named verify) | `commandRegistry.js` | leg 2 label `Cue all (4)` |
+
+After: all three mutant strings grep 0, `commandRegistry.js` has no diff vs HEAD, and the
+block's diff is MPI-678's pre-existing hunks only.
+
+### Runs
+
+- `npx playwright test --config=playwright.desktop.config.js tests/desktop/gallery-cue-all.spec.js` — **1 passed (5.0s)**
+- same config, cue-all + gallery-archive + gallery-renditions + gallery-media-release — **12 passed (1.7m)**, after the mutations
+- `npx eslint tests/desktop/gallery-cue-all.spec.js` — clean
+
+### Docs
+
+New `docs/gallery-selection.md` (32 lines): trigger and why the context menu, live-op read,
+eligibility rule + reasons, image-axis/video-output note, role-pill slot choice + in-place
+substitution, click-order caveat (corrected — see Plan Drift), Loop refusal, the two dispatch
+traps, spec pointer. Every named symbol grepped present. `docs/gallery.md` stays **199** lines
+(its selection section moved out, 3-line pointer in), `docs/README.md` map row added.
+
+### Fabio's app (`user-ux`) — PASSED 2026-09-12
+
+Fabio ran Cue all in project `1.4 media` on H3 (`minimax-h3`, `i2v_ms`) with one staged chip
+pill-tagged **`endFrame`** — the harder sweep case — over 2 selected cards. Read back from disk:
+
+- `i2v_001` sidecar: one item, `role: endFrame`, `t2i_006.png`; `i2v_002`: `role: endFrame`,
+  `t2i_007.png`. **A different image in the SWEPT slot per job**, run in order.
+- ComfyUI `/history` for both: `Input_Start_Frame = ''`, `Input_End_Frame = <that card's path>`.
+- Two earlier Cue all batches (18:36, 18:37) were Stopped by Fabio — two global interrupts each
+  in `app.log`, queue resumed as designed. Not a defect.
+
+His concern that H3 "started from the end frame" was NOT a wiring fault: all three clips were
+**0.92 s** (`Input_Duration: 1`). Extracted last frames match each end image, and core
+`MiniMaxH3ImageToVideo` anchors a lone `last_frame` at `frame_count - 1` (honoured in
+`comfy/ldm/minimax/model.py`). 22 frames leave no room for an entrance. His 3 s re-run worked,
+and he confirmed: "We already proved that it works."

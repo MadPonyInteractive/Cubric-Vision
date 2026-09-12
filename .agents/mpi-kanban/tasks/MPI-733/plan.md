@@ -25,13 +25,21 @@ hand-built index blob, so those hunks are still uncommitted in the worktree — 
 **the queue-depth and sidecar legs need Fabio's own app**: they want a project, installed
 models and a real GPU, which is why this card is `user-ux`.
 
-**The single next action is Phase 4** (desktop spec + `docs/gallery.md`). Four things a
-fresh session would otherwise rediscover: the eligibility rule is narrower than this plan's
-prose (Plan Drift — exactly one REQUIRED slot); Phase 3's "exit selection mode" is already
-done by the grid; **Phase 4's spec must mount through the BLOCK, not the grid alone** — a
-standalone mount is what let the op-source bug ship green; and **committing
-`MpiGalleryGrid.js` will sweep in MPI-678's uncommitted archive work** unless staged by hunk
-(see Plan Drift).
+**Phase 4 is DONE too — all four phases are built (2026-09-12).** `tests/desktop/gallery-cue-all.spec.js`
+mounts through the BLOCK and kills three mutants (op source → memory, staged chips shipped
+instead of the card, eligibility returning everything); the docs entry is the new
+`docs/gallery-selection.md`. Phase 4 was committed at its handoff, with `docs/gallery.md` and the root
+`events.jsonl` staged as hand-built blobs (both also hold peer MPI-678/MPI-723 lines). `a2de7093`
+(Phases 1-3) and that commit stay LOCAL until master CI is green — it was red from a peer commit.
+
+**FABIO VERIFIED IT IN HIS APP, 2026-09-12.** H3 `i2v_ms`, a pill-tagged `endFrame` chip, 2
+cards → Cue all → `i2v_001`/`i2v_002` in project `1.4 media`, whose sidecars each name a
+different image (`t2i_006`/`t2i_007`) in the `endFrame` slot, run in order. His "the video starts
+on the end image" scare was `Input_Duration: 1` (0.92 s clips — the LAST frames do match the end
+images, and core anchors the keyframe at `frame_count - 1`); his 3 s re-run worked.
+**Single next action: `mpi-end-session`** — close the card on that evidence and push once master
+CI is green. **Committing `MpiGalleryGrid.js` / `MpiGalleryBlock.js` still sweeps in MPI-678's
+uncommitted work** unless staged by hunk.
 
 **The ask.** Fabio's photographer friend wants one operation run over many photos or
 clips without a watch folder. Agreed shape (2026-09-12): import them into a Vision
@@ -182,6 +190,13 @@ Raise it with Fabio as its own card if the friction proves real in use.
       `StatusBar.notify`; passes no `getNextGeneration`. Subscribed ONCE outside
       `_wirePromptBox` so a PromptBox remount cannot double-cue. Evidence: `validation.md`.
 
+- [x] **Phase 4 — regression spec + docs, 2026-09-12.** `tests/desktop/gallery-cue-all.spec.js`
+      through `MpiGalleryBlock`: label/disabled follow the LIVE op in both directions with the
+      memory poisoned opposite, and one click queues 3 jobs whose single image slot is each
+      card's own still, in click order. Jobs held pending by reporting both lanes busy through
+      `generationStore.getSnapshot` — no GPU. 3/3 mutants killed. Docs split into
+      `docs/gallery-selection.md`. Evidence: `validation.md`.
+
 ## Remaining Work
 
 Kept as sequential phases rather than a `## Parallel Batch`: the two files are joined
@@ -230,15 +245,15 @@ more in briefing than it saves.
       That sidecar read is the check that matters; the output thumbnails alone cannot
       prove the right input went in (`docs/generation-lifecycle.md` § History dispatch).
 
-## Phase 4: Regression spec + docs
+## Phase 4: Regression spec + docs — DONE
 
-- [ ] Desktop spec under `tests/desktop/`, following `docs/testing-desktop-specs.md`.
+- [x] Desktop spec under `tests/desktop/`, following `docs/testing-desktop-specs.md`.
       Assert the eligible count on the menu label, the disabled state with no
       remembered op, and that N cue-all clicks produce N queued jobs. Stub at the
       dispatch boundary — the spec must not need a GPU.
       **Verify:** `npm run test:desktop` passes with the new spec, and it fails when
       the eligibility helper is made to return everything.
-- [ ] Document the feature in `docs/gallery.md` (selection section): the trigger, the
+- [x] Document the feature in `docs/gallery.md` (selection section): the trigger, the
       eligibility rule, the remembered-op read, the click-order caveat, and the loop
       refusal. Keep the file under the 200-line rule; split if it crosses.
       **Verify:** `docs/gallery.md` line count checked, and the entry names symbols
@@ -352,6 +367,16 @@ more in briefing than it saves.
   two-chip edit's base image into the slot being swept. Four new tests cover it.
   **Consequence for Phase 4's spec:** the sidecar assertion should check the SWEPT slot, not
   `mediaItems[0]` — on a two-chip sweep index 0 is the fixed chip and identical across jobs.
+
+- **2026-09-12 — the docs entry is a NEW file, `docs/gallery-selection.md`.** `docs/gallery.md`
+  was already at 199 lines (with MPI-678/MPI-723 peer sections uncommitted in it), so any entry
+  crossed the 200-line rule. Moved its "Selection survives setGroups refresh" section out beside
+  the Cue all entry and left a 3-line pointer: `gallery.md` stays at 199. `docs/README.md` map
+  gained a row.
+- **2026-09-12 — decision 4's click-order caveat was half wrong.** It said shift-range select
+  "clears and re-adds in render order". `_rangeSelect` actually REPLACES the selection: it clears
+  `_selectedIds` and walks from the anchor (last ctrl-clicked card) to the clicked one, so earlier
+  ctrl-picks outside the range are dropped and the order is that walk. Documented as read.
 
 ## Verification
 

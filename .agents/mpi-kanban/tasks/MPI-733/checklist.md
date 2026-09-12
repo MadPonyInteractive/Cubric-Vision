@@ -43,10 +43,11 @@ see this card's Plan Drift and `tasks/MPI-732/plan.md`.
         unit-tested; substitutes in place so ORDINAL-slot ops keep their base image at
         index 0
 
-- [ ] Phase 4 — regression spec + docs
-  - [ ] Desktop spec under `tests/desktop/`, stubbed at the dispatch boundary (no GPU)
-  - [ ] `docs/gallery.md` selection section: trigger, eligibility rule, remembered-op
-        read, click-order caveat, loop refusal. Keep the file under 200 lines
+- [x] Phase 4 — regression spec + docs **(auto-verified, see `validation.md`)**
+  - [x] `tests/desktop/gallery-cue-all.spec.js` through `MpiGalleryBlock`, lanes held busy via
+        `generationStore.getSnapshot` (no GPU). 3/3 mutants killed
+  - [x] Docs: new `docs/gallery-selection.md` (gallery.md was at 199 lines) — trigger, eligibility,
+        LIVE-op read, role-pill slot, click-order caveat (corrected), Loop refusal
 
 ## Verification
 
