@@ -47,3 +47,29 @@ Screenshot of the header in the gallery entry path:
 
 Fabio's own eye on the spacing — he specified the stacked layout and the screenshot
 matches it, but the final look is his call.
+
+## Follow-up: aligned to the Flow topbar chip (Fabio, same session)
+
+The chip sat 26px below and 26px right of the `← Flows` chip it is the counterpart to,
+so the cursor still had to travel. Measured in one instance, both states:
+
+| chip | x | y | centre |
+|---|---|---|---|
+| Flow topbar `← Flows` | 22 | 42 | (54, 50) |
+| Library `← Gallery`, before | 48 | 68 | (88, 76) |
+| Library `← Gallery`, after | 48 | **42** | (88, **50**) |
+
+Vertically exact. Horizontally left at 48 deliberately: the chip keeps the title's left
+margin, which is what makes the stack read as one block.
+
+Done with `position: relative; top: -26px`. The two obvious alternatives do NOT work:
+
+- **A negative `margin-top` does nothing.** The Primitive is `inline-flex` — an atomic
+  inline-level box, whose vertical margins grow the line box instead of moving it.
+  Measured: `margin: -26px 0 calc(var(--s-3) + 26px)` left the chip at y 68 and pushed
+  the title from 98 down to 124, the opposite of the intent.
+- **A smaller `__head` padding-top** would move the title up 26px on the Landing path,
+  where the chip is hidden and nothing occupies the space.
+
+Re-measured after the change: gallery path title 98 / sub 138 (unmoved); Landing title
+64 / sub 104 with the chip hidden (unmoved). Screenshot: `…/scratchpad/mpi729-v2.png`.

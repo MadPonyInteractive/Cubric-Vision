@@ -61,6 +61,17 @@
     gap: var(--s-2);
     padding: 0;
     margin: 0 0 var(--s-3);
+    /* Nudged 26px up into the head's top padding so the chip lands on the exact y the
+       Flow topbar's own `← Flows` chip occupies (measured: both at y 42, centre 50) —
+       press back out of a Flow and the next target is already under the cursor.
+       `position` rather than a negative margin-top, which does NOT work here: the
+       Primitive is `inline-flex`, an atomic inline-level box, so its vertical margins
+       grow the line box instead of moving it (measured — the chip stayed at 68 and the
+       title was pushed to 124). And rather than a smaller `__head` padding-top, which
+       would jump the title up on the Landing path, where there is no chip to occupy the
+       space. Relative keeps the reserved space, so the title does not move either way. */
+    position: relative;
+    top: -26px;
     font-family: inherit;
     font-weight: inherit;
     font-size: var(--t-2xs);
