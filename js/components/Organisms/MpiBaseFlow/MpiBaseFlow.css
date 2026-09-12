@@ -838,23 +838,14 @@
     align-items: center;
     gap: var(--s-2);
 }
-/* The name takes the slack; the type holds a fixed width so the dropdown does not
-   resize row to row as names grow, and the remove button never stretches. */
-.mpi-base-flow__field-voice-name {
+/* The type takes the slack now that the name box is gone (MPI-664, 2026-09-12) — a lone
+   9em dropdown floating beside a trash button read as a half-drawn row. The remove
+   button still never stretches. The three rules this replaces styled
+   `.mpi-base-flow__field-voice-name`, which `declaredFields.js` stopped emitting when
+   five live runs showed a typed name reaches no model. */
+.mpi-base-flow__field-voice-type {
     flex: 1;
     min-width: 0;
-}
-/* …and the mounted input has to TAKE that slack. Without this the primitive keeps its
-   own narrow numeric-ish width and the row renders a ~40px box that truncates "Singer
-   A" to "Sing" — invisible in the old 620px single column, obvious the moment the
-   roster moved into a 340px side column (MPI-664, 2026-09-02). Width only, as with the
-   stacked column above; the chrome stays the primitive's. */
-.mpi-base-flow__field-voice-name .mpi-input,
-.mpi-base-flow__field-voice-name .mpi-input__field {
-    width: 100%;
-}
-.mpi-base-flow__field-voice-type {
-    flex: 0 0 9em;
 }
 .mpi-base-flow__field-voice-add {
     align-self: flex-start;

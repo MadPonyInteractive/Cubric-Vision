@@ -29,7 +29,7 @@ stacked into the 236px control column; on a step they obey the one-row cap.
 **Every type here mounts an app Primitive** (`js/utils/declaredFields.js`, MPI-582) —
 `select`→MpiDropdown, `radio`→MpiRadioGroup, `button`→MpiButton, `toggle`→MpiButton (icon mode,
 `toggleable`, icon optional — MPI-504), `number`/`text`→MpiInput, `slider`→MpiProgressBar,
-`voices`→MpiInput + MpiDropdown + MpiButton (a composite, not a new Primitive — MPI-664).
+`voices`→MpiDropdown + MpiButton (a composite, not a new Primitive — MPI-664).
 `type` NAMES a component; it does not
 replace one. So a consumer block sizes these into its layout and never restates their fill,
 border, hover, focus or disabled treatment — anything chrome-like in a consumer stylesheet is a
@@ -65,6 +65,12 @@ never reached the payload, defaults were never seeded, and Reuse read only `step
   would hover "Length: 90" over a readout saying "1 minute 30 seconds" — one control contradicting
   itself. Seconds → frames stays the **graph's** job (`MpiMath`), never the app's.
 - `text` takes `placeholder` and `rows`; `rows > 1` renders a `textarea`. That is the prompt case.
+  It also takes `tags`, a CLOSED array of `{tag}` that gives the box an `@` picker inserting the
+  pick in SQUARE brackets on its own line (MPI-664). Opt-in per FIELD, never on the Primitive: this
+  branch builds every text box in every flow, so a picker on `MpiInput` lands on every one of them
+  (Fabio, 2026-09-10: *"only the lyrics box gets it"*). Declare a list the graph actually READS — a
+  `mentions` key pointing at a sibling field shipped first and was removed the same week, because
+  it offered voice names that `Strip_Voice_Markers` cut before the encoder.
 - `radio` takes `options: [{ v, label, info?, note? }]` and an optional `columns`. It is the only
   field type that mounts a Primitive (`MpiRadioGroup`), and it earns that: a tier choice rendered
   as a `select` hides the alternatives behind a click, and comparing them is the entire point.
@@ -81,23 +87,25 @@ never reached the payload, defaults were never seeded, and Reuse read only `step
   female bridge, choir on the last chorus".
   - **It is the only type whose UI value is not its graph value.** It holds an ARRAY of
     `{ name, type }` — that is what Reuse needs to rebuild the control — and `mapDeclaredValue`
-    serialises it to one string, one line per voice, `Name (Type)`. So **the one-field-one-param
+    serialises it to one string, one line per voice, `Voice N (Type)`. So **the one-field-one-param
     law is untouched**, and the agent connector (`resolveFlowFieldValues`) serialises through the
     same call the widget does rather than growing a second dialect.
-  - A row whose type is the catch-all (`Any`) emits the **bare name**: writing "Ana (Any)" into a
-    caption states a vocal quality the user never chose, and a model reads it as one. An unnamed
-    row is dropped rather than emitted blank.
+  - A row whose type is the catch-all (`Any`) emits the **bare label**: writing "Voice 2 (Any)"
+    into a caption states a vocal quality the user never chose, and a model reads it as one.
+  - `deserialiseVoices` DISCARDS the label on the way back in and the position regenerates it, so
+    a card written before 2026-09-12 carrying `Singer A (Female)` restores as one Female row.
+    Pinned by a test against that exact old spelling.
   - An option's `v` is used **literally**, so declare the caption word (`'Male'`), not an index.
     A roster feeds PROSE, not an `MpiAnySwitch` bank — there is no int to map to, and a lookup
     table would only be a second place to drift.
-  - It composes three existing Primitives (`MpiInput` · `MpiDropdown` · `MpiButton`) rather than
-    adding a fourth: it is a new *arrangement*, not a new visual idea.
-  - Rows repaint on **add and remove only**. Wiring a repaint to the name box would rebuild the row
-    under a typing user and drop focus on every keystroke; a name or type edit mutates its row in
-    place and reports.
-  - New rows are auto-named `Singer A`, `Singer B`, … (MiniMax's own caption convention) so a
-    reference to a voice from elsewhere stays unambiguous. Uniqueness is enforced on **add** only —
-    policing a rename would fight the user mid-word.
+  - It composes two existing Primitives (`MpiDropdown` / `MpiButton`) rather than adding a
+    third: it is a new *arrangement*, not a new visual idea.
+  - Rows repaint on **add and remove only** — a type change mutates its row in place and reports.
+  - **A row is a type, not a name** (MPI-664, 2026-09-12). The name box was removed after five
+    live runs showed the cast is a seed-level bias the model honours about one time in five, so a
+    typed name reached nothing that could hear it. `serialiseVoices` generates the label from
+    POSITION instead — `Voice 1 (Female)` — which is what still lets a sibling field name a voice
+    when two rows share a type.
 - Anything else logs a warning and renders nothing. A silently-missing control is the failure
   mode this whole file exists to avoid.
 
