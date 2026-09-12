@@ -3,6 +3,52 @@
 Design settled with Fabio 2026-08-30. Capability facts live in `research/minimax-music-3.md` —
 read it first, and do not re-search it.
 
+## Current State — 2026-09-12 (later), THE OWED RUN HAPPENED AND IT KILLED THE FEATURE'S PREMISE
+
+🟢 **THE SONG RUN IS NO LONGER OWED. It ran, repeatedly, and the answer was no.** Fabio made
+five Song runs across 2026-09-11/12. The cast fix works — the roster reaches the enhancer and
+the caption names every singer, every time. The AUDIO does not follow: one voice in four of the
+five runs. Read that as a capability ceiling, not a defect, and do NOT re-open the enhancer.
+
+| run | cast in caption | audio |
+|---|---|---|
+| `63c8ed60` | male, female | male only |
+| `82fb50dc` | Female, Male | one voice |
+| `99e13587` | **byte-identical caption to `82fb50dc`** | female → male ✅ |
+| `779dc2d8` | Female, Male + section notes | female only |
+| `c3f1aef8` | Female, Child | child only |
+
+🔴 **THE SEED DECIDES, AND THAT IS PROVEN, NOT INFERRED.** `82fb50dc` and `99e13587` share a
+caption hash (`ce6efa99cb`) and differ only in seed — one solo, one duet. Nothing else we varied
+predicted the winner: not row order (`Singer A (Female)` first lost to `Singer B (Child)`), not
+type, not description length. Do not spend seeds re-testing order.
+
+🔴 **THE LYRICS BOX CANNOT ADDRESS A VOICE, AT ALL.** `Strip_Voice_Markers` cuts every `<…>` run
+before the encoder AND `Input_Lyrics` is not in the enhancer's `from` list, so a marker reached
+NO model. The hint told users to write one and an `@` picker inserted them; Fabio followed it on
+two live runs for nothing. Bracketed variants die too — `[Intro male]` is a legal tag but not
+one of MiniMax's nine words, `[Intro <male>]` meets the same strip.
+
+🟢 **SHIPPED AS `1aab648d`** (6 files, pushed): roster row is one dropdown with no name box;
+`serialiseVoices` writes `Voice N (Type)` from POSITION; `deserialiseVoices` discards the label
+so every pre-2026-09-12 card still restores; the `@` picker, `mentionTagsFrom`, `nextVoiceName`
+and the `mentions` field key are removed (`attachMentionPicker` stays for MpiPromptBox); the
+angle-bracket hint sentence is gone; a field `note` states the odds instead of implying a
+guarantee. Recipe: section placement joins the `[VOCAL]` carry-through list, never-invent-a-
+running-order now says never INVENT one, and `[VOCAL]` may not open on a singular summary vocal
+when the cast is larger than one.
+
+🟢 **CHECKS:** 929/930 unit (the red is `tests/audio-waveform-alpha.test.cjs`, an UNTRACKED peer
+file touching none of this), 15/15 desktop flow specs, eslint + `lint:components` clean. The
+desktop spec now drives the real dropdown and asserts the serialised roster survives a
+destroy/remount.
+
+## Plan Drift — 2026-09-12
+
+The card's tier-2/tier-3 roster work (named cast, `@` picker for voices) is REVERSED, not
+extended. It was built correctly against a premise five live runs then falsified. Checklist
+items covering voice naming and the voice `@` picker are moot rather than open.
+
 ## Current State — 2026-09-12, TWO BUGS FROM FABIO'S RUN ARE FIXED. THE SONG RUN IS STILL OWED.
 
 His 2026-09-11 run produced four findings. Two are fixed here, one is now MPI-727, one is
