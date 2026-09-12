@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-733",
+  "title": "Cue all - batch a gallery multi-select through the current prompt-box recipe",
+  "description": "UMBRELLA: MPI-732. Select N gallery cards, right-click, Cue all (N): one queued job per card, all on the prompt box's current recipe. Design settled with Fabio 2026-09-12; see plan.md.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-09-12T12:27:24+01:00",
+  "updated_at": "2026-09-12T12:30:43+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

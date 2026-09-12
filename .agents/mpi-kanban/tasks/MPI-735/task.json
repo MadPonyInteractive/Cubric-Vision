@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-735",
+  "title": "Stale comments claim the edit ops show a ratio picker - they do not",
+  "description": "UMBRELLA: MPI-732. Comment-only correction in js/data/commandRegistry.js (:356, :441). imageSizedOps already suppresses ratio for krea2Edit/kleinEdit/qwenEdit; :485 already says so. No behaviour change.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-09-12T12:27:25+01:00",
+  "updated_at": "2026-09-12T12:30:43+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

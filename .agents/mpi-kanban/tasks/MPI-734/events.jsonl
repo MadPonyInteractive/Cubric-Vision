@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-734", "at": "2026-09-12T12:27:24+01:00", "actor": "claude", "column": "todo", "title": "PiD is not deprecated - it stays as a model that brings its four upscale plugins"}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-734", "type": "task.updated", "at": "2026-09-12T12:30:43+01:00", "actor": "claude", "summary": "Plan attached. Opens with a research phase and a decision gate: PiD install status when one of four plugins is removed."}

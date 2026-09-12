@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-735", "at": "2026-09-12T12:27:25+01:00", "actor": "claude", "column": "todo", "title": "Stale comments claim the edit ops show a ratio picker - they do not"}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-735", "type": "task.updated", "at": "2026-09-12T12:30:43+01:00", "actor": "claude", "summary": "Plan attached. Comment-only correction; no behaviour change."}

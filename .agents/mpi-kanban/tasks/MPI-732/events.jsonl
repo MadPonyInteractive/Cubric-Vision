@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-732", "at": "2026-09-12T12:27:13+01:00", "actor": "claude", "column": "todo", "title": "Gallery batch cue, and the op-surface corrections it surfaced"}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-732", "type": "task.updated", "at": "2026-09-12T12:30:43+01:00", "actor": "claude", "summary": "Umbrella plan attached: members, phase order, and the one item deliberately not carded."}

@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-734",
+  "title": "PiD is not deprecated - it stays as a model that brings its four upscale plugins",
+  "description": "UMBRELLA: MPI-732. Reverses MPI-515. PiD keeps its ModelDef and Library card; installing it activates all four plugins (shared requiredDeps, the Krea2 + image-describer shape). Carries an unsolved design problem: uninstalling one plugin makes PiD read uninstalled. See plan.md.",
+  "column": "todo",
+  "maturity": "needs-decision",
+  "status": "active",
+  "created_at": "2026-09-12T12:27:24+01:00",
+  "updated_at": "2026-09-12T12:30:43+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

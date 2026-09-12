@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-733", "at": "2026-09-12T12:27:24+01:00", "actor": "claude", "column": "todo", "title": "Cue all - batch a gallery multi-select through the current prompt-box recipe"}
+{"schema": "mpi-kanban/event/v1", "id": "MPI-733", "type": "task.updated", "at": "2026-09-12T12:30:43+01:00", "actor": "claude", "summary": "Plan attached. Design fully settled - no open decisions remain."}
