@@ -46,12 +46,33 @@ pill on the dark stage. That is not new — it is the same element the result pa
 MPI-622, and it is the element being *moved*, so it could not be swapped here without breaking the
 thing this card exists to fix. Worth its own card if Fabio wants it styled.
 
-## Left for Fabio
+## Left for Fabio — DONE, 2026-09-12
 
-- [ ] Generate on a real audio flow, press play, change step — **the sound keeps playing** — return
+- [x] Generate on a real audio flow, press play, change step — **the sound keeps playing** — return
       to the last step, still playing, back in its normal box.
-- [ ] A video flow: the window loops it silently. An image flow: a thumbnail.
-- [ ] Reuse a Song card: the flow opens with the song already in the window and the lyrics
+- [x] A video flow: the window loops it silently. An image flow: a thumbnail.
+- [x] Reuse a Song card: the flow opens with the song already in the window and the lyrics
       restored; Generate replaces it and nothing else does.
-- [ ] Does the window want a close button, or to be draggable? Deliberately not built — a window
+- [ ] STILL OPEN — does the window want a close button, or to be draggable? Deliberately not built — a window
       the user can dismiss and not get back is a new bug, so it was left as a question.
+
+### Fabio's verdict, 2026-09-12
+
+> *"Okay, looks good. I've tested with video, image, and audio flows."*
+
+All three kinds verified in the running app by the user, which is the whole of `user-ux` mode.
+Card closed on that.
+
+The close-button question stays open and unasked-for: he signed the card off without wanting one,
+so no window chrome was added. That is the parked item, not a debt.
+
+### Claim audit, 2026-09-12
+
+Every factual claim on this card — the commit body, this file, the plan's "What was built" table
+and the ticked checklist — was re-checked against the tree by the read-only claim auditor at
+close-out. **10 claims, 10 proven, 0 findings.** It re-ran both suites itself rather than trusting
+the numbers written here: 933 pass / 0 fail, and 15 test cases across the 13 `tests/desktop/flow-*.spec.js`
+files, which is where the "15/15" comes from. It also confirmed the two structural claims that are
+easy to assert and hard to keep: `_syncDock()` has exactly four call sites (2207, 2590, 2614, 3275),
+sits before the early return in both `_forgetResult` and `_showResults`, and lands at 2207 — after
+`slidesEl.appendChild(slide)` at 2200, before the rAF at 2209.

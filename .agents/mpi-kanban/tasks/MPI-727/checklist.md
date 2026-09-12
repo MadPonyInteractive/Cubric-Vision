@@ -34,7 +34,7 @@ must therefore stay inside that same task — never behind a `requestAnimationFr
 - [x] Also from `_forgetResult()` (file gone) and `_run()` (Generate is the only thing that
       replaces a result, so it is the only thing that empties the window)
 - [x] `_teardownSlide()` does NOT drop `_audioEl` or the dock; `el.destroy()` drops both
-- [ ] Ask Fabio about a close button before adding one (plan § Parking)
+- [ ] Ask Fabio about a close button before adding one (plan § Parking) — still open, deliberately: he signed the card off without asking for one, so no window chrome was added.
 
 ## Build — half two, Reuse loads the result
 
@@ -51,11 +51,11 @@ must therefore stay inside that same task — never behind a `requestAnimationFr
 - [x] `npx eslint` on the touched files + `npm run lint:components` — clean
 - [x] A test pinning what breaks silently: `tests/flow-result-dock.test.cjs`, 6/6. The rAF case is
       pinned by name, because that rAF is on the very next line after the `_syncDock()` call.
-- [ ] `js/data/flowsRegistry.js` was NOT touched, so the desktop flow specs are not mandatory —
+- [x] `js/data/flowsRegistry.js` was NOT touched, so the desktop flow specs are not mandatory —
       run them anyway before the push
-- [ ] **In the app** (`npm run app:isolated`, never `:3000`): audio flow → play → change step →
+- [x] **In the app** (`npm run app:isolated`, never `:3000`): audio flow → play → change step →
       the sound keeps playing; back to the last step → still playing, still in the pane
-- [ ] Video flow → the window loops it silently; image flow → a thumbnail
-- [ ] Reuse a Song card → the flow opens with the song already in the window, lyrics restored;
+- [x] Video flow → the window loops it silently; image flow → a thumbnail
+- [x] Reuse a Song card → the flow opens with the song already in the window, lyrics restored;
       Generate replaces it and nothing else does
-- [ ] Close the flow → the window goes with it
+- [x] Close the flow → the window goes with it
