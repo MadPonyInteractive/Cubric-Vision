@@ -181,9 +181,8 @@ test('a vertical MpiProgressBar fills from the bottom and reads bottom-to-top', 
  * Its reveal is CSS alone (`:hover, :focus-within` on the root), which is exactly the kind
  * a specificity accident leaves permanently open or permanently shut — so visibility is
  * MEASURED here (computed style plus what the pointer actually hits), never read off a
- * class. It is mounted in the right cluster of a real `MpiVideoControlBar`, standing in
- * for the bar's own volume pair, because that is where item 5 puts it and the height of
- * the flyout only means something next to the bar it rises out of.
+ * class. It is mounted bare, in a host pinned near the bottom of the window with room
+ * above it for the flyout; the next test drives it inside the real `MpiVideoControlBar`.
  */
 test('MpiVolumeControl reveals its vertical volume on hover and reports, never owns, the state', async ({}, testInfo) => {
     const { app, window, pageErrors } = await launchApp(testInfo);
@@ -193,27 +192,19 @@ test('MpiVolumeControl reveals its vertical volume on hover and reports, never o
         await clearBootModals(window);
 
         const geo = await window.evaluate(async () => {
-            const { MpiVideoControlBar } = await import('/js/components/Compounds/MpiVideoControlBar/MpiVideoControlBar.js');
             const { MpiVolumeControl } = await import('/js/components/Compounds/MpiVolumeControl/MpiVolumeControl.js');
 
             const host = document.createElement('div');
             host.id = 'mpi731-volume-probe';
-            host.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999';
+            host.style.cssText = 'position:fixed;right:40px;bottom:40px;z-index:99999';
             document.body.appendChild(host);
 
-            const bar = MpiVideoControlBar.mount(host, { showTrim: false });
-            // Stand-in for item 5: the bar's own horizontal pair out, the compound in.
-            const oldPair = bar.el.querySelector('.mpi-video-control-bar__volume');
-            const slot = document.createElement('div');
-            oldPair.after(slot);
-            oldPair.style.display = 'none';
-
-            const vc = MpiVolumeControl.mount(slot, { value: 50, info: 'Mute/Unmute (M)' });
+            const vc = MpiVolumeControl.mount(host, { value: 50, info: 'Mute/Unmute (M)' });
             const log = [];
             vc.on('input', ({ value }) => log.push(['input', value]));
             vc.on('change', ({ value }) => log.push(['change', value]));
             vc.on('mute-toggle', ({ muted }) => log.push(['mute-toggle', muted]));
-            window.__mpi731v = { bar, vc, log };
+            window.__mpi731v = { vc, log };
 
             const btn = vc.el.querySelector('.mpi-btn').getBoundingClientRect();
             return { btn: { x: btn.x + btn.width / 2, y: btn.y + btn.height / 2 } };
@@ -281,6 +272,8 @@ test('MpiVolumeControl reveals its vertical volume on hover and reports, never o
         expect(afterDrag.value).toBeLessThan(20);
 
         // Mute is a REQUEST. The compound says what was asked; setters never echo back.
+        // From a level above zero: at zero the speaker restores instead (asserted below).
+        await window.evaluate(() => window.__mpi731v.vc.el.setValue(50));
         await window.mouse.move(geo.btn.x, geo.btn.y);
         await window.mouse.click(geo.btn.x, geo.btn.y);
         const muted = await window.evaluate(() => {
@@ -304,6 +297,64 @@ test('MpiVolumeControl reveals its vertical volume on hover and reports, never o
         expect(muted.value, 'setValue lands').toBe(30);
         expect(muted.echoed, 'and neither setter emits — the consumer is the truth').toBe(0);
 
+        // The wheel is always on, over the button as well as the panel, and fast: 5 per tick
+        // whatever the drag step — the gallery's speed (Fabio, 2026-09-12). Value is 30 here.
+        const wheel = async (x, y, dy, ticks) => {
+            await window.mouse.move(x, y);
+            for (let i = 0; i < ticks; i++) {
+                await window.mouse.wheel(0, dy);
+                await window.waitForTimeout(60);
+            }
+            await window.waitForTimeout(150);
+            return window.evaluate(() => {
+                const { vc, log } = window.__mpi731v;
+                return { value: vc.el.getValue(), log: log.slice() };
+            });
+        };
+
+        await window.evaluate(() => { window.__mpi731v.log.length = 0; });
+        const up = await wheel(geo.btn.x, geo.btn.y, -100, 1);
+        expect(up.value, 'one wheel tick UP over the mute button is +5').toBe(35);
+        expect(up.log, 'reported as input then change, like a drag').toEqual([['input', 35], ['change', 35]]);
+
+        const down = await wheel(open.track.x, (open.track.top + open.track.bottom) / 2, 100, 2);
+        expect(down.value, 'two ticks DOWN over the panel are -10').toBe(25);
+
+        await window.evaluate(() => { window.__mpi731v.vc.el.setValue(98); window.__mpi731v.log.length = 0; });
+        const top = await wheel(geo.btn.x, geo.btn.y, -100, 2);
+        expect(top.value, 'the wheel clamps at 100').toBe(100);
+        expect(top.log.filter(([k]) => k === 'input').length, 'and a tick that cannot move emits nothing')
+            .toBe(1);
+
+        // Zero reads as MUTED, and the speaker then brings the level back rather than
+        // flipping a flag nobody would hear (Fabio, 2026-09-12).
+        const btnState = () => window.evaluate(() => {
+            const { vc, log } = window.__mpi731v;
+            return {
+                value: vc.el.getValue(),
+                active: vc.el.querySelector('.mpi-btn').classList.contains('is-active'),
+                log: log.slice(),
+            };
+        });
+        await window.evaluate(() => window.__mpi731v.vc.el.setValue(10));
+        await window.waitForTimeout(500); // past the wheel's gesture gap, so a new burst starts
+        expect((await wheel(geo.btn.x, geo.btn.y, 100, 3)).value, 'wheeled down to zero').toBe(0);
+        expect((await btnState()).active, 'the speaker shows MUTED at zero').toBe(true);
+
+        await window.evaluate(() => { window.__mpi731v.log.length = 0; });
+        await window.mouse.click(geo.btn.x, geo.btn.y);
+        await window.waitForTimeout(150);
+        const restored = await btnState();
+        expect(restored.value, 'clicking it brings back the level the gesture started from').toBe(10);
+        expect(restored.active, 'and shows sound again').toBe(false);
+        expect(restored.log, 'reported as a value, never a mute-toggle')
+            .toEqual([['input', 10], ['change', 10]]);
+
+        await window.evaluate(() => window.__mpi731v.vc.el.setValue(0));
+        expect((await btnState()).active, 'a consumer setting zero shows muted too').toBe(true);
+        await window.evaluate(() => window.__mpi731v.vc.el.setValue(40));
+        expect((await btnState()).active, 'and any level above it shows sound').toBe(false);
+
         // Away from the control, it closes again.
         await window.mouse.move(5, 5);
         await window.waitForTimeout(350);
@@ -311,9 +362,148 @@ test('MpiVolumeControl reveals its vertical volume on hover and reports, never o
 
         await window.evaluate(() => {
             window.__mpi731v.vc.destroy();
-            window.__mpi731v.bar.destroy();
             document.getElementById('mpi731-volume-probe')?.remove();
             delete window.__mpi731v;
+        });
+
+        expect(pageErrors, 'no renderer errors').toEqual([]);
+    } finally {
+        await closeApp(app);
+    }
+});
+
+/**
+ * Item 5 — `MpiVideoControlBar` mounts `MpiVolumeControl` in place of its own mute button and
+ * horizontal slider. Driven against a REAL `MpiVideoSurface`: neither the bar nor the control
+ * owns the media, so the only proof the swap kept the wiring is the `<video>` element's own
+ * `volume` / `muted` moving — from the button, the wheel, `M` and the arrow keys — and the
+ * control following the element back. A `<video>` with no `src` still takes both properties
+ * and still fires `volumechange`, so no fixture is needed.
+ */
+test('MpiVideoControlBar drives a real video through MpiVolumeControl: click, wheel, M and the arrows', async ({}, testInfo) => {
+    const { app, window, pageErrors } = await launchApp(testInfo);
+
+    try {
+        await window.waitForTimeout(6000);
+        await clearBootModals(window);
+
+        const layout = await window.evaluate(async () => {
+            const { MpiVideoSurface } = await import('/js/components/Compounds/MpiVideoSurface/MpiVideoSurface.js');
+            const { MpiVideoControlBar } = await import('/js/components/Compounds/MpiVideoControlBar/MpiVideoControlBar.js');
+
+            const host = document.createElement('div');
+            host.id = 'mpi731-bar-probe';
+            host.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#000';
+            const surfaceHost = document.createElement('div');
+            surfaceHost.style.cssText = 'width:160px;height:90px';
+            const barHost = document.createElement('div');
+            host.append(surfaceHost, barHost);
+            document.body.appendChild(host);
+
+            const surface = MpiVideoSurface.mount(surfaceHost, { volume: 0.5 });
+            const bar = MpiVideoControlBar.mount(barHost, { showTrim: true });
+            bar.el.attachSurface(surface);
+            window.__mpi731b = { surface, bar };
+
+            const right = bar.el.querySelector('.mpi-video-control-bar__right');
+            const btns = [...right.querySelectorAll('.mpi-btn')];
+            const gap = parseFloat(getComputedStyle(right).columnGap) || 0;
+            const btn = right.querySelector('.mpi-volume-control .mpi-btn').getBoundingClientRect();
+            return {
+                btn: { x: btn.x + btn.width / 2, y: btn.y + btn.height / 2 },
+                oldPairGone: !bar.el.querySelector('.mpi-video-control-bar__volume, .mpi-video-control-bar__volume-slider'),
+                rightSliders: [...right.querySelectorAll('.mpi-progress')]
+                    .map(p => p.classList.contains('mpi-progress--vertical')),
+                rightButtons: btns.length,
+                leftButtons: bar.el.querySelectorAll('.mpi-video-control-bar__left .mpi-btn').length,
+                rightSlack: right.getBoundingClientRect().width
+                    - btns.reduce((s, b) => s + b.getBoundingClientRect().width, 0)
+                    - gap * (btns.length - 1),
+                trimMounted: bar.el.querySelector('.mpi-video-control-bar__trim').children.length > 0,
+            };
+        });
+
+        // The swap reached exactly its slot: one vertical slider, the buttons all still there.
+        expect(layout.oldPairGone, 'the bar\'s own volume pair is gone').toBe(true);
+        expect(layout.rightSliders, 'its right cluster holds ONE slider, the vertical one').toEqual([true]);
+        expect(layout.rightButtons, 'frames, loop, mute, fullscreen').toBe(4);
+        expect(layout.leftButtons, 'play and both frame steps untouched').toBe(3);
+        expect(layout.trimMounted, 'the trim bar still mounts').toBe(true);
+        expect(layout.rightSlack, 'the cluster is only its buttons now — no slider width left in it')
+            .toBeLessThan(24);
+
+        await window.waitForFunction(() => getComputedStyle(
+            document.querySelector('#mpi731-bar-probe .mpi-volume-control__flyout')).position === 'absolute');
+
+        const state = () => window.evaluate(() => {
+            const { surface, bar } = window.__mpi731b;
+            const v = surface.el.getVideoElement();
+            const vc = bar.el.querySelector('.mpi-volume-control');
+            return {
+                volume: Math.round(v.volume * 100),
+                muted: v.muted,
+                slider: parseFloat(vc.querySelector('.mpi-progress__input').value),
+                btnActive: vc.querySelector('.mpi-btn').classList.contains('is-active'),
+            };
+        });
+
+        expect(await state(), 'attachSurface paints the element\'s volume into the control')
+            .toEqual({ volume: 50, muted: false, slider: 50, btnActive: false });
+
+        // The button.
+        await window.mouse.move(layout.btn.x, layout.btn.y);
+        await window.mouse.click(layout.btn.x, layout.btn.y);
+        await window.waitForTimeout(200);
+        expect(await state(), 'clicking mute mutes the VIDEO').toMatchObject({ muted: true, btnActive: true });
+        await window.mouse.click(layout.btn.x, layout.btn.y);
+        await window.waitForTimeout(200);
+        expect(await state(), 'and again unmutes it').toMatchObject({ muted: false, btnActive: false });
+
+        // The wheel, over the button: 5 per tick, all the way to the element.
+        await window.mouse.wheel(0, -100);
+        await window.waitForTimeout(100);
+        await window.mouse.wheel(0, -100);
+        await window.waitForTimeout(200);
+        expect(await state(), 'two ticks up put the video at 60%').toMatchObject({ volume: 60, slider: 60 });
+
+        // The hotkeys, with the pointer away and nothing focused.
+        await window.mouse.move(5, 5);
+        await window.evaluate(() => document.activeElement?.blur());
+        await window.keyboard.press('m');
+        await window.waitForTimeout(200);
+        expect(await state(), 'M mutes, and the control follows the element')
+            .toMatchObject({ muted: true, btnActive: true });
+        await window.keyboard.press('m');
+        await window.waitForTimeout(200);
+        expect(await state(), 'M again unmutes').toMatchObject({ muted: false, btnActive: false });
+
+        await window.keyboard.press('ArrowDown');
+        await window.waitForTimeout(200);
+        expect(await state(), 'arrow down is -10, and the slider follows').toMatchObject({ volume: 50, slider: 50 });
+        await window.keyboard.press('ArrowUp');
+        await window.waitForTimeout(200);
+        expect(await state(), 'arrow up is +10').toMatchObject({ volume: 60, slider: 60 });
+
+        // Zero reads as MUTED on the real bar too, and the speaker brings the sound back.
+        await window.waitForTimeout(500);
+        await window.mouse.move(layout.btn.x, layout.btn.y);
+        for (let i = 0; i < 12; i++) {
+            await window.mouse.wheel(0, 100);
+            await window.waitForTimeout(40);
+        }
+        await window.waitForTimeout(250);
+        expect(await state(), 'wheeled to zero: silent, NOT muted, and the speaker shows muted')
+            .toEqual({ volume: 0, muted: false, slider: 0, btnActive: true });
+        await window.mouse.click(layout.btn.x, layout.btn.y);
+        await window.waitForTimeout(250);
+        expect(await state(), 'clicking it brings the video back to 60%')
+            .toEqual({ volume: 60, muted: false, slider: 60, btnActive: false });
+
+        await window.evaluate(() => {
+            window.__mpi731b.bar.destroy();
+            window.__mpi731b.surface.destroy();
+            document.getElementById('mpi731-bar-probe')?.remove();
+            delete window.__mpi731b;
         });
 
         expect(pageErrors, 'no renderer errors').toEqual([]);

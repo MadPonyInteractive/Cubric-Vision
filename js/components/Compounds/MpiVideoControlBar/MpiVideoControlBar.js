@@ -31,8 +31,8 @@
 
 import { ComponentFactory } from '../../factory.js';
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
-import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiTrimBar } from '../MpiTrimBar/MpiTrimBar.js';
+import { MpiVolumeControl } from '../MpiVolumeControl/MpiVolumeControl.js';
 import { formatTime } from '../../../utils/string.js';
 import { qs } from '../../../utils/dom.js';
 import { Hotkeys } from '../../../managers/hotkeyManager.js';
@@ -59,10 +59,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
             <div class="mpi-video-control-bar__right">
                 <div data-mount="frames-toggle"></div>
                 <div data-mount="loop"></div>
-                <div class="mpi-video-control-bar__volume">
-                    <div data-mount="mute"></div>
-                    <div class="mpi-video-control-bar__volume-slider" data-mount="volume"></div>
-                </div>
+                <div data-mount="volume"></div>
                 <div data-mount="fullscreen"></div>
             </div>
         </div>
@@ -196,13 +193,12 @@ export const MpiVideoControlBar = ComponentFactory.create({
         if (_showFrames) framesToggleBtn.el.classList.add('is-active');
 
         const loopBtn  = MpiButton.mount(qs('[data-mount="loop"]', el),       { icon: 'loop', size: 'sm', info: 'Loop (L)' });
-        const muteBtn  = MpiButton.mount(qs('[data-mount="mute"]', el),       { icon: 'volumeHigh', iconActive: 'volumeOff', size: 'sm', info: 'Mute/Unmute (M)' });
         const fsBtn    = MpiButton.mount(qs('[data-mount="fullscreen"]', el), { icon: 'fullscreen', size: 'sm', info: 'Fullscreen (F)' });
 
-        const volumeSlider = MpiProgressBar.mount(qs('[data-mount="volume"]', el), {
-            min: 0, max: 100, step: 1, value: 100,
-            prefix: '', suffix: '%',
-            interactive: true, handle: true, variant: 'primary'
+        // The same mute + vertical volume flyout the gallery and the audio player mount
+        // (MPI-731). It owns no media: it reports gestures, volumechange reports back.
+        const volumeCtl = MpiVolumeControl.mount(qs('[data-mount="volume"]', el), {
+            value: 100, step: 1, info: 'Mute/Unmute (M)',
         });
 
         const trim = _showTrim
@@ -321,11 +317,12 @@ export const MpiVideoControlBar = ComponentFactory.create({
             }
         });
 
-        muteBtn.on('click', () => {
+        const _toggleMute = () => {
             if (!_surface) return;
             const v = _surface.getVideoElement();
             _surface._setMuted(!v.muted);
-        });
+        };
+        volumeCtl.on('mute-toggle', () => _toggleMute());
 
         const _doVolume = (value) => {
             if (!_surface) return;
@@ -334,8 +331,8 @@ export const MpiVideoControlBar = ComponentFactory.create({
             const v = _surface.getVideoElement();
             if (v.muted && newVolume > 0) _surface._setMuted(false);
         };
-        volumeSlider.on('input',  ({ value }) => _doVolume(value));
-        volumeSlider.on('change', ({ value }) => _doVolume(value));
+        volumeCtl.on('input',  ({ value }) => _doVolume(value));
+        volumeCtl.on('change', ({ value }) => _doVolume(value));
 
         fsBtn.on('click', async () => {
             try {
@@ -371,8 +368,8 @@ export const MpiVideoControlBar = ComponentFactory.create({
             const video = _surface.getVideoElement();
 
             // Reset UI to surface state
-            volumeSlider.el.setValueQuiet(Math.round(video.volume * 100));
-            muteBtn.el.classList.toggle('is-active', video.muted);
+            volumeCtl.el.setValue(Math.round(video.volume * 100));
+            volumeCtl.el.setMuted(video.muted);
             _loopIntent = !!video.loop;
             loopBtn.el.classList.toggle('is-active', _loopIntent);
             _renderTime(video.currentTime || 0, video.duration || 0);
@@ -429,8 +426,8 @@ export const MpiVideoControlBar = ComponentFactory.create({
                     _renderTime(video.currentTime || 0, _duration);
                 }),
                 addCb(surfaceInstance, 'volumechange', ({ volume, muted }) => {
-                    muteBtn.el.classList.toggle('is-active', muted);
-                    volumeSlider.el.setValueQuiet(Math.round(volume * 100));
+                    volumeCtl.el.setMuted(muted);
+                    volumeCtl.el.setValue(Math.round(volume * 100));
                 }),
             );
 
@@ -445,7 +442,7 @@ export const MpiVideoControlBar = ComponentFactory.create({
             hk('video.volume.up',     () => _adjustVolume(+10));
             hk('video.volume.down',   () => _adjustVolume(-10));
             hk('video.loop',          () => loopBtn.el.click());
-            hk('video.mute',          () => muteBtn.el.click());
+            hk('video.mute',          () => _toggleMute());
             hk('video.frame.first',   () => {
                 _surface.getVideoElement().pause();
                 _surface.seek(_in);
@@ -538,9 +535,8 @@ export const MpiVideoControlBar = ComponentFactory.create({
             try { frameFwdBtn.destroy(); } catch (_) { /* noop */ }
             try { framesToggleBtn.destroy(); } catch (_) { /* noop */ }
             try { loopBtn.destroy(); } catch (_) { /* noop */ }
-            try { muteBtn.destroy(); } catch (_) { /* noop */ }
             try { fsBtn.destroy(); } catch (_) { /* noop */ }
-            try { volumeSlider.destroy(); } catch (_) { /* noop */ }
+            try { volumeCtl.destroy(); } catch (_) { /* noop */ }
         };
     }
 });

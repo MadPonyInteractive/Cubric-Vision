@@ -366,18 +366,47 @@ settled below from the code, not from preference. Do not re-litigate them — bu
       `muted: true`, setters never echo, closes on leave. **Falsified**: with `:focus-within`
       in place of `:has(:focus-visible)` the "leaving closes" assertion fails.
 
-**Where it stands (2026-09-12 ~19:50Z):** items 1-2 done; card in `doing`. Fabio signed off
-the flyout: **height (140px / 112px travel) fine, upward-only fine, and the WHEEL MUST
-change volume, fast, like the gallery** (gallery = `step: 5, wheel: true`). **Order changed:
-item 5 (video bar adopts `MpiVolumeControl`) goes NEXT, before item 3**, so he can see it in
-action in the real video workspace first. Then item 3, where the player must be a **very
-small widget whose width the consumer sets**, so it fits a Flow's layout.
+- [x] **Wheel + 5. `MpiVideoControlBar` adopts `MpiVolumeControl`** (2026-09-12, uncommitted,
+      session `59f90600`). Wheel: `WHEEL_STEP = 5`, always on, one capture listener on the
+      root (button AND panel), slider mounts `wheel: false`, `wheel` prop deleted. Bar: own
+      mute + horizontal slider + wrapper + 5 CSS rules gone; `mute-toggle` and the `M` hotkey
+      both call `_toggleMute()`; attach/`volumechange` mirror via `setValue`/`setMuted`.
+      `MpiVolumeControl.css` added to `preloadStyles.js` (item 8's line, pulled forward).
+      Test 2 now mounts bare + asserts the wheel; new test 3 drives a real `MpiVideoSurface`
+      through the bar (button, wheel, `M`, arrows). 3 passed; wheel and `M` falsified.
+      Side effect, deliberate: the bar's volume fill is `primary`, no longer `--accent-heat`.
+      **Fabio signed off item 5 live in the video workspace, 2026-09-12 ("it works great").**
+
+- [x] **Zero reads as muted** (2026-09-12, Fabio's ask after the live look). In
+      `MpiVolumeControl`, so all three consumers get it: the speaker shows its muted icon when
+      the level is 0 as well as when muted (`_paint` = `_muted || value === 0`, repainted on
+      drag input, wheel, `setValue`, `setMuted`). A click at zero RESTORES the level the
+      lowering gesture began from (snapshot on root `pointerdown` capture + wheel-burst start,
+      `WHEEL_GESTURE_GAP_MS = 400`), reported as `input`/`change` — never `mute-toggle`, which
+      would re-mute after the consumer's volume handler unmutes. Known ceiling (ponytail
+      comment): hotkey changes arrive through `setValue` and are not snapshotted. Tests 2 + 3
+      extended; both halves falsified.
+
+**Where it stands (2026-09-12, session `59f90600`):** items 1, 2, wheel, 5 and zero-as-muted
+done, verified, Fabio-approved. **NEXT: item 5b** — in the video workspace (Group History),
+move the transport bar BELOW the PromptBox so the PromptBox's upward panel stops covering the
+bar's buttons. Then item 3 — `MpiAudioPlayer` as a **very small widget whose width the
+consumer sets**, so it fits a Flow. Master CI is green again since `da3b23bc`.
 
 ## Remaining Work
 
-- User-ux sign-off on the hover-reveal: Fabio set the row order and the vertical volume,
-  but how far the flyout travels, how tall it is and whether it also wants the wheel are
-  his eyes, not a spec's.
+- **5b. Transport bar below the PromptBox in the video workspace** (Fabio, 2026-09-12, with the
+  bar live on screen). Facts found, not yet designed: `MpiGroupHistoryBlock`'s grid is
+  `header / left centre right / controls`; the bar mounts in `#controls-slot`
+  (`.mpi-group-history-block__controls`, grid row 3, `auto`). The PromptBox sits in
+  `.mpi-group-history-block__bottom` — `position: fixed; bottom: 30px; z-index: 10`,
+  "shell-managed" — so it floats OVER the grid rather than taking a row, and its ▲ expander
+  opens upward across the bar. Read `.claude/rules/component-mounts.md` § MpiVideoControlBar
+  and `docs/workspaces.md` first; the rule files need Fabio's permission to edit. Only the
+  video workspace is in scope — the Flow result pane mounts its own bar under the split.
+  **Verify:** in a real window the bar sits below the PromptBox, the PromptBox's expanded
+  panel no longer covers any bar button, the volume flyout still opens unclipped, and
+  image groups (no bar, `:empty`) keep their layout. Then Fabio's live look.
 - `js/components/types.js`'s `MpiWaveformProps` typedef is **stale** from MPI-730 — it says
   the played layer is an `--accent-heat` tint (it is `--accent-audio` now) and its `seek`
   payload omits `modified`. Not this card's mess and not this card's file to fix; flag it
@@ -448,6 +477,12 @@ small widget whose width the consumer sets**, so it fits a Flow's layout.
   `types.js` (MPI-728's record is complete). Item 8 is unblocked. It also matters more than
   it read: an unregistered component stylesheet loads async on first mount, and the spec
   measured the flyout OPEN before the sheet landed — that flash is what users would see.
+- **2026-09-12 — Fabio's live look at item 5 added two asks, both folded into this card.**
+  (1) Zero reads as muted, like standard volume controls — built in `MpiVolumeControl`, with
+  a click at zero restoring the pre-gesture level, because a speaker that shows muted and
+  toggles only a flag would look dead. (2) Move the video workspace's transport bar below the
+  PromptBox — item 5b, next session, before item 3. `MpiVolumeControl.css` preload (item 8)
+  already landed with item 5.
 
 ## Verification
 
