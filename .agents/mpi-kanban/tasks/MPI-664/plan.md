@@ -59,11 +59,16 @@ which is what keeps a name like `Ana (live)` a name.
 and no widget reads it back. Fixing the seeder/writer disagreement is frame surgery that
 touches every flow, and this card is not the place. Worth a card if it ever bites again.
 
-🔵 **NEW SCOPE, FABIO 2026-09-12: the lyrics ride along on the gallery card.** *"For the song
-flow, we could add card notes to the card with the lyrics."* Folded into this card at his
-word. NOT started. It is partly a workaround for the result-pane bug — if MPI-727 lands
-properly he can read the lyrics without leaving the step — but it stands on its own for
-finding a song again in the gallery later. Decide the shape with him before building.
+🔵 ~~**NEW SCOPE: the lyrics ride along on the gallery card.**~~ **SUPERSEDED THE SAME DAY AND
+MOVED TO MPI-727.** He asked for card notes carrying the lyrics, then replaced it himself:
+*"the only way we could make it work is if, when we reuse a flow, it loads in the current
+result until the user presses Generate to replace that with a new result. That solves it."*
+And it does, better: the lyrics are ALREADY in the flow, so reusing a card plays the result in
+MPI-727's floating window while he reads and edits the words that made it — no second copy of
+the lyrics, and it works for every flow rather than just Song. **Nothing on this card.** Handed
+over by `mpi-message` `8b3c6f19-42ae-4d70-95c1-0e7f2a6d8b44` and a live cross-session message
+to `cubric-vision-95`; that session holds a write claim on MPI-727's own `brief.md`, so it
+folds the scope in itself rather than having it edited underneath it.
 
 🟣 **MPI-727 CUT** — a flow's result follows the user across steps (floating window top-right
 off the last step; video loops silently, image is a thumbnail, audio is the player). Frame-wide,

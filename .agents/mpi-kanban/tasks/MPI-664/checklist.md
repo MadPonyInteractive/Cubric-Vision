@@ -223,10 +223,17 @@ Design settled 2026-08-30 (hybrid). See `plan.md` for the full field surface and
       (red before, green after), 15/15 unit in `flow-field-constraints`, 927/927 overall,
       14/14 desktop flow specs.
 
-- [ ] 🔵 **THE LYRICS RIDE ALONG ON THE GALLERY CARD** (Fabio, 2026-09-12, folded into this
-      card at his word). *"For the song flow, we could add card notes to the card with the
-      lyrics."* NOT started, shape not agreed. Partly a workaround for MPI-727; stands on its
-      own for finding a song again in the gallery later.
+- [x] 🔵 ~~**THE LYRICS RIDE ALONG ON THE GALLERY CARD**~~ — **SUPERSEDED, AND IT IS MPI-727'S
+      NOW** (Fabio, 2026-09-12, hours after asking for it). He replaced his own idea with a
+      better one: *"the only way we could make it work is if, when we reuse a flow, it loads in
+      the current result until the user presses Generate to replace that with a new result.
+      That solves it."* It does — the lyrics are ALREADY in the flow, so reusing a card plays
+      the result in MPI-727's floating window while he reads and edits the words that made it.
+      No duplicate copy of the lyrics anywhere, and it works for every flow instead of just
+      Song. Handed to the MPI-727 session by `mpi-message`
+      (`8b3c6f19-42ae-4d70-95c1-0e7f2a6d8b44`) plus a live cross-session message, because that
+      session holds a live write claim on its own `brief.md` — it folds the scope in itself.
+      Original ask kept above because it explains where the shape came from.
 
 - [ ] 🔴 **THE SONG RUN, STILL OWED.** The 2026-09-11 attempt ran on a one-voice roster that
       bug 2 had already reset, so it proved nothing either way. Needs a fresh Song, two voices,
