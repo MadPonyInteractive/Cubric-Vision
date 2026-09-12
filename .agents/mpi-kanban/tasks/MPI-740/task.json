@@ -1,0 +1,15 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-740",
+  "title": "MpiFader: the mouse wheel is too slow and cannot leave the unity detent",
+  "description": "Fabio, on the components page: the fader crawls under the wheel (native range moves by step = 0.1 dB over a 72 dB travel) and once it snaps to 0 dB the wheel can never move it off, because `detent` is cleared only on keydown - so a wheel-driven input is snapped straight back to unity by the 1 dB tolerance. The component's own docstring documents this exact trap for the keyboard and fixes it there. Fix both twins: an explicit wheel policy (a `wheel` prop + a dB `wheelStep`, mirroring MpiProgressBar, which either handles wheel or suppresses it) and `detent = false` on wheel, the same rule keydown already gets - pointer drags feel the detent, discrete value requests do not. Adding a listener means the component also finally owes an `el.destroy()`.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-09-12T17:10:00Z",
+  "updated_at": "2026-09-12T17:10:00Z",
+  "links": {
+    "brief": "brief.md",
+    "events": "events.jsonl"
+  }
+}

@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-740", "at": "2026-09-12T17:10:00Z", "actor": "claude-opus-5", "column": "todo", "title": "MpiFader: the mouse wheel is too slow and cannot leave the unity detent"}
