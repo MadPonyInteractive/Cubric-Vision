@@ -1093,3 +1093,48 @@ afterwards, `t2i_002`, DOES carry `dog` in its stored prompt.
 
 Raw runs: `scratchpad/dog-runs.json`, `scratchpad/dog-runs-deepinfra.json` (session
 scratchpad, not committed).
+
+### CORRECTION, same day: Fabio's enhance runs LOCAL, not in the cloud
+
+The section above reasoned that a DeepInfra key makes `chooseBackend()` return
+`'deepinfra'`, so his enhance ran on `google/gemma-4-26B-A4B-it`. **His screenshot
+says otherwise: the provenance line reads "Enhanced by gemma4:e4b for ILL Anime."**
+The app's key lives in its own secret store, not in the `~/.secrets/di.txt` file the
+measurement scripts read, so the app has no key and falls to Ollama.
+
+The measurement is untouched — `e4b` keeps the dog 10/10 either way, and the cloud
+model was worth measuring. What was wrong is the claim about which one HE ran. **A
+backend inferred from config is a hypothesis; the provenance line is the reading.**
+That line exists because round 2 put it there, and it answered this in one glance.
+
+## `lightingg` — a malformed final tag on the SHIPPED local model (2026-09-12)
+
+Visible in Fabio's own screenshots twice (`volumetric lightingg`, `soft lightingg`)
+and initially read as a typo. It is not:
+
+| enhancer | malformed final tag |
+|---|---|
+| `gemma4:e4b` (shipped local) | **8/10** |
+| `huihui_ai/gemma-4-abliterated:12b` | 0/10 |
+| `google/gemma-4-26B-A4B-it` | 0/10 |
+
+The obvious suspect was the prompt's tail. `illustrious`'s `systemPrompt` deliberately
+ends on a bare, unterminated tag line whose last two words are `cinematic lighting` —
+the MPI-25 pony finding that the prompt's own last characters set the model's first
+ones. **Tested and REFUTED:** bare tail 8/10, tail + newline 9/10, tail + comma 7/10.
+Terminating it changes nothing; the variation is noise.
+
+So it is the model, not the recipe, and it is confined to the one model users are
+actually on. **Nothing was changed** — `illustrious` is green 24/24 and an edit owes
+two clean sweeps, so a recipe edit on refuted evidence would be paid for twice. Left
+for a recipe card to decide with the rate in hand. Note a `forbiddenPatterns` entry
+would FAIL the run rather than repair the tag, which is the honest behaviour but not
+a fix.
+
+## Step 1c — CLOSED (2026-09-12)
+
+Fabio drove the last leg himself: new prompt → Enhance → OK → generate → **restart
+the app** → Reuse. The short prompt returns to the box, the enhancement returns to
+the overlay, the provenance line names engine and target model. Nine defects across
+three rounds, all fixed. The reload leg could not have passed a day earlier — round 3
+is why.

@@ -35,8 +35,19 @@ names but never lettered. **Order is by priority, not by letter.**
 
 ## Current State
 
-**2026-09-12 — step 1c round 2: four fixes from Fabio's live pass, one new card,
-one piece of field evidence. Step 1c is STILL OPEN and still his.**
+**2026-09-12 (later) — STEP 1c IS CLOSED, and so is step 2. Steps 1 and 2 are both
+done; step 3 (archive Cubric-Prompt) is the only thing between here and the goal,
+and it is on Fabio's explicit go.**
+
+Round 3 found the defect the whole `user-ux` gate existed to catch: `sourcePrompt`
+never reached the sidecar, because two run-payload mappers destructure an explicit
+field list and neither named it. Fabio then drove the reload leg himself and it
+passes. **Step 2 turned out to have shipped as `3b8052d6` with its boxes unticked —
+the third time this card has done that**, so it was re-audited on disk rather than
+believed. Step 4's corpus path is built. See below and `validation.md` round 3.
+
+*Superseded, kept for the trail:* **step 1c round 2: four fixes from Fabio's live
+pass, one new card, one piece of field evidence.**
 
 Fixed and verified (`npm test` 927/927, lint clean, `tests/enhance-overlay.test.cjs`
 18/18, every new assertion proven to FAIL on HEAD's pre-fix source):
@@ -357,6 +368,14 @@ and `illustrious` emit no negative block at all — and **`project.json` stores 
 uuid strings**, so `sourcePrompt` had to reach the sidecar or Reuse would lose the
 short prompt on the next reload and nowhere earlier.
 
+**CLOSED 2026-09-12 — Fabio drove the last leg himself and it passes.** New prompt
+→ Enhance → OK → generate → **restart the app** → Reuse: the short prompt comes back
+to the box, the enhancement comes back to the overlay, the provenance line reads
+"Enhanced by gemma4:e4b for ILL Anime." That leg had never been driven before, and
+it could not have passed a day earlier: `sourcePrompt` was being dropped by the two
+run-payload mappers, so nothing was ever stored to reload (validation.md round 3).
+Rounds 1–3 of his pass found NINE defects between them; every one is fixed.
+
 ### 1d — measure the ComfyUI backend *(Fabio's, on the GPU)*
 
 - [ ] **Not an assumption in this plan.** The claim that an enhance on that
@@ -376,29 +395,52 @@ model; the measurement only decides how good the local path is.
 Runs only after step 1: the button cannot lose its backend before it has a new
 one.
 
-- [ ] Delete `services/brokerBoot.js`, `services/connectorResponder.js`,
+**SHIPPED as `3b8052d6`, and the boxes below went unticked for the THIRD time on
+this card.** Audited and confirmed on disk 2026-09-12: all three source files are
+gone, `POST /connector/enhance` is gone, `package.json` declares no
+`@cubric/connector`, and every remaining match for those names is a comment
+explaining the removal. Run the audit, not the history — a step completing on disk
+and invisible in the plan is this card's signature failure.
+
+- [x] Delete `services/brokerBoot.js`, `services/connectorResponder.js`,
       `POST /connector/enhance` (`routes/connector.js:264`) and the
       `promptEnhance` field it feeds (`:156-157`), `js/shell/connectorOps.js`,
       and the wand block `MpiPromptBox.js:1749-1840` plus its import at `:23`.
       **Verify:** `grep -rn 'connectorOps|/connector/enhance|checkPromptEnhanceAvailable|@cubric/connector' js/ routes/ services/ main.js server.js`
       returns nothing; `npm start` boots and enhance still works.
-- [ ] Remove the `@cubric/connector` **broker-SDK** dependency
+- [x] Remove the `@cubric/connector` **broker-SDK** dependency
       (`package.json:31`, a `file:` dep on the Studio repo), its handling in
       `scripts/build-portable.mjs:348,626`, and the import at `server.js:151`.
       This is about Vision's dependency, **not** the fate of the repo being
       renamed to Cubric-Connector. **Verify:** `npm ci` succeeds from a clean
       tree with no `../Cubric-Studio` on disk, and
       `npm run build:portable:dry-run` completes.
-- [ ] **Keep** `/connector/generate`, `/connector/open-project`,
+      **Done; dry-run completes (2026-09-12).** `npm ci` from a clean tree was NOT
+      re-run — it would wipe a shared tree's `node_modules` under a live peer — but
+      `npm ls @cubric/connector` is empty and `require.resolve` throws, which is
+      what the dep question actually asks.
+      **A LEFTOVER THE DELETION DID NOT REMOVE, found by audit:**
+      `node_modules/@cubric/connector` was still a symlink to
+      `/c/AI/Mpi/Cubric-Studio/packages/connector/`. npm does not prune a dep you
+      delete from `package.json`, and the link **resolved**, so
+      `assertNoDanglingSymlinks()` waved it through — a link into a sibling repo
+      could have shipped in a portable artifact, which is MPI-416's bug verbatim.
+      Deleted. **The guard tests whether a link RESOLVES, not whether it belongs**,
+      so removing a dependency is not finished until `node_modules` is checked too.
+- [x] **Keep** `/connector/generate`, `/connector/open-project`,
       `/connector/jobs/stream` and `/connector/jobs/:id/result` — they are the
       agent's hands in step 5, and an external-caller surface. **Verify:** they
       still answer after the deletions above.
-- [ ] Reword only the JSDoc in `js/data/modelConstants/models.js` (`:7-8` and
+      **Confirmed present (2026-09-12)**, plus `/connector/capabilities`: five
+      routes, exactly the keep list.
+- [x] Reword only the JSDoc in `js/data/modelConstants/models.js` (`:7-8` and
       the `enhanceRecipe` overrides). **The `type` and `enhanceRecipe` keys
       stay** — they are now the local recipe index `resolveRecipe()` reads, not
       a pointer at a sibling app. **Verify:**
       `node --test tests/recipe-registry.test.cjs` still passes its resolution
       audit.
+      **Done; the JSDoc records the meaning change rather than the deletion, and
+      the resolution audit passes (2026-09-12).**
 
 ## Step 3 — release the repos
 
