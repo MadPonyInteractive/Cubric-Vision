@@ -1,6 +1,7 @@
 /**
  * projectUI.js — UI logic for the Landing page project grid and New Project dialog.
- * Cards are rendered using MpiProjectCard. The "+ New Project" trigger uses MpiButton.
+ * Rows are hand-built divs from `_buildProjectRow()`, NOT a component. The
+ * "+ New Project" trigger uses MpiButton.
  * The creation dialog uses the MpiNewProject compound component.
  */
 
@@ -15,7 +16,6 @@ import { clientLogger } from '../services/clientLogger.js';
 import { formatBytes } from '../utils/formatBytes.js';
 import { gid } from '../utils/dom.js';
 import { APP_VERSION } from '../core/appVersion.js';
-import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
 import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
 import { MpiNotesEditor } from '../components/Compounds/MpiNotesEditor/MpiNotesEditor.js';

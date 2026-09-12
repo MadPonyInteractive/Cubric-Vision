@@ -1783,12 +1783,6 @@
  */
 
 /**
- * @typedef {Object} MpiProjectCardMedia
- * @property {'image'|'video'} type - Media type to render as the card background.
- * @property {string}          src  - URL or local path to the image or video file.
- */
-
-/**
  * @typedef {Object} MpiNewProjectProps (Compound — js/components/Compounds/MpiNewProject)
  * No props required — all content is internal.
  *
@@ -1806,20 +1800,6 @@
  * Emits:
  * 'create' { name: string, location: string|null } — "+ Create Project" clicked
  * 'cancel' {}                                       — Cancel button clicked only
- */
-
-/**
- * @typedef {Object} MpiProjectCardProps (Compound — js/components/Compounds/MpiProjectCard)
- * @property {string}               [title='Untitled'] - Project name shown in the card footer.
- * @property {string}               [date='']          - Formatted date string shown below the title.
- * @property {MpiProjectCardMedia}  [media]            - Optional image or video background.
- *                                                       Omit or set to null for an icon-only card.
- *
- * Instance methods: none (card is fully declarative via props + events).
- *
- * Emits:
- * 'click'  {} — Card body clicked (delete button area is excluded).
- * 'delete' {} — Delete button (trash icon) clicked. Caller decides confirmation flow.
  */
 
 /**
