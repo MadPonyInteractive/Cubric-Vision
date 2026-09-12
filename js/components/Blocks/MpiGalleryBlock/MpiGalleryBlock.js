@@ -1408,9 +1408,14 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 };
             };
 
-            const _galleryGenerationFromPayload = ({ operation, positive, negative, negativeAudio, mediaItems, injectionParams = {}, previewOnly = false, forceLocal = false }) => {
+            const _galleryGenerationFromPayload = ({ operation, positive, negative, negativeAudio, sourcePrompt = null, mediaItems, injectionParams = {}, previewOnly = false, forceLocal = false }) => {
                 if (!activeModel) return;
-                const config = { operation, model: activeModel, positive, negative, negativeAudio, mediaItems, injectionParams, previewOnly };
+                // MPI-677 step 1c — `sourcePrompt` (the short prompt behind an approved
+                // enhancement) must survive this mapper. It is an EXPLICIT field list, so
+                // a field nobody adds here is dropped between the box that built it and
+                // the service that stores it — silently, and only visible a session later
+                // when Reuse hands back the enhanced text with no words behind it.
+                const config = { operation, model: activeModel, positive, negative, negativeAudio, sourcePrompt, mediaItems, injectionParams, previewOnly };
                 return {
                     config,
                     // MPI-74: forceLocal rides in opts (a routing hint, not gen config).

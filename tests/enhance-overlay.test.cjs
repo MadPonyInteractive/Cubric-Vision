@@ -264,6 +264,33 @@ function testAFailedRunDoesNotRewriteProvenance() {
         'the failure path must still call _note directly, without recording it as provenance');
 }
 
+// ── 4c. The short prompt survives the mappers between the box and the service ─
+// Found by Fabio, 2026-09-12, from a test project where EVERY sidecar read
+// `sourcePrompt: null` while two of the cards plainly held enhanced text. The box
+// built the field (`getRunPayload`) and the service stored it (the sidecar AND the
+// live item), and it was lost in between: the two blocks that turn a run payload
+// into a generation config destructure an EXPLICIT field list and rebuild the
+// object, so a field nobody adds there is dropped with no error and no warning.
+//
+// What it costs is the half of the loop that cannot be reconstructed afterwards.
+// The enhanced text is on the card; the words behind it exist nowhere else, so
+// Reuse hands back an enhancement as if the user had typed it and the idea it was
+// made from is gone. Asserted at both ends of both mappers because the two halves
+// fail independently — destructuring it and then not passing it on is silent in
+// exactly the same way.
+function testTheShortPromptSurvivesEveryRunMapper() {
+    for (const rel of [
+        'js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js',
+        'js/components/Blocks/MpiGroupHistoryBlock/MpiGroupHistoryBlock.js',
+    ]) {
+        const src = SRC(rel);
+        assert.ok(/sourcePrompt = null/.test(src),
+            `${rel} must destructure sourcePrompt out of the run payload`);
+        assert.ok(/config(?::|\s*=)\s*\{[^}]*sourcePrompt[,\s}]/.test(src),
+            `${rel} must put sourcePrompt back into the generation config it builds`);
+    }
+}
+
 // ── 5. Feedback lives in the wait, not after it ──────────────────────────────
 // Fabio, 2026-09-11: OK fired a toast every press. A confirmation for an action
 // the user just took is noise; the signal was missing DURING the run instead.
@@ -300,6 +327,7 @@ const tests = [
     testTheNoteIsRestoredOnReopen,
     testTheNoteNamesTheTargetModel,
     testAnEnhancedNegativeDoesNotLeakAcrossModels,
+    testTheShortPromptSurvivesEveryRunMapper,
     testTheEnhanceButtonSurvivesAnUnannouncedDismissal,
     testAFailedRunDoesNotRewriteProvenance,
     testOkDoesNotToast,

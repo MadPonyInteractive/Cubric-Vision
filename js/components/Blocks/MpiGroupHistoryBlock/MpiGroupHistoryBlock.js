@@ -1523,7 +1523,10 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
             return { in: rangeIn, out: rangeOut };
         }
 
-        function _generationFromPromptPayload({ operation, positive, negative, negativeAudio, mediaItems = [], maskDataUrl, injectionParams = {}, previewOnly = false, historyMode = false, extend = false, sourceItemId = null, forceLocal = false }) {
+        // MPI-677 step 1c — `sourcePrompt` is in this list for the same reason it is in
+        // the gallery's mapper: an explicit destructure drops any field nobody adds to
+        // it, and this one carries the short prompt behind an approved enhancement.
+        function _generationFromPromptPayload({ operation, positive, negative, negativeAudio, sourcePrompt = null, mediaItems = [], maskDataUrl, injectionParams = {}, previewOnly = false, historyMode = false, extend = false, sourceItemId = null, forceLocal = false }) {
             if (!activeModel) return;
 
             const currentItem = _group.history[_currentIdx];
@@ -1568,7 +1571,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 : (viewer.el.hasMask?.() ? viewer.el.getCurrentMaskDataURL?.() : null);
 
             return {
-                config: { operation, model: activeModel, positive, negative, negativeAudio, mediaItems: resolvedMedia, maskDataUrl: resolvedMask, injectionParams, previewOnly, historyMode, extend, sourceItemId },
+                config: { operation, model: activeModel, positive, negative, negativeAudio, sourcePrompt, mediaItems: resolvedMedia, maskDataUrl: resolvedMask, injectionParams, previewOnly, historyMode, extend, sourceItemId },
                 opts: { existingGroup: _group, scope: 'groupHistory', groupId: _group.id, forceLocal },
             };
         }

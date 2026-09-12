@@ -991,3 +991,54 @@ one sentence.
 recipe, on ONE input, through the shipped backend. It is first-class evidence
 about `illustrious` on `gemma4:e4b` and says nothing yet about the other eleven
 recipes — which share neither its exemplars nor its grammar.
+
+## Step 1c — round 3 (2026-09-12): the short prompt was never stored at all
+
+### 9 (FIXED) — every card in the test project read `sourcePrompt: null`
+
+Fabio raised it as a design question, not a bug: after Reuse he expected the box to
+hold the SHORT prompt with the control lit, and the overlay to open with the short
+prompt above and the enhancement below. **That IS the built design, and the whole
+reason both texts are stored.** It had never once happened, because the field was
+being dropped on the way OUT.
+
+**Measured, not inferred.** Every sidecar in
+`Documents/Cubric Vision/Projects/Prompt Enhancement tests/Media/.meta/` reads
+`sourcePrompt: null` — including `t2i_001` (sdxl-realistic) and `t2i_002`
+(ill-anime), whose `prompt` fields plainly hold enhanced text.
+
+**Where it went.** Both ends were right and the middle was not:
+
+- `MpiPromptBox.getRunPayload()` builds `sourcePrompt` (`:2186`).
+- `generationService` stores it on the sidecar (`:1199`) AND the live item (`:1240`).
+- **`MpiGalleryBlock._galleryGenerationFromPayload()` (`:1407`) and
+  `MpiGroupHistoryBlock._generationFromPromptPayload()` (`:1526`) destructure an
+  EXPLICIT field list and rebuild the config from it.** Neither named
+  `sourcePrompt`, so it was dropped between the two — no error, no warning.
+
+**THE RULE: an explicit-field destructure mapper is a silent drop point, and a field
+is not "wired" until something walks the whole path.** Both ends of this one were
+built in the same session, tested at both ends, and shipped broken through the
+middle. The tests asserted that the box BUILDS the field and that reuse CONSUMES it;
+nothing asserted anything in between, so 18 green tests coexisted with a feature
+that had never worked once. Same shape as the `flowId` and live-item duplications
+already commented in `generationService` — this repo drops fields in mappers,
+repeatedly, and only a test that names the mapper catches it.
+
+**Why the user-ux pass could not see it.** Reuse DID restore a prompt — the enhanced
+one, via `positive: _shortPrompt || _enhancedText` falling through exactly as
+designed for an un-enhanced card. A card with no `sourcePrompt` is indistinguishable
+from one that was never enhanced, so the failure renders as the correct behaviour of
+a different case. It is also why **"Reuse after an app reload"** never passed: there
+was nothing stored to reload.
+
+**Fix:** `sourcePrompt` added to both destructures and both config literals (4 lines).
+**Verified:** `tests/enhance-overlay.test.cjs` 18 → 19, the new assertion proven to
+fail on HEAD's pre-fix source by script (`git show HEAD:<path>`), not by eye. 933/933,
+lint clean. The suite count is a SHARED-TREE number — peers landed tests in the same
+window; one of the six is this one.
+
+**Not healable, and it needs a fresh render to verify.** The seven existing cards have
+no short prompt anywhere on disk — the enhanced text is all that was ever written, so
+there is nothing to reconstruct it from. Closing this leg needs a NEW enhanced
+generation, then Reuse, then Reuse again after an app RELOAD.
