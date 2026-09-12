@@ -156,8 +156,15 @@ function testEveryEditRechecksStaleness() {
 
 function testAnEmptyLowerBoxMeansRunMyWordsRaw() {
     const src = SRC('js/components/Organisms/MpiPromptBox/MpiPromptBox.js');
-    assert.ok(src.includes('_enhanced = positive ? { source: positiveValue, positive, note: note || null } : null'),
+    // Matched as a SHAPE, not as one exact line: the assignment gained `modelId`
+    // and `modelName` on 2026-09-12, and a string equality assertion failed on a
+    // change that never touched the property it defends. What this test owns is
+    // that the assignment is keyed on `positive` and that the empty branch is
+    // `null` — not how many fields the kept branch carries.
+    assert.ok(/_enhanced\s*=\s*positive\s*[\s\S]{0,600}?:\s*null;/.test(src),
         'clearing the enhanced box on OK must drop the enhancement, not keep the previous one');
+    assert.ok(/_enhanced\s*=\s*positive\s*[\s\S]{0,600}?source:\s*positiveValue/.test(src),
+        'the kept branch must record the short prompt it was made from, or staleness is undetectable');
 }
 
 // ── 4. Provenance survives a reopen ──────────────────────────────────────────
@@ -183,8 +190,65 @@ function testTheNoteIsRestoredOnReopen() {
     assert.ok(src.includes('if (lastNote) _note(lastNote.text, lastNote.kind);'),
         'a seeded note must actually be rendered at mount, not merely held');
     const box = SRC('js/components/Organisms/MpiPromptBox/MpiPromptBox.js');
-    assert.ok(box.includes('negative: negativeValue, note: _enhanced.note'),
-        'the box must pass the stored note back when it reopens the dialog');
+    assert.ok(box.includes('_modelMismatchNote(_enhanced) ?? _enhanced.note'),
+        'the box must pass the stored note back when it reopens the dialog, falling back from the mismatch note');
+}
+
+// ── 4b. The enhancement names the model it was made FOR ──────────────────────
+// Found by Fabio's user-ux pass, 2026-09-12. He enhanced with Krea 2 selected,
+// switched to SDXL, and the provenance line still read only "Enhanced by
+// gemma4:e4b" — true, and not the half that mattered. An enhancement is shaped
+// for ONE model's syntax; switching the model leaves prose in the box that is a
+// valid prompt of the wrong shape for what will now run it, and NOTHING else on
+// screen says so. Deliberately not modelled on the short-prompt staleness rule:
+// an edit to the prompt invalidates the words, a model switch does not, so the
+// enhancement is KEPT and the mismatch is announced instead of dropped.
+function testTheNoteNamesTheTargetModel() {
+    const dialog = SRC('js/components/Compounds/MpiEnhanceDialog/MpiEnhanceDialog.js');
+    assert.ok(dialog.includes('props.model?.name ? ` for ${props.model.name}`'),
+        'a successful run must name the target model in its provenance line, not only the engine');
+
+    const box = SRC('js/components/Organisms/MpiPromptBox/MpiPromptBox.js');
+    assert.ok(/_enhanced\s*=\s*positive\s*[\s\S]{0,600}?modelId:\s*model\?\.id/.test(box),
+        'the approved enhancement must record the target model, or a later switch is undetectable');
+    assert.ok(box.includes('enh.modelId !== model.id'),
+        'the mismatch is the STORED target against the CURRENT model — that comparison is the whole mechanism');
+}
+
+// ── 4bb. An enhanced negative must not outlive the recipe that wrote it ──────
+// Found by Fabio's user-ux pass, 2026-09-12, with the exact repro: enhance on
+// SDXL Realistic (which writes a counter-tag ladder into the negative), switch to
+// Illustrious (whose recipe emits no negative block at all), enhance again, close,
+// reopen — and SDXL's ladder is still sitting there under "Enhanced negative
+// prompt". `if (negative) negativeValue = negative;` was written to protect a
+// negative the USER typed, which is right, but it could not tell that apart from
+// one a previous enhancement wrote. Authorship is now recorded, so an enhancement
+// that produces no negative clears its predecessor's and still never touches the
+// user's own.
+function testAnEnhancedNegativeDoesNotLeakAcrossModels() {
+    const box = SRC('js/components/Organisms/MpiPromptBox/MpiPromptBox.js');
+    assert.ok(box.includes('const priorEnhancedNegative = _enhanced?.negative ?? null;'),
+        'the previous enhancement\'s negative must be read BEFORE _enhanced is reassigned');
+    assert.ok(/_enhanced\s*=\s*positive\s*[\s\S]{0,700}?negative:\s*negative \|\| null/.test(box),
+        'the approved enhancement must record the negative it wrote, or authorship is unknowable');
+    assert.ok(/else if \(priorEnhancedNegative && negativeValue === priorEnhancedNegative\) \{\s*negativeValue = '';/.test(box),
+        'a run that produces no negative must clear the PREVIOUS enhancement\'s, and only when it is still unedited');
+}
+
+// ── 4c. The dialog handle must not outlive the dialog ────────────────────────
+// Found by Fabio's user-ux pass, 2026-09-12: after a generation the Enhance
+// button did nothing at all, permanently. `MpiModal.hide()` does not emit
+// 'cancel' — its own contract says so — so a backdrop click, Escape, or the
+// `ui:close-all-popups` pulse a generation fires tore the modal down while
+// `_enhanceDialog` stayed non-null, and an `if (_enhanceDialog) return` guard
+// then swallowed every later click. MpiLicenceGate and MpiAudioRecorder already
+// carry the same warning in their own comments; this one missed it.
+function testTheEnhanceButtonSurvivesAnUnannouncedDismissal() {
+    const box = SRC('js/components/Organisms/MpiPromptBox/MpiPromptBox.js');
+    assert.ok(!/function _openEnhanceDialog\(\)\s*\{\s*if \(_enhanceDialog\) return;/.test(box),
+        'an early return on a live handle is the bug — a dismissal the box never hears about makes it permanent');
+    assert.ok(/function _openEnhanceDialog\(\)\s*\{[\s\S]{0,900}?_closeEnhanceDialog\(\);\s*_enhanceDialog = MpiEnhanceDialog\.mount/.test(box),
+        'opening must tear down any stale instance immediately before mounting the new one');
 }
 
 // A transient failure must NOT overwrite the provenance of the text still in the
@@ -234,6 +298,9 @@ const tests = [
     testAnEmptyLowerBoxMeansRunMyWordsRaw,
     testTheNoteIsCarriedOutOfTheDialog,
     testTheNoteIsRestoredOnReopen,
+    testTheNoteNamesTheTargetModel,
+    testAnEnhancedNegativeDoesNotLeakAcrossModels,
+    testTheEnhanceButtonSurvivesAnUnannouncedDismissal,
     testAFailedRunDoesNotRewriteProvenance,
     testOkDoesNotToast,
     testTheSpinnerClearsOnEveryExitPath,

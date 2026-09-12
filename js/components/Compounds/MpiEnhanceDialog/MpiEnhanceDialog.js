@@ -186,8 +186,15 @@ export const MpiEnhanceDialog = ComponentFactory.create({
                 // enhanced by the `chroma` IMAGE recipe for a week and nothing failed
                 // loudly. Surface it verbatim, in the dialog, before OK — and keep it
                 // with the text, so reopening does not drop the warning.
+                // The note names BOTH halves — which engine wrote it and which target
+                // model it was written FOR (Fabio, 2026-09-12). The engine alone is the
+                // less useful half: an enhancement is shaped for one model's syntax, and
+                // the user can change the selected model after approving it, at which
+                // point "Enhanced by gemma4:e4b" does not say that the words in the box
+                // are Krea 2 prose about to be sent to SDXL.
+                const _for = props.model?.name ? ` for ${props.model.name}` : '';
                 lastNote = {
-                    text: result.note || `Enhanced by ${result.model || result.backend || 'the enhancer'}.`,
+                    text: result.note || `Enhanced by ${result.model || result.backend || 'the enhancer'}${_for}.`,
                     kind: result.note ? 'warn' : '',
                 };
                 _note(lastNote.text, lastNote.kind);

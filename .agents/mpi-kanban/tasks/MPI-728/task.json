@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-728",
+  "title": "Prompt-enhancement settings - the DeepInfra key, the Ollama models, and which LLM enhances",
+  "description": "Fabio, 2026-09-12, from MPI-677's step-1c user-ux pass. Enhancement has no settings surface at all, and three separate gaps land on the same one. (1) THE DEEPINFRA KEY HAS NOWHERE TO GO. `routes/llm.js` already tells the user to \"add a DeepInfra key in settings\" and no such field exists - the key only ever reached the app through the environment on a dev boot. (2) NOTHING HANDLES A MISSING OLLAMA MODEL, AND NOTHING STARTS OR INSTALLS OLLAMA. Grepped 2026-09-12: no `api/pull` anywhere in the repo, no presence check, no toast, no lifecycle - `ensureOllama` appears nowhere, and the only three files mentioning Ollama are routes/llm.js, services/llmEngines.mjs and js/services/llmService.js. A user with Ollama running but without the model gets `Ollama chat failed: 404 Not Found` raw. This is CONSOLIDATION DEBT: Cubric Prompt shipped the whole ladder as its MPI-8 (probe the server, spawn `ollama serve` detached, treat ENOENT as the not-installed signal, one-time remembered consent, then winget, download page as the fallback, never bundle Ollama, never stop it on quit) plus MPI-17 (the spawn must inherit the desktop app's configured model directory, recovered from the Ollama app's own server.log - never set OLLAMA_MODELS as a persistent var, it shadows what the user later picks; measured on Fabio's machine as 0 models reported against 9 models / 63.2 GB on disk). Step 1a ported the engine and the route and NONE of the lifecycle, and nothing recorded that it had not. (3) WHICH LLM ENHANCES IS NOT THE ONE THE RECIPES WERE MEASURED ON, AND THE USER CANNOT CHANGE IT. `chooseEngineModelId()` (js/services/llmService.js:166) returns UNCENSORED_MODEL_ID only when the TARGET model card's id ends in `-nsfw`; every other local enhance falls through to DEFAULT_MODEL_ID = `gemma-4-e4b` -> `gemma4:e4b`, and every cloud enhance to `google/gemma-4-26B-A4B-it`. But MODEL_REGISTRY's own description of `gemma-4-abliterated-12b` says it is \"the ENHANCER of record: every v1 recipe is Stage 1 green on this model. Word-budget adherence is a capability threshold between 8B and 12B, so recipes hold their length here and drift on smaller models\" - and llmEngines.mjs's own header says these models ARE the instrument and changing one silently invalidates every green in docs/recipes/research/. So the shipped SFW path runs an enhancer on the wrong side of the stated threshold, no recipe was ever green on it, and this was never recorded as a decision. Backend has a preference (`cubric.llm.backend` in localStorage) with no UI; the enhancer MODEL has neither. SCOPE: a settings section that takes the DeepInfra key (main-side, never readable back - Cubric Prompt's safeStorage contract is the precedent), installs/pulls the Ollama model with progress and a presence check, exposes the backend preference that already exists, lets the user pick the enhancer model from MODEL_REGISTRY, and carries a short plain-English explanation of what enhancement does. OPEN FOR FABIO: whether the DEFAULT enhancer should move to the abliterated 12B (what the recipes were measured on) or stay on E4B (what most users can actually run) - that is a product call about the floor, not a bug, and if it moves it should be recorded as a decision rather than drifting. Parent: MPI-677 (the consolidation umbrella); the gaps were found during its step 1c.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-09-12T08:25:27+01:00",
+  "updated_at": "2026-09-12T08:25:27+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

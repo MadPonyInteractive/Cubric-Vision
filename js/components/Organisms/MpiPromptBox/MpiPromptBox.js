@@ -2001,8 +2001,39 @@ export const MpiPromptBox = ComponentFactory.create({
             _enhanceBtn?.el?.setActive?.(!!_enhanced);
         }
 
+        const _closeEnhanceDialog = () => { _enhanceDialog?.destroy?.(); _enhanceDialog = null; };
+
+        /**
+         * The note to show when an approved enhancement was made for a DIFFERENT model
+         * than the one now selected (Fabio, 2026-09-12).
+         *
+         * Switching the model deliberately does NOT drop the enhancement — unlike an
+         * edit to the short prompt, the words still describe what the user asked for,
+         * and they may well want to keep them. What must not happen is the switch going
+         * unsaid: Krea 2 prose submitted to SDXL is a perfectly valid prompt in the
+         * wrong SHAPE, and nothing else on screen says so. The provenance line is the
+         * only surface that can, which is the same reason it carries the fallback
+         * warning.
+         */
+        const _modelMismatchNote = (enh) => (
+            enh?.modelId && model?.id && enh.modelId !== model.id
+                ? {
+                    text: `Enhanced for ${enh.modelName || enh.modelId} — ${model.name || model.id} is selected now. Press Enhance to rewrite it for this model.`,
+                    kind: 'warn',
+                }
+                : null
+        );
+
         function _openEnhanceDialog() {
-            if (_enhanceDialog) return;
+            // NOT `if (_enhanceDialog) return`. `MpiModal.hide()` does not emit 'cancel'
+            // — its own contract says so — so every dismissal that is NOT the Cancel
+            // button (backdrop click, Escape, a `ui:close-all-popups` pulse, an
+            // Overlays.reset()) tore the modal down and left this handle non-null. The
+            // guard then swallowed every later click and the control was dead for the
+            // rest of the session. Found by Fabio after a generation, which pulses
+            // close-all. Tearing down whatever is there costs nothing when there is
+            // nothing, and the button is unreachable under an open backdrop anyway.
+            _closeEnhanceDialog();
             _enhanceDialog = MpiEnhanceDialog.mount(document.createElement('div'), {
                 prompt: positiveValue,
                 model,
@@ -2012,25 +2043,65 @@ export const MpiPromptBox = ComponentFactory.create({
                 // it, reopening showed the enhancement with a blank provenance line and
                 // the "this model matched no recipe" warning silently vanished.
                 enhanced: _enhanced
-                    ? { positive: _enhanced.positive, negative: negativeValue, note: _enhanced.note }
+                    ? {
+                        positive: _enhanced.positive,
+                        negative: negativeValue,
+                        // A model mismatch OUTRANKS the stored note: both ride the same
+                        // one line, and "these words are for another model" is the more
+                        // urgent of the two. Re-enhancing replaces it either way.
+                        note: _modelMismatchNote(_enhanced) ?? _enhanced.note,
+                    }
                     : undefined,
             });
-            const _close = () => { _enhanceDialog?.destroy?.(); _enhanceDialog = null; };
+            const _close = _closeEnhanceDialog;
             _enhanceDialog.on('cancel', _close);
             _enhanceDialog.on('apply', ({ shortPrompt, positive, negative, note }) => {
                 positiveValue = String(shortPrompt ?? '');
+                // Read BEFORE `_enhanced` is reassigned below: it is what tells a
+                // negative the last enhancement wrote apart from one the user typed.
+                const priorEnhancedNegative = _enhanced?.negative ?? null;
                 // An EMPTY lower box means "not enhanced, run my words raw" — the rule
                 // Character Sheet already states in its own help text. It is how a user
                 // backs out of an enhancement without backing out of their prompt.
                 // `note` is the provenance of THIS text, so it is stored with it and
                 // dropped with it — a cleared box and a stale enhancement both leave
                 // nothing behind to mis-describe the next run.
-                _enhanced = positive ? { source: positiveValue, positive, note: note || null } : null;
+                // `modelId`/`modelName` are the TARGET the enhancement was shaped for,
+                // recorded so a later model switch is detectable at all — the same
+                // reason `source` is recorded for the short prompt.
+                _enhanced = positive
+                    ? {
+                        source: positiveValue,
+                        positive,
+                        note: note || null,
+                        modelId: model?.id ?? null,
+                        modelName: model?.name ?? null,
+                        // Recorded so the NEXT enhancement can tell this negative
+                        // apart from one the user typed. See below.
+                        negative: negative || null,
+                    }
+                    : null;
                 // Only a recipe that produced a second channel writes the negative. A
-                // prose recipe returns none, and blanking the user's own negative
+                // prose recipe returns none, and blanking the user's OWN negative
                 // because this recipe had nothing to say about it would be a silent
                 // delete.
-                if (negative) negativeValue = negative;
+                //
+                // But "leave it alone" was too broad and leaked across models (Fabio,
+                // 2026-09-12): enhance on SDXL Realistic, which writes a counter-tag
+                // ladder into the negative; switch to Illustrious, whose recipe emits
+                // no negative at all; the guard below then preserved SDXL's ladder and
+                // reopening showed it under "Enhanced negative prompt". The user never
+                // typed it and had no reason to expect it to survive the switch.
+                //
+                // The missing distinction is authorship, so it is now recorded. A
+                // negative the PREVIOUS enhancement wrote, still standing unedited, is
+                // ours to clear when this run produces none. Anything else — typed by
+                // the user, or edited by them since — is theirs and is left alone.
+                if (negative) {
+                    negativeValue = negative;
+                } else if (priorEnhancedNegative && negativeValue === priorEnhancedNegative) {
+                    negativeValue = '';
+                }
                 if (textareaEl) textareaEl.value = _readMode();
                 updateHeight();
                 _saveDraft();

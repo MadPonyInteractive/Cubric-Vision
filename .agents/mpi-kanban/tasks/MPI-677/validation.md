@@ -656,3 +656,338 @@ staged a second ago. `git commit -- <paths>` is the only form that commits *what
 you named*, and it is the form the rule bans. The ban was written against sweeping
 work in; here it is what allows it. Checking `git status` first does not help — the
 race is between the check and the commit.
+
+
+## Step 1c — Fabio's user-ux pass, round 2 (2026-09-12)
+
+Six items raised in one pass. **Three were real defects and are fixed; two are
+features that were never built and are reported as not built; one could not be
+reproduced from the code and needs one more datum from him.** The step stays open.
+
+### 3. The Enhance button died after a generation, permanently (fixed)
+
+The worst of the six, and a whole class rather than a one-off. `_openEnhanceDialog()`
+opened with `if (_enhanceDialog) return;` — a guard against double-mounting that
+assumed the handle is cleared whenever the dialog goes away. It is cleared on
+exactly one path: the **Cancel button**, which is the only thing that emits
+`cancel`.
+
+**`MpiModal.hide()` does not emit `cancel`, and says so in its own contract**
+(`js/components/Primitives/MpiModal/MpiModal.js:33`). So a backdrop click, an
+Escape, an `Overlays.reset()`, or a `ui:close-all-popups` pulse tore the modal
+down and left `_enhanceDialog` non-null forever. Every later click hit the guard
+and returned. A generation pulses close-all, which is why Fabio found it there and
+why it read as "after a generation" rather than as "after any dismissal".
+
+**This trap is already known in this codebase and was already commented in two
+other components** — `MpiLicenceGate.js:338` and `MpiAudioRecorder.js:345` both
+carry the same warning in prose, and the licence gate goes as far as a
+`MutationObserver` to catch it. The overlay simply missed it. *A hazard documented
+in a sibling component is not a hazard the next component avoids;* only a check
+that runs does that.
+
+The fix is a deletion, not an addition: the guard is gone and
+`_closeEnhanceDialog()` runs unconditionally before the mount. Tearing down
+nothing costs nothing, and the button is unreachable under an open backdrop
+anyway, so the double-mount the guard defended against is not a state a user can
+produce.
+
+### 4. The provenance line named the engine but not the target model (fixed)
+
+Fabio enhanced with **Krea 2** selected, switched to **SDXL**, reopened, and the
+line still read `Enhanced by gemma4:e4b.` — true, and not the half that mattered.
+
+Underneath the cosmetic ask was a real hole: **`_syncEnhancedState()` compares only
+the stored `source` against the current text, and nothing anywhere compared the
+MODEL.** `setModel` / `setModelList` never call it. So an approved enhancement
+survived a model switch intact and `getRunPayload()` would submit Krea 2 prose to
+SDXL — a perfectly valid prompt in the wrong shape, with nothing on screen saying
+so. This is the same failure family as the pinned-fallback miss: the system
+answers, so nothing looks broken.
+
+**Deliberately NOT modelled on the short-prompt staleness rule.** An edit to the
+prompt invalidates the words, so dropping the enhancement is right. A model switch
+does not invalidate them — the user may well want to keep them — so the
+enhancement is **kept and the mismatch is announced**. `_enhanced` now carries
+`modelId` + `modelName`, the dialog's success note reads `Enhanced by <engine> for
+<model>.`, and reopening against a different model replaces the note with a warn:
+`Enhanced for Krea 2 — SDXL Realistic is selected now. Press Enhance to rewrite it
+for this model.` The mismatch note **outranks** the stored one: both ride the same
+single line and "these words are for another model" is the more urgent of the two.
+
+### 5. The Ollama error told the user to open a terminal (fixed)
+
+`routes/llm.js:127` read *"Start it with `ollama serve`"*. Ollama ships a desktop
+app with a tray icon on every platform we target, so the ordinary fix is "open
+it". Naming the terminal command first sends a user who HAS it installed to do the
+awkward thing and tells a user who does NOT have it nothing useful. Now: *"Ollama
+is not running. Start Ollama, or install it from ollama.com, or add a DeepInfra key
+in settings."*
+
+### 6. NOT BUILT — nothing handles a missing Ollama MODEL, and nothing starts or installs Ollama
+
+Fabio asked what happens when the user does not have the model we call. Answer,
+grepped rather than assumed: **nothing does.** There is no `api/pull` call anywhere
+in the repo, no model-presence check, no toast, no settings entry, and no install
+or lifecycle path — `ensureOllama` appears nowhere. The three files that mention
+Ollama at all are `routes/llm.js`, `services/llmEngines.mjs` and
+`js/services/llmService.js`, and `OllamaEngine` has `isRunning()`, `chat()`,
+`complete()`, `loadedModels()` and `releaseOwnModels()` — no pull.
+
+So a user with Ollama running but without the model gets `/api/chat` → 404 →
+`Ollama chat failed: 404 Not Found`, surfaced raw. And the "Start Ollama" message
+above is the app's entire answer to Ollama not running.
+
+**This is consolidation debt, not a new gap.** Cubric Prompt had the whole ladder
+as MPI-8 — `ensureOllama()`: probe the server, spawn `ollama serve` detached,
+treat `ENOENT` as the not-installed signal, one-time consent, then `winget`, with
+the download page as the fallback — plus MPI-17's finding that the spawn must
+inherit the desktop app's model directory or the user's models silently vanish.
+**None of it came across in step 1a.** Step 1a ported the engine and the route; it
+did not port the lifecycle, and nothing recorded that it had not. Fabio's question
+is the first thing that surfaced it.
+
+Not built here: it is its own card's worth of work (a pull with progress, a
+presence check, and the install ladder), it touches the settings surface, and it
+is not what step 1c is about. Recorded so it is not mistaken for working.
+
+### 7. NOT REPRODUCED — the positive/negative selector "disappearing" on enhance
+
+Nothing in the enhance path touches the negative toggle. `_refreshNegToggle()`
+gates it on exactly three things — `props.includeNegative === true`, the model's
+`capabilities.negativePrompt !== false`, and `!_krea2TurboOn` — and neither
+`_openEnhanceDialog()` nor the apply handler writes any of them. The apply handler
+sets `negativeValue` and re-reads the textarea; it never remounts or destroys the
+toggle.
+
+Reported as **not reproduced from the code**, not as "works fine". Needs from
+Fabio: which model was selected, and whether the toggle comes back on a reload or
+a model switch.
+
+### 8. RECORDED, not actioned — `pony` and `illustrious` emit no negative block
+
+Fabio: a negative is genuinely useful on Pony (`realistic`, `furry`, `anime` as
+counter-tags), and the two recipes declare `negativeHandling: 'separate-field'`
+while emitting nothing, which is why the box stays hidden. That is correct
+*today* — step 1c measured it and the splitter is right to leave their raw text
+alone — but the recipes themselves could be authoring a negative and are not.
+
+**Not done here, deliberately.** It is a recipe edit, which resets the twice-green
+counter and owes two clean Stage 1 sweeps per recipe under the GPU lease, and
+Fabio's own framing is that it is low priority: *"I'm not very worried about these
+models. People don't use them much anymore. These SDXL models were placed there
+just as starter models."* Recorded for whoever picks the recipe layer back up.
+
+### Verified
+
+`node tests/enhance-overlay.test.cjs` **17/17** (was 15; +2 new). `npm test`
+**923/923**, `npm run lint` clean.
+
+**The count is reconciled, per this card's own rule:** 921 -> 923 is exactly the two
+tests added here, with no peer contribution in the window — unlike the 916 -> 917 -> 921
+sequence, where a peer's 9 mention-picker tests had to be subtracted before the
+delta meant anything.
+
+**All six new assertions were run against HEAD's pre-fix source and confirmed to
+FAIL there** (scripted against `git show HEAD:<path>` rather than by eye): the
+dialog naming the target model, the box recording `modelId`, the id comparison,
+the absence of the early return, the teardown-before-mount, and the mismatch-note
+fallback. A source-contract test that passes on both versions proves nothing.
+
+**One of the two pre-existing tests had to be loosened, and the reason is worth
+keeping:** `testAnEmptyLowerBoxMeansRunMyWordsRaw` asserted the `_enhanced`
+assignment as one exact string, so adding two fields to the kept branch failed a
+test whose actual subject — that the empty branch is `null` — was untouched. It now
+matches the shape (keyed on `positive`, empty branch `null`, kept branch carries
+`source`). An exact-string source contract fails on edits that do not concern it,
+and each such false failure is an invitation to weaken the assertion under time
+pressure.
+
+### Still owed on 1c
+
+Unchanged from round 1, none of it closed by this round: `OK -> reopen -> Cancel ->
+reopen`; the separate-field negative channel (**`sdxl-realistic` / `sdxl-nsfw` are
+the cards that resolve to the `sdxl` recipe** — `nvidia-pid` is the only other
+`sdxl` key and it is a deprecated upscaler; `pony-mix` / `ill-anime` are the
+control case that must show NO negative box; **no Kling card ships in Vision**, so
+that half of the old note is unreachable); the operation gate; and **Reuse after an
+app reload**, still the one leg nothing has ever driven. Plus item 7 above.
+
+
+## Step 1c — round 2b (2026-09-12): item 7 reproduced, and it was not the toggle
+
+### 7 (CLOSED, and it was a different bug) — the negative leaked across models
+
+Round 2 reported item 7 as *not reproduced from the code*, because nothing in the
+enhance path touches the negative TOGGLE — which was true and was the wrong thing
+to look at. Fabio's own repro named the real one: *"I've done an enhancement on
+SDXL realistic, and then I selected Illustrious and did an enhancement there. I
+closed it, and when I reopen it, it has a negative prompt from the SDXL prompt
+enhancement."*
+
+The toggle was never the subject. **The negative VALUE survived a model switch.**
+The chain:
+
+1. `sdxl` is `separate-field` and writes its counter-tag ladder — `bad hands 5,
+   bad dream, unrealistic dream:1.2, big eyes, camera` — into `negativeValue`.
+2. Switch to Illustrious. `illustrious` declares `separate-field` and **emits no
+   negative block at all** (measured in step 1c: its baseline negative is a
+   constant ladder, so there is nothing for an LLM to write), so `_run()` sets
+   `negText = ''` and hides the box *inside the dialog*.
+3. OK emits `negative: ''`, and the box's apply handler read
+   `if (negative) negativeValue = negative;` — so the empty value did nothing and
+   **SDXL's ladder stayed standing**.
+4. Reopening seeds the dialog with `negative: negativeValue`, so it reappears
+   under the label "Enhanced negative prompt", attributed to a recipe that never
+   wrote it.
+
+**The guard was right and its reasoning was right; it was missing one
+distinction.** Its comment says blanking the user's own negative because this
+recipe had nothing to say about it would be a silent delete — true. But it could
+not tell a negative the USER typed from one a PREVIOUS ENHANCEMENT wrote, and
+treated both as the user's.
+
+Authorship is now recorded: `_enhanced` carries the `negative` it wrote, and a run
+that produces none clears the standing value **only when it is byte-identical to
+what the last enhancement wrote**. Typed by the user, or edited by them since →
+untouched, exactly as before.
+
+Worth keeping as a general shape: *a guard that protects "the user's data" needs
+to know what makes it the user's.* Ownership is a fact about provenance, and if
+provenance is not recorded the guard degrades into "never touch it", which is a
+different rule with different bugs. This is the third thing on this card that had
+to start being recorded for the same reason — the short prompt (`source`), the
+target model (`modelId`), and now the negative.
+
+### The enhancer LLM is not the one the recipes were measured on (recorded, not changed)
+
+Fabio: *"Why are we using Gemma E4B? Didn't we train all the recipes on an
+uncensored model?"* He is right, and the answer is in our own registry.
+
+`chooseEngineModelId()` (`js/services/llmService.js:166`) returns
+`UNCENSORED_MODEL_ID` (`gemma-4-abliterated-12b`) **only when the TARGET model
+card's id ends in `-nsfw`**. Every other local enhance returns `undefined` and
+falls through to `DEFAULT_MODEL_ID` = `gemma-4-e4b` → `gemma4:e4b`; every cloud
+enhance falls through to `google/gemma-4-26B-A4B-it`.
+
+And `MODEL_REGISTRY`'s own entry for `gemma-4-abliterated-12b` reads: *"The
+ENHANCER of record: every v1 recipe is Stage 1 green on this model. Word-budget
+adherence is a capability threshold between 8B and 12B, so recipes hold their
+length here and drift on smaller models."* `llmEngines.mjs`'s header adds that
+these models **are the instrument**, and that changing one silently invalidates
+every green recorded in `docs/recipes/research/`.
+
+So the shipped SFW path runs an enhancer on the wrong side of the threshold its
+own registry states, no recipe was ever green on it, and **nothing anywhere
+records this as a decision** — it is the default winning by omission. Two
+defensible positions exist (the recipes' instrument vs. what most users can
+actually run on their own hardware) and this is not an agent's call, so it is
+written down rather than changed. It is the third gap on [[MPI-728]].
+
+Also measured while answering: the user cannot change any of it. The *backend* has
+a preference (`cubric.llm.backend` in `localStorage`, `backendPreference()`) with
+no UI anywhere; the enhancer MODEL has neither a preference nor a UI.
+
+### Card filed
+
+**[[MPI-728]]** — *Prompt-enhancement settings: the DeepInfra key, the Ollama
+models, and which LLM enhances* (todo / planned), on Fabio's explicit request. It
+absorbs round 2's item 6 (nothing installs Ollama or pulls a model), the DeepInfra
+key field that `routes/llm.js` already tells the user exists, the enhancer-model
+choice above, and the plain-English explanation of what enhancement does.
+
+### Verified
+
+`node tests/enhance-overlay.test.cjs` **18/18** (15 → 17 → 18 across both rounds).
+`npm test` **927/927**, `npm run lint` clean.
+
+**Count reconciled, and this time it was NOT all mine:** 923 → 927 is my one new
+test plus **three from a peer** — `tests/desktop/flow-roster-survives-navigation.spec.js`,
+`tests/flow-field-constraints.test.cjs` and `tests/mention-picker.test.cjs`, all of
+which they had already STAGED in the shared index during this session. Read as a
+delta it would have said "four tests appeared". The staged-peer-files hazard this
+card recorded on 2026-09-11 is therefore live right now: **commit with
+`git commit -F <msg> -- <paths>`**, never a bare `git commit` after `git add`.
+
+The three new assertions were run against HEAD's pre-fix source and confirmed to
+FAIL there, scripted against `git show HEAD:<path>` rather than checked by eye.
+
+
+## Field evidence: the dog was dropped (2026-09-12) — first real signal on the enhancer-model question
+
+Fabio ran `a man walking his dog` on **ILL Anime** (`ill-anime` -> the
+`illustrious` recipe) through the shipped path, i.e. on `gemma4:e4b`. Output:
+
+```text
+masterpiece, best quality, very aesthetic, absurdres, newest, 1boy, solo, man,
+medium brown hair, blue eyes, t-shirt, jeans, walking, looking at viewer,
+outdoors, park, green grass, full body, street light, afternoon, from side,
+sharp focus, cinematic lighting
+```
+
+### The format is CORRECT, and the instinct about it was inverted
+
+Fabio read the tag grammar as a Pony prompt reaching an Illustrious card. It is
+not: this is `illustrious`'s own shape, byte for byte. Its three
+`examplePrompts` (`illustrious.recipe.js:262-264`) all open
+`masterpiece, best quality, very aesthetic, absurdres, newest, <count>` and the
+recipe's rule 0 calls that six-tag header "COPIED, never composed".
+
+The inversion is worth writing down because it is the exact opposite of the
+intuition: **`masterpiece, best quality` is the ILLUSTRIOUS marker, and it is the
+block `pony` deliberately WITHHOLDS.** MPI-25 measured both on split corpora —
+on Illustrious the Animagine block is native (`masterpiece` 73%/78%,
+`best quality` 73%/73%) while the score chain is dead (`score_9` 2%/4%); on the
+shipped Pony merge the six-tag score chain appears in **0 of 32** prompts. Both
+checkpoints are SDXL-derived anime models and **both recipes are tag grammars** —
+tags do not distinguish them, the header does. Nothing to fix here.
+
+### The dog is a RULE VIOLATION, not a judgement call
+
+`illustrious.recipe.js:278`, rule 1, verbatim: *"THE SUBJECT IS FIXED... Everything
+the user named — every person, animal, object, garment and place — is written into
+the line BEFORE anything you chose yourself... When the count is tight it is your
+inventions that go, **never their furniture and never their pets**."*
+
+The rule names pets explicitly. The output has no `dog` tag, and instead carries
+`street light`, `green grass` and `afternoon` — three of the model's own
+inventions kept while the user's subject was dropped. That is the precise
+inversion rule 1 forbids, and the line is nowhere near its budget, so no
+condense pressure explains it.
+
+Note `1boy, solo` is NOT itself the defect and should not be "fixed": in Danbooru
+grammar `solo` counts PEOPLE, so `1boy, solo, dog` is a normal, correct
+combination. The missing tag is `dog`.
+
+### Two candidate causes, and the experiment that separates them — run this FIRST
+
+1. **The instrument.** The shipped SFW path runs `gemma4:e4b`, and every v1 recipe
+   was measured on `huihui_ai/gemma-4-abliterated:12b`, which the registry's own
+   description places above an 8B-12B capability threshold. A dropped subject is
+   exactly the class of drift that predicts.
+2. **The recipe's exemplars.** All three `examplePrompts` and the trailing
+   in-prompt exemplar (`:328`) are single-subject: two are `1girl/1boy, solo`
+   with no animal, the third is `no humans, fox`. **There is no demonstration
+   anywhere of a person WITH their animal.** MPI-25's own §7.2e finding was that a
+   slot is fixed by DEMONSTRATION, not instruction — the picker slot survived
+   three reframes of the instruction and closed the moment a tag was added to the
+   trailing exemplar. So an instruction that says "never their pets" with no
+   exemplar showing a pet is the shape that has already failed once on this recipe.
+
+**The experiment is one run and it isolates them:** same input, same recipe, on
+`gemma-4-abliterated-12b`. Dog survives -> cause 1, and this is evidence for
+[[MPI-728]]'s third gap rather than a recipe defect. Dog still missing -> cause 2,
+the recipe owes an exemplar carrying a person and their animal, plus a re-sweep.
+**Do not edit the recipe before running it** — a recipe edit resets the
+twice-green counter and owes two clean sweeps, and half of the candidate causes
+here are not in the recipe at all.
+
+Also owed either way, and cheap: the Stage 1 harness already checks user-term
+retention, so a dropped `dog` should fail a sweep. It was never going to, because
+**no sweep has ever run on the model the app actually ships**. That is the gap in
+one sentence.
+
+**Scope note, the discipline this card keeps relearning:** this is ONE run, on ONE
+recipe, on ONE input, through the shipped backend. It is first-class evidence
+about `illustrious` on `gemma4:e4b` and says nothing yet about the other eleven
+recipes — which share neither its exemplars nor its grammar.

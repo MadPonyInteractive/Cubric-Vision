@@ -124,7 +124,12 @@ router.post('/llm/enhance', async (req, res) => {
         if (backend === 'ollama' && !(await new OllamaEngine().isRunning())) {
             return res.json({
                 ok: false,
-                error: "Ollama isn't running. Start it with `ollama serve`, or add a DeepInfra key in settings.",
+                // NOT `ollama serve` (Fabio, 2026-09-12). Ollama ships a desktop app
+                // with a tray icon on every platform we target, so the ordinary fix is
+                // "open it", not "open a terminal". Naming the terminal command first
+                // sends a user who HAS it installed to do the awkward thing, and tells
+                // a user who does NOT have it nothing useful at all.
+                error: 'Ollama is not running. Start Ollama, or install it from ollama.com, or add a DeepInfra key in settings.',
             });
         }
 

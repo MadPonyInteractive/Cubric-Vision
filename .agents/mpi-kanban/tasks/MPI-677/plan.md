@@ -35,6 +35,43 @@ names but never lettered. **Order is by priority, not by letter.**
 
 ## Current State
 
+**2026-09-12 — step 1c round 2: four fixes from Fabio's live pass, one new card,
+one piece of field evidence. Step 1c is STILL OPEN and still his.**
+
+Fixed and verified (`npm test` 927/927, lint clean, `tests/enhance-overlay.test.cjs`
+18/18, every new assertion proven to FAIL on HEAD's pre-fix source):
+
+1. **The Enhance button died after a generation, permanently.**
+   `if (_enhanceDialog) return` + `MpiModal.hide()` not emitting `cancel` = a
+   handle that outlives its dialog on every dismissal but the Cancel button. A
+   generation pulses `ui:close-all-popups`, which is why it read as "after a
+   generation". Guard deleted; teardown runs before the mount.
+2. **An enhanced negative leaked across models.** SDXL's counter-tag ladder
+   survived a switch to Illustrious, whose recipe writes no negative, because
+   `if (negative)` could not tell a negative the USER typed from one the previous
+   ENHANCEMENT wrote. Authorship is now recorded on `_enhanced`.
+3. **The provenance line named the engine but not the target model** — and under
+   it, nothing compared the model at all, so an approved enhancement survived a
+   model switch and would have been submitted in the wrong shape. Kept and
+   announced rather than dropped (an edit invalidates the words, a switch does
+   not).
+4. **The Ollama error told the user to open a terminal.** Now "Start Ollama, or
+   install it from ollama.com".
+
+Filed: **MPI-728** (todo/planned) — prompt-enhancement settings: the DeepInfra key
+field `routes/llm.js` already advertises, Ollama model install/pull, the backend
+preference that exists only in `localStorage`, and the enhancer-model choice.
+
+**The finding that matters most is not a fix.** The shipped SFW path enhances on
+`gemma4:e4b`, and every v1 recipe was measured on `gemma-4-abliterated-12b`, which
+our own registry describes as above an 8B-12B word-budget threshold. Fabio then
+produced the first field evidence: `a man walking his dog` on ILL Anime came back
+with no `dog` tag at all, while keeping three of the model's own inventions -
+a verbatim violation of the recipe's rule 1 ("never their pets"). One run, one
+recipe, one input. `validation.md` carries the two candidate causes and the single
+experiment that separates them; run that before touching the recipe.
+
+
 **Delivered 2026-09-08 — the recipe layer is in this repo.** Gate:
 Cubric-Prompt MPI-35, closed `done`/`complete`. Verified on disk here rather
 than accepted from its report:
