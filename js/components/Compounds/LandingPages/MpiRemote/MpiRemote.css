@@ -1,0 +1,15 @@
+/* ═══════════════════════════════════════════════════════════════
+   MpiRemote — the "Remote" slide-over (MPI-728). It reuses the
+   Settings panel's own layout classes deliberately: the two
+   sections it holds were EXTRACTED from Settings and must look
+   identical after the move. Everything visual lives in
+   MpiSettings.css, which preloadStyles loads app-wide; this sheet
+   exists so the component declares one, and for anything the
+   Remote panel needs that Settings does not.
+   ═══════════════════════════════════════════════════════════════ */
+
+.mpi-remote {
+    /* Deliberately empty of overrides — the panel is .mpi-settings chrome and
+       should stay pixel-identical to it. A modifier hook for later. */
+    display: block;
+}

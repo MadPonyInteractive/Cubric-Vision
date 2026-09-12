@@ -9,8 +9,9 @@
  * exists for one reason the renderer cannot cover: **the DeepInfra key lives in
  * the main process and must never reach the renderer.**
  *
- * Two routes:
+ * Three routes:
  *   GET  /llm/status   -> { deepinfra: { hasKey }, ollama: { running }, defaultBackend }
+ *   GET  /llm/models   -> { models: [{ id, name, description, ollama, deepinfra }] }
  *   POST /llm/enhance  -> { ok, text, backend, model } | { ok:false, error }
  *
  * HONEST STATE IS PART OF THE CONTRACT: every completion echoes the backend and
@@ -86,6 +87,37 @@ router.get('/llm/status', async (_req, res) => {
         logger.error('system', `llm status failed: ${err && err.message}`);
         // A probe failure is "not ready", never a 500 the caller has to branch on.
         res.json({ deepinfra: { hasKey: false }, ollama: { running: false }, defaultBackend: 'ollama' });
+    }
+});
+
+/**
+ * GET /llm/models — the enhancer LLM catalogue, for the settings picker.
+ *
+ * MPI-728. The registry lives in `services/llmEngines.mjs`, which is server-side
+ * ESM the renderer cannot import, so the picker asks for it here. Coverage is
+ * reported per backend rather than as one list, because it is ASYMMETRIC on
+ * purpose — abliterated builds exist only locally, frontier models only in the
+ * cloud — and the dropdown has to filter to the backend the user picked instead
+ * of offering a model that backend cannot serve.
+ *
+ * No key, no secret, no request to either provider: this is the static catalogue.
+ */
+router.get('/llm/models', async (_req, res) => {
+    try {
+        const { MODEL_REGISTRY, DEFAULT_MODEL_ID } = await engines();
+        res.json({
+            defaultModelId: DEFAULT_MODEL_ID,
+            models: MODEL_REGISTRY.map((m) => ({
+                id: m.id,
+                name: m.name,
+                description: m.description,
+                ollama: !!m.ollamaName,
+                deepinfra: !!m.deepInfraId,
+            })),
+        });
+    } catch (err) {
+        logger.error('system', `llm models failed: ${err && err.message}`);
+        res.json({ defaultModelId: null, models: [] });
     }
 });
 

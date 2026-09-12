@@ -10,22 +10,24 @@
  * replaced; step 1b repointed the button and step 2 DELETED it, along with the
  * broker boot, the connector responder and the `@cubric/connector` dependency.
  *
- * THREE BACKENDS, ONE DECISION FUNCTION (`chooseBackend`). Fabio, 2026-09-08:
- * backend is a SETTING, not per-model behaviour, and the user sees one system
- * either way.
+ * THREE BACKENDS, AND THE CHOICE IS THE USER'S (MPI-728). Fabio, 2026-09-12:
+ * the dropdown is about WHERE THE WORK RUNS, not which model is smartest — a
+ * user generating on a RunPod pod enhances locally because the card is idle, and
+ * a user generating locally pushes enhancement to the cloud to keep VRAM free.
+ * `chooseBackend` honours that pick and otherwise takes the server's default.
  *
  *   - `deepinfra` — the default when a key is stored. Off-GPU, no queue wait, no
- *     VRAM at all, which is the reason the enhance control could collapse to one
- *     path in the first place: with a key connected there is no GPU tax on ANY
- *     model.
- *   - `comfy` — the local/uncensored path, on the four models whose graph
- *     already carries a `.generate()`-capable CLIP. It runs the shipped
- *     `qwen3vl_4b_prompt_enhancer.json` through the existing `promptEnhance`
- *     operation, so it REUSES weights a generation already loads. Chosen over
- *     Ollama for local because Ollama is a second runtime holding a duplicate
- *     copy of a model on the same card — the cross-app VRAM problem
- *     Cubric-Prompt spent MPI-14 solving.
- *   - `ollama` — the local fallback for the other eight models.
+ *     VRAM at all.
+ *   - `comfy` — local, through the engine that is already running. It runs the
+ *     shipped `qwen3vl_4b_prompt_enhancer.json` through the existing
+ *     `promptEnhance` operation. OFFERED ON EVERY MODEL: the graph carries its
+ *     own `CLIPLoader` (node 9, `qwen3vl_4b_abliterated_fp8_scaled`), so it
+ *     never borrows the generation model's encoder and never touched it —
+ *     proven 2026-09-12 by running the graph on an idle bench with no
+ *     generation model loaded at all. Its only gate is whether the
+ *     `qwen3vl-abliterated-clip` dep is installed.
+ *   - `ollama` — local, in a second runtime with its own VRAM. The only backend
+ *     that carries an abliterated build.
  *
  * The cloud key lives in the main process and is resolved by `routes/llm.js`.
  * Nothing here ever sees it; `serverStatus()` asks only whether one EXISTS.
@@ -41,15 +43,11 @@ const DEFAULT_MODE = 't2v';
 /** The registered ComfyUI operation that runs `qwen3vl_4b_prompt_enhancer.json`. */
 export const COMFY_ENHANCE_OP = 'promptEnhance';
 
-/**
- * The enhancer LLM for uncensored work. Local only — no serverless catalogue
- * carries an abliterated build, which is the whole reason an NSFW prompt cannot
- * be allowed to fall through to the cloud.
- */
-export const UNCENSORED_MODEL_ID = 'gemma-4-abliterated-12b';
-
 /** Per-viewer backend override, when the user has pinned one. */
 const BACKEND_PREF_KEY = 'cubric.llm.backend';
+
+/** Per-viewer enhancer-model choice, under whichever backend is running it. */
+const ENHANCER_MODEL_PREF_KEY = 'cubric.llm.enhancerModel';
 
 /**
  * MPI-35 phase 2's overrides on the shipped enhancer graph.
@@ -110,62 +108,30 @@ export function buildComfyInjectionParams(systemPrompt) {
 }
 
 /**
- * Does this model card carry an in-graph `.generate()`-capable encoder?
+ * Which backend runs this enhance — the user's pick, or the server's default.
  *
- * `capabilities.promptEnhance` CHANGED MEANING in MPI-677 and kept its value: it
- * no longer gates a settings toggle, it declares eligibility for the ComfyUI
- * backend. The four that carry it (krea2, krea2-nsfw, klein-4b, klein-9b) are
- * exactly the four whose generation already loads the encoder this graph needs.
- * T5/umT5 models CRASH the `TextGenerate` node, so this is a hard gate, not a
- * preference.
- */
-export function canEnhanceInGraph(model) {
-    return model?.capabilities?.promptEnhance === true;
-}
-
-/**
- * Is this an uncensored card?
+ * IT NO LONGER READS THE MODEL CARD AT ALL (MPI-728). Two rules that did have
+ * gone, deliberately:
  *
- * ponytail: derived from the `-nsfw` id suffix rather than a new field on every
- * model, because `models.js` already spells the distinction that way and the two
- * cards that need it (`sdxl-nsfw`, `krea2-nsfw`) are the two that carry it.
- * CEILING, stated because it is real: Klein bakes a PROMPT-GATED NSFW LoRA, so
- * `klein-4b` and `klein-9b` can produce uncensored output from a card this
- * returns false for. They are ComfyUI-eligible and land on the local abliterated
- * encoder anyway whenever the user picks local — but with a DeepInfra key they
- * default to the cloud. If that turns out to matter in the field, the fix is an
- * explicit `uncensored: true` on those model defs, not a cleverer suffix rule.
- */
-export function isUncensoredModel(model) {
-    return typeof model?.id === 'string' && model.id.endsWith('-nsfw');
-}
-
-/**
- * Which backend runs this enhance. Pure, so the NSFW rule is asserted rather
- * than left to a default.
+ * 1. **The `-nsfw` route.** It derived "uncensored" from an id suffix, and Fabio
+ *    listed what is actually uncensored in Vision — every SDXL model, both
+ *    Chroma models, Wan 2.2, and anything at all with a downloaded LoRA. Only
+ *    two carry the suffix, so the rule fired on the wrong models and quietly
+ *    sent the rest to a hosted provider. A LoRA makes any model uncensored, so
+ *    the property was never a fact about the card; the disposition belongs to
+ *    the person, and the picker is where they state it.
+ * 2. **The silent `comfy -> ollama` downgrade.** It existed because `comfy` used
+ *    to mean the generation model's own encoder. The standalone graph loads its
+ *    own CLIP and runs anywhere (proven 2026-09-12), so an explicit pick is now
+ *    honoured — and Ollama may not even be installed to downgrade to.
  *
  * @param {object}  a
- * @param {object}  a.model          the model card (`id`, `capabilities`)
  * @param {string} [a.override]      an explicit user choice ('deepinfra'|'ollama'|'comfy')
  * @param {string} [a.serverDefault] what `/llm/status` says the cloud key allows
  */
-export function chooseBackend({ model, override, serverDefault = 'ollama' }) {
-    if (override === 'comfy') return canEnhanceInGraph(model) ? 'comfy' : 'ollama';
-    if (override === 'deepinfra' || override === 'ollama') return override;
-
-    // THE ONE RULE THAT IS NOT A PREFERENCE: DeepInfra carries no abliterated
-    // model, so an uncensored card must never fall through to it. It gets the
-    // in-graph encoder when the model has one, and the local abliterated Ollama
-    // build otherwise.
-    if (isUncensoredModel(model)) return canEnhanceInGraph(model) ? 'comfy' : 'ollama';
-
+export function chooseBackend({ override, serverDefault = 'ollama' } = {}) {
+    if (override === 'comfy' || override === 'deepinfra' || override === 'ollama') return override;
     return serverDefault === 'deepinfra' ? 'deepinfra' : 'ollama';
-}
-
-/** The enhancer LLM id for a backend + model. Uncensored work is local-only. */
-export function chooseEngineModelId({ model, backend }) {
-    if (backend === 'deepinfra') return undefined;   // the registry default
-    return isUncensoredModel(model) ? UNCENSORED_MODEL_ID : undefined;
 }
 
 /** The user's pinned backend, or undefined. */
@@ -183,6 +149,33 @@ export function setBackendPreference(backend) {
     try {
         if (backend) localStorage.setItem(BACKEND_PREF_KEY, backend);
         else localStorage.removeItem(BACKEND_PREF_KEY);
+    } catch { /* storage disabled — the choice just does not persist */ }
+}
+
+/**
+ * The user's enhancer LLM, or undefined for the registry default.
+ *
+ * THIS IS WHAT REPLACED `chooseEngineModelId()` — an inference became a
+ * preference. It is NOT validated against the chosen backend here: coverage is
+ * asymmetric on purpose (abliterated builds are local-only, frontier models
+ * cloud-only), and `routes/llm.js` already answers a mismatch by NAME
+ * (`"<model>" has no <backend> variant.`). Swallowing it here would turn the
+ * user's explicit pick into a silent fall-back to something else — the exact
+ * defect this card deleted.
+ */
+export function enhancerModelPreference() {
+    try {
+        return localStorage.getItem(ENHANCER_MODEL_PREF_KEY) || undefined;
+    } catch {
+        return undefined;   // private window / storage disabled
+    }
+}
+
+/** Pin an enhancer model by registry id, or pass a falsy value for the default. */
+export function setEnhancerModelPreference(id) {
+    try {
+        if (id) localStorage.setItem(ENHANCER_MODEL_PREF_KEY, id);
+        else localStorage.removeItem(ENHANCER_MODEL_PREF_KEY);
     } catch { /* storage disabled — the choice just does not persist */ }
 }
 
@@ -269,6 +262,28 @@ export async function serverStatus() {
         return await res.json();
     } catch {
         return { deepinfra: { hasKey: false }, ollama: { running: false }, defaultBackend: 'ollama' };
+    }
+}
+
+/**
+ * The enhancer LLM catalogue, for the settings picker (MPI-728).
+ *
+ * `MODEL_REGISTRY` lives in `services/llmEngines.mjs` — server-side ESM the
+ * renderer cannot import — so it arrives over `/llm/models`. Each entry reports
+ * per-backend coverage (`ollama` / `deepinfra`) rather than a single "available",
+ * because coverage is asymmetric on purpose and the picker filters by the backend
+ * the user chose. An unreachable server answers `[]`, which the picker renders as
+ * "the default" rather than as an error — nothing is broken, there is simply
+ * nothing to choose between yet.
+ */
+export async function enhancerModels() {
+    try {
+        const res = await fetch('/llm/models');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const body = await res.json();
+        return Array.isArray(body?.models) ? body.models : [];
+    } catch {
+        return [];
     }
 }
 
@@ -392,7 +407,7 @@ export async function enhance({ prompt, model, recipeKey, mode, backend } = {}) 
 
     const override = backend ?? backendPreference();
     const status = override ? null : await serverStatus();
-    const chosen = chooseBackend({ model, override, serverDefault: status?.defaultBackend });
+    const chosen = chooseBackend({ override, serverDefault: status?.defaultBackend });
 
     const result = chosen === 'comfy'
         ? await runComfyEnhance({ prompt: idea, injectionParams: buildComfyInjectionParams(system) })
@@ -400,7 +415,7 @@ export async function enhance({ prompt, model, recipeKey, mode, backend } = {}) 
             prompt: idea,
             system,
             backend: chosen,
-            modelId: chooseEngineModelId({ model, backend: chosen }),
+            modelId: enhancerModelPreference(),
         });
 
     if (!result.ok) {

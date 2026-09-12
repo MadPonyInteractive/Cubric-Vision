@@ -7,7 +7,6 @@ import { MpiDropdown } from '../../../Primitives/MpiDropdown/MpiDropdown.js';
 import { MpiProgressBar } from '../../../Primitives/MpiProgressBar/MpiProgressBar.js';
 import { MpiLevelMeter, meterAnalyser } from '../../../Primitives/MpiLevelMeter/MpiLevelMeter.js';
 import { MpiFolderDrop } from '../../../Primitives/MpiFolderDrop/MpiFolderDrop.js';
-import { MpiRunpodSettings } from '../MpiRunpodSettings/MpiRunpodSettings.js';
 import { state } from '../../../../state.js';
 import { Events } from '../../../../events.js';
 import { Storage } from '../../../../core/storage.js';
@@ -232,8 +231,6 @@ export const MpiSettings = ComponentFactory.create({
                     </div>
                     <span class="mpi-settings__hint">Extra folders are read-only and additive — Cubric reads models from them but only installs, updates, and removes files in the primary managed folder (the first row in each group).</span>
                 </section>
-
-                <div id="mpiSettingsRunpodMount"></div>
             </div>
         </div>`,
 
@@ -260,12 +257,13 @@ export const MpiSettings = ComponentFactory.create({
             clientLogger.warn('settings', '[MpiSettings] Electron IPC unavailable for folder picker', err);
         }
 
-        // RunPod Remote Engine section — own Compound since MPI-177; mounted once
-        // here, onOpen forwarded so it re-inits with fresh values on every open.
-        const _runpodInst = MpiRunpodSettings.mount(qs('#mpiSettingsRunpodMount', el), {});
+        // MPI-728: the RunPod Remote Engine section (a Compound here since MPI-177)
+        // and the Language Models section both MOVED to the Remote slide-over —
+        // they are about somebody else's computer, and this panel is about this
+        // one. Neither is duplicated; `MpiRemote` owns them now.
 
         // Called by MpiSlideOver each time panel opens — re-init fields with fresh values.
-        el.onOpen = () => { _initFields(el); _runpodInst?.el?.onOpen?.(); };
+        el.onOpen = () => { _initFields(el); };
 
         /**
          * Mount a right-aligned toggle switch into a plate's ctrl slot and keep
@@ -709,7 +707,6 @@ export const MpiSettings = ComponentFactory.create({
         el.destroy = () => {
             _unsubs.forEach(fn => fn?.());
             _clearExtraFolderControls();
-            _runpodInst?.destroy?.();
         };
 
         async function _hydrateComfyPath(pathInst) {

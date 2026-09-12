@@ -23,6 +23,7 @@ import { MpiButton } from '../components/Primitives/MpiButton/MpiButton.js';
 import { MpiContextMenu } from '../components/Compounds/MpiContextMenu/MpiContextMenu.js';
 import { MpiProjectDropOverlay } from '../components/Primitives/MpiProjectDropOverlay/MpiProjectDropOverlay.js';
 import { MpiSettings } from '../components/Compounds/LandingPages/MpiSettings/MpiSettings.js';
+import { MpiRemote } from '../components/Compounds/LandingPages/MpiRemote/MpiRemote.js';
 import { MpiHotkeys } from '../components/Compounds/LandingPages/mpi-hotkeys/mpi-hotkeys.js';
 import { MpiAbout } from '../components/Compounds/LandingPages/MpiAbout/MpiAbout.js';
 import '../components/Compounds/MpiSlideOver/MpiSlideOver.js';
@@ -71,7 +72,7 @@ export function initProjectUI() {
   const versionEl = gid('heroVersion');
   if (versionEl) versionEl.textContent = `Cubric Vision · v${APP_VERSION}`;
 
-  // ── Hero nav: plain text links (Settings · Hotkeys · About) ──────────────
+  // ── Hero nav: plain text links (Settings · Remote · Hotkeys · About) ─────
   const navSlot = gid('landingActions');
   if (navSlot) {
     const defs = [
@@ -80,6 +81,10 @@ export function initProjectUI() {
       // Five now ship with their art, so MPI-589 took the gate off: this is a user route.
       { label: 'Flows',    handler: () => Events.emit('flows:open') },
       { label: 'Settings', handler: () => Events.emit('slide-over:open', { title: 'Settings', component: MpiSettings }) },
+      // MPI-728 — sits next to Settings because it IS settings, split off by whose
+      // machine they describe: the language models and the RunPod engine both run
+      // somewhere else, and Settings is about this computer.
+      { label: 'Remote',   handler: () => Events.emit('slide-over:open', { title: 'Remote',   component: MpiRemote   }) },
       { label: 'Hotkeys',  handler: () => Events.emit('slide-over:open', { title: 'Hotkeys',  component: MpiHotkeys  }) },
       { label: 'About',    handler: () => Events.emit('slide-over:open', { title: 'About',    component: MpiAbout    }) },
     ];

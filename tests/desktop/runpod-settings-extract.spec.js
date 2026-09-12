@@ -1,11 +1,19 @@
 // MPI-177: MpiRunpodSettings extraction — the RunPod section must render and
-// initialise inside the Settings slide-over exactly as it did pre-extraction,
-// and survive a close → re-open cycle (fresh instance each open).
+// initialise inside its host slide-over exactly as it did pre-extraction, and
+// survive a close → re-open cycle (fresh instance each open).
+//
+// MPI-728 MOVED THAT HOST from Settings to the new "Remote" panel, and this spec
+// is what proves the move was pure relocation: the same section, the same
+// key-gated locking, the same re-init on re-open, one panel to the right. The
+// section's own ids are unchanged — only the mount it lands in and the panel that
+// opens it. The "the rest of the host still works" assertion moved with it: in
+// Settings that was the auto-start checkbox, in Remote it is the Language Models
+// section that now sits above RunPod.
 const fs = require('fs');
 const { test, expect, _electron: electron } = require('@playwright/test');
 const { shellWindow, SHELL_URL_RE } = require('./shellWindow');
 
-test('settings slide-over renders the extracted RunPod section', async ({}, testInfo) => {
+test('remote slide-over renders the extracted RunPod section', async ({}, testInfo) => {
   // Suite runs share the machine with other work; app boot under load can blow the 30s default.
   test.setTimeout(90000);
   const userDataDir = testInfo.outputPath('user-data');
@@ -25,21 +33,21 @@ test('settings slide-over renders the extracted RunPod section', async ({}, test
     const pageErrors = [];
     window.on('pageerror', (err) => pageErrors.push(String(err)));
 
-    const openSettings = () => window.evaluate(async () => {
-      const [{ Events }, { MpiSettings }] = await Promise.all([
+    const openRemote = () => window.evaluate(async () => {
+      const [{ Events }, { MpiRemote }] = await Promise.all([
         import('/js/events.js'),
-        import('/js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js'),
+        import('/js/components/Compounds/LandingPages/MpiRemote/MpiRemote.js'),
       ]);
-      Events.emit('slide-over:open', { title: 'Settings', component: MpiSettings });
+      Events.emit('slide-over:open', { title: 'Remote', component: MpiRemote });
     });
 
-    // ── open Settings ────────────────────────────────────────────────
-    await openSettings();
+    // ── open Remote ──────────────────────────────────────────────────
+    await openRemote();
     const panel = window.locator('.mpi-slide-over');
     await expect(panel).toBeVisible();
 
     // Extracted section mounted into its slot, with its own template intact.
-    const mount = window.locator('#mpiSettingsRunpodMount');
+    const mount = window.locator('#mpiRemoteRunpodMount');
     await expect(mount.locator('.mpi-settings__section-title')).toHaveText('RunPod Remote Engine');
     // Was #mpiSettingsRunpodToggleSlot — MPI-280's Settings redesign dropped the master
     // enable toggle (the section is key-gated now) and left this assertion pointing at an
@@ -60,8 +68,27 @@ test('settings slide-over renders the extracted RunPod section', async ({}, test
     }
     await expect(window.locator('#mpiSettingsRunpodSkipEngineGroup')).toBeVisible();
 
-    // Non-RunPod half of MpiSettings still initialises (auto-start checkbox).
+    // Non-RunPod half of MpiRemote still initialises: the Language Models section
+    // above it renders and its own key-status hint is populated (MPI-728).
+    await expect(window.locator('#mpiRemoteLlmMount .mpi-settings__section-title')).toHaveText('Language Models');
+    await expect(window.locator('#mpiSettingsLlmKeyStatus')).not.toHaveText('', { timeout: 10000 });
+
+    // And the move was a MOVE: neither section is left behind in Settings.
+    await window.evaluate(async () => {
+      const [{ Events }, { MpiSettings }] = await Promise.all([
+        import('/js/events.js'),
+        import('/js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js'),
+      ]);
+      document.querySelector('.mpi-slide-over')?.close();
+      Events.emit('slide-over:open', { title: 'Settings', component: MpiSettings });
+    });
     await expect(window.locator('#mpiSettingsAutoStartSlot input[type="checkbox"]').first()).toBeAttached();
+    await expect(window.locator('#mpiRemoteRunpodMount')).toHaveCount(0);
+    await expect(window.locator('#mpiRemoteLlmMount')).toHaveCount(0);
+    await window.evaluate(() => document.querySelector('.mpi-slide-over')?.close());
+    await expect(panel).toHaveCount(0, { timeout: 5000 });
+    await openRemote();
+    await expect(panel).toBeVisible();
 
     // ── close → content destroyed with the panel ─────────────────────
     // Close via the panel's own API instead of clicking: under load the E2E
@@ -71,8 +98,8 @@ test('settings slide-over renders the extracted RunPod section', async ({}, test
     await expect(panel).toHaveCount(0, { timeout: 5000 });
 
     // ── re-open: fresh instance renders + re-inits again ─────────────
-    await openSettings();
-    await expect(window.locator('#mpiSettingsRunpodMount .mpi-settings__section-title')).toHaveText('RunPod Remote Engine');
+    await openRemote();
+    await expect(window.locator('#mpiRemoteRunpodMount .mpi-settings__section-title')).toHaveText('RunPod Remote Engine');
     await expect(window.locator('#mpiSettingsRunpodKeyStatus')).not.toHaveText('', { timeout: 10000 });
 
     expect(pageErrors, `page errors: ${pageErrors.join(' | ')}`).toHaveLength(0);

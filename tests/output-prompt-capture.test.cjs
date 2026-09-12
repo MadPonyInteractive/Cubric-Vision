@@ -117,44 +117,26 @@ assert.strictEqual(resolvePrompt(undefined, 'short'), 'short',
 assert.strictEqual(resolvePrompt('', 'short'), 'short',
     'an empty capture must not blank the saved prompt');
 
-// ── the two capability gates ──────────────────────────────────────
-// Both default FALSE — unlike negativePrompt, a model must opt in.
+// ── the capability gate ───────────────────────────────────────────
+// Defaults FALSE — unlike negativePrompt, a model must opt in.
 //
-// `styleLoras` still mirrors MpiPromptBox._refreshOpSlot. `promptEnhance` no longer
-// gates any UI at all: MPI-677 deleted the in-workflow toggle and the flag now declares
-// ComfyUI-BACKEND ELIGIBILITY, read only by `canEnhanceInGraph()` in llmService. The
-// shape of the check is unchanged, so it is still asserted here — what changed is what
-// a `true` buys you, which is why the encoder-family assertion below matters MORE now,
-// not less: it is the only thing standing between a wrong flag and a crashed
-// TextGenerate node.
+// `styleLoras` still mirrors MpiPromptBox._refreshOpSlot. `promptEnhance` IS GONE
+// (MPI-728, 2026-09-12): MPI-677 deleted the in-workflow toggle and re-pointed the flag
+// at ComfyUI-backend eligibility, and this card deleted that too — the standalone
+// enhancer graph loads its own CLIP, so the backend is offered on every model. The
+// assertion below is what keeps it deleted: a flag with no reader is data that drifts.
 const showStyle   = (m) => m?.capabilities?.styleLoras === true;
-const showEnhance = (m) => m?.capabilities?.promptEnhance === true;
 
 assert.strictEqual(showStyle({ capabilities: {} }), false, 'styleLoras absent => hidden');
 assert.strictEqual(showStyle({}), false, 'no capabilities bag => hidden');
 assert.strictEqual(showStyle(null), false, 'null model => hidden (boot order)');
 assert.strictEqual(showStyle({ capabilities: { styleLoras: true } }), true, 'opt-in shows it');
 
-assert.strictEqual(showEnhance({ capabilities: {} }), false, 'promptEnhance absent => hidden');
-assert.strictEqual(showEnhance(null), false, 'null model => hidden');
-assert.strictEqual(showEnhance({ capabilities: { promptEnhance: true } }), true, 'opt-in shows it');
-
-// T5/umT5 encoders CRASH on TextGenerate (AttributeError, no graceful degrade).
-// Chroma + Wan must never carry the capability.
-//
-// The allowlist is by model TYPE and holds only LLM-class text encoders, which are the
-// ones whose CLIP implements `.generate()`:
-//   krea2 — Qwen3-VL (abliterated)
-//   klein — Qwen3-4B text-only (MPI-354); an LLM, not a T5 derivative
-// Adding a type here is a claim about its ENCODER, not about the graph having an
-// enhancer node. Check the encoder family before widening it.
-const ENHANCER_CAPABLE_TYPES = ['krea2', 'klein'];
 const { MODELS } = await import('../js/data/modelConstants/models.js');
 for (const m of MODELS) {
-    if (m.capabilities?.promptEnhance === true) {
-        assert.ok(ENHANCER_CAPABLE_TYPES.includes(m.type),
-            `${m.id}: promptEnhance requires a CLIP with .generate() — T5/umT5 models crash`);
-    }
+    assert.strictEqual(m.capabilities?.promptEnhance, undefined,
+        `${m.id}: capabilities.promptEnhance was deleted in MPI-728 and has no reader — `
+        + 'the ComfyUI enhance backend is offered on every model');
     if (m.capabilities?.styleLoras === true) {
         assert.ok(Array.isArray(m.styleLoraLabels) && m.styleLoraLabels.length > 1,
             `${m.id}: styleLoras:true requires styleLoraLabels`);

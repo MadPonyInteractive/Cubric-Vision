@@ -1,0 +1,13 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/services/llmService.js",
+    "tests/llm-service.test.cjs",
+    "js/components/Compounds/LandingPages/MpiEnhancementSettings/",
+    "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js",
+    "js/components/types.js",
+    "js/shell/preloadStyles.js",
+    "js/data/modelConstants/models.js",
+    "tests/output-prompt-capture.test.cjs"
+  ]
+}

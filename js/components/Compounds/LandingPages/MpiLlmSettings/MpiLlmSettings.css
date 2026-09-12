@@ -1,0 +1,36 @@
+/* ═══════════════════════════════════════════════════════════════
+   MpiLlmSettings — Language Models section of the Remote panel
+   (MPI-728). Section chrome (.mpi-settings__section, __subgroup,
+   __hint, __field-label, __form-group, __folder-row,
+   __folder-input) lives in MpiSettings.css, the base sheet
+   preloadStyles always loads; only what this section adds is here.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* `[hidden]` is a UA rule of `display: none`, and ANY display declaration on the
+   element beats it — a `display: flex` row with `hidden` set stays on screen. The
+   first draft shipped exactly that: an "Enhancer model" label with no control
+   under it whenever the backend was Automatic. `.mpi-settings__form-group` sets
+   `display: flex`, so every group this section hides needs the rule restated. */
+.mpi-settings__form-group[hidden],
+.mpi-settings__hint[hidden] {
+    display: none;
+}
+
+/* ── Stacked dropdown options ──────────────────────────────────────────────
+   Each entry here carries a COST as its meta ("No VRAM, needs a key"), and that
+   copy is the entire reason the control reads as a placement choice rather than
+   a quality ranking. The default option row lays label and meta side by side and
+   caps the meta at 11ch, which truncated them to "CLOUD W…" and "NO VRAM…" at
+   the panel's real width. Same remedy MPI-620 applied to the RunPod pickers,
+   named for the shape rather than for one consumer. */
+.mpi-dropdown--stacked.mpi-dropdown__list .mpi-dropdown__option {
+    grid-template-columns: 1fr;
+    gap: 4px;
+}
+
+.mpi-dropdown--stacked.mpi-dropdown__list .mpi-dropdown__option-meta {
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
+    justify-self: start;
+}

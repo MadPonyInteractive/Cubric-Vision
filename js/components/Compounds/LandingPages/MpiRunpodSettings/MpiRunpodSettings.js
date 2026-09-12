@@ -21,8 +21,14 @@ import { APP_CONFIG } from '../../../../../dev_configs/app_config.js';
  * Extracted verbatim from MpiSettings.js (MPI-177). DOM ids and the
  * mpi-settings__runpod-* class names are kept unchanged so the extraction is
  * pure code motion; section chrome (.mpi-settings__section) still comes from
- * MpiSettings.css. Mounted once by MpiSettings into #mpiSettingsRunpodMount;
- * MpiSettings forwards el.onOpen() on each panel open.
+ * MpiSettings.css, which preloadStyles loads app-wide.
+ *
+ * MOVED PANELS IN MPI-728 and nothing in this file changed for it. Mounted once
+ * by `MpiRemote` into #mpiRemoteRunpodMount — the "Remote" slide-over, which
+ * holds the sections about somebody else's computer — and MpiRemote forwards
+ * el.onOpen() on each panel open exactly as MpiSettings used to. The
+ * mpi-settings__runpod-* names stay for the same reason they did in MPI-177:
+ * renaming them would make a relocation look like a rewrite.
  */
 export const MpiRunpodSettings = ComponentFactory.create({
     name: 'MpiRunpodSettings',

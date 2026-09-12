@@ -929,10 +929,36 @@
  * @typedef {Object} MpiRunpodSettingsProps (Compound — js/components/Compounds/LandingPages/MpiRunpodSettings)
  * No props required — reads state.runpodConfig + secretsClient internally (MPI-177 extraction).
  *
- * The RunPod Remote Engine section of the Settings panel. Mounted once by
- * MpiSettings into #mpiSettingsRunpodMount; MpiSettings forwards el.onOpen()
- * each panel open. el.destroy() clears the status/disk polls and aborts any
- * in-flight connect poll (the Pod itself is left booting — destroy ≠ Cancel).
+ * The RunPod Remote Engine section of the REMOTE panel (it moved out of Settings
+ * in MPI-728; the component itself was unchanged by the move). Mounted once by
+ * MpiRemote into #mpiRemoteRunpodMount; MpiRemote forwards el.onOpen() each panel
+ * open. el.destroy() clears the status/disk polls and aborts any in-flight
+ * connect poll (the Pod itself is left booting — destroy ≠ Cancel).
+ */
+
+/**
+ * @typedef {Object} MpiRemoteProps (Compound — js/components/Compounds/LandingPages/MpiRemote)
+ * No props required. Content component for MpiSlideOver, and it owns no controls
+ * of its own — it mounts MpiLlmSettings and MpiRunpodSettings and forwards
+ * el.onOpen() to both (MPI-728).
+ *
+ * The "Remote" panel: the two sections that describe somebody else's computer,
+ * MOVED out of Settings rather than duplicated. Settings is about this machine.
+ *
+ * Trigger via: Events.emit('slide-over:open', { title: 'Remote', component: MpiRemote })
+ */
+
+/**
+ * @typedef {Object} MpiLlmSettingsProps (Compound — js/components/Compounds/LandingPages/MpiLlmSettings)
+ * No props required — reads the `cubric.llm.*` preferences, secretsClient and
+ * `/llm/models` internally (MPI-728).
+ *
+ * The Language Models section of the Remote panel: the write-only DeepInfra key,
+ * and one dropdown PER JOB naming BACKENDS rather than model ids, because the
+ * choice is where the work runs. Enhancement and Image descriptions ship; the
+ * agent is a third row later (MPI-677 step 5). Mounted once by MpiRemote into
+ * #mpiRemoteLlmMount, which forwards el.onOpen() each panel open and calls
+ * destroy() with its own. MPI-737 grows the descriptions row past its one option.
  */
 
 /**

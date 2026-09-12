@@ -6,9 +6,11 @@
 //
 // Three things are worth a test here and the rest is plumbing:
 //
-//  1. **The backend choice, especially the uncensored rule.** DeepInfra carries
-//     no abliterated model, so an NSFW card reaching the cloud is a silent
-//     wrong answer, not an error. It is asserted, never left to a default.
+//  1. **The backend choice, and that it is the USER'S** (MPI-728). The model
+//     card no longer reaches it at all: the `-nsfw` route fired on two of the
+//     many models that are actually uncensored, and the `comfy -> ollama`
+//     downgrade turned an explicit pick into a different backend silently.
+//     Both are asserted gone, not left to a default.
 //  2. **The ComfyUI graph overrides.** They are string keys matched against
 //     node titles at dispatch time; a typo fails nothing and changes nothing.
 //  3. **The DeepInfra key never reaches the renderer.** Asserted by recording
@@ -22,22 +24,15 @@ const path = require('path');
 
 const {
     chooseBackend,
-    chooseEngineModelId,
-    canEnhanceInGraph,
-    isUncensoredModel,
     buildComfyInjectionParams,
     resolveRecipeId,
     resolveMode,
     COMFY_ENHANCE_OVERRIDES,
-    UNCENSORED_MODEL_ID,
 } = require('../js/services/llmService.js');
-const { MODELS } = require('../js/data/modelConstants/models.js');
 const { FALLBACK_RECIPE_ID } = require('../js/data/recipes/registry.js');
 
 const ELIGIBLE = { id: 'krea2', capabilities: { promptEnhance: true } };
 const PLAIN = { id: 'chroma', capabilities: {} };
-const NSFW_ELIGIBLE = { id: 'krea2-nsfw', capabilities: { promptEnhance: true } };
-const NSFW_PLAIN = { id: 'sdxl-nsfw', capabilities: {} };
 
 // ── Backend choice ───────────────────────────────────────────────────────────
 
@@ -52,53 +47,40 @@ function testLocalFallbackWithoutAKey() {
     assert.strictEqual(chooseBackend({ model: PLAIN }), 'ollama', 'no serverDefault → local');
 }
 
-function testUncensoredNeverReachesTheCloud() {
-    // The rule, stated four ways so a refactor cannot quietly drop it.
-    assert.strictEqual(chooseBackend({ model: NSFW_ELIGIBLE, serverDefault: 'deepinfra' }), 'comfy');
-    assert.strictEqual(chooseBackend({ model: NSFW_PLAIN, serverDefault: 'deepinfra' }), 'ollama');
-    assert.strictEqual(chooseBackend({ model: NSFW_ELIGIBLE, serverDefault: 'ollama' }), 'comfy');
-    assert.strictEqual(chooseBackend({ model: NSFW_PLAIN, serverDefault: 'ollama' }), 'ollama');
-    for (const m of [NSFW_ELIGIBLE, NSFW_PLAIN]) {
-        assert.notStrictEqual(chooseBackend({ model: m, serverDefault: 'deepinfra' }), 'deepinfra');
-    }
-}
-
 function testExplicitOverrideWins() {
     assert.strictEqual(chooseBackend({ model: PLAIN, override: 'deepinfra', serverDefault: 'ollama' }), 'deepinfra');
     assert.strictEqual(chooseBackend({ model: PLAIN, override: 'ollama', serverDefault: 'deepinfra' }), 'ollama');
     assert.strictEqual(chooseBackend({ model: ELIGIBLE, override: 'comfy' }), 'comfy');
-    // T5/umT5 models CRASH the TextGenerate node, so an ineligible model must
-    // degrade rather than honour the override.
-    assert.strictEqual(chooseBackend({ model: PLAIN, override: 'comfy' }), 'ollama');
-    // An override is NOT allowed to send uncensored work to the cloud by accident,
-    // but it IS allowed deliberately — the user asked for it in as many words.
-    assert.strictEqual(chooseBackend({ model: NSFW_PLAIN, override: 'deepinfra' }), 'deepinfra');
+    // An override is honoured on any model, including one the user knows wants
+    // shaping a hosted provider would sanitise — they asked for it in as many words.
+    assert.strictEqual(chooseBackend({ model: { id: 'sdxl-nsfw' }, override: 'deepinfra' }), 'deepinfra');
 }
 
-function testUncensoredWorkGetsTheAbliteratedModel() {
-    assert.strictEqual(chooseEngineModelId({ model: NSFW_PLAIN, backend: 'ollama' }), UNCENSORED_MODEL_ID);
-    assert.strictEqual(chooseEngineModelId({ model: PLAIN, backend: 'ollama' }), undefined,
-        'a clean card takes the registry default');
-    assert.strictEqual(chooseEngineModelId({ model: NSFW_PLAIN, backend: 'deepinfra' }), undefined,
-        'the cloud has no abliterated build to ask for');
+function testComfyIsOfferedOnEveryModel() {
+    // MPI-728. `chooseBackend` used to answer `ollama` for an explicit `comfy`
+    // pick on any model outside four — a silent downgrade to a second runtime
+    // that may not even be installed. The standalone enhancer graph carries its
+    // own CLIPLoader and was proven on 2026-09-12 to run with NO generation
+    // model loaded at all, so the pick is honoured everywhere.
+    for (const model of [PLAIN, ELIGIBLE, { id: 'wan-2-2' }, { id: 'sdxl-nsfw' }, undefined]) {
+        assert.strictEqual(chooseBackend({ model, override: 'comfy' }), 'comfy');
+    }
 }
 
-function testUncensoredModelIsIdSuffixed() {
-    assert.ok(isUncensoredModel({ id: 'krea2-nsfw' }));
-    assert.ok(!isUncensoredModel({ id: 'krea2' }));
-    assert.ok(!isUncensoredModel({}));
-    assert.ok(!isUncensoredModel(undefined));
-}
-
-// ── Eligibility, read from the real model list ───────────────────────────────
-
-function testInGraphEligibilityIsTheFourExpectedModels() {
-    // `capabilities.promptEnhance` CHANGED MEANING in MPI-677 and kept its value.
-    // Read from models.js itself so a fifth model declaring it shows up here
-    // rather than in a live enhance that crashes the TextGenerate node.
-    const eligible = MODELS.filter(canEnhanceInGraph).map((m) => m.id).sort();
-    assert.deepStrictEqual(eligible, ['klein-4b', 'klein-9b', 'krea2', 'krea2-nsfw'],
-        'the ComfyUI-backend eligible set changed — confirm the new graph carries a .generate()-capable CLIP');
+function testTheModelCardNoLongerSteersTheBackend() {
+    // The deleted `-nsfw` rule, asserted GONE rather than absent by accident.
+    // A LoRA makes any model uncensored, so an id suffix never was the fact it
+    // was read as — and only two of Vision's uncensored models carry one.
+    for (const serverDefault of ['deepinfra', 'ollama']) {
+        const plain = chooseBackend({ model: PLAIN, serverDefault });
+        for (const id of ['sdxl-nsfw', 'krea2-nsfw', 'klein-lora-nsfw', 'chroma', 'wan-2-2']) {
+            assert.strictEqual(chooseBackend({ model: { id }, serverDefault }), plain,
+                `the id "${id}" changed the backend — the model card must not steer it`);
+        }
+    }
+    // And the card is not even needed to answer.
+    assert.strictEqual(chooseBackend({ serverDefault: 'deepinfra' }), 'deepinfra');
+    assert.strictEqual(chooseBackend(), 'ollama');
 }
 
 // ── The ComfyUI graph overrides ──────────────────────────────────────────────
@@ -233,11 +215,9 @@ function testForkBridgeAnswersDeepInfraRequests() {
 const tests = [
     testCloudIsTheDefaultWhenAKeyExists,
     testLocalFallbackWithoutAKey,
-    testUncensoredNeverReachesTheCloud,
     testExplicitOverrideWins,
-    testUncensoredWorkGetsTheAbliteratedModel,
-    testUncensoredModelIsIdSuffixed,
-    testInGraphEligibilityIsTheFourExpectedModels,
+    testComfyIsOfferedOnEveryModel,
+    testTheModelCardNoLongerSteersTheBackend,
     testInjectionParamsCarryTheOverrides,
     testSystemPromptIsChatMlWrapped,
     testRecipeResolutionAndFallback,
