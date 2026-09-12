@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-729",
+  "title": "Flow Library: a back chip to the Gallery above the title",
+  "description": "Inside a project the Library header's only exit is the overlay X, diagonally opposite the back chip the user just clicked. Add a stacked '<- Gallery' chip above the title, rendered only when currentPage is gallery.",
+  "column": "doing",
+  "maturity": "validating",
+  "status": "active",
+  "created_at": "2026-09-12T09:48:09+01:00",
+  "updated_at": "2026-09-12T09:53:27+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

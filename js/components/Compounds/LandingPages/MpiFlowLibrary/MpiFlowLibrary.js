@@ -111,6 +111,26 @@ export const MpiFlowLibrary = ComponentFactory.create({
         overlay.el.appendToContainer(el);
         overlay.on('close', () => { _closeDetail(); });
 
+        // ── Back to the Gallery (MPI-729) ───────────────────────────────────
+        // The same Primitive and props MpiBaseFlow gives its own `← Flows` chip
+        // (MpiBaseFlow ~274), so the breadcrumb reads the same at both ends —
+        // Gallery → Flows → Song, and back out the way you came in. Without it the
+        // Library's only exit inside a project was the overlay X, diagonally
+        // opposite the chip the user had just clicked to get here.
+        //
+        // It sits ABOVE the title, not beside it, so the title never moves: entered
+        // from Landing there is no chip, and a side-by-side row would put "Flows" at
+        // the left margin on one entry path and indented on the other.
+        const backBtn = MpiButton.mount(ce('div'), {
+            icon: 'back', label: 'Gallery', size: 'sm', variant: 'ghost',
+            extraClasses: 'mpi-flow-library__back',
+        });
+        // Hiding the overlay has already restored the gallery underneath, so this is
+        // a close and not a navigate — re-navigating to the page we are on would tear
+        // that gallery down and rebuild it for nothing (navigation.js ~110).
+        _unsubs.push(on(backBtn.el, 'click', () => el.close()));
+        qs('.mpi-flow-library__head', el).prepend(backBtn.el);
+
         // ── Availability badge (chip) for a tile / section sort ──────────────
         function _badgeHtml(flow) {
             const { available } = flowAvailability(flow);
@@ -738,7 +758,16 @@ export const MpiFlowLibrary = ComponentFactory.create({
         }));
 
         // ── Open / close the Library overlay ──────────────────────────────────
-        el.open = () => { overlay.el.show(); renderList(); };
+        // The chip is a PER-OPEN decision, not a per-mount one: shell.js mounts this
+        // component once and reuses the instance for every `flows:open` (shell.js ~487),
+        // so deciding in setup would freeze the answer at whatever page the FIRST open
+        // happened on — Landing for anyone who browses the flows before opening a
+        // project. Same `state.currentPage` gate the detail panel's Open button derives.
+        el.open = () => {
+            backBtn.el.hidden = state.currentPage !== PAGE_GALLERY;
+            overlay.el.show();
+            renderList();
+        };
         el.close = () => { overlay.el.hide(); };
         el.onOpen = el.open;
 
@@ -749,6 +778,7 @@ export const MpiFlowLibrary = ComponentFactory.create({
             _destroyAllTiles();
             _destroyDetailBtns();
             closeBtn?.el?.destroy?.();
+            backBtn?.el?.destroy?.();
             _confirmDialog?.el?.destroy?.();
             overlay?.el?.destroy?.();
         };

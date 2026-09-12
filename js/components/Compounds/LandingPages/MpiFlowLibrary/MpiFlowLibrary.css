@@ -52,6 +52,28 @@
     border-bottom: 1px solid var(--line);
     flex: none;
 }
+/* Back-to-Gallery chip (MPI-729). The same ghost MpiButton the Flow topbar uses for
+   its `← Flows` link, restated here because the two live in different components —
+   only geometry and typography, the chrome is the Primitive's. It stacks above the
+   title (the h1 is a block, so no row wrapper is needed) and the title keeps the left
+   margin it has when the chip is absent. */
+.mpi-flow-library__back {
+    gap: var(--s-2);
+    padding: 0;
+    margin: 0 0 var(--s-3);
+    font-family: inherit;
+    font-weight: inherit;
+    font-size: var(--t-2xs);
+    letter-spacing: 0.16em;
+}
+/* Beats `.mpi-btn.mpi-ibtn.mpi-btn--ghost` (0,3,0) — one shade quieter, smaller icon,
+   matching MpiBaseFlow.css ~97. */
+.mpi-flow-library .mpi-btn.mpi-ibtn.mpi-flow-library__back { color: var(--ink-4); }
+.mpi-flow-library .mpi-btn.mpi-flow-library__back .mpi-icon { width: 12px; height: 12px; }
+/* `[hidden]` is a UA rule the Primitive's own `display` outranks, so hiding the chip
+   on the Landing entry path has to be stated at author level. */
+.mpi-flow-library__back[hidden] { display: none; }
+
 .mpi-flow-library__title {
     font-size: var(--t-xl, 32px);
     font-weight: 700;
