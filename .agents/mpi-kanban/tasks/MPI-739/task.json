@@ -3,11 +3,11 @@
   "id": "MPI-739",
   "title": "Component gallery cleanup - drop dead cards, fix the slider entry, add the settings switch",
   "description": "Delete MpiProjectCard (dead component, only the gallery mounts it). Drop the MpiPromptBox, MpiProjectName and MpiVoicePicker cards from the gallery. Rehome the two slider cards: they are labelled MpiSlider, a component that has not existed since it was absorbed into MpiProgressBar, and they sit in Compounds while MpiProgressBar is a Primitive. Add the switch variant of MpiCheckbox (the Settings toggle) to the gallery.",
-  "column": "doing",
-  "maturity": "in-progress",
-  "status": "active",
+  "column": "done",
+  "maturity": "complete",
+  "status": "closed",
   "created_at": "2026-09-12T00:00:00+01:00",
-  "updated_at": "2026-09-12T00:00:00+01:00",
+  "updated_at": "2026-09-12T18:02:00Z",
   "links": {
     "files": "files.json",
     "events": "events.jsonl"

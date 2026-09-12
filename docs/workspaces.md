@@ -15,9 +15,8 @@ Handles project selection and creation. Entry point when no project is open.
   `_buildProjectRow()` creates `.mpi-landing__pl-row` elements directly, so any row change goes
   in `_buildProjectRow` + `styles/shell/landing.css` (`.mpi-landing__pl-*`). **There is no
   `MpiProjectCard` to look at** — the Landing list has not rendered from it since the Stage
-  redesign, MPI-739 removed its last mount anywhere (a component-gallery preview), and its
-  directory goes with the dead `projectUI.js` import under that card. MPI-286 lost its first
-  pass reading that component; do not repeat it, and do not re-create one.
+  redesign, and MPI-739 deleted the component outright once the gallery preview proved to be
+  its last mount anywhere. MPI-286 lost its first pass reading it; do not re-create one.
 - Thumbnails load through a **cap-3 concurrency queue** (`_runThumbQueue(loaders, 3, signal)`),
   newest-first (the server sorts `updatedAt` desc). Each row shows a per-thumb `.spinner`
   (`--loading`) swapped for media on load and is **open-locked** while loading
