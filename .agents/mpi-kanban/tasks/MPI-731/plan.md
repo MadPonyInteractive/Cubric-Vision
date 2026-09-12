@@ -76,6 +76,14 @@ Neither is a live `claimed` record, so the file is writable, but it makes item 6
 riskiest swap in the card: **do it last, stage by hunk, and read `git diff` before every
 stage.** That is why items 5 and 6 are separate items rather than one "adopt everywhere".
 
+**Claims re-checked 2026-09-12 ~19:00Z — the two blocks above are GONE.** MPI-728's
+record is `complete` (types.js + preloadStyles.js committed, clean in git) and MPI-739's is
+`complete` with the card in `done` (components.js + tpl-components.html clean). The only
+`claimed` record on any file this card touches is MPI-731's own. So item 8's registrations
+and the demo-page variant are unblocked — claim them before the first write. What has NOT
+changed: `MpiGalleryGrid.js/.css` still carry uncommitted MPI-733 (`needs_verification`,
+card in `doing`) and MPI-678 work. No live claim, but item 6 stays last and hunk-staged.
+
 ## Decided at plan time
 
 The brief left three things open and asked for a fourth decision explicitly; Fabio settled
@@ -338,6 +346,18 @@ settled below from the code, not from preference. Do not re-litigate them — bu
       row still points at the right file.
 
 ## Completed
+
+- [x] **1. `MpiProgressBar` `orientation: 'vertical'`** (2026-09-12, `eeef13dc`). Template adds
+      `mpi-progress--vertical` and writes `bottom`/`height` instead of `left`/`width`;
+      `updateVisuals` does the same; CSS scoped under `.mpi-progress--vertical` with
+      `writing-mode: vertical-lr; direction: rtl` on the native input. Verified by
+      `tests/desktop/flow-audio-player.spec.js` in a real window: bottom click reads LOW, top
+      reads HIGH, fill anchored at the bottom, horizontal control beside it untouched.
+      **Falsified**: without `direction: rtl` a bottom click reads 100 and the spec fails.
+
+**Where it stands at handoff (2026-09-12 ~19:05Z):** item 1 shipped; card in `doing`. Next is
+item 2, `MpiVolumeControl`. Fabio wants a real-window screenshot of the flyout (height, travel)
+before it lands in the video bar. Nothing else is in progress; the tree holds no MPI-731 edits.
 
 ## Remaining Work
 
