@@ -327,6 +327,13 @@
   the job: shots come out more cinematic, and the sound follows what you asked for more
   closely. It adds a 0.29 GB download to that model, and only to that model.
 
+- **Audio now looks like audio.** Every song, voice line and sound effect in the gallery used
+  to be the same blank grey tile with a play icon — three minutes of music and a two-second
+  bleep looked identical. An audio card is now a wide tile drawn with its own waveform, and it
+  fills as it plays so you can see where you are in the track. Click anywhere on the wave to
+  jump there and keep listening, instead of waiting for the chorus to come round. Hovering
+  still plays from the start, and moving away still stops it.
+
 - **The cogwheel by the prompt now shows the LoRAs your model is running.** Each one gets a
   row of its own: its name, its strength, and a switch that mutes it for the next run without
   forgetting anything you set. So trying a LoRA a little weaker, or taking one out of the mix

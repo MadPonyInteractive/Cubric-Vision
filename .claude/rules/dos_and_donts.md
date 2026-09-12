@@ -5,7 +5,7 @@
 ## Sub-Agent Briefing
 > Copy this section verbatim into any sub-agent prompt that involves DOM work, CSS, utilities, or icons.
 
-- **Never hardcode colors.** OKLCH variables only — from `styles/01_base.css`. No hex, no named colors, no `rgb()`/`hsl()` literals. Canonical token families: `--surface-{0,1,2,3,bar,canvas}`, `--ink-{1,2,3,4}`, `--line`/`--line-soft`, `--accent-{heat,frost,ok,warn}`, `--t-*` (type), `--s-*` (spacing), `--r-*` (radius), `--ease`/`--t-fast|base|slow` (motion). Legacy `--neon-*`, `--bg*`, `--primary*`, `--surface-glass`, `--text*`, `--border*`, `--radius*`, `--font-main`/`--font-display` are **removed** — do not reintroduce.
+- **Never hardcode colors.** OKLCH variables only — from `styles/01_base.css`. No hex, no named colors, no `rgb()`/`hsl()` literals. Canonical token families: `--surface-{0,1,2,3,bar,canvas}`, `--ink-{1,2,3,4}`, `--line`/`--line-soft`, `--accent-{heat,frost,ok,warn}`, `--accent-audio`, `--t-*` (type), `--s-*` (spacing), `--r-*` (radius), `--ease`/`--t-fast|base|slow` (motion). Legacy `--neon-*`, `--bg*`, `--primary*`, `--surface-glass`, `--text*`, `--border*`, `--radius*`, `--font-main`/`--font-display` are **removed** — do not reintroduce.
 - **Stage design baseline:** sharp corners default (`--r-1: 0`), no glow, no `backdrop-filter`, no glassmorphism. Pass `shape:'pill'` to opt into rounded buttons. Gradient text only on the wordmark.
 - **Never paste raw SVG.** Import from `js/utils/icons.js`. If the icon is missing, add it there first.
 - **Icon stroke is auto-detected — never pass `stroke: true` to `MpiButton`.** Name icons with `ratio_` prefix or `_stroke` suffix and `renderIcon()` handles stroke automatically.
@@ -61,12 +61,14 @@ Whenever you need generic functionality, ALWAYS check the `js/utils/` directory 
    - **Ink (text):** `--ink-1`, `--ink-2`, `--ink-3`, `--ink-4`
    - **Lines:** `--line`, `--line-soft`
    - **Accents:** `--accent-heat` (pink/magenta — primary), `--accent-frost` (cyan — focus/generative), `--accent-ok`, `--accent-warn`
+   - **Media-type accent:** `--accent-audio` (greenish-cyan — Cubric Audio). Mirrored from the Cubric Studio (Website) repo, never invented here; the rest of the family is MPI-736. Not a status colour — do NOT substitute `--accent-ok`, which is close enough to tempt.
    - **Type scale:** `--t-2xs`…`--t-display`
    - **Spacing:** `--s-1`…`--s-8`
    - **Radius:** `--r-1` (0px, sharp default), `--r-2` (4px), `--r-3` (12px), `--r-pill` (999px)
    - **Motion:** `--ease`, `--t-fast`, `--t-base`, `--t-slow`
    - **Fonts:** body = `'JetBrains Mono', monospace`. `--font-wordmark` = `'Russo One'` (self-hosted at `assets/fonts/RussoOne-Regular.woff2`) — used ONLY for the brand wordmark (titlebar + landing hero). See `.claude/rules/components.md` § Stage design baseline.
-3. **Template UI Adherence:** The active design system is **Stage** (see `docs/redesign/`). Stage = OKLCH mauve surfaces, heat/frost accents, sharp corners by default, **no neon glow, no glass blur, no `backdrop-filter`**. Legacy tokens `--bg`, `--bg-light`, `--bg-dark`, `--bg-elevated`, `--bg-recessed`, `--bg-modal`, `--surface`, `--surface-glass`, `--neon-electric`, `--neon-glow*`, `--neon-accent`, `--neon-border`, `--primary`, `--primary-dim`, `--text*`, `--border*`, `--radius*`, `--font-main`, `--font-display`, `--transition`, `--bounce` have been **removed** — do not reintroduce them. The only place `background-clip: text` (gradient text) is allowed is the wordmark.
+3. **`color-mix(in oklch, ...)` interpolates HUE — use `oklab` across hues.** Mixing a token whose hue is far from the surface family's 350 walks the hue *past* the colour: `--accent-audio` (170) is antipodal to it, and a 22% mix landed on a yellow, which reads as "the token never loaded" rather than as a mix. `--accent-heat` (355) hides this because it is 5 degrees away, so **no existing `color-mix(in oklch, var(--accent-heat) ...)` call site proves the pattern safe**. Rectangular space (`oklab`) has no hue to walk. MPI-730; `--accent-video` (48) and `--accent-prompt` (102) will hit it too.
+4. **Template UI Adherence:** The active design system is **Stage** (see `docs/redesign/`). Stage = OKLCH mauve surfaces, heat/frost accents, sharp corners by default, **no neon glow, no glass blur, no `backdrop-filter`**. Legacy tokens `--bg`, `--bg-light`, `--bg-dark`, `--bg-elevated`, `--bg-recessed`, `--bg-modal`, `--surface`, `--surface-glass`, `--neon-electric`, `--neon-glow*`, `--neon-accent`, `--neon-border`, `--primary`, `--primary-dim`, `--text*`, `--border*`, `--radius*`, `--font-main`, `--font-display`, `--transition`, `--bounce` have been **removed** — do not reintroduce them. The only place `background-clip: text` (gradient text) is allowed is the wordmark.
 
 ### 🔴 Class Naming Convention
 - **BEM is Mandatory:** Since we do not use a standard bundler, you MUST use BEM (Block Element Modifier) architecture strictly in your component CSS.
