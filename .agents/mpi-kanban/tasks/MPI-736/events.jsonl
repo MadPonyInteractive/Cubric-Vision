@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-736", "at": "2026-09-12T12:28:44+01:00", "actor": "claude-opus-5", "column": "todo", "title": "Per-media-type accent family: finish what --accent-audio started"}
+{"schema": "mpi-kanban/event/v1", "type": "task.updated", "id": "MPI-736", "at": "2026-09-12T11:29:15Z", "actor": "claude-opus-5", "note": "brief written; maturity needs-decision (token shape is Fabio's call)"}

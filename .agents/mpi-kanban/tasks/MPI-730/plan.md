@@ -52,9 +52,20 @@ things, and NEITHER is a defect in what shipped:
    `oklch(0.84 0.11 170)` — the greenish-cyan** (see Plan Drift for where that lives and what
    may NOT be done with it).
 
-Still owed regardless: the gallery demo page (`js/pages/components.js`) has not been asked
-about, and the derivative path and the paint path have still only met in a spec, never in a
-live app.
+**Where it stands (2026-09-12, after item 3 and the repaint):** both of Fabio's points are
+addressed. A click on the wave now SEEKS - the card consumes `MpiWaveform`'s `seek`, the
+play/stop toggle is gone, and an audio card no longer emits `open-group` (a type check in the
+generic click handler; the double-fire was confirmed live, not assumed). The card wears
+`--accent-audio`, the new single token Fabio picked; the rest of the per-media-type family is
+carded as **MPI-736**.
+
+Fabio then found one real defect in his own app: clicking the far right of a card emptied the
+fill and stopped it, reading as dead. Fixed - a finished clip now HOLDS the fill at the end
+instead of snapping empty, and leaving still resets. The gallery demo page is answered: **no**,
+`MpiWaveform` does not go on `js/pages/components.js`.
+
+Still owed: the derivative path and the paint path have still only met in a spec, never in a
+live app. **The user-ux re-check after the end-of-clip fix is what this card now waits on.**
 
 ## Implementation
 
@@ -102,7 +113,7 @@ live app.
       precedent is that made-up media 404s into the missing-media path, which empties the
       thumb, so a fake fixture passes green against a broken build.
 
-- [ ] **Click to seek, and stop opening nothing.** Click anywhere on the card seeks to that
+- [x] **Click to seek, and stop opening nothing.** Click anywhere on the card seeks to that
       x and keeps playing; `mouseenter` still plays from 0 and `mouseleave` still stops and
       resets, so `_ensureAudioCardControls`' audio lifecycle is otherwise untouched. A plain
       click currently also emits `open-group` (`MpiGalleryGrid.js:1361`) → History workspace;
@@ -145,15 +156,9 @@ live app.
 
 ## Remaining Work
 
-- **Item 3 — click to seek + suppress open-group.** The blocker Fabio actually hit.
-  `MpiWaveform` already emits `seek { fraction, time }`; nothing consumes it. So this is
-  card-side wiring only, not new paint: the card's own click handler currently toggles
-  play/stop and wins, which is why a click reads as "it pauses".
-- **Repaint in the Cubric Audio accent** (`oklch(0.84 0.11 170)`), not Vision's rose. Needs a
-  token decision first — see the Plan Drift entry; do not hardcode it and do not reach for
-  `--accent-ok`.
-- Ask about the gallery demo page for `MpiWaveform` (`js/pages/components.js`).
+- **User-ux re-check after the end-of-clip fix.** Everything else he checked passed.
 - Run it once in a live app — the bake and the paint have only met in a spec.
+- `docs/gallery.md` gains the audio-card section at close-out (see Preservation Notes).
 
 ## Plan Drift
 
@@ -227,3 +232,33 @@ control strip, a play/pause button, a card size floor, a player overlay.
   at 0 a kept position buys nothing, and clicking a 0px-wide target to get back to the start
   is worse than re-hovering. The waveform is what makes reset-on-leave cheap — 1:40 is now
   one click away.
+
+## Plan Drift (continued)
+
+- **2026-09-12 — the accent landed as ONE token, and MPI-736 owns the rest.** Fabio chose
+  `--accent-audio` alone in `styles/01_base.css` over adding the whole per-media family now.
+  MPI-736 (`needs-decision`) carries the family, the `--accent-heat` / `--vision-accent`
+  naming collision, and the design-doc update.
+- **2026-09-12 — `color-mix(in oklch, ...)` walked the hue past the colour.** The first run
+  after the repaint failed with the PLAYED half reading more rose than the unplayed one —
+  which reads exactly like "the new token never loaded". It had. `oklch` interpolates HUE, and
+  the surface family sits at 350 against audio's 170, exactly antipodal, so a 22% mix landed
+  on a yellow. Fixed by mixing in `oklab`. Vision's rose hid this for the life of the app:
+  355 is 5° from the surface hue, so no existing `color-mix(in oklch, var(--accent-heat) …)`
+  call site proves the pattern safe, and `--accent-video` (48) and `--accent-prompt` (102)
+  will hit it too.
+- **2026-09-12 — the seek payload gained `modified`.** `MpiWaveform` emits the shift/ctrl/meta
+  state with the fraction, because the component cannot know that its consumer treats a
+  modified click as "select" rather than "scrub" — and the card's own handler cannot see the
+  event. One boolean, and MPI-731's player is free to ignore it.
+
+- **2026-09-12 — a click at the very end read as "the card died", and the cause was the
+  `ended` handler, not the seek.** Seeking into the last pixels reaches an end that arrives
+  immediately; `ended` then reset `currentTime` to 0 and emptied the fill, so a click produced
+  an untouched silent tile. A finished clip now holds the fill at the end, and `mouseleave`
+  gained `&& !audio.currentTime` so a card parked there still resets — without that second
+  half, holding the end IS the latch this plan rejected. Full account in `validation.md`,
+  including the false repro (a leftover selection mode made the harness measure itself) and
+  the point-vs-range flake.
+- **2026-09-12 — the gallery demo page is answered: no.** `MpiWaveform` does not go on
+  `js/pages/components.js`. Fabio, asked and closed.

@@ -78,6 +78,13 @@
   --accent-ok:       oklch(0.78 0.13 150);   /* success, ready */
   --accent-warn:     oklch(0.78 0.14 60);    /* warning */
 
+  /* Media-type accent. Cubric Studio gives each media type its own colour
+     (MPI-708); audio is the first surface here that needs one. Mirrored from
+     the source of truth — `--audio-accent` in the Cubric Studio (Website) repo,
+     `styles/landing.css` — never invented here. NOT --accent-ok, which is close
+     enough to tempt and would tie a brand colour to a status semantic. */
+  --accent-audio:    oklch(0.84 0.11 170);   /* greenish-cyan — Cubric Audio */
+
   /* Type scale */
   --t-2xs:     10px;
   --t-xs:      11px;

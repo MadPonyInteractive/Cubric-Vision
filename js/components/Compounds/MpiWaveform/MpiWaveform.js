@@ -33,8 +33,11 @@
  *   destroy()
  *
  * Emits (component-local):
- *   'seek' { fraction, time } — the user clicked at `fraction` across the box.
- *                               `time` is seconds, or null when no duration is known.
+ *   'seek' { fraction, time, modified } — the user clicked at `fraction` across
+ *                               the box. `time` is seconds, or null when no
+ *                               duration is known. `modified` is true for a
+ *                               shift/ctrl/meta click, which a gallery card
+ *                               reads as "select", not "scrub".
  */
 
 import { ComponentFactory } from '../../factory.js';
@@ -95,7 +98,11 @@ export const MpiWaveform = ComponentFactory.create({
 
         _unsubs.push(on(el, 'click', (e) => {
             const fraction = _fractionAt(e.clientX);
-            emit('seek', { fraction, time: _duration > 0 ? fraction * _duration : null });
+            emit('seek', {
+                fraction,
+                time: _duration > 0 ? fraction * _duration : null,
+                modified: !!(e.shiftKey || e.ctrlKey || e.metaKey),
+            });
         }));
 
         el.setMask = (url) => _applyMask(url);

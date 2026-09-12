@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-736",
+  "title": "Per-media-type accent family: finish what --accent-audio started",
+  "description": "MPI-730 landed --accent-audio alone. Land the rest of the per-media-type accent family in styles/01_base.css (hub, vision, prompt, video), resolve the --accent-heat / --vision-accent naming collision, and write the decision into the design docs. Values mirror the Cubric Studio (Website) repo - never invented here. Tangled with MPI-708.",
+  "column": "todo",
+  "maturity": "needs-decision",
+  "status": "active",
+  "created_at": "2026-09-12T12:28:44+01:00",
+  "updated_at": "2026-09-12T11:29:15Z",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

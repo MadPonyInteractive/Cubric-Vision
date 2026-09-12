@@ -38,8 +38,12 @@
 /* Revealed left-to-right by `clip-path` from JS. The BACKGROUND fills too, not
    just the wave — the surface has to read as a progress bar. */
 .mpi-waveform__layer--played {
-    background: color-mix(in oklch, var(--accent-heat) 22%, var(--surface-3));
-    color: var(--accent-heat);
+    /* oklab, not oklch: the audio accent sits at hue 170 and the surface family
+       at 350 — exactly antipodal — so an oklch mix interpolates the HUE right
+       past the colour and lands on a yellow. A rectangular space has no hue to
+       walk. (Vision's rose never showed this: 355 is 5° from the surface.) */
+    background: color-mix(in oklab, var(--accent-audio) 22%, var(--surface-3));
+    color: var(--accent-audio);
     clip-path: inset(0 100% 0 0);
 }
 

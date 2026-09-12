@@ -128,6 +128,12 @@ MPI-132: hovering a gallery VIDEO card unmutes+plays its `<video>`; hovering an 
 
 **`currentTime = 0` is NOT free at position 0 (MPI-583).** The scroll gate above calls `_stopOtherGalleryMedia(null)` on EVERY scroll event, and that sweep used to `pause()` + seek + re-mute every video in the DOM unconditionally. Blink does **not** short-circuit a seek to the position the element already holds: measured **1000 `seeking` events for 10 sweeps over 100 videos**, each queuing a demux + decode of frame 0. A scrollbar drag fires ~60–100 scroll events/s, so a gallery full of promoted videos took thousands of seeks/s and the scroll visibly lagged. The sweep now early-outs on `if (m.paused && !m.currentTime) return;` — 60 sweeps over 100 videos went 23.7 ms → 0.5 ms, idle seeks 1000 → 0, while a genuinely playing card still stops (paused, `t 0`, re-muted). **Do not restore the unconditional seek**, and treat "the element is already at 0 so this is a no-op" as false for any media element. Note this is the STOP path, not playback — the `_isScrolling` gate already keeps hover from playing anything mid-scroll, and a cursor parked on the scrollbar never fires `mouseenter` at all, so a scroll-lag report here is about the sweep, not about videos trying to play.
 
+## Audio cards -> its own doc
+
+The 21:9 waveform tile, the baked alpha mask, `MpiWaveform`, click-to-seek and the audio
+accent live in [gallery-audio-cards.md](gallery-audio-cards.md). Hover/scroll playback stays
+above, because audio and video share it.
+
 ## Live preview frames — exercising a generating card without a GPU
 
 A card exposes `cardEl.updatePreview(objectUrl, clip)` and `cardEl.resetPreviewClip(clip)`; the

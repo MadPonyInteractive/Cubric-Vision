@@ -833,6 +833,27 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 if (_waveform) { _waveform.el.destroy?.(); _waveform = null; }
 
                 const wf = MpiWaveform.mount(document.createElement('div'), { mask, duration });
+
+                // Click the wave → seek there and keep playing. The card owns
+                // playback, so the component reports the fraction and this side
+                // moves the playhead. A modified / selection-mode click is a
+                // select, not a scrub.
+                wf.on('seek', ({ fraction, time, modified }) => {
+                    if (modified || _selectionMode) return;
+                    if (!_audioEl) return;
+                    const d = Number(_audioEl.duration);
+                    const t = d > 0 ? fraction * d : time;
+                    if (!Number.isFinite(t)) return;
+                    try { _audioEl.currentTime = t; } catch (_) {}
+                    wf.el.setProgress(fraction);
+                    // Volume 0 is the mute: hover does not play under it, so a
+                    // seek must not start a silent clip either.
+                    if (_audioEl.paused && _volume > 0) {
+                        _stopOtherGalleryMedia(_audioEl);
+                        _audioEl.play().catch(() => {});
+                    }
+                });
+
                 wf.el.classList.add('mpi-group-card__thumb', 'mpi-group-card__thumb--audio');
                 wf.el.draggable = true; // enable drag-into-prompt (like img/video thumbs)
                 _replaceThumb(wf.el);
@@ -848,8 +869,9 @@ export const MpiGalleryGrid = ComponentFactory.create({
             // No dwell: a real hover (not scrolling) plays instantly.
             cardEl._hoverPlay = () => {};
 
-            // Click the audio card → toggle play/stop (no loop). The waveform fill
-            // is the feedback. A hidden <audio> element drives it.
+            // Hover plays an audio card from 0, leaving stops and resets, and a
+            // click on the wave seeks. The waveform fill is the feedback; a
+            // hidden <audio> element drives it.
             let _audioEl = null;
             function _ensureAudioCardControls(src, selected) {
                 if (_audioEl && _audioEl.dataset.src === src) return;
@@ -870,10 +892,11 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 });
                 // The fill tracks playback; stop/end empties it back to 0.
                 on(audio, 'timeupdate', () => _syncWave(audio.currentTime));
-                on(audio, 'ended', () => {
-                    try { audio.currentTime = 0; } catch (_) {}
-                    _waveform?.el.setProgress(0);
-                });
+                // A clip that reached its end HOLDS the fill there rather than
+                // snapping empty. Emptying it read as "the card died" — worst
+                // when a click lands in the last few pixels, which is a seek to
+                // an end that arrives immediately. Leaving the card still resets.
+                on(audio, 'ended', () => _waveform?.el.setProgress(1));
                 audio.addEventListener('error', () => {
                     cardEl.classList.add('mpi-group-card--missing');
                     emit('media-missing', { group, itemId: selected?.id });
@@ -883,22 +906,8 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 cardEl.appendChild(audio);
                 _audioEl = audio;
 
-                // Card click → play/pause toggle. Stop every OTHER playing card
-                // (audio + hover video) first so two clips never overlap.
-                on(cardEl, 'click', (e) => {
-                    // Selection mode / action buttons keep their own handlers.
-                    if (e.target.closest('.mpi-group-card__top-actions, .mpi-group-card__select-wrap')) return;
-                    e.stopPropagation();
-                    if (audio.paused) {
-                        _stopOtherGalleryMedia(audio);
-                        audio.play().catch(() => {});
-                    } else {
-                        // Stop (not pause): reset to the beginning.
-                        audio.pause();
-                        try { audio.currentTime = 0; } catch (_) {}
-                        _waveform?.el.setProgress(0);
-                    }
-                });
+                // No click toggle: a click on the wave seeks (wired in
+                // `_swapThumbToAudio`). Hover plays, leave stops.
 
                 // Hovering an audio card plays it (the fill is the feedback);
                 // leaving stops + resets. Click-to-stop still works. Volume 0 is
@@ -916,7 +925,9 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     cardEl._hoverPlay();
                 });
                 on(cardEl, 'mouseleave', () => {
-                    if (audio.paused) return;
+                    // Paused AT the end still needs the reset, or holding the
+                    // fill there becomes the latch this card rejected.
+                    if (audio.paused && !audio.currentTime) return;
                     audio.pause();
                     try { audio.currentTime = 0; } catch (_) {}
                     _waveform?.el.setProgress(0);
@@ -1385,6 +1396,8 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 // "opened" into history — they stay on the gallery.
                 const _selectedNow = group?.history?.[group.selectedIndex];
                 const _isPreviewNow = _selectedNow?.stage === 'preview';
+                // Audio cards never open: no audio workspace exists yet. Click = seek.
+                const _isAudioNow = _selectedNow?.type === 'audio' || group?.type === 'audio';
 
                 if (e.shiftKey) {
                     e.preventDefault();
@@ -1393,7 +1406,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     _toggleSelect(group.id);
                 } else if (_selectionMode) {
                     _toggleSelect(group.id);
-                } else if (!_isPreviewNow) {
+                } else if (!_isPreviewNow && !_isAudioNow) {
                     emit('open-group', { group });
                 }
             });
