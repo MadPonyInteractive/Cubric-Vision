@@ -45,6 +45,7 @@ Opened when user clicks a card from gallery. Lazy-loaded by `js/shell/navigation
 - `#right-top-slot` — active `MpiToolOptions*` compound (swapped by mediator on tool change)
 - `#right-bottom-slot` — `MpiHistoryList` (ctrl/shift/right-click selection, dimensions, context menu)
 - `#prompt-box-mount` — shell-level PromptBox (centre-bottom floating); shown/hidden via `mpi-group-history-block--prompt-active` CSS class
+- `#controls-mount` — shell-level, directly BELOW `#prompt-box-mount`; video groups mount `MpiVideoControlBar` here (MPI-731). It used to be the block's last grid row, which put it right above the PromptBox, and the PromptBox's upward strips covered its buttons.
 
 **Mediator:** `mountOptions(mode)` destroys the previous `MpiToolOptions*` instance and mounts the new one. `prompt` is special — no compound; toggles `mpi-group-history-block--prompt-active` CSS class (shows PromptBox, hides `#right-top-slot`). Tool options compounds: `MpiToolOptionsCrop`, `MpiToolOptionsMaskDetect`, `MpiToolOptionsMaskPoints`, `MpiToolOptionsUpscale`, `MpiToolOptionsInterpolate`, `MpiToolOptionsResize`, `MpiToolOptionsPrompt`.
 
@@ -67,6 +68,7 @@ Mounted once in `js/shell.js`, independent of active workspace:
 - `MpiStartingComfy` — shown on `comfy:starting` / `comfy:ready` events
 - `MpiSlideOver` — hosts slide-over content components (`MpiSettings`, `MpiHotkeys`, `MpiAbout`, `MpiModelManager`); opened via `slide-over:open { title, component }`. `models:open` is re-emitted by shell as `slide-over:open { title: 'Models', component: MpiModelManager }`.
 - `#prompt-box-mount` slot — declared in `index.html`; Blocks (Gallery, History) mount `MpiPromptBox` Organism directly into it. Slot persists across workspace switches; each Block destroys its prior `_pb` handle before remount and in `el.destroy`.
+- `#controls-mount` slot — declared in `index.html` after `#prompt-box-mount`; only Group History (video) mounts into it, and the bar's instance `destroy()` empties it. The Flow `main-area` overlay stashes it with the other `.main-area` children; focus mode leaves it visible.
 
 **Zero-model gate:** When a new/empty project opens with no installed models, Gallery auto-emits `models:open`, opening the Models slide-over. A project that already has media opens read-only with no PromptBox until ≥1 model is installed. PromptBox mounts once `s_installedModelIds` is non-empty (keyed off `state:changed`, not a `models:closed` event).
 

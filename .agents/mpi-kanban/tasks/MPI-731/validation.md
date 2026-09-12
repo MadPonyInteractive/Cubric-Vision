@@ -67,3 +67,21 @@ Card is open. Evidence per item, newest last.
   "clicking it brings back the level the gesture started from". Restored byte-identical.
 - Final: `npx playwright test --config=playwright.desktop.config.js tests/desktop/flow-audio-player.spec.js`
   → **3 passed** (32.2s); `npx eslint` clean on the compound and the spec.
+
+## 5b. Transport bar below the PromptBox
+
+- **Fabio verified live, 2026-09-12 ("1").**
+
+- New test 4, real window: video Group History with a synthetic dependency-free i2v model so
+  the PromptBox mounts. Measured: bar top 707 == PromptBox bottom 707, 7 buttons, no PromptBox
+  node's box on the bar, every button hit-tests to itself. Flyout 144px tall, not clipped by
+  `.main-area`, rises over the PromptBox and its slider takes the pointer. Navigating to an
+  image group leaves `#controls-mount` empty, 0px tall, block grid two rows.
+- **Probe falsified in-test:** moving `#controls-mount` above `#prompt-box-mount` makes it
+  report the expand toggle (`mpi-prompt-box__lock-container`) and `mpi-prompt-box__op-strip`
+  on the bar — the exact chrome that covered it.
+- **z-index falsified:** `#controls-mount { z-index: auto }` fails at "it rises across the
+  PromptBox and its slider takes the pointer there" (`reachable: false`). Restored to 41.
+- Screenshots (scratchpad, not committed) matched: bar under the prompt row, flyout over it.
+- `npx playwright test --config=playwright.desktop.config.js tests/desktop/flow-audio-player.spec.js tests/desktop/workspace-sweep.spec.js tests/desktop/mask-persist-roundtrip.spec.js`
+  → **11 passed** (54.5s). `npx eslint` clean on the block and the spec.

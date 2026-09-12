@@ -87,7 +87,7 @@ const TOOL_OPTIONS_REGISTRY = {
 
 **Video groups** (`_group.type === 'video'`):
 - `MpiVideoViewer`   props: `{ fps }`   slot: `#centre-slot`
-- `MpiVideoControlBar`   props: `{ fps, showTrim: true }`   slot: `#controls-slot` (Block-owned, full-width row spanning all 3 grid columns below the viewer). Wired to viewer via `viewer.el.attachControlBar(controlBarInstance)` (which internally calls `controlBar.el.attachSurface(viewerSurfaceInstance)`). Block listens to `controlBar.on('range-change')` for trim persistence (debounced 250ms POST to `/project-media/.../update-meta`).
+- `MpiVideoControlBar`   props: `{ fps, showTrim: true }`   slot: `#controls-mount` (shell-level, declared in `index.html` directly BELOW `#prompt-box-mount`; Block-owned lifetime — the instance `destroy()` empties it). MPI-731: as the block's last grid row it sat right above the PromptBox, whose upward chrome (expand toggle, op strip) covered its buttons; the slot's `z-index: 41` (PromptBox mount is 40) lets the bar's volume flyout paint over the PromptBox. The Flow `main-area` overlay stashes it; focus mode leaves it visible. Wired to viewer via `viewer.el.attachControlBar(controlBarInstance)` (which internally calls `controlBar.el.attachSurface(viewerSurfaceInstance)`). Block listens to `controlBar.on('range-change')` for trim persistence (debounced 250ms POST to `/project-media/.../update-meta`).
 - Tool options in `#right-top-slot`: `MpiToolOptionsCrop`, `MpiToolOptionsUpscale`, `MpiToolOptionsInterpolate`, `MpiToolOptionsPrompt` (prompt mode, video + frame-ops-capable model: `_modelHasFrameOps()` — any `i2v*`/`v2v*` op)
 - `MpiPromptBox` (Organism) into `#prompt-box-mount` — gated by `_shouldShowPromptBox() = _hasPromptOps() || _modelHasFrameOps()`. `_modelHasFrameOps()` matches any `supportedOps` starting with `i2v` or `v2v`. Frame-ops capability bypass keeps PromptBox visible BEFORE any chip lands so the user can drop a start/end-frame image (or input video) from outside; the existing media-change listener unlocks the op as soon as a chip is staged. Block keeps handle in `_pb`.
 
@@ -140,7 +140,7 @@ Self-contained tool-options compounds. Each mounts into `#right-top-slot` via th
 
 ## MpiVideoViewer (Organism — js/components/Organisms/MpiVideoViewer/MpiVideoViewer.js)
 
-Wraps a `MpiVideoSurface` + crop overlay canvas + `MpiViewerCorners` chip strip. Mounted by `MpiGroupHistoryBlock` for video groups. Tool bars are owned by `MpiToolOptions*` compounds — NOT by the viewer. **Control bar is NOT internal**: the parent Block mounts `MpiVideoControlBar` in its own `#controls-slot` and wires it via `viewer.el.attachControlBar(instance)`. This lets the bar span the full app window and lets non-video surfaces reuse the bar (e.g. audio-only via `showTrim: false`) without dragging the viewer along.
+Wraps a `MpiVideoSurface` + crop overlay canvas + `MpiViewerCorners` chip strip. Mounted by `MpiGroupHistoryBlock` for video groups. Tool bars are owned by `MpiToolOptions*` compounds — NOT by the viewer. **Control bar is NOT internal**: the parent Block mounts `MpiVideoControlBar` in the shell-level `#controls-mount` (below the PromptBox) and wires it via `viewer.el.attachControlBar(instance)`. This lets the bar span the full app window and lets non-video surfaces reuse the bar (e.g. audio-only via `showTrim: false`) without dragging the viewer along.
 
 Pan/zoom transform targets the actual `.mpi-video-surface__video` element, not `.mpi-video-viewer__player`, for cross-platform hardware-video compositor compatibility. Wheel zoom works while video tools are selected; crop mode blocks left-drag pan only so crop-handle dragging remains unambiguous.
 
@@ -304,7 +304,7 @@ Owns the bare `<video>` element + a sibling **exact-frame canvas overlay** (`.mp
 
 Owns play/frame±/loop/audio/fullscreen/frames-toggle buttons + time display + (optional) embedded `MpiTrimBar`. Drives a sibling `MpiVideoSurface` via `attachSurface(instance)`. Owns the 6 video hotkeys + 3 trim hotkeys (trim hotkeys only when `showTrim` is true). Hotkeys are bound on `attachSurface`, unbound on `detachSurface`/`destroy`. Loop intent is tracked separately from `video.loop`: when the active range is a strict subset of the clip, native `video.loop` is forced off and the loop is emulated via `timeupdate` (`seek(_in)` at `_out` if loop on; `_pause()` otherwise). Range-loop emulation gates on `!video.paused` so frame-step (which pauses first) is not re-routed.
 
-**Layout:** single horizontal row, `[left buttons + time] [trim flex:1] [right buttons]`. Mounted full-width by the parent Block (see `#controls-slot` mount above); not embedded inside the viewer.
+**Layout:** single horizontal row, `[left buttons + time] [trim flex:1] [right buttons]`. Mounted full-width by the parent Block into the shell-level `#controls-mount` (see that mount above); not embedded inside the viewer.
 
 **Props:**
 - `fps` (number, default 24)

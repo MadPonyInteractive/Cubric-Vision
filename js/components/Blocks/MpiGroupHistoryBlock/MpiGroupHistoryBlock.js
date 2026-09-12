@@ -181,7 +181,6 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 <div class="mpi-group-history-block__right-top"    id="right-top-slot"></div>
                 <div class="mpi-group-history-block__right-bottom" id="right-bottom-slot"></div>
             </div>
-            <div class="mpi-group-history-block__controls" id="controls-slot"></div>
             <div class="mpi-group-history-block__bottom"></div>
         </div>
     `,
@@ -410,7 +409,9 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
                 groupId:         _group.id,
             });
 
-        // ── Video control bar — full-block-width row below the viewer ─────
+        // ── Video control bar — shell slot BELOW the PromptBox (MPI-731 5b): in the
+        // block's own grid it sat right above the shell-level PromptBox, whose
+        // upward strips (media, ops, ref picker) painted over its buttons ─────
         let videoControlBar = null;
         const RESIZE_QUEUE_DISABLED_REASON = 'Resize is disabled while Cue has running or queued jobs';
 
@@ -443,8 +444,7 @@ export const MpiGroupHistoryBlock = ComponentFactory.create({
         _syncQueueBlockedTools();
 
         if (isVideo) {
-            const controlsSlot = qs('#controls-slot', el);
-            videoControlBar = MpiVideoControlBar.mount(controlsSlot, { fps: 24, showTrim: true });
+            videoControlBar = MpiVideoControlBar.mount(gid('controls-mount'), { fps: 24, showTrim: true });
             viewer.el.attachControlBar(videoControlBar);
             _unsubs.push(() => {
                 try { viewer.el.detachControlBar?.(); } catch (_) { /* noop */ }

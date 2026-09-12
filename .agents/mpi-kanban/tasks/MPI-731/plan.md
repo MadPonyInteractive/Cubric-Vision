@@ -387,26 +387,34 @@ settled below from the code, not from preference. Do not re-litigate them — bu
       comment): hotkey changes arrive through `setValue` and are not snapshotted. Tests 2 + 3
       extended; both halves falsified.
 
-**Where it stands (2026-09-12, session `59f90600`):** items 1, 2, wheel, 5 and zero-as-muted
-done, verified, Fabio-approved. **NEXT: item 5b** — in the video workspace (Group History),
-move the transport bar BELOW the PromptBox so the PromptBox's upward panel stops covering the
-bar's buttons. Then item 3 — `MpiAudioPlayer` as a **very small widget whose width the
-consumer sets**, so it fits a Flow. Master CI is green again since `da3b23bc`.
+**Where it stands (2026-09-12, session `18a9cd9e`):** items 1, 2, wheel, 5 and zero-as-muted
+done, verified, Fabio-approved. **Item 5b done too** — Fabio verified live; the rule files
+(`component-mounts.md`, `component-events-blocks.md`) now name `#controls-mount`, with his
+permission. **NEXT: item 3** — `MpiAudioPlayer` as a **very small widget whose width the
+consumer sets**, so it fits a Flow; copy `MpiVideoControlBar`'s `_toggleMute` +
+`_doVolume`-unmutes-on-nonzero wiring. Then item 4 (wire into `MpiBaseFlow`).
 
 ## Remaining Work
 
-- **5b. Transport bar below the PromptBox in the video workspace** (Fabio, 2026-09-12, with the
-  bar live on screen). Facts found, not yet designed: `MpiGroupHistoryBlock`'s grid is
-  `header / left centre right / controls`; the bar mounts in `#controls-slot`
-  (`.mpi-group-history-block__controls`, grid row 3, `auto`). The PromptBox sits in
-  `.mpi-group-history-block__bottom` — `position: fixed; bottom: 30px; z-index: 10`,
-  "shell-managed" — so it floats OVER the grid rather than taking a row, and its ▲ expander
-  opens upward across the bar. Read `.claude/rules/component-mounts.md` § MpiVideoControlBar
-  and `docs/workspaces.md` first; the rule files need Fabio's permission to edit. Only the
-  video workspace is in scope — the Flow result pane mounts its own bar under the split.
-  **Verify:** in a real window the bar sits below the PromptBox, the PromptBox's expanded
-  panel no longer covers any bar button, the volume flyout still opens unclipped, and
-  image groups (no bar, `:empty`) keep their layout. Then Fabio's live look.
+- [x] **5b. Transport bar below the PromptBox in the video workspace** (Fabio, 2026-09-12).
+      DONE, Fabio verified live. New shell slot `<div id="controls-mount">` in `index.html`
+      between `#prompt-box-mount` and `#shell-info-bar`; `styles/shell/workspace.css` gives it
+      `flex-shrink:0; position:relative; z-index:41` — one layer over the PromptBox's 40 so the
+      bar's upward volume flyout paints across it (falsified: `z-index:auto` and the slider
+      loses the pointer to the PromptBox). The block mounts the bar with
+      `gid('controls-mount')`; its `controls` grid row, `__controls` rules and `#controls-slot`
+      are gone. Teardown unchanged (instance `destroy()` removes the root from the slot); the
+      Flow `main-area` overlay stashes the slot like every `.main-area` child; focus mode hides
+      only `#prompt-box-mount`, so the bar stays. `docs/workspaces.md` updated.
+      **Verified:** `flow-audio-player.spec.js` test 4 (real window, video group with a
+      synthetic i2v model so the PromptBox mounts): bar top == PromptBox bottom, no PromptBox
+      node's box lands on the bar, every bar button hit-tests to itself, the flyout opens
+      unclipped over the PromptBox and takes the pointer, and an image group leaves the slot
+      empty at 0px with a two-row grid. The probe is proven able to see the bug: re-ordering
+      the slot above the PromptBox in-page makes it report the expand toggle and the op strip
+      on the bar. 11 passed across `flow-audio-player`, `workspace-sweep`, `mask-persist-roundtrip`.
+- Dead code noticed, not touched: `.mpi-group-history-block__bottom` (template div, its CSS and
+  a `focus-mode.css` rule) — nothing mounts there; the PromptBox goes to `#prompt-box-mount`.
 - `js/components/types.js`'s `MpiWaveformProps` typedef is **stale** from MPI-730 — it says
   the played layer is an `--accent-heat` tint (it is `--accent-audio` now) and its `seek`
   payload omits `modified`. Not this card's mess and not this card's file to fix; flag it
@@ -483,6 +491,13 @@ consumer sets**, so it fits a Flow. Master CI is green again since `da3b23bc`.
   toggles only a flag would look dead. (2) Move the video workspace's transport bar below the
   PromptBox — item 5b, next session, before item 3. `MpiVolumeControl.css` preload (item 8)
   already landed with item 5.
+- **2026-09-12 — 5b's recorded layout facts were wrong about the PromptBox.** The plan said it
+  lives in `.mpi-group-history-block__bottom` (`position: fixed`). Nothing ever mounts there:
+  the PromptBox goes into the shell-level `#prompt-box-mount`, an in-flow `.main-area` child
+  right after `#tool-container`. The bar, as the block's last grid row, was the bottom edge of
+  `#tool-container` — directly on top of the PromptBox, where its `bottom: 100%` chrome (the
+  expand toggle at `top: -10px`, the op strip) landed. Two parents, so no CSS-only reorder: the
+  bar moved to a shell slot instead.
 
 ## Verification
 

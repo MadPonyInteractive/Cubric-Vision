@@ -38,6 +38,16 @@
   z-index: 40;
 }
 
+/* ── Controls Mount — video transport, below the PromptBox (MPI-731) ────────────
+ * Below, not above: the PromptBox's strips open upward (bottom: 100%) and covered
+ * the bar's buttons. One layer over the PromptBox so the bar's own upward volume
+ * flyout paints across it. Empty (every non-video workspace) = zero height. */
+#controls-mount {
+  flex-shrink: 0;
+  position: relative;
+  z-index: 41;
+}
+
 /* ── Tool Container ─────────────────────────────────────────────────────────── */
 .tool-container {
   flex: 1;

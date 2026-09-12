@@ -1,3 +1,5 @@
+const fs = require('fs');
+const path = require('path');
 const { test, expect } = require('@playwright/test');
 const { launchApp, closeApp } = require('./launch');
 
@@ -505,6 +507,141 @@ test('MpiVideoControlBar drives a real video through MpiVolumeControl: click, wh
             document.getElementById('mpi731-bar-probe')?.remove();
             delete window.__mpi731b;
         });
+
+        expect(pageErrors, 'no renderer errors').toEqual([]);
+    } finally {
+        await closeApp(app);
+    }
+});
+
+/**
+ * Item 5b — in the video workspace the transport bar lives BELOW the PromptBox.
+ *
+ * It used to be the block's last grid row: the bottom of `#tool-container`, which sits directly
+ * on top of the shell-level `#prompt-box-mount`. Everything the PromptBox opens upward (the
+ * expand toggle at `top: -10px`, the op strip, the media strip) hangs off `bottom: 100%` of that
+ * mount — so it landed on the bar's buttons. The bar now mounts in `#controls-mount`, the shell
+ * slot after the PromptBox. Geometry and hit-testing in a real window, because the bug was paint.
+ */
+test('video Group History: the transport bar sits below the PromptBox and nothing covers it', async ({}, testInfo) => {
+    const { app, window, pageErrors } = await launchApp(testInfo);
+
+    // A real folder: a fake path 500s the settings writes (docs/testing-desktop-specs.md).
+    const folderPath = testInfo.outputPath('project');
+    fs.mkdirSync(folderPath, { recursive: true });
+    const project = {
+        id: 'p731', name: 'MPI-731', folderPath, modelSettings: {},
+        itemGroups: [
+            { id: 'gVid', type: 'video', name: 'Video', selectedIndex: 0,
+                history: [{ id: 'v1', type: 'video', filePath: '', displayName: 'v1' }] },
+            { id: 'gImg', type: 'image', name: 'Image', selectedIndex: 0, history: [] },
+        ],
+    };
+    fs.writeFileSync(path.join(folderPath, 'project.json'), JSON.stringify(project, null, 2));
+
+    try {
+        await window.waitForTimeout(6000);
+        await clearBootModals(window);
+
+        await window.evaluate(async (project) => {
+            const { state } = await import('/js/state.js');
+            const { navigate, PAGE_GROUP_HISTORY } = await import('/js/router.js');
+            const reg = await import('/js/data/modelRegistry.js');
+            // A runner has no weights: a dependency-free i2v model is what makes the video
+            // workspace mount its PromptBox at all (same trick as mask-persist-roundtrip).
+            reg.MODELS.push({
+                id: 'e2e-i2v', name: 'E2E I2V', mediaType: 'video', supportedOps: ['i2v'], installed: true,
+            });
+            state.currentProject = project;
+            await navigate(PAGE_GROUP_HISTORY, { groupId: 'gVid' });
+        }, project);
+
+        await window.waitForSelector('#controls-mount .mpi-video-control-bar', { timeout: 15000 });
+        await window.waitForSelector('#prompt-box-mount .mpi-prompt-box', { state: 'visible', timeout: 15000 });
+        await window.waitForTimeout(500);
+
+        // Every PromptBox node whose box lands on the bar, and every bar button whose centre does
+        // not hit-test to itself. Both empty = nothing covers it.
+        const probe = () => window.evaluate(() => {
+            const bar = document.querySelector('#controls-mount .mpi-video-control-bar');
+            const b = bar.getBoundingClientRect();
+            const overlaps = (r) => r.width > 0 && r.height > 0
+                && r.left < b.right && r.right > b.left && r.top < b.bottom && r.bottom > b.top;
+            const btns = [...bar.querySelectorAll('.mpi-btn')];
+            return {
+                barTop: b.top,
+                promptBottom: document.getElementById('prompt-box-mount').getBoundingClientRect().bottom,
+                buttons: btns.length,
+                painting: [...document.querySelectorAll('#prompt-box-mount *')]
+                    .filter(n => getComputedStyle(n).visibility !== 'hidden' && overlaps(n.getBoundingClientRect()))
+                    .map(n => n.getAttribute('class')),
+                blocked: btns.filter(btn => {
+                    const r = btn.getBoundingClientRect();
+                    return !btn.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2));
+                }).map(btn => btn.getAttribute('class')),
+            };
+        });
+
+        const after = await probe();
+        expect(after.buttons, 'play, both frame steps, frames, loop, mute, fullscreen').toBeGreaterThanOrEqual(7);
+        expect(after.barTop, 'the bar starts at the PromptBox\'s bottom edge, not above it')
+            .toBeGreaterThanOrEqual(after.promptBottom - 1);
+        expect(after.painting, 'no PromptBox node lands on the bar').toEqual([]);
+        expect(after.blocked, 'every bar button takes its own click').toEqual([]);
+
+        // The probe can see the bug: put the slot back ABOVE the PromptBox, where the old grid row
+        // sat, and the same probe must find the PromptBox on the bar. Then restore it.
+        await window.evaluate(() => {
+            const slot = document.getElementById('controls-mount');
+            slot.parentNode.insertBefore(slot, document.getElementById('prompt-box-mount'));
+        });
+        await window.waitForTimeout(200);
+        expect((await probe()).painting.length, 'above the PromptBox, its upward chrome lands on the bar')
+            .toBeGreaterThan(0);
+        await window.evaluate(() => {
+            const slot = document.getElementById('controls-mount');
+            slot.parentNode.insertBefore(slot, document.getElementById('shell-info-bar'));
+        });
+        await window.waitForTimeout(200);
+
+        // The volume flyout still opens whole, and over the PromptBox.
+        await window.waitForFunction(() => getComputedStyle(
+            document.querySelector('#controls-mount .mpi-volume-control__flyout')).position === 'absolute');
+        const vol = await window.evaluate(() => {
+            const r = document.querySelector('#controls-mount .mpi-volume-control .mpi-btn').getBoundingClientRect();
+            return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+        });
+        await window.mouse.move(vol.x, vol.y);
+        await window.waitForTimeout(400);
+        const flyout = await window.evaluate(() => {
+            const slider = document.querySelector('#controls-mount .mpi-volume-control__slider');
+            const f = document.querySelector('#controls-mount .mpi-volume-control__flyout').getBoundingClientRect();
+            const t = slider.getBoundingClientRect();
+            return {
+                height: f.height,
+                clipped: f.top < document.querySelector('.main-area').getBoundingClientRect().top,
+                overPrompt: f.top < document.getElementById('prompt-box-mount').getBoundingClientRect().bottom,
+                reachable: slider.contains(document.elementFromPoint(t.x + t.width / 2, t.y + t.height / 2)),
+            };
+        });
+        expect(flyout.height, 'the flyout opened').toBeGreaterThan(50);
+        expect(flyout.clipped, 'and nothing clips it').toBe(false);
+        expect(flyout, 'it rises across the PromptBox and its slider takes the pointer there')
+            .toMatchObject({ overPrompt: true, reachable: true });
+
+        // An image group mounts no bar: the slot is empty, takes no room, and the grid is two rows.
+        await window.mouse.move(5, 5);
+        await window.evaluate(async () => {
+            const { navigate, PAGE_GROUP_HISTORY } = await import('/js/router.js');
+            await navigate(PAGE_GROUP_HISTORY, { groupId: 'gImg' });
+        });
+        await window.waitForFunction(() => document.querySelector('.mpi-group-history-block')
+            && !document.querySelector('.mpi-video-viewer'), null, { timeout: 15000 });
+        expect(await window.evaluate(() => ({
+            slotEmpty: document.getElementById('controls-mount').children.length === 0,
+            slotHeight: document.getElementById('controls-mount').getBoundingClientRect().height,
+            rows: getComputedStyle(document.querySelector('.mpi-group-history-block')).gridTemplateRows.split(' ').length,
+        })), 'leaving the video group took the bar with it').toEqual({ slotEmpty: true, slotHeight: 0, rows: 2 });
 
         expect(pageErrors, 'no renderer errors').toEqual([]);
     } finally {

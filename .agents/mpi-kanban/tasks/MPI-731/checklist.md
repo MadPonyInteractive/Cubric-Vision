@@ -16,8 +16,9 @@ the spec.
   - [x] 5. `MpiVideoControlBar` adopts `MpiVolumeControl` — hotkeys `M` / volume± keep working
         (spec test 3 green + falsified; Fabio approved live). Plus: zero reads as muted, and a
         click at zero restores the pre-gesture level
-  - [ ] 5b. Video workspace: transport bar moves BELOW the PromptBox, so the PromptBox's
-        upward panel stops covering the bar's buttons (Fabio, 2026-09-12) — NEXT
+  - [x] 5b. Video workspace: transport bar moves BELOW the PromptBox, so the PromptBox's
+        upward panel stops covering the bar's buttons (Fabio, 2026-09-12) — shell slot
+        `#controls-mount`, spec test 4 green + falsified, Fabio verified live
   - [ ] 6. `MpiGalleryGrid` adopts it, and the gallery gains a real mute button.
         **LAST, and hunk-staged**: that file holds MPI-733's and MPI-678's uncommitted work
   - [ ] 7. `tests/desktop/flow-audio-player.spec.js` + the MPI-727 regression spec + a live
