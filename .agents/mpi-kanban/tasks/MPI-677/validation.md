@@ -1042,3 +1042,54 @@ window; one of the six is this one.
 no short prompt anywhere on disk — the enhanced text is all that was ever written, so
 there is nothing to reconstruct it from. Closing this leg needs a NEW enhanced
 generation, then Reuse, then Reuse again after an app RELOAD.
+
+## THE DOG EXPERIMENT — run, 30 runs, and it refutes BOTH candidate causes (2026-09-12)
+
+`a man walking his dog` → `illustrious` t2v, via `selectSystemPrompt()` and the app's
+own `OllamaEngine`/`DeepInfraEngine`. Nothing was edited first, per the handoff.
+
+| enhancer model | role | animal kept | leash kept | subject kept |
+|---|---|---|---|---|
+| `google/gemma-4-26B-A4B-it` | **the shipped CLOUD default** | **10/10** | 10/10 | 10/10 |
+| `gemma4:e4b` | the shipped LOCAL default | **10/10** | 9/10 | 10/10 |
+| `huihui_ai/gemma-4-abliterated:12b` | **the model of record** | **4/10** | 9/10 | 10/10 |
+
+**The hypothesis was posed backwards.** It read "the shipped path runs the weaker
+instrument; the recipe was measured on the 12B". The measurement says the opposite:
+both shipped models keep the dog every single time, and **the model every v1 recipe is
+green on drops it in 6 runs out of 10**.
+
+**The consequence is a decision, not a curiosity.** Switching the default enhancer to
+`gemma-4-abliterated-12b` is a live question — it is MPI-728's third gap and it was
+recorded here as Fabio's product call. On this evidence that switch would **introduce**
+the defect it was being considered to fix. It does not settle the switch (one recipe,
+one input), but it inverts the burden of proof.
+
+**The tell, and it is worth more than the counts:** the 12B keeps `holding leash` 9/10
+while dropping the animal 6/10. It writes a man holding a leash attached to nothing.
+That is not a budget problem or a vocabulary problem — the tag naming the thing is
+absent while the tag describing the relationship to it survives, so the recipe's rule 1
+("never their furniture and never their pets") has nothing pinning it for this model.
+An exemplar showing a person WITH an animal is still owed; it is now owed for the 12B,
+not for the path users are on.
+
+### A recorded claim that is wrong: "the shipped SFW path runs `gemma4:e4b`"
+
+It runs `gemma4:e4b` **only when there is no DeepInfra key.** `chooseBackend()` returns
+`'deepinfra'` whenever the server reports a key (`routes/llm.js:70`, `:83`), and
+`chooseEngineModelId()` then sends `undefined` so DeepInfra takes the registry default —
+`google/gemma-4-26B-A4B-it` (`llmEngines.mjs:52`). **Fabio has a key**, so unless he
+pinned a backend in localStorage, his enhance ran in the cloud on a model neither the
+handoff nor rounds 1–2 of this experiment had touched. The local `e4b` reading was an
+inference from `DEFAULT_MODEL_ID` that skipped the backend branch above it.
+
+### Fabio's original dropped dog is NOT reproduced
+
+20 runs on the two shipped paths, zero drops. His run is real and was seen, so what it
+measured is still open — a pinned backend, the in-graph ComfyUI encoder
+(`chooseBackend` sends uncensored cards there), or a different input. **It is not the
+shipped SFW path on this recipe.** Worth noting that the card he generated immediately
+afterwards, `t2i_002`, DOES carry `dog` in its stored prompt.
+
+Raw runs: `scratchpad/dog-runs.json`, `scratchpad/dog-runs-deepinfra.json` (session
+scratchpad, not committed).
