@@ -102,6 +102,6 @@ in the card description are retired; `plan.md` carries the mapping note.
         `resources/cubric/connector-manifest.json` still advertises four broker
         capabilities nothing serves. Left in place because the portable build
         reads and hashes it (`assertConnectorManifest`) — step 5 owns its fate
-- [ ] Step 3 — release the repos *(archive Cubric-Prompt on Fabio's explicit go)*
+- [x] Step 3 — release the repos *(Cubric-Prompt archived 2026-09-12: banner pushed as `35dee06`, GitHub flag set by Fabio)*
 - [ ] Step 4 — the corpus, the skill split (MPI-593 owns it), the build/heal loop
 - [ ] Step 5 — the agent that talks to the user *(gets its own plan when reached)*

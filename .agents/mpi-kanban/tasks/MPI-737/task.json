@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-737",
+  "title": "Image descriptions become backend-choosable, and grow past captioning",
+  "description": "Fabio, 2026-09-12, split out of MPI-728 on his explicit ask (\"You can create its own card for descriptions. Probably best. It can actually grow into something that is unexpected. Just make sure that is part of the umbrella we are carrying on with\"). PARENT: MPI-677, the consolidation umbrella. SIBLING: MPI-728, which owns the settings section and the Enhancement dropdown; this card owns the Descriptions dropdown and everything downstream of it.\n\nTODAY DESCRIPTIONS RUN IN EXACTLY ONE PLACE AND THE USER CANNOT MOVE THEM. `imageDescribe` (js/data/modelConstants/universal_workflows.js:46) runs comfy_workflows/image_descriptor.json - 7 nodes, its own CLIPLoader (node 35) pulling qwen3vl_4b_abliterated_fp8_scaled.safetensors, a TextGenerate at node 36. It is reached only from the gallery/history right-click via js/utils/describeAction.js, and it is gated on the Image Describer PLUGIN (js/data/pluginsRegistry.js:63, requiredDeps: ['qwen3vl-abliterated-clip']). There is no DeepInfra path and no Ollama path, and there cannot be one today: MODEL_REGISTRY (services/llmEngines.mjs:48) holds six models and EVERY ONE IS TEXT-ONLY. No vision model in it. That asymmetry - enhancement has three backends, description has one - is the whole reason descriptions get their own dropdown instead of inheriting the enhancement one. A single dropdown governing both would break Describe image the moment a user picked Ollama, or silently fall back to ComfyUI, which is the exact silent guessing MPI-728 exists to delete.\n\nTHE POINT IS WHERE THE WORK RUNS, NOT WHICH MODEL IS SMARTEST (Fabio, 2026-09-12). His two cases, and they are the spec: a user generating on a RunPod pod should be able to describe and enhance locally on Ollama; a user generating locally in ComfyUI should be able to push description off to DeepInfra so it costs no local VRAM and the generation stays fast. The backend choice is a COMPUTE PLACEMENT decision. The picker copy must say that, and must not read as a quality ranking.\n\nSCOPE: (1) a vision-capable entry in MODEL_REGISTRY so the Descriptions dropdown has a second option - DeepInfra and Ollama both carry vision models, so this is a registry addition plus an image-passing path in the engines, not new plumbing; (2) route `imageDescribe` through the chosen backend rather than hardwiring ComfyUI; (3) the honest gate on the ComfyUI entry, which is whether `qwen3vl-abliterated-clip` is installed - the same gate the plugin already uses.\n\nSHIP THE DROPDOWN WITH ONE OPTION FIRST (Fabio's call): visible now, ComfyUI only, with a line saying more arrive when a vision model is added. \"We will fix it, add to it, and improve it as we go along.\"\n\nWHERE IT MAY GROW, and why Fabio wanted it on its own card: a describer that can run anywhere stops being a right-click caption. It is the read half of the step-5 agent (MPI-677 step 5), which has to look at what it just generated to say anything useful about it; and Vision already has an unreachable audio-understanding input on the same node (TextGenerate's `audio` input, engine/.../nodes_textgen.py:38, with no installed encoder that can tokenize it) plus a cheap video-understanding path via its `video` input at 1 FPS subsample. Do not build those here - they are named so the dropdown is not designed in a way that forecloses them.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-09-12T12:57:04+01:00",
+  "updated_at": "2026-09-12T12:57:04+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

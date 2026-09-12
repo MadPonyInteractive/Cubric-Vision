@@ -35,11 +35,83 @@ names but never lettered. **Order is by priority, not by letter.**
 
 ## Current State
 
-**2026-09-12 (later) — THE GOAL IS MET. Steps 1, 2 and 3 are done: Vision enhances on
-its own, the cord is cut, and Cubric-Prompt is archived.** One action outstanding and
-it is Fabio's: `gh repo archive MadPonyInteractive/Cubric-Prompt --yes` (the local
-banner is pushed; the classifier refused the flag). Step 4's corpus path is built;
-steps 4's remaining bullets and step 5 are what is left of the card.
+**2026-09-12 (later) — THE GOAL IS MET, AND STEP 3 IS NOW FULLY CLOSED.** Vision
+enhances on its own, the cord is cut, and Cubric-Prompt is archived on GitHub —
+**Fabio ran `gh repo archive MadPonyInteractive/Cubric-Prompt --yes` himself on
+2026-09-12**, after an agent session's permission classifier refused it. Nothing is
+outstanding on steps 1–3. Step 4's corpus path is built; step 4's remaining bullets
+and step 5 are what is left of the card.
+
+**2026-09-12 (this session) — MPI-728 IS PLANNED, and planning it against disk
+resized it three ways.** `tasks/MPI-728/plan.md`, 3 phases, `Verify mode:
+user-ux`. All three findings are measurements, not readings of the card:
+
+1. **Gap 1 is a UI field, not a store.** The DeepInfra key plumbing is already
+   complete and already tested — `main/secretsStore.js:163,175,238-239` plus the
+   fork bridge at `:267-276`, `js/core/secretsClient.js:81,93,106`, covered by
+   `tests/llm-service.test.cjs:172-223`. The card's "the key only ever reached the
+   app through the environment on a dev boot" describes the missing FIELD; the
+   bridge has been there all along and `routes/llm.js:49` asks it first.
+2. **The deletion and the picker are ONE edit, so phase 1 cannot ship alone.**
+   Strip `isUncensoredModel` and `chooseEngineModelId()` returns `undefined` on
+   every path — it is dead, not simplified. What revives it is the user's stored
+   choice, in the same localStorage shape `backendPreference()` (`:172`) already
+   uses. Shipping the deletion by itself would leave a user who wants the
+   abliterated build with no way to ask for it.
+3. **The test surface is three whole test functions, not "four assertions".**
+   `testUncensoredNeverReachesTheCloud` (`:55-64`),
+   `testUncensoredWorkGetsTheAbliteratedModel` (`:78-85`) and
+   `testUncensoredModelIsIdSuffixed` (`:86-92`), plus three registrations at
+   `:236,238,239` and the `NSFW_*` fixtures they orphan.
+
+**One decision is open for Fabio and is written into that plan**: after the
+deletion, is the in-graph `comfy` backend reachable only by an explicit pick?
+Recommendation there is yes-but-OFFER-it — list it whenever
+`canEnhanceInGraph(model)`, labelled as the option costing no extra VRAM.
+
+**THE UMBRELLA'S OWN COMPLETION CLAUSE (§ Verification) IS NOW SATISFIED** —
+Vision enhances with no sibling app, the broker greps clean, and Cubric-Prompt is
+archived. Steps 4 and 5 are what keep this card open, and step 5 is a product
+feature that wants its own card. **Whether to close MPI-677 and spin those out is
+Fabio's call, not a tidy-up to perform.**
+
+**Found, not touched:** the board validator fails on 5 errors, all from ONE
+malformed line a peer wrote at 11:29:15Z —
+`.agents/mpi-kanban/tasks/MPI-736/events.jsonl:2`, duplicated into
+`.agents/mpi-kanban/events.jsonl:4062`. It uses `event`/`task`/`note` where the
+schema wants `schema`/`type`/`id`. Another session's card and another session's
+log line; not repaired from here.
+
+**2026-09-12 (this session, later) — FABIO REDESIGNED THE PICKER MID-CONVERSATION,
+AND MPI-737 IS A NEW UMBRELLA MEMBER.** The settings surface is now **one dropdown
+per JOB, each listing BACKENDS rather than model ids**: Enhancement (MPI-728),
+Descriptions (**MPI-737**, created on his explicit ask), and the agent's own when
+step 5 lands.
+
+**The framing is compute PLACEMENT, not model quality**, and the copy has to carry
+it. His two cases: generating on a RunPod pod — enhance locally on Ollama,
+because the local card is idle; generating locally in ComfyUI — push
+enhancement to DeepInfra so it costs no local VRAM.
+
+**Two measurements from this pass that the plans now turn on:**
+
+1. **The four-model ComfyUI gate does not exist.**
+   `comfy_workflows/qwen3vl_4b_prompt_enhancer.json` carries its OWN `CLIPLoader`
+   (node 9), and so does `image_descriptor.json` (node 35). Neither borrows the
+   generation model's encoder, so `canEnhanceInGraph()`'s restriction is
+   VRAM-thrift, not capability. The real gate is the one
+   `pluginsRegistry.js:63` already uses: is `qwen3vl-abliterated-clip` installed?
+   The T5/umT5 crash warning in `models.js:14` is real but describes the
+   **in-graph** `TextGenerate` (Krea2 node 58 behind `Input_enhance_prompt` at
+   node 241), not the standalone graph. **Unverified on a non-Krea model** — both
+   loaders pass `type: "krea2"`, and that has never been exercised outside the
+   four. Run that first.
+2. **Descriptions cannot share the enhancement dropdown.** `imageDescribe` has no
+   DeepInfra and no Ollama path and cannot have one today: `MODEL_REGISTRY`
+   (`services/llmEngines.mjs:48`) is six models and every one is TEXT-ONLY. One
+   dropdown for both would break "Describe image" the moment a user picked
+   Ollama. That asymmetry is why MPI-737 exists rather than a second bullet on
+   MPI-728.
 
 Round 3 found the defect the whole `user-ux` gate existed to catch: `sourcePrompt`
 never reached the sidecar, because two run-payload mappers destructure an explicit
@@ -452,10 +524,11 @@ and invisible in the plan is this card's signature failure.
       nothing else counts.
       **GO GIVEN 2026-09-12, immediately after 1c closed and step 2 was confirmed
       live.** Cubric-Prompt `35dee06` puts an archive banner at the top of its
-      `CLAUDE.md` and is pushed. **The GitHub flag itself is Fabio's one command** —
-      `gh repo archive MadPonyInteractive/Cubric-Prompt --yes` was refused by this
-      session's permission classifier, so it is the single outstanding action and it
-      is his to run.
+      `CLAUDE.md` and is pushed. **The GitHub flag was Fabio's one command, and he
+      ran it (2026-09-12).**
+      `gh repo archive MadPonyInteractive/Cubric-Prompt --yes` was refused by an agent
+      session's permission classifier, so it was handed over rather than routed
+      around; Fabio confirmed the repo is archived. **Step 3 has nothing left.**
       **The banner does the work the flag does not.** His complaint was that sessions
       keep OPENING in that repo, which is a launcher cwd, not a GitHub state — a
       read-only remote would not have told a local session anything. So the banner
@@ -579,6 +652,14 @@ with ownership `js/data/recipes/corpus.js` + `docs/agent/**` against
 `.claude/skills/cubric-vision/**`, and only once MPI-547 has landed.
 
 ## Plan Drift
+
+- **2026-09-12 — the umbrella grew a member after its goal was met, deliberately.**
+  MPI-737 (descriptions) was created on Fabio's explicit ask and belongs to this
+  umbrella, not to MPI-728. It is downstream of step 1's enhancement work but is
+  not part of it: the settings surface is one dropdown per job, and descriptions
+  are a different job with a different backend set. Noted here because the card's
+  § Verification completion clause is already satisfied — new members change
+  what "done" costs, so they must be visible, not discovered at close-out.
 
 - **2026-09-09 — "fold in the two Flow-internal enhance buttons" was read as ONE
   DISPATCH, not one backend, and that reading is load-bearing.** The obvious
