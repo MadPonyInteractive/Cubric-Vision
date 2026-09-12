@@ -355,9 +355,23 @@ settled below from the code, not from preference. Do not re-litigate them — bu
       reads HIGH, fill anchored at the bottom, horizontal control beside it untouched.
       **Falsified**: without `direction: rtl` a bottom click reads 100 and the spec fails.
 
-**Where it stands at handoff (2026-09-12 ~19:05Z):** item 1 shipped; card in `doing`. Next is
-item 2, `MpiVolumeControl`. Fabio wants a real-window screenshot of the flyout (height, travel)
-before it lands in the video bar. Nothing else is in progress; the tree holds no MPI-731 edits.
+- [x] **2. `MpiVolumeControl`** (2026-09-12, uncommitted). `js/components/Compounds/MpiVolumeControl/`
+      — `MpiButton` mute + vertical `MpiProgressBar` in an upward flyout, owns no media.
+      Props `{ value, muted, step, wheel, info }`; API `setValue` / `setMuted` / `getValue`
+      (both setters quiet); emits `input` / `change` / `mute-toggle { muted }`. Panel 140px,
+      travel 112px (`--s-8`). Verified by the second test in
+      `tests/desktop/flow-audio-player.spec.js`, mounted in a real `MpiVideoControlBar`'s right
+      cluster in place of its own pair: hidden and click-through before hover, open on hover,
+      survives the pointer travelling up into it, top click LOUD / bottom QUIET, mute asks
+      `muted: true`, setters never echo, closes on leave. **Falsified**: with `:focus-within`
+      in place of `:has(:focus-visible)` the "leaving closes" assertion fails.
+
+**Where it stands (2026-09-12 ~19:50Z):** items 1-2 done; card in `doing`. Fabio signed off
+the flyout: **height (140px / 112px travel) fine, upward-only fine, and the WHEEL MUST
+change volume, fast, like the gallery** (gallery = `step: 5, wheel: true`). **Order changed:
+item 5 (video bar adopts `MpiVolumeControl`) goes NEXT, before item 3**, so he can see it in
+action in the real video workspace first. Then item 3, where the player must be a **very
+small widget whose width the consumer sets**, so it fits a Flow's layout.
 
 ## Remaining Work
 
@@ -411,6 +425,29 @@ before it lands in the video bar. Nothing else is in progress; the tree holds no
   `HTMLMediaElement.volume` cannot use. So this card now ADDS the option to `MpiProgressBar`
   (item 1) rather than reaching for `MpiFader` — one Primitive owns sliders, and the next
   surface that wants a vertical one should find it there.
+- **2026-09-12 — item 2 built slightly different from its spec, each for a measured reason.**
+  (a) **`:has(:focus-visible)`, not `:focus-within`**: a mouse click leaves focus on the
+  button or the range, so `:focus-within` held the flyout open after the pointer left —
+  proven by swapping it back and watching the spec fail. Keyboard focus still opens it.
+  (b) **No separate `setValueQuiet`**: `setValue` is already quiet, because every consumer
+  is the source of truth and only ever mirrors state back; an emitting setter had no caller.
+  (c) **An `info` prop** for the mute tooltip: only the video bar binds `M`, so a hardcoded
+  "(M)" would lie in the gallery and the player's N-output mounts.
+  (d) **The flyout opens UPWARD only.** Right for the video bar and the dock; the gallery
+  header sits at the TOP of its workspace, so item 6 may need a downward modifier. Not built
+  until item 6 proves it.
+- **2026-09-12 — Fabio's flyout sign-off reorders the card and settles the wheel.** Height
+  and upward direction approved as built. The wheel is ON for every mount and fast, gallery
+  speed (5 per tick): make `wheel` default true and step the wheel by 5 in
+  `MpiVolumeControl` itself rather than asking each consumer, then drive it by wheel in the
+  spec. Item 5 now precedes item 3 so the control is seen live in the video workspace
+  before the player is built. Item 3 constraint added: the player is a **small** widget and
+  its width is the consumer's to set (no fixed or minimum width that fights a Flow pane).
+- **2026-09-12 — two item-8 premises are stale.** `MpiWaveform.css` IS already in
+  `js/shell/preloadStyles.js` (line 83), and no live claim holds `preloadStyles.js` or
+  `types.js` (MPI-728's record is complete). Item 8 is unblocked. It also matters more than
+  it read: an unregistered component stylesheet loads async on first mount, and the spec
+  measured the flyout OPEN before the sheet landed — that flash is what users would see.
 
 ## Verification
 

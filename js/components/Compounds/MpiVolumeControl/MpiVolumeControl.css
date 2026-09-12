@@ -1,0 +1,49 @@
+/* MpiVolumeControl — mute button, vertical volume flyout above it.
+   The reveal is CSS only: the ROOT's `:hover, :focus-within` opens the flyout, and
+   the flyout sits flush on the button (its gap is its own transparent padding), so
+   the pointer never crosses a pixel that is outside the root on the way up. */
+
+.mpi-volume-control {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.mpi-volume-control__flyout {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    z-index: 10;
+    /* The breathing room between button and panel. Padding, not margin: it is
+       part of the root's box, so hover survives the travel across it. */
+    padding-bottom: var(--s-1);
+    transform: translateX(-50%);
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--t-fast) var(--ease), visibility var(--t-fast);
+}
+
+/* `:focus-visible`, not `:focus-within`: a mouse click leaves focus on the button or
+   the range, and `:focus-within` would then hold the flyout open after the pointer
+   has left. Keyboard focus is the only focus that should open it. */
+.mpi-volume-control:hover .mpi-volume-control__flyout,
+.mpi-volume-control:has(:focus-visible) .mpi-volume-control__flyout {
+    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* The panel. Its height IS the slider's travel — MpiProgressBar vertical takes
+   its height from this box. */
+.mpi-volume-control__slider {
+    box-sizing: border-box;
+    width: var(--s-5);
+    height: calc(var(--s-8) + var(--s-3) * 2);
+    padding: var(--s-3) 0;
+    display: flex;
+    justify-content: center;
+    background: var(--surface-bar);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+}

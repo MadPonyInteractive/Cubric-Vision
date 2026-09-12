@@ -7,8 +7,8 @@ the spec.
 - [ ] **Implementation**
   - [x] 1. `MpiProgressBar` gains `orientation: 'vertical'` — additive, horizontal path
         untouched, `writing-mode: vertical-lr` (native in Chromium 142 / Electron 41)
-  - [ ] 2. `MpiVolumeControl` compound — mute button + hover-reveal vertical volume, owns no
-        media element, three consumers
+  - [x] 2. `MpiVolumeControl` compound — mute button + hover-reveal vertical volume, owns no
+        media element, three consumers (flyout sign-off from Fabio pending)
   - [ ] 3. `MpiAudioPlayer` compound — one row, `play │ time │ waveform │ mute`, owns ONE
         `<audio>`, mounts MPI-730's `MpiWaveform` as its scrub track
   - [ ] 4. Wire it into the Flow's result pane and floating dock — `_sharedAudioPlayer`

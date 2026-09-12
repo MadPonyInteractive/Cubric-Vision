@@ -174,3 +174,150 @@ test('a vertical MpiProgressBar fills from the bottom and reads bottom-to-top', 
         await closeApp(app);
     }
 });
+
+/**
+ * Item 2 — `MpiVolumeControl`, the mute button with the volume hiding above it.
+ *
+ * Its reveal is CSS alone (`:hover, :focus-within` on the root), which is exactly the kind
+ * a specificity accident leaves permanently open or permanently shut — so visibility is
+ * MEASURED here (computed style plus what the pointer actually hits), never read off a
+ * class. It is mounted in the right cluster of a real `MpiVideoControlBar`, standing in
+ * for the bar's own volume pair, because that is where item 5 puts it and the height of
+ * the flyout only means something next to the bar it rises out of.
+ */
+test('MpiVolumeControl reveals its vertical volume on hover and reports, never owns, the state', async ({}, testInfo) => {
+    const { app, window, pageErrors } = await launchApp(testInfo);
+
+    try {
+        await window.waitForTimeout(6000);
+        await clearBootModals(window);
+
+        const geo = await window.evaluate(async () => {
+            const { MpiVideoControlBar } = await import('/js/components/Compounds/MpiVideoControlBar/MpiVideoControlBar.js');
+            const { MpiVolumeControl } = await import('/js/components/Compounds/MpiVolumeControl/MpiVolumeControl.js');
+
+            const host = document.createElement('div');
+            host.id = 'mpi731-volume-probe';
+            host.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999';
+            document.body.appendChild(host);
+
+            const bar = MpiVideoControlBar.mount(host, { showTrim: false });
+            // Stand-in for item 5: the bar's own horizontal pair out, the compound in.
+            const oldPair = bar.el.querySelector('.mpi-video-control-bar__volume');
+            const slot = document.createElement('div');
+            oldPair.after(slot);
+            oldPair.style.display = 'none';
+
+            const vc = MpiVolumeControl.mount(slot, { value: 50, info: 'Mute/Unmute (M)' });
+            const log = [];
+            vc.on('input', ({ value }) => log.push(['input', value]));
+            vc.on('change', ({ value }) => log.push(['change', value]));
+            vc.on('mute-toggle', ({ muted }) => log.push(['mute-toggle', muted]));
+            window.__mpi731v = { bar, vc, log };
+
+            const btn = vc.el.querySelector('.mpi-btn').getBoundingClientRect();
+            return { btn: { x: btn.x + btn.width / 2, y: btn.y + btn.height / 2 } };
+        });
+
+        const probe = () => window.evaluate(() => {
+            const { vc } = window.__mpi731v;
+            const flyout = vc.el.querySelector('.mpi-volume-control__flyout');
+            const track = vc.el.querySelector('.mpi-progress__track-container').getBoundingClientRect();
+            const btn = vc.el.querySelector('.mpi-btn').getBoundingClientRect();
+            const cx = track.x + track.width / 2;
+            const cy = track.y + track.height / 2;
+            const hit = document.elementFromPoint(cx, cy);
+            return {
+                visibility: getComputedStyle(flyout).visibility,
+                opacity: parseFloat(getComputedStyle(flyout).opacity),
+                pointerReachesSlider: !!hit && vc.el.querySelector('.mpi-volume-control__slider').contains(hit),
+                track: { x: cx, top: track.y, bottom: track.bottom, h: track.height },
+                btnTop: btn.y,
+            };
+        });
+
+        // The factory injects a component's stylesheet as a `<link>` on first mount, and it
+        // loads async: measured before it lands, the flyout is an unstyled, visible div. So
+        // wait for the sheet, then past the `--t-fast` fade it triggers on the way in.
+        await window.waitForFunction(() => getComputedStyle(
+            window.__mpi731v.vc.el.querySelector('.mpi-volume-control__flyout')).position === 'absolute');
+        await window.waitForTimeout(350);
+
+        // Closed until asked: not painted, and the pointer passes straight through it.
+        const closed = await probe();
+        expect(closed.visibility, 'the flyout is hidden before any hover').toBe('hidden');
+        expect(closed.pointerReachesSlider, 'and a closed flyout catches no pointer').toBe(false);
+
+        await window.mouse.move(geo.btn.x, geo.btn.y);
+        await window.waitForTimeout(350);
+        const open = await probe();
+        expect(open.visibility, 'hovering the mute button opens it').toBe('visible');
+        expect(open.opacity).toBeGreaterThan(0.95);
+        expect(open.pointerReachesSlider, 'and the slider is now what the pointer hits').toBe(true);
+        expect(open.track.bottom, 'it rises ABOVE the button').toBeLessThanOrEqual(open.btnTop);
+        expect(open.track.h, 'with a usable length of travel').toBeGreaterThan(90);
+
+        // The travel from the button up into the slider must not close it on the way.
+        await window.mouse.move(open.track.x, open.track.top + 4, { steps: 12 });
+        await window.waitForTimeout(150);
+        expect((await probe()).visibility, 'still open after the pointer travels up into it')
+            .toBe('visible');
+
+        await window.screenshot({ path: testInfo.outputPath('volume-flyout-open.png') });
+
+        // It reports the gesture — top of the track is loud, bottom is quiet.
+        await window.mouse.click(open.track.x, open.track.top + 4);
+        await window.waitForTimeout(150);
+        await window.mouse.click(open.track.x, open.track.bottom - 4);
+        await window.waitForTimeout(150);
+        const afterDrag = await window.evaluate(() => {
+            const { vc, log } = window.__mpi731v;
+            return { log: log.slice(), value: vc.el.getValue() };
+        });
+        const inputs = afterDrag.log.filter(([k]) => k === 'input').map(([, v]) => v);
+        expect(inputs.length, 'a click on the slider emits input').toBeGreaterThanOrEqual(2);
+        expect(inputs[0], 'near the top reads LOUD').toBeGreaterThan(80);
+        expect(inputs[inputs.length - 1], 'near the bottom reads QUIET').toBeLessThan(20);
+        expect(afterDrag.value).toBeLessThan(20);
+
+        // Mute is a REQUEST. The compound says what was asked; setters never echo back.
+        await window.mouse.move(geo.btn.x, geo.btn.y);
+        await window.mouse.click(geo.btn.x, geo.btn.y);
+        const muted = await window.evaluate(() => {
+            const { vc, log } = window.__mpi731v;
+            const last = log[log.length - 1];
+            const btn = vc.el.querySelector('.mpi-btn');
+            const activeAfterClick = btn.classList.contains('is-active');
+            const before = log.length;
+            vc.el.setMuted(false);
+            vc.el.setValue(30);
+            return {
+                last, activeAfterClick,
+                activeAfterSet: btn.classList.contains('is-active'),
+                value: vc.el.getValue(),
+                echoed: log.length - before,
+            };
+        });
+        expect(muted.last, 'clicking mute asks for muted: true').toEqual(['mute-toggle', true]);
+        expect(muted.activeAfterClick, 'and shows it').toBe(true);
+        expect(muted.activeAfterSet, 'setMuted(false) puts it back').toBe(false);
+        expect(muted.value, 'setValue lands').toBe(30);
+        expect(muted.echoed, 'and neither setter emits — the consumer is the truth').toBe(0);
+
+        // Away from the control, it closes again.
+        await window.mouse.move(5, 5);
+        await window.waitForTimeout(350);
+        expect((await probe()).visibility, 'leaving closes the flyout').toBe('hidden');
+
+        await window.evaluate(() => {
+            window.__mpi731v.vc.destroy();
+            window.__mpi731v.bar.destroy();
+            document.getElementById('mpi731-volume-probe')?.remove();
+            delete window.__mpi731v;
+        });
+
+        expect(pageErrors, 'no renderer errors').toEqual([]);
+    } finally {
+        await closeApp(app);
+    }
+});
