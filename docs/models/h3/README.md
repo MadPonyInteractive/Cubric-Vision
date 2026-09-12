@@ -296,6 +296,11 @@ below); the `MpiIfElse` nodes left in fl2va all key on `Input_is_Turbo` (`turbo.
 encoding the keyframes at its own pass size) and ZERO core `MiniMaxH3ImageToVideo`, because a
 missing or stray node does not error — it conditions on the wrong frames.
 
+**A lone end frame on a short clip looks like the video STARTS on it.** Core pins `last_frame`
+at `frame_count - 1` (`nodes_minimax_h3.py`), and a 1 s ask snaps to 22 frames (0.92 s), too
+few to travel toward it. Not a routing fault: the last frame does match. Ask for 3 s or more
+(MPI-733, 2026-09-12).
+
 ### The keyframe resize belongs to the NODE — the graph lost it once already
 
 `MiniMaxH3ImageToVideo` treats its two keyframes differently: `first_frame` gets

@@ -344,6 +344,11 @@
   removing and swapping LoRAs is unchanged, and still lives in LoRA & Upscale on the model
   card.
 
+- **Cue all: run one operation over many pictures.** Select several gallery cards, right-click
+  and pick Cue all. Each picture becomes its own job on your current prompt and settings, so
+  five photos give you five upscales or five clips. Cards the operation can't use are skipped
+  and counted.
+
 ## Fixes
 
 > **A fix to a FLOW does not belong in this section for this release.** Flows debut here, so

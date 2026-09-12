@@ -20,10 +20,10 @@ the queue and the prompt box, and that reading turned up a stale set of comments
 re-opened a decision about PiD. Hence three members, only the first of which is the
 original ask.
 
-**Where the umbrella stands, 2026-09-12.** Phase 1 is DONE — MPI-735 shipped and is in
-`done`/`complete`. Phase 2 (MPI-733, Cue all) is the next action, and its Phase 1 (the
-pure eligibility helper + Node test) is clear to run; its Phases 2–3 wait on a live peer
-claim, see Plan Drift. Phase 3 (MPI-734) is still at its decision gate awaiting Fabio.
+**Where the umbrella stands, 2026-09-12.** Phases 1 and 2 are DONE — MPI-735 and MPI-733
+(Cue all, verified by Fabio in his own app, closed in `c9d2f88c`) are both `done`/`complete`.
+Only Phase 3 (MPI-734) remains, and it has NOT started: its Phase 1 research
+(`tasks/MPI-734/research/install-status.md`) must exist before (a) vs (b) goes to Fabio.
 
 **One thing was checked and needs NO card — do not create one.** The user-facing
 collapse of `edit` / `krea2Edit` / `qwenEdit` / `kleinEdit` onto **Edit**, and `pid`
@@ -39,7 +39,7 @@ case), and `operation_registry.json` version-tracks each key.
 
 | # | card | what | maturity |
 |---|---|---|---|
-| 1 | **MPI-733** | Cue all — batch a gallery multi-select through the current prompt-box recipe | `planned` |
+| 1 | **MPI-733** | Cue all — batch a gallery multi-select through the current prompt-box recipe | **`complete`** ✅ |
 | 2 | **MPI-734** | PiD is not deprecated — it stays as a model that brings its four upscale plugins | `needs-decision` |
 | 3 | **MPI-735** | Stale comments claim the edit ops show a ratio picker | **`complete`** ✅ |
 
@@ -89,7 +89,10 @@ been made. Work them sequentially through `mpi-continue`.
 
 ## Phase 2: MPI-733 — Cue all
 
-- [ ] Work `tasks/MPI-733/plan.md` to completion, phases 1–4.
+- [x] Work `tasks/MPI-733/plan.md` to completion, phases 1–4.
+      **Verified 2026-09-12:** Fabio ran Cue all in his own app (H3, pill-tagged
+      `endFrame`, one sidecar per card naming its own image); card closed in `c9d2f88c`.
+      Evidence: `tasks/MPI-733/validation.md`.
       **Verify:** that card's end-to-end criterion — five photos selected with
       `upscale` remembered produce five queued jobs, each traceable to its own source
       image through its `.meta` sidecar — plus Fabio's own look at it in the running
