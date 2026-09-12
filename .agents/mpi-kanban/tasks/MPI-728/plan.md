@@ -15,6 +15,9 @@ possible and informed.
 
 ## Current State
 
+**SHIPPED AS `fef67f9d`, pushed to master, 21 files.** The write claim
+(`3a1c1b42`) is released as `complete` — nothing of this card is uncommitted.
+
 **2026-09-12, round 2 — RESTRUCTURED ON FABIO'S SCREENSHOT REVIEW, still awaiting
 his eyes.** He compared the section against the RunPod one and was right three
 times: a field label with no field under it (`[hidden]` is inert against
