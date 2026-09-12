@@ -31,6 +31,7 @@
     "tests/shared-dep-uninstall-direction.test.cjs",
     "js/utils/mentionPicker.js",
     "tests/ref-tag-picker.test.cjs",
-    "tests/mention-picker.test.cjs"
+    "tests/mention-picker.test.cjs",
+    "tests/desktop/flow-section-tag-picker.spec.js"
   ]
 }

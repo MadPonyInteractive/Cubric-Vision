@@ -214,11 +214,20 @@ directions. Weigh it accordingly (ONE seed, hand-written caption):
 ## The art
 
 Cut from `flowMusicMaker_013` — a real 120 s run already on disk ("Don't wake the morning",
-`<Singer A>` female, 75 BPM), so it cost no GPU. Both assets lead on the **lyric-sheet grammar**
-(`[Chorus]` in heat, `<Singer A>` in frost) rather than a line of type over a waveform, which is
-already Chatter Box's tile AND Drama Box's — a third would be invisible inside the family. The
-band is a 12 s excerpt on purpose: the whole two minutes averages into a flat pink brick at
-220 px. 33,576 B / 111,115 B, 7.2 s, loop seam 0.006/255.
+75 BPM), so it cost no GPU. Both assets lead on the **lyric-sheet grammar** rather than a line of
+type over a waveform, which is already Chatter Box's tile AND Drama Box's — a third would be
+invisible inside the family. The band is a 12 s excerpt on purpose: the whole two minutes averages
+into a flat pink brick at 220 px, and so does 0 dB through `scale=sqrt` — linear at +2 dB is what
+keeps the transients and the dark gaps between them.
+
+🔴 **REBUILT 2026-09-12: the frost `<Singer A>` is gone, REMOVED not replaced.** It advertised a
+control that does not exist — `Strip_Voice_Markers` cuts every `<…>` run before the encoder — and
+the lyric sheet has exactly two kinds of line, a tag and a lyric, so a second accent would have to
+invent a third. Heat on the section tag is the only accent left, and it is the one thing in that
+box the `@` picker types for you. 33,604 B / 70,145 B, 7.2 s, loop seam 0.22/255. Both bands are
+placed by MEASUREMENT, not by eye: the tile's from the shipped pink rows (846–959, centre 902),
+the hero's at y=624 off the chorus hook's lowest ink row (543) — a 220 px band put the peaks
+through the type.
 
 ## Deliberately out of scope
 

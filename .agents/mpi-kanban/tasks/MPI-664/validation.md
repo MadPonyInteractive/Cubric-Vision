@@ -515,3 +515,111 @@ fields. They were hand-written for this run, deliberately following the structur
 rivalling it. So this closes **"do bare tags travel wordless, in order"** — a property of the
 graph — and closes nothing about what a user gets. **Item 1 and 2 above still need Fabio's
 press and Fabio's ears.**
+
+---
+
+## 2026-09-12 — the `@` section-tag picker
+
+**What ran, all green:**
+
+| check | result |
+|---|---|
+| `node --test tests/mention-picker.test.cjs` | 12/12 |
+| `npm test` | **934/934**, 0 fail |
+| `npx eslint` on the five changed files | clean |
+| `npm run lint:components` | clean |
+| `npx playwright test --config=playwright.desktop.config.js tests/desktop/flow-*.spec.js` | **16/16** (1.8m) |
+
+`npm test` was 929/930 at the last handoff. The red one, `tests/audio-waveform-alpha.test.cjs`,
+is a peer's file and it is GREEN now — the +4 is 3 new tests here plus that one.
+
+**The evidence that is not a green tick.** Two of these tests would pass a broken feature, so
+they are written not to:
+
+1. 🔴 **The nine tags are read out of the GRAPH, not out of a second copy of the list.**
+   `tests/mention-picker.test.cjs` parses `regex_pattern` from
+   `comfy_workflows/flow_minimax_music.json` and asserts the offered list equals it,
+   lower-cased. A list-versus-list assertion would go green forever while the two drifted —
+   and drift here is not cosmetic: `normalize_lyrics` keeps ANY bracketed run, so a tenth word
+   offered by the picker would be accepted by the box, pass the split, and be **sung**.
+
+2. 🔴 **The desktop spec asserts the popup rows have TEXT AND HEIGHT.**
+   `tests/desktop/flow-section-tag-picker.spec.js` reads the SHIPPED FlowDef's `tags` (a fixture
+   list would pass while the real declaration was empty), types `hold me close @pre`, and
+   checks: popup opens · nine filter to one · `rowText === ['Pre-Chorus']` · every row height
+   `> 0` · `mousedown` yields `'hold me close\n[Pre-Chorus]\n'` · popup closes · `@zzz` opens
+   nothing. The height assertion is there because the last wiring of this popup shipped to
+   Fabio with three real, styled, EMPTY rows: `MpiButton`'s `label` is the ICON mode's key and
+   a text row needs `text`. An "the element exists" test passed that bug.
+
+**Square brackets are load-bearing, not styling.** `spliceMentionTag` gained one optional
+`wrap`, defaulting to angle so `MpiPromptBox` and its four existing tests are untouched. Angle
+is exactly what `Strip_Voice_Markers` deletes — a defaulted `wrap` here would have rebuilt the
+no-op picker this one replaces, and it would have looked correct on screen while reaching no
+model. That is asserted directly (`'a section tag is written in SQUARE brackets, and angle is
+what the graph strips'`).
+
+**Still owed on this item:** Fabio's own eyes in the app. Open Song → *Write the song* → click
+into Lyrics → type `@`. The cosmetic carried over from the first picker is unchanged: the popup
+sits above the box and covers the step title.
+
+### Verified in the app, and what `flowSong_011` says (2026-09-12)
+
+🟢 **Fabio: *"Looks good, my man."*** The `@` section-tag picker is verified on his screen. The
+cosmetic carried from the first picker — the popup covers the step title — is unchanged and now
+applies to this one.
+
+**`flowSong_011`** (`7ecbce73`-chain project `Music Maker`, `Imagine` verse + chorus, soul/blues/
+gospel, 80 BPM, piano and sax) is the run he made while this was being built. Read for what it
+settles, which is less than it looks:
+
+- 🔴 **IT DOES NOT TEST THE CAST QUESTION.** `Input_Voices` is `Voice 1 (Female)` — a
+  ONE-ROW roster. The duet-versus-solo count stands at the five runs already tabled; this is
+  not a sixth data point, and it must not be added to that table.
+- 🟢 **THE SECTION-TAG CHANNEL IS WHAT HE ACTUALLY USED**, hand-typed: `[Instrumental]` with
+  nothing under it, then `[Verse]`, then `[Chorus]`. That is precisely the grammar the hint
+  teaches and precisely what the new picker now types for him — the feature was built against
+  the thing he was already doing by hand, which is the best evidence it was the right one.
+- 🟢 **THE RECIPE'S SECTION-PLACEMENT FIX (`1aab648d`) IS WORKING.** His Voice notes were four
+  words, *"Close mic whispering."* The enhancer's `Input_Vocal` came back carrying timbre,
+  delivery, backing vocals AND **"Section placement: entire track sings as one continuous
+  whisper"** — the carry-through key that used to be dropped is being written.
+- 🟡 **160s ASKED, 76.4s DELIVERED** (`ffprobe`, 44.1kHz stereo FLAC), for 221.8s of compute.
+  Fifth independent confirmation that `Input_Duration` is a CEILING the AR stage ignores, not a
+  target. Consistent with the eight measurements in § 3 — do not read it as truncation and do
+  not chase it.
+
+### The picker anchors at the CARET (2026-09-12, folded in)
+
+Fabio, on being told the popup covers the step title: *"I would much rather prefer that the
+picker would show up where the cursor is, which is the usual behaviour for these types of
+stuff."* So the cosmetic was not patched — the anchor was replaced, and the title problem goes
+with it.
+
+**There is no native API for a textarea caret's pixel position.** `Selection`/`Range` reach a
+contenteditable only; a textarea's caret is not in the DOM. `caretOffset()` in
+`js/utils/mentionPicker.js` uses the standard MIRROR: a hidden div wearing the textarea's own
+metrics, holding the text up to the `@`, with a span after it whose `offsetTop`/`offsetLeft` is
+the answer. Twenty computed properties are copied because every one of them changes where a
+line WRAPS — a missing one puts the popup on the wrong line, and only for long text.
+
+Anchored on the **`@` itself**, not the live caret, so the popup stays put while the query is
+typed rather than crawling right one character at a time. It flips above the line against the
+**viewport**, not the host: the host is only as tall as the field, so a field near the bottom of
+the slide has room by its own reckoning and none on screen.
+
+🔴 **`bottom`/`left` in `MpiBaseFlow.css` are now the RESTING PLACE, not the anchor** — both are
+overwritten inline on every keystroke, and both `top`/`bottom` are always written (one to
+`auto`) or a flip leaves the old one fighting the new. The stylesheet says so, because
+restyling the anchor from there will silently not work.
+
+**Proven to bite, not just proven green.** The desktop spec opens the picker at two `@`s — one
+at the very start, one five lines down and far along a long line — and asserts both x and y
+increase. With `position()` commented out the run goes RED with both anchors at `y = 350`: the
+pinned corner, reported twice. Restored, 1/1.
+
+**Checks:** 934/934 unit · 16/16 desktop flow specs · eslint + `lint:components` clean.
+
+🟡 `MpiPromptBox` still runs its own older copy of this picker (MPI-475) and is unchanged, so
+the gallery prompt box's `@` is still corner-pinned. Not in scope and not asked for; the
+standing note to repoint that file at this util now carries a second reason.

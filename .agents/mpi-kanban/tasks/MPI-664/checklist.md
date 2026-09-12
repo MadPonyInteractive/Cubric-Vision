@@ -235,6 +235,29 @@ Design settled 2026-08-30 (hybrid). See `plan.md` for the full field surface and
       session holds a live write claim on its own `brief.md` — it folds the scope in itself.
       Original ask kept above because it explains where the shape came from.
 
-- [ ] 🔴 **THE SONG RUN, STILL OWED.** The 2026-09-11 attempt ran on a one-voice roster that
-      bug 2 had already reset, so it proved nothing either way. Needs a fresh Song, two voices,
-      a falsifiable voice note, and Fabio's ears. **ASK BEFORE ANY GPU WORK.**
+- [x] 🟢 **THE SONG RUN — DONE, FIVE TIMES, 2026-09-11/12.** This line said "still owed" for a
+      day after it stopped being true, and this card has now had a checklist item read as a
+      record of fact THREE times (the phantom `minimax-music.md` rename, a run credited from
+      MPI-694, and this). Corrected at source rather than at close-out. Fabio made five runs;
+      the cast reaches the caption every time and the audio delivers one voice in four of the
+      five, with the SEED deciding — `82fb50dc` / `99e13587` share a caption hash and gave a
+      solo and a duet. The table is in the plan's 2026-09-12 Current State. **Do not re-run it.**
+
+- [x] 🟢 **THE `@` SECTION-TAG PICKER — BUILT 2026-09-12,** and it is the SECOND picker this box
+      has had. The first (L30 above) pointed at the voice roster and inserted `<Singer A>`, which
+      `Strip_Voice_Markers` cuts before the encoder — a no-op Fabio followed on two live runs.
+      This one offers MiniMax's nine SECTION tags, which do execute, in SQUARE brackets on their
+      own line. The source is a CLOSED `tags` array on the field, never a `mentions` pointer at a
+      sibling field; `spliceMentionTag` gained one optional `wrap` param (angle by default, so
+      MpiPromptBox is untouched). The nine are pinned against the graph's own `regex_pattern`, so
+      the list offered cannot drift from the list the model accepts — a tenth word would pass the
+      bracket split and be SUNG. Checks: 934/934 unit, 16/16 desktop, eslint + lint:components
+      clean, including a new `tests/desktop/flow-section-tag-picker.spec.js` that drives the real
+      popup and asserts the rows have text AND height (the `label`-vs-`text` bug that shipped
+      empty rows last time). 🟢 **VERIFIED IN THE APP** — Fabio, 2026-09-12: *"Looks good, my
+      man."* The popup-covers-the-step-title cosmetic from L30 is CLOSED rather than carried:
+      Fabio asked for the anchor he expected instead — *"where the cursor is, which is the usual
+      behaviour"* — so the picker now measures the caret with a mirror div and opens there,
+      flipping above the line against the VIEWPORT when it would run off the bottom. Proven to
+      bite: with position() disabled both anchors report y=350, the old pinned corner. 🟡
+      MpiPromptBox keeps its own older copy and is still corner-pinned — out of scope.

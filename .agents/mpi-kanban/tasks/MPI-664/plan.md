@@ -1,5 +1,45 @@
 # MPI-664 — Plan: the MiniMax Music 3 Flow
 
+## Current State — 2026-09-12 (latest), THE `@` PICKER IS BACK, POINTED AT A LIST THAT EXECUTES
+
+🟢 **THE SECTION-TAG PICKER IS BUILT AND DRIVEN FOR REAL.** Typing `@` in the Lyrics box offers
+MiniMax's nine section tags and inserts the pick in SQUARE brackets on its own line. This is the
+SECOND picker the box has had and the mechanism is identical — only the source and the brackets
+differ, which is the whole reason the tests are written around telling them apart.
+
+- `js/utils/mentionPicker.js` — one new optional param, `wrap`, defaulting to `['<', '>']` so
+  `MpiPromptBox`'s references and every existing test are untouched. Angle is what
+  `Strip_Voice_Markers` eats; square is what `normalize_lyrics` splits on. A caller inserting
+  something the model must actually read has to say so.
+- `js/utils/declaredFields.js` — the text branch honours `f.tags`, a CLOSED array on the field.
+  🔴 Deliberately **not** a `mentions`-style pointer at a sibling field: that key was the no-op
+  picker's plumbing and stays deleted. `getTags` returns the same array every call, which the
+  picker allows.
+- `js/data/flowsRegistry.js` — `Input_Lyrics.tags` carries the nine in Title Case (the graph
+  lowercases before matching, so the spelling can follow the hint the user just read), plus one
+  clause in the step hint: *"type @ in the lyrics to pick one"*. `tags` documented on the
+  `FlowStepField` typedef.
+
+🔴 **THE NINE ARE PINNED AGAINST THE GRAPH, NOT AGAINST A COPY OF THEMSELVES.**
+`tests/mention-picker.test.cjs` parses `regex_pattern` out of `comfy_workflows/flow_minimax_music.json`
+and asserts the offered list equals it. That is the check with teeth: `normalize_lyrics` keeps a
+bracketed run whatever is inside it, so a tenth word offered here would be accepted by the box,
+pass the split, and be **sung as a lyric line**.
+
+🟢 **A NEW DESKTOP SPEC DRIVES THE DOM HALF** — `tests/desktop/flow-section-tag-picker.spec.js`.
+It reads the SHIPPED FlowDef's `tags` (a fixture list would pass while the real declaration was
+empty), types `hold me close @pre`, and asserts: the popup opens, filters nine to one, the rows
+have **text and non-zero height**, `mousedown` inserts `hold me close\n[Pre-Chorus]\n`, the popup
+closes, and `@zzz` opens nothing. The height assertion is not padding — the last time this popup
+was wired it shipped to Fabio with three real, styled, EMPTY rows, because `MpiButton` was handed
+`label` (the icon mode's key) instead of `text`.
+
+🟢 **CHECKS: 934/934 unit, 16/16 desktop flow specs, eslint + `lint:components` clean.** The
+previously-red `tests/audio-waveform-alpha.test.cjs` is green now too — the peer finished it.
+
+**NEXT:** Fabio's eyes on the popup in the app, then `/mpi-flow-graphics` for the Song tile and
+hero, which still show `<Singer A>`. That needs GPU — ask first.
+
 Design settled with Fabio 2026-08-30. Capability facts live in `research/minimax-music-3.md` —
 read it first, and do not re-search it.
 
