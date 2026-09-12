@@ -349,11 +349,21 @@ const MINIMAX_MUSIC_ENHANCE_PARAMS = {
         // one the defect actually needed. The recipe's habit of teaching by negation is
         // a known cause of the 4B's repetition loop; do not answer a new defect here
         // with another "No X" line.
-        'THE CAST COMES FROM THE USER THE SAME WAY. A "Voices:" line lists every singer on its own line as Name (Type), where a bare name means the user left the type open. Write [VOCAL] for exactly that cast: give each named voice its own phrases, and where a "Voice notes:" line describes timbre, delivery, harmonies or backing vocals, carry those words through into your phrases. THAT LIST IS CLOSED IN BOTH DIRECTIONS — introduce no singer they did not cast, and leave none of theirs out. Never state that the track lacks a vocal the user asked for.',
+        //
+        // 🔴 SECTION PLACEMENT WAS THE SECOND HALF OF THE SAME DEFECT (2026-09-12).
+        // Fabio wrote "Soft smooth voice playing in the intro and chorus" / "Harsh and
+        // raspy rock vocal playing in the verse and the chorus"; the 4B kept both
+        // timbres and deleted both placements. It was obeying: the carry-through list
+        // here read "timbre, delivery, harmonies or backing vocals" — a closed list
+        // that placement was not on — and the older "never invent a running order"
+        // rule pushed the same way. That rule exists because two runs had the 4B
+        // writing TIMED plans nobody asked for, so it stays; what changed is that it
+        // now says never INVENT one, which was always the point.
+        'THE CAST COMES FROM THE USER THE SAME WAY. A "Voices:" line lists every singer on its own line as Voice N (Type), where a bare label means the user left the type open. Write [VOCAL] for exactly that cast: give each voice its own phrases, and where a "Voice notes:" line describes timbre, delivery, harmonies, backing vocals OR WHICH SECTIONS A VOICE SINGS, carry those words through into your phrases. A placement the user wrote — "the female in the intro and chorus", "Voice 2 takes the verse" — is theirs and belongs in [VOCAL] in their terms; you are forbidden from INVENTING a running order, never from carrying one they gave you. THAT LIST IS CLOSED IN BOTH DIRECTIONS — introduce no singer they did not cast, and leave none of theirs out. Never state that the track lacks a vocal the user asked for.',
         '',
         'Output EXACTLY three blocks, in this order, each opening with its marker on the same line:',
         '[MOOD] Feel and listening occasion in a few phrases, then the production texture: mix, room, grain. Name no instruments here and do not describe the running order.',
-        '[VOCAL] Timbre, delivery and backing vocals, as phrases, covering every voice in the cast.',
+        '[VOCAL] Timbre, delivery, backing vocals and any section placement the user gave, as phrases, covering every voice in the cast. Where the cast holds more than one voice, open on the cast itself — never on a single summary vocal, which reads as the whole track having one singer.',
         '[ARRANGEMENT] Open with the core instrument bed as one list, then describe how that bed develops and what carries each part, in phrases. Write no section lines and name no sections.',
         '',
         'Rules:',
@@ -2356,19 +2366,24 @@ export const FLOWS = [
                 // `[Instrumental]` with nothing under it buys a section with no vocals.
                 // Said out loud here because it is the answer to "how do I get a guitar
                 // break", and the tag channel is MiniMax's closed nine words or nothing.
-                hint: 'Mark sections with [Intro] [Verse] [Pre-Chorus] [Chorus] [Post-Chorus] [Bridge] [Instrumental] [Solo] [Outro] — they steer the arrangement rather than guarantee it, and a tag with nothing under it buys a section with no vocals. Every line outside a tag is sung, and so is anything in round brackets: (like this) is a backing vocal, not a note to the model, so instruments and production belong in Your song or Style. To hand a line to a voice, put its name in angle brackets on its own line — <Singer A>.',
+                hint: 'Mark sections with [Intro] [Verse] [Pre-Chorus] [Chorus] [Post-Chorus] [Bridge] [Instrumental] [Solo] [Outro] — they steer the arrangement rather than guarantee it, and a tag with nothing under it buys a section with no vocals. Every line outside a tag is sung, and so is anything in round brackets: (like this) is a backing vocal, not a note to the model, so instruments and production belong in Your song or Style. The lyrics cannot hand a line to a particular voice — say who sings where in Voice notes instead.',
                 fields: [
                     {
                         // The roster (MPI-664 tier 2). Its `v` values are the CAPTION
-                        // WORDS, not indices: `serialiseVoices` writes `Name (Type)`
+                        // WORDS, not indices: `serialiseVoices` writes `Voice N (Type)`
                         // straight into the caption's Vocal Details, so there is no
                         // switch bank and no lookup table to drift.
                         //
-                        // `Any` is the catch-all and emits the bare NAME — writing
-                        // "Ana (Any)" would state a vocal quality the user never chose.
+                        // `Any` is the catch-all and emits the bare LABEL — writing
+                        // "Voice 2 (Any)" would state a quality the user never chose.
+                        //
+                        // 🔴 NO NAME BOX, and the `note` is the whole promise (Fabio,
+                        // 2026-09-12). Five runs said the cast is a bias the seed can
+                        // refuse, so the control must not read as a guarantee — see
+                        // `serialiseVoices` for the runs and what separates them.
                         id: 'Input_Voices', type: 'voices', label: 'Voices',
-                        namePlaceholder: 'Singer A',
-                        default: [{ name: 'Singer A', type: 'Any' }],
+                        note: 'MiniMax decides how many voices actually sing. Casting two makes a duet likely, not certain — re-roll if it comes back as one.',
+                        default: [{ type: 'Any' }],
                         options: [
                             { v: 'Any', label: 'Any' },
                             { v: 'Female', label: 'Female' },
@@ -2382,7 +2397,11 @@ export const FLOWS = [
                         // Timbre, delivery and backing vocals — the three Vocal Details
                         // sub-labels a roster slot cannot express.
                         id: 'Input_Voice_Notes', type: 'text', rows: 4, label: 'Voice notes',
-                        placeholder: 'Raspy and close-miked, conversational in the verses, layered harmonies on the chorus…',
+                        // THE PLACEHOLDER TEACHES THE ONLY WORKING GRAMMAR FOR PLACEMENT
+                        // (2026-09-12). With the lyrics box unable to address a voice,
+                        // this is where "who sings where" lives, so it shows both halves
+                        // — a voice referenced by its roster position, and a section.
+                        placeholder: 'Voice 1 raspy and close-miked, takes the verses; Voice 2 smooth, layered harmonies on the chorus…',
                         default: '',
                     },
                     {
@@ -2409,17 +2428,16 @@ export const FLOWS = [
                         // lyrics empty hears that song's words.
                         id: 'Input_Lyrics', type: 'text', rows: 16, label: 'Lyrics',
                         col: 'right',
-                        // `@` LISTS THE CAST (MPI-664 checklist L30, Fabio 2026-09-10).
-                        // The marker's spelling has to be exact for a line to reach the
-                        // voice the user meant, and the step's own hint asks for angle
-                        // brackets — so the names live one field to the left and the box
-                        // offers them rather than asking the user to copy them.
+                        // NO `@` PICKER, and it was removed rather than repointed
+                        // (MPI-664, 2026-09-12). It listed the cast so a user could
+                        // insert `<Singer A>` exactly — but `Strip_Voice_Markers` cuts
+                        // every `<…>` run before the encoder, and the lyrics are not in
+                        // the enhancer's `from` list, so the marker reached no model at
+                        // all. Fabio followed the hint twice on live runs for nothing.
                         //
-                        // This key is the WHOLE GATE. `buildField`'s text branch builds
-                        // every declared text field in every flow, so the picker is
-                        // opt-in per field: Sound & Music's "Describe it", the song
-                        // brief and Voice notes declare nothing and get nothing.
-                        mentions: 'Input_Voices',
+                        // The `@` list worth having here is MiniMax's nine section tags
+                        // — a closed list that DOES execute. That is a different source
+                        // from a sibling field's rows and gets its own card.
                         placeholder: '[Verse]\nMidnight and the canvas glows…',
                         default: '',
                     },

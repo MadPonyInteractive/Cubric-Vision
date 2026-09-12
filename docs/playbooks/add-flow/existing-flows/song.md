@@ -126,9 +126,39 @@ and the prose **between** them is a lyric line the model sings.
 | 1 | bare tags, prose underneath | a man sang the stage directions |
 | 2 | directions folded INSIDE the brackets, Suno-style | sung too — `_LYRIC_TAG_RE` is `\[[^\]]+\]`, so any bracketed run is a legal tag |
 
-The step's `hint` exists for exactly this; nothing on screen implies it. Voice markers
-(`<Singer A>`) are **stripped in the graph** by `Strip_Voice_Markers` — `<Name>` is not in
-MiniMax's tag set and the lyrics reach the model verbatim.
+The step's `hint` exists for exactly this; nothing on screen implies it.
+
+## 🔴 The cast is a BIAS, and the lyrics cannot address a voice
+
+Five live runs, 2026-09-11/12.
+
+**A voice marker in the lyrics reaches NO model.** `Strip_Voice_Markers` cuts every `<…>`
+run before the encoder (`<Name>` is not in MiniMax's tag set) and `Input_Lyrics` is not in
+the enhancer's `from` list, so nothing reads it on the way past. The hint used to instruct
+*"put its name in angle brackets"* and an `@` picker inserted exactly that; Fabio followed
+it on two live runs for nothing. Both are gone — `attachMentionPicker` stays for
+MpiPromptBox. Bracketed variants die too: `[Intro male]` is a legal tag but not one of the
+nine words, and `[Intro <male>]` meets the same strip.
+
+**So the cast travels only through `[VOCAL]`, honoured about one run in five.** The caption
+named every cast member every time; the audio gave ONE voice in four of the five. Which
+voice won followed nothing observable — `Singer A (Female)` first lost to `Singer B
+(Child)`, `male` first beat `female`. The pair that settles it: `82fb50dc` / `99e13587`,
+**byte-identical captions**, different seeds, one solo and one female-then-male duet.
+
+Hence a dropdown per row and **no name box** — a name buys nothing the model can hear —
+plus a field `note` that says so, so the control cannot read as a guarantee.
+`serialiseVoices` writes `Voice N (Type)` from POSITION, which is what lets Voice notes
+name a voice when two rows share a type; `deserialiseVoices` discards the label, so every
+pre-2026-09-12 card still restores.
+
+**The recipe was deleting section placement**, the other half of the same defect. Fabio
+wrote *"…playing in the intro and chorus"* / *"…playing in the verse and the chorus"*; the
+4B kept both timbres and dropped both placements, because the carry-through list read
+`timbre, delivery, harmonies or backing vocals` and placement was not on it. It is now,
+and never-invent-a-running-order says never **invent** one. `[VOCAL]` also may not open on
+a single summary vocal when the cast is larger than one: a bench caption opening *"Soft
+androgynous vocal…"* before casting two singers produced one — the first sentence wins.
 
 🔴 **`default: ''` on `Input_Lyrics` is load-bearing.** `_seedField` returns undefined for a
 field with no `default`, the seeding loops skip it, the id never reaches `injectionParams`, and

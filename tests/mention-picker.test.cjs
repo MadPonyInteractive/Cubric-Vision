@@ -1,24 +1,21 @@
 /**
- * mention-picker.test.cjs — MPI-664 checklist L30, the `@` picker in the Lyrics box.
+ * mention-picker.test.cjs — `spliceMentionTag`, and the Song flow NOT offering a picker.
  *
- * Typing `@` in the Song flow's Lyrics box lists the voice roster and inserts the
- * marker MiniMax reads — `<Singer A>` — because the spelling has to be exact for a
- * line to reach the voice the user meant.
+ * 🔴 THE VOICE PICKER IS GONE (MPI-664, 2026-09-12). Typing `@` in the Lyrics box used
+ * to list the roster and insert `<Singer A>`. It inserted a no-op: `Strip_Voice_Markers`
+ * cuts every `<…>` run before the encoder, and the lyrics are not in the enhancer's
+ * `from` list, so the marker reached no model at all. The picker, the roster names it
+ * listed and the hint advertising it were one closed loop with no effect on a single
+ * generated note. Fabio followed that hint on two live runs.
  *
- * The popup is DOM and is checked in the app. The two pure halves are here:
+ * What is still tested:
  *
- *   - `mentionTagsFrom` — roster rows to picker entries. Its rules mirror
- *     `serialiseVoices` on purpose (blank rows dropped, `Any` emits the bare name), so
- *     the list the user picks from and the caption the graph reads cannot disagree.
- *   - `spliceMentionTag` — the insert. A voice marker MUST sit on its own line: every
- *     line outside a `[section]` tag is sung, so a marker sharing a line with words
- *     changes what the encoder is handed. That is the edge case with teeth.
- *
- * The FlowDef itself is pinned last, and that is the regression that matters most:
- * the picker is opt-in per field, so a renamed roster id or a stray `mentions` on
- * another flow's text box is silent — nothing throws, the feature simply is not there,
- * or it appears where Fabio said it must not (2026-09-10: *"only the lyrics box gets
- * it. Why would it leak into sound and music?"*).
+ *   - `spliceMentionTag` — the shared insert, which MpiPromptBox still uses. A tag MUST
+ *     land on its own line; in the Lyrics box every line outside a `[section]` tag is
+ *     sung, so a tag sharing a line with words changes what the encoder is handed.
+ *   - The FlowDef, pinned so the removal cannot quietly come back: no field anywhere
+ *     declares `mentions` (`buildField` no longer honours it, so one left behind is a
+ *     dead key), and the Song hint no longer tells anyone to write a marker.
  */
 
 'use strict';
@@ -28,44 +25,6 @@ const assert = require('node:assert');
 const path = require('node:path');
 
 const esm = p => import('file://' + path.join(__dirname, '..', p).replace(/\\/g, '/'));
-
-// ── mentionTagsFrom ─────────────────────────────────────────────────────────
-
-test('a roster becomes picker entries, typed label and bare tag', async () => {
-    const { mentionTagsFrom } = await esm('js/utils/declaredFields.js');
-    const rows = [
-        { name: 'Singer A', type: 'Female' },
-        { name: 'Ana', type: 'Any' },
-    ];
-    assert.deepStrictEqual(mentionTagsFrom(rows), [
-        // The TAG is bare: it is what goes inside the angle brackets.
-        { tag: 'Singer A', label: 'Singer A (Female)' },
-        // `Any` is the catch-all — "Ana (Any)" would state a quality nobody chose,
-        // the same reason serialiseVoices drops it.
-        { tag: 'Ana', label: 'Ana' },
-    ]);
-});
-
-test('a half-added row is not a voice, and two of one name is not a choice', async () => {
-    const { mentionTagsFrom } = await esm('js/utils/declaredFields.js');
-    // Blank and whitespace-only names are dropped, matching serialiseVoices.
-    assert.deepStrictEqual(mentionTagsFrom([{ name: '', type: 'Male' }, { name: '   ' }]), []);
-    // `nextVoiceName` enforces uniqueness on ADD only, so a RENAME can produce two.
-    // Both would insert the same marker, so the second is unanswerable, not useful.
-    const dupes = mentionTagsFrom([
-        { name: 'Ana', type: 'Female' },
-        { name: 'ana', type: 'Child' },
-    ]);
-    assert.deepStrictEqual(dupes.map(t => t.tag), ['Ana']);
-});
-
-test('a mentions pointing at a non-roster field closes quietly', async () => {
-    const { mentionTagsFrom } = await esm('js/utils/declaredFields.js');
-    // Not an array = no list = no picker. It must not throw: this runs on a keystroke.
-    for (const bad of [undefined, null, '', 'Singer A', 42, {}]) {
-        assert.deepStrictEqual(mentionTagsFrom(bad), [], `${JSON.stringify(bad)} must yield nothing`);
-    }
-});
 
 // ── spliceMentionTag ────────────────────────────────────────────────────────
 
@@ -97,9 +56,10 @@ test('text already continuing on the next line does not get a second newline', a
 test('the query and the insert compose: half a name in, a whole marker out', async () => {
     const { matchRefTagQuery } = await esm('js/data/commandRegistry.js');
     const { spliceMentionTag } = await esm('js/utils/mentionPicker.js');
-    const { mentionTagsFrom } = await esm('js/utils/declaredFields.js');
 
-    const tags = mentionTagsFrom([{ name: 'Singer A', type: 'Female' }, { name: 'Choirboy' }]);
+    // A literal list, which is what MpiPromptBox hands in — the roster-to-tags helper
+    // went with the voice picker, and this pair is the shared path that outlived it.
+    const tags = [{ tag: 'Singer A', label: 'Singer A (Female)' }, { tag: 'Choirboy', label: 'Choirboy' }];
     const value = '[Chorus]\n@sing';
     const q = matchRefTagQuery(value, value.length, tags);
     assert.ok(q, 'the picker must open');
@@ -112,37 +72,39 @@ test('the query and the insert compose: half a name in, a whole marker out', asy
 
 // ── the FlowDef ─────────────────────────────────────────────────────────────
 
-test('the Lyrics box declares the picker, and its roster still exists', async () => {
+test('the Lyrics box no longer offers, or advertises, a voice marker', async () => {
     const mod = await esm('js/data/flowsRegistry.js');
     const flows = mod.FLOWS || mod.flows || mod.default;
     const flow = flows.find(f => f.id === 'minimax-music');
     assert.ok(flow, 'the minimax-music FlowDef must exist');
 
-    const stepFields = (flow.steps || []).flatMap(s => s.fields || []);
-    const lyrics = stepFields.find(f => f.id === 'Input_Lyrics');
+    const step = (flow.steps || []).find(s => (s.fields || []).some(f => f.id === 'Input_Lyrics'));
+    const lyrics = (step.fields || []).find(f => f.id === 'Input_Lyrics');
     assert.ok(lyrics, 'Input_Lyrics must exist');
-    assert.strictEqual(lyrics.mentions, 'Input_Voices', 'the Lyrics box must declare the picker');
 
-    // A `mentions` naming a field that is gone is SILENT — readField returns undefined,
-    // mentionTagsFrom yields nothing, and `@` does nothing with no error anywhere.
-    const roster = stepFields.find(f => f.id === lyrics.mentions);
-    assert.ok(roster, `${lyrics.mentions} must exist in the same step`);
-    assert.strictEqual(roster.type, 'voices', 'the source must be a roster');
+    // 🔴 THE PICKER INSERTED A NO-OP. `Strip_Voice_Markers` cuts every `<…>` run before
+    // the encoder and the lyrics never reach the enhancer, so a marker changed NOTHING
+    // about the audio. Fabio followed the hint on two live runs before we measured it.
+    assert.strictEqual(lyrics.mentions, undefined, 'the Lyrics box must not declare a picker');
+    assert.ok(
+        !/angle bracket|<Singer/i.test(step.hint || ''),
+        'the hint must not tell the user to write a voice marker',
+    );
 });
 
-test('no other declared field anywhere carries a picker', async () => {
+test('no declared field anywhere carries a picker', async () => {
     const mod = await esm('js/data/flowsRegistry.js');
     const flows = mod.FLOWS || mod.flows || mod.default;
     const offenders = [];
     flows.forEach((flow) => {
         const all = [...(flow.fields || []), ...(flow.steps || []).flatMap(s => s.fields || [])];
         all.forEach((f) => {
-            if (f?.mentions && !(flow.id === 'minimax-music' && f.id === 'Input_Lyrics')) {
-                offenders.push(`${flow.id}.${f.id}`);
-            }
+            if (f?.mentions) offenders.push(`${flow.id}.${f.id}`);
         });
     });
-    // Lyrics-only, by Fabio's decision. A new one is a product call, not a refactor.
+    // `buildField` no longer honours `mentions` at all, so one left behind would be a
+    // silent dead key. The `@` list Fabio wants — MiniMax's nine section tags — is its
+    // own card and its own source, not a pointer at a sibling field.
     assert.deepStrictEqual(offenders, []);
 });
 

@@ -274,22 +274,24 @@ test('format: duration reads as m:ss, short enough to sit beside its slider', as
 test('a voice roster serialises to the caption lines the graph reads', async () => {
     const { serialiseVoices, mapDeclaredValue } = await esm('js/utils/declaredFields.js');
 
-    // MiniMax's own convention in the reference captions: `Singer A (Male)`.
+    // MiniMax's caption convention, with the label generated from POSITION — the user
+    // no longer names a voice (MPI-664, 2026-09-12).
     assert.equal(
-        serialiseVoices([{ name: 'Singer A', type: 'Male' }, { name: 'The Choir', type: 'Choir' }]),
-        'Singer A (Male)\nThe Choir (Choir)',
+        serialiseVoices([{ type: 'Male' }, { type: 'Choir' }]),
+        'Voice 1 (Male)\nVoice 2 (Choir)',
     );
 
-    // The catch-all emits a BARE name. "Ana (Any)" in a caption states a vocal quality
-    // the user never chose, and the model reads it as one.
-    assert.equal(serialiseVoices([{ name: 'Ana', type: 'Any' }]), 'Ana');
-    assert.equal(serialiseVoices([{ name: 'Ana', type: 'any' }]), 'Ana', 'case-insensitive');
-    assert.equal(serialiseVoices([{ name: 'Ana', type: '' }]), 'Ana');
+    // The catch-all emits a BARE label. "Voice 1 (Any)" in a caption states a vocal
+    // quality the user never chose, and the model reads it as one.
+    assert.equal(serialiseVoices([{ type: 'Any' }]), 'Voice 1');
+    assert.equal(serialiseVoices([{ type: 'any' }]), 'Voice 1', 'case-insensitive');
+    assert.equal(serialiseVoices([{ type: '' }]), 'Voice 1');
 
-    // A half-added row must not reach the caption as an anonymous voice.
+    // Numbering is POSITIONAL, so two rows sharing a type stay distinguishable — which
+    // is the only reason a label survived the name box being removed.
     assert.equal(
-        serialiseVoices([{ name: '  ', type: 'Male' }, { name: 'Joe', type: 'Male' }]),
-        'Joe (Male)',
+        serialiseVoices([{ type: 'Female' }, { type: 'Female' }]),
+        'Voice 1 (Female)\nVoice 2 (Female)',
     );
 
     // Nothing declared, nothing sent — never the string "undefined".
@@ -300,8 +302,8 @@ test('a voice roster serialises to the caption lines the graph reads', async () 
     // The serialisation must happen on the SHARED path, so the agent connector and the
     // widget cannot disagree about what the graph receives.
     assert.equal(
-        mapDeclaredValue({ type: 'voices' }, [{ name: 'Singer A', type: 'Male' }]),
-        'Singer A (Male)',
+        mapDeclaredValue({ type: 'voices' }, [{ type: 'Male' }]),
+        'Voice 1 (Male)',
     );
     // Every other type is untouched by the new branch.
     assert.equal(mapDeclaredValue({ type: 'text' }, 'hello'), 'hello');
@@ -319,52 +321,40 @@ test('a serialised roster parses back into rows — the inverse the restore path
     // the SERIALISED roster — `s_flowInputs` after navigation, a card's sidecar on Reuse —
     // and with no inverse the branch fell to the declared default AND wrote that default
     // back over the user's cast. Fabio lost a singer and generated on what was left.
-    const cast = [{ name: 'Singer A', type: 'Male' }, { name: 'female', type: 'Any' }];
+    const cast = [{ type: 'Male' }, { type: 'Any' }];
     assert.deepStrictEqual(
         deserialiseVoices(serialiseVoices(cast), OPTS),
         cast,
         'a cast must survive a round trip through the caption string',
     );
 
-    // A bare name takes the catch-all, mirroring the way serialiseVoices drops it.
-    assert.deepStrictEqual(deserialiseVoices('Ana', OPTS), [{ name: 'Ana', type: 'Any' }]);
+    // A line with no declared type takes the catch-all.
+    assert.deepStrictEqual(deserialiseVoices('Voice 1', OPTS), [{ type: 'Any' }]);
 
-    // 🔴 A NAME MAY CONTAIN BRACKETS. The type is resolved against the DECLARED options,
-    // never trusted from the text, so an undeclared parenthetical stays part of the name.
+    // 🔴 EVERY CARD ALREADY ON DISK holds the OLD `Name (Type)` spelling in its sidecar,
+    // so Reuse has to keep working against it. The label is discarded either way — it is
+    // regenerated from position on the way out — so only the type has to survive.
     assert.deepStrictEqual(
-        deserialiseVoices('Ana (live)', OPTS),
-        [{ name: 'Ana (live)', type: 'Any' }],
-        'an undeclared bracket is part of the name, not a type',
+        deserialiseVoices('Singer A (Male)\nThe Choir (Choir)', OPTS),
+        [{ type: 'Male' }, { type: 'Choir' }],
+        'a pre-2026-09-12 sidecar restores as the same cast',
     );
     assert.deepStrictEqual(
-        deserialiseVoices('Ana (live) (Female)', OPTS),
-        [{ name: 'Ana (live)', type: 'Female' }],
-        'only the LAST bracket is a candidate, and only if declared',
+        deserialiseVoices('Ana (live)', OPTS),
+        [{ type: 'Any' }],
+        'an undeclared bracket is not a type',
     );
 
     // Case-insensitive on the way back, because serialiseVoices is on the way out.
-    assert.deepStrictEqual(deserialiseVoices('Joe (male)', OPTS), [{ name: 'Joe', type: 'Male' }]);
+    assert.deepStrictEqual(deserialiseVoices('Voice 1 (male)', OPTS), [{ type: 'Male' }]);
 
     // Rows pass straight through: the live path must not be touched by any of this.
     assert.deepStrictEqual(deserialiseVoices(cast, OPTS), cast);
 
-    // Nothing in, nothing out — never a row named "undefined".
+    // Nothing in, nothing out — never a row typed "undefined".
     [undefined, null, '', '   ', 42].forEach((v) => {
         assert.deepStrictEqual(deserialiseVoices(v, OPTS), [], `${String(v)} must yield no rows`);
     });
-});
-
-test('a new roster row is named uniquely, so a lyric reference stays unambiguous', async () => {
-    const { nextVoiceName } = await esm('js/utils/declaredFields.js');
-
-    assert.equal(nextVoiceName([]), 'Singer A');
-    assert.equal(nextVoiceName([{ name: 'Singer A' }]), 'Singer B');
-    // A gap is filled rather than skipped past.
-    assert.equal(nextVoiceName([{ name: 'Singer B' }]), 'Singer A');
-    // A user's own name for a voice still blocks the auto one that collides with it.
-    assert.equal(nextVoiceName([{ name: 'singer a' }]), 'Singer B', 'case-insensitive');
-    assert.equal(nextVoiceName([{ name: '  Singer A  ' }]), 'Singer B', 'trimmed');
-    assert.equal(nextVoiceName(undefined), 'Singer A');
 });
 
 // ── MPI-664 — greying a field, and hiding one for good ────────────────────────

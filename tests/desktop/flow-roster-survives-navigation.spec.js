@@ -14,8 +14,8 @@ const { launchApp, closeApp } = require('./launch');
  * alone: a `voices` field and a `text` field in the SAME step, both filled, both carried
  * through one destroy/remount. A string round-trips through anything; the roster is the
  * one field type whose UI value (rows, so Reuse can rebuild the control) is not its graph
- * value (one `Name (Type)` string, via `serialiseVoices`). That serialiser has no inverse,
- * and `_seedField` reads `persisted ?? root ?? default` where `root` is
+ * value (one `Voice N (Type)` string, via `serialiseVoices`). That serialiser has no
+ * inverse, and `_seedField` reads `persisted ?? root ?? default` where `root` is
  * `injectionParams[id]` for any `Input_*` id — the flattened string. If the raw rows in
  * `stepValues` ever fail to win that race, `declaredFields.js` gets handed a string,
  * `Array.isArray(cur)` is false, and the branch falls to `f.default` AND writes that
@@ -56,7 +56,7 @@ test('a voice roster and a text field both survive a close and reopen', async ({
             fields: [
               {
                 id: 'Input_Voices', type: 'voices', label: 'Voices',
-                default: [{ name: 'Singer A', type: 'Any' }],
+                default: [{ type: 'Any' }],
                 options: [
                   { v: 'Any', label: 'Any' },
                   { v: 'Female', label: 'Female' },
@@ -87,8 +87,12 @@ test('a voice roster and a text field both survive a close and reopen', async ({
         return inst;
       };
 
-      const rosterNames = root => [...root.querySelectorAll('.mpi-base-flow__field-voices input')]
-        .map(i => i.value);
+      // The roster is DROPDOWNS now, one per row, so the observable is each row's
+      // selected type rather than a typed name (MPI-664, 2026-09-12). MpiDropdown is a
+      // Primitive, not a native select, so the trigger label IS the selection.
+      const rosterTypes = root => [...root.querySelectorAll(
+        '.mpi-base-flow__field-voices .mpi-dropdown__label',
+      )].map(n => (n.textContent || '').trim());
 
       state.s_flowInputs = {};
 
@@ -100,13 +104,17 @@ test('a voice roster and a text field both survive a close and reopen', async ({
       addBtn?.click();
       await new Promise(r => setTimeout(r, 250));
 
-      // Name the second singer the way he did. `input` is what the widget listens for;
-      // the roster deliberately does NOT repaint on a name edit (it would drop focus on
-      // every keystroke), so the row is mutated in place and reported.
-      const nameBoxes = [...inst.el.querySelectorAll('.mpi-base-flow__field-voices input')];
-      if (nameBoxes[1]) {
-        nameBoxes[1].value = 'female';
-        nameBoxes[1].dispatchEvent(new Event('input', { bubbles: true }));
+      // Cast the second voice the way he did, now through its dropdown. Open the
+      // trigger, click the option: the widget reports on `change` and mutates the row
+      // in place without repainting, so this is the real user path.
+      const rows = [...inst.el.querySelectorAll('.mpi-base-flow__field-voices .mpi-dropdown')];
+      if (rows[1]) {
+        rows[1].querySelector('.mpi-dropdown__trigger')?.click();
+        await new Promise(r => setTimeout(r, 150));
+        const female = [...document.querySelectorAll('.mpi-dropdown__list [role="option"], .mpi-dropdown__option')]
+          .find(o => /^female$/i.test((o.textContent || '').trim()));
+        female?.click();
+        await new Promise(r => setTimeout(r, 150));
       }
 
       const lyrics = inst.el.querySelector('textarea');
@@ -116,7 +124,7 @@ test('a voice roster and a text field both survive a close and reopen', async ({
       }
       await new Promise(r => setTimeout(r, 300));
 
-      const before = { names: rosterNames(inst.el), lyrics: lyrics ? lyrics.value : null };
+      const before = { types: rosterTypes(inst.el), lyrics: lyrics ? lyrics.value : null };
 
       // ── navigation: destroy flushes the snapshot, exactly as the shell does ──
       inst.el.destroy?.();
@@ -128,7 +136,7 @@ test('a voice roster and a text field both survive a close and reopen', async ({
       // ── second visit: the flow reopens and seeds from session scratch ───────
       inst = await open();
       const after = {
-        names: rosterNames(inst.el),
+        types: rosterTypes(inst.el),
         lyrics: (inst.el.querySelector('textarea') || {}).value ?? null,
       };
 
@@ -140,7 +148,7 @@ test('a voice roster and a text field both survive a close and reopen', async ({
     });
 
     // The fixture has to have worked, or the assertions below prove nothing.
-    expect(result.before.names).toEqual(['Singer A', 'female']);
+    expect(result.before.types).toEqual(['Any', 'Female']);
 
     // 🔴 THE SNAPSHOT IS WHERE THE DIAGNOSIS LIVES, so it is asserted rather than logged.
     // The step store holds the SEEDED DEFAULTS and never the live edits, because a
@@ -148,9 +156,9 @@ test('a voice roster and a text field both survive a close and reopen', async ({
     // then skips `_stepValues` entirely - while the seeding loop populates it regardless.
     // So `stepValues` is a write-once shadow, and the value that actually comes back is
     // the `injectionParams` one: SERIALISED. That is the shape the widget must cope with.
-    expect(result.snapshot.injectionParams.Input_Voices).toBe('Singer A\nfemale');
+    expect(result.snapshot.injectionParams.Input_Voices).toBe('Voice 1\nVoice 2 (Female)');
     expect(result.snapshot.stepValues.song.fields.Input_Voices)
-      .toEqual([{ name: 'Singer A', type: 'Any' }]);
+      .toEqual([{ type: 'Any' }]);
 
     // The text field is the CONTROL in this experiment - a string is its own restore
     // shape, so it was never at risk. If it ever stops surviving, the bug is not
@@ -159,7 +167,7 @@ test('a voice roster and a text field both survive a close and reopen', async ({
 
     // THE BUG: before the fix this came back as the one-voice default and the default was
     // written back over the cast. Fabio then generated on it and heard a single singer.
-    expect(result.after.names).toEqual(['Singer A', 'female']);
+    expect(result.after.types).toEqual(['Any', 'Female']);
   } finally {
     await closeApp(app);
   }
