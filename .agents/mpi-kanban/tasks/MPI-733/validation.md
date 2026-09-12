@@ -299,7 +299,8 @@ New `docs/gallery-selection.md` (32 lines): trigger and why the context menu, li
 eligibility rule + reasons, image-axis/video-output note, role-pill slot choice + in-place
 substitution, click-order caveat (corrected — see Plan Drift), Loop refusal, the two dispatch
 traps, spec pointer. Every named symbol grepped present. `docs/gallery.md` stays **199** lines
-(its selection section moved out, 3-line pointer in), `docs/README.md` map row added.
+in the WORKTREE, which includes peers' uncommitted MPI-678/MPI-723 sections (**171** committed at
+`581a3363`), with its selection section moved out and a 3-line pointer in. `docs/README.md` map row added.
 
 ### Fabio's app (`user-ux`) — PASSED 2026-09-12
 

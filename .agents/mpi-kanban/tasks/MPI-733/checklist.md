@@ -10,7 +10,7 @@ see this card's Plan Drift and `tasks/MPI-732/plan.md`.
         `filterMediaInputsForModel`; no hardcoded op list. Pure — no DOM, no dispatch, no
         generation import. **Rule tightened to "exactly one REQUIRED slot, type matching"**
         after enumerating every op's slots; the plan's looser rule dispatched broken jobs
-  - [x] `tests/cue-all-eligibility.test.cjs` — 9 tests, all pass. The plan's four cases
+  - [x] `tests/cue-all-eligibility.test.cjs` — 9 tests at Phase 1 (14 after Phase 3), all pass. The plan's four cases
         plus four the enumeration turned up. **Proven non-vacuous by falsification**: a
         broken helper turns 3 of the 9 red
 
@@ -46,7 +46,7 @@ see this card's Plan Drift and `tasks/MPI-732/plan.md`.
 - [x] Phase 4 — regression spec + docs **(auto-verified, see `validation.md`)**
   - [x] `tests/desktop/gallery-cue-all.spec.js` through `MpiGalleryBlock`, lanes held busy via
         `generationStore.getSnapshot` (no GPU). 3/3 mutants killed
-  - [x] Docs: new `docs/gallery-selection.md` (gallery.md was at 199 lines) — trigger, eligibility,
+  - [x] Docs: new `docs/gallery-selection.md` (gallery.md was at 199 lines in the worktree, peers' uncommitted sections included; 171 committed) — trigger, eligibility,
         LIVE-op read, role-pill slot, click-order caveat (corrected), Loop refusal
 
 ## Verification

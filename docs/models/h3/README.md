@@ -284,14 +284,17 @@ and return a different sample, with nothing to announce it.
 
 ## Routing — derived from media, not from a toggle
 
-H3 does not take an op int. `Input_Start_Frame` and `Input_End_Frame` are path strings;
-each feeds an `MpiAnyChecker` (`has img1` / `has img2`) and those two booleans drive four
-lazy `MpiIfElse` branches into four `MiniMaxH3ImageToVideo` nodes (t2v, start-only,
-end-only, start+end). **Illegal states are unreachable by construction** — there is no
-toggle that can disagree with the media present. LTX should adopt this shape (MPI-455).
+H3 does not take an op int. `Input_Start_Frame` and `Input_End_Frame` are path strings into
+`MpiLoadImageFromPath` 217/219 (`block_if_empty` off), wired straight into
+`MpiH3ImageToVideo`, which drops a blank frame itself (`is_blank_image`, MpiNodes `h3.py`).
+One node covers t2v, start-only, end-only and start+end, so **illegal states are unreachable
+by construction** — there is no toggle that can disagree with the media present. LTX should
+adopt this shape (MPI-455). The old `MpiAnyChecker` → four-`MpiIfElse` lattice is gone (see
+below); the `MpiIfElse` nodes left in fl2va all key on `Input_is_Turbo` (`turbo.md`).
 
-`generate_h3.py` asserts all four branches survive, because a missing one does not error —
-it falls through to another and conditions on the wrong frames.
+`generate_h3.py` asserts exactly TWO `MpiH3ImageToVideo` (stage 1 and the refine, each
+encoding the keyframes at its own pass size) and ZERO core `MiniMaxH3ImageToVideo`, because a
+missing or stray node does not error — it conditions on the wrong frames.
 
 ### The keyframe resize belongs to the NODE — the graph lost it once already
 
