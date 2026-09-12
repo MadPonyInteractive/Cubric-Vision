@@ -42,6 +42,7 @@ Stack-based overlay controller. Multiple overlays can be visible simultaneously,
 - Ctrl+Shift+I opens devtools (dev mode only, gated by `APP_CONFIG.dev_mode`).
 - Context Menu / Shift+F10 opens the app context menu at the last hovered point when dev mode is off. In dev mode, the key is left to Electron so the native Inspect Element menu can open.
 - Focus gating treats only text-entry controls as typing (`TEXTAREA`, contenteditable, and text-like `INPUT` types such as `text`, `number`, `search`, `email`, `password`, date/time types). Non-text controls such as `input[type="range"]`, checkboxes, radios, and buttons may keep focus without blocking global hotkeys.
+- **`modal.confirm` is bound by `MpiModal` for EVERY modal**, whether or not the dialog subscribes to `'confirm'` — `show()` binds it unconditionally — and `_dispatch` calls `preventDefault()`/`stopPropagation()` on any bound+eligible key BEFORE it reaches the handlers (`hotkeyManager.js:210`). So a key swallowed inside a modal has no listener to blame, and the search starts in the wrong file. That ate Enter in every modal textarea until MPI-738 gave the entry a `when` gate skipping `TEXTAREA`/contenteditable — the notes editor (project notes and card notes) could not start a new line. `MpiNotesEditor` and `MpiEnhanceDialog` both carry comments claiming they dodge the clash by not listening for `confirm`; that was never sufficient. A field inside a modal that needs a key the registry binds gets a registry gate, not a local listener.
 
 ### Adding a hotkey
 
