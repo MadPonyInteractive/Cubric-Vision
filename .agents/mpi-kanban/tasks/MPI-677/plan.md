@@ -413,18 +413,30 @@ one.
 
 Not blocking anything above. Each is independently useful.
 
-- [ ] **The corpus retrieval path.** `listCorpus() → [{ id, kind:
+- [x] **The corpus retrieval path.** `listCorpus() → [{ id, kind:
       'model'|'app', title, tags, text() }]`, `text()` lazy. Model entries render
       through the existing `renderRecipeBrief()` (`js/data/recipes/brief.js:26`,
-      tested at `tests/recipe-registry.test.cjs:217-229`). **`listCorpus()` does
-      not exist** (grepped repo-wide) and **`docs/agent/` does not exist**, so
-      the app-knowledge half has nothing to read yet. **Verify:** an entry for
+      tested at `tests/recipe-registry.test.cjs:217-229`). **Verify:** an entry for
       every declared mode of all 12 recipes, `text()` uncalled during
       `listCorpus()`, at least one `kind: 'app'` entry resolving.
+      **Built 2026-09-12** as `services/agentCorpus.mjs` — server-side, because
+      `js/` is browser code with no `fs`. All three verifies are asserted in
+      `tests/agent-corpus.test.cjs`, and the laziness one is a RUNTIME count:
+      `fs.readFileSync` is patched on the core module object before the ESM module
+      loads, so an eager read is caught rather than reasoned about. The counter is
+      proven live in the same test — 0 during `listCorpus()`, 1 when an app
+      entry's `text()` is called.
+      **Two decisions worth not re-litigating:** an app doc's title and tags come
+      from its FILENAME (reading every file to build a listing is the one thing
+      this function exists to avoid, and nothing writes front matter yet), and a
+      missing `docs/agent/` returns the model half rather than throwing.
 - [ ] **Write the first app-knowledge playbooks** into `docs/agent/` — RunPod
       setup, what each operation does, where the gallery is. The documentation
       website stays the fallback the agent points at. **Verify:** `listCorpus()`
       returns them, each non-empty.
+      **Seeded 2026-09-12** with `prompt-enhancement.md`: the overlay's two-box
+      contract, what a recipe is and the four jobs, the per-OPERATION enhance
+      exemption, and the three backends. The rest of the list is still open.
 - [ ] **Split `.claude/skills/cubric-vision/SKILL.md`** — 670 lines into a
       ~85-line router plus `projects.md` (~109), `on-disk-format.md` (~181,
       taking §Reference slots because its recovery script is the same shape),
