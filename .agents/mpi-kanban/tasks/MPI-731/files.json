@@ -1,0 +1,20 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/components/Primitives/MpiProgressBar/MpiProgressBar.js",
+    "js/components/Primitives/MpiProgressBar/MpiProgressBar.css",
+    "js/components/Compounds/MpiVolumeControl/MpiVolumeControl.js",
+    "js/components/Compounds/MpiVolumeControl/MpiVolumeControl.css",
+    "js/components/Compounds/MpiAudioPlayer/MpiAudioPlayer.js",
+    "js/components/Compounds/MpiAudioPlayer/MpiAudioPlayer.css",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.js",
+    "js/components/Organisms/MpiBaseFlow/MpiBaseFlow.css",
+    "js/components/Compounds/MpiVideoControlBar/MpiVideoControlBar.js",
+    "js/components/Compounds/MpiVideoControlBar/MpiVideoControlBar.css",
+    "js/components/Compounds/MpiFlowResultDock/MpiFlowResultDock.css",
+    "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+    "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.css",
+    "tests/desktop/flow-audio-player.spec.js",
+    "docs/gallery-audio-cards.md"
+  ]
+}

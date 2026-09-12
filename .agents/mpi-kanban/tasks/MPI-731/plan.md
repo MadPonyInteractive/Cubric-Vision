@@ -60,6 +60,22 @@ need are sequenced last — item 8 — and neither blocks the feature. `MpiBaseF
 unclaimed — but it is a shared Primitive, so claim it before the first edit and release it
 the moment the item lands.
 
+**`js/pages/components.js` is MPI-739's** (claim live 17:05Z, card still in `doing`). Its
+work shipped at 18:11/18:19 (`6ef03986`, `fa5c161a`) and Fabio believes that session is
+finished, but the record is what `guard-claim` reads and it still says `claimed` — so leave
+the page alone. Nothing on the critical path needs it; the demo variant is item 8's
+follow-up, and it now has a named home: that commit rehomed the two slider cards
+(`preview-slider-smart`, `preview-slider-smart-2`) from a fictional "MpiSlider" heading in
+Compounds to `MpiProgressBar`'s own row beside the static bars, which is where a vertical
+variant belongs.
+
+**`MpiGalleryGrid.js` (item 6) holds TWO peers' uncommitted work** — MPI-733's `cue-all`
+context-menu entry, deliberately uncommitted while it waits on Fabio's UX verify, and ~83
+lines of MPI-678's archive work — plus an untracked `tests/desktop/gallery-archive.spec.js`.
+Neither is a live `claimed` record, so the file is writable, but it makes item 6 the
+riskiest swap in the card: **do it last, stage by hunk, and read `git diff` before every
+stage.** That is why items 5 and 6 are separate items rather than one "adopt everywhere".
+
 ## Decided at plan time
 
 The brief left three things open and asked for a fourth decision explicitly; Fabio settled
@@ -276,6 +292,11 @@ settled below from the code, not from preference. Do not re-litigate them — bu
       previous value so unmuting restores it — that is the behaviour the span never had, and
       the one place this item adds function rather than moving it. Give the freed ~7rem back
       to the header's centre zone (`MpiGalleryGrid.css:14-17` explains why that matters).
+      **DO THIS ITEM LAST.** `MpiGalleryGrid.js` carries MPI-733's and MPI-678's
+      uncommitted work (see Current State), so every stage here is hunk-level and every
+      `git diff` gets read first. If the file is mid-flight when this item comes up, defer
+      it and say so on the card — a shared header row is not worth clobbering a peer's
+      unverified feature.
       **Verify:** live — hover an audio card and a video card, confirm the volume still
       lands on both, mute and unmute round-trips to the same level, and the setting survives
       a reload (it is in `Storage`). `tests/desktop/gallery-audio-waveform.spec.js` and the

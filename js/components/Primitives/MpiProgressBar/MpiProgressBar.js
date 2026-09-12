@@ -17,6 +17,9 @@ import { qs } from '../../../utils/dom.js';
  * @param {boolean} [wheel=false]    - Enable mouse wheel to adjust value (slider mode only)
  * @param {boolean} [handle=false]   - Show a circular thumb handle on the fill position
  * @param {'primary'|'secondary'|'success'|'danger'} [variant='primary']
+ * @param {'horizontal'|'vertical'} [orientation='horizontal'] - Travel direction. Vertical
+ *   fills from the BOTTOM and is what a hover-out volume flyout mounts (MPI-731); the
+ *   native control does the pointer maths either way — see the CSS.
  */
 export const MpiProgressBar = ComponentFactory.create({
     name: 'MpiProgressBar',
@@ -40,10 +43,17 @@ export const MpiProgressBar = ComponentFactory.create({
         const isDisabledAttr = isInteractive ? '' : 'disabled';
         const stateClass = isInteractive ? 'mpi-progress--interactive' : 'mpi-progress--disabled';
 
-        const fillPercent = ((value - min) / (max - min)) * 100;
-        const handleHtml = props.handle ? `<div class="mpi-progress__handle" style="left: ${fillPercent}%"></div>` : '';
+        const vertical = props.orientation === 'vertical';
+        const axisClass = vertical ? ' mpi-progress--vertical' : '';
 
-        return `<div class="mpi-progress mpi-progress--${variant} ${stateClass}" ${infoAttr}>
+        const fillPercent = ((value - min) / (max - min)) * 100;
+        // Vertical grows upward, so the handle is offset from the bottom and the fill is a
+        // height. Both axes are set as inline styles here and in updateVisuals — keep the
+        // two in step or the mount paints one axis and the first drag paints the other.
+        const handleOffset = vertical ? `bottom: ${fillPercent}%` : `left: ${fillPercent}%`;
+        const handleHtml = props.handle ? `<div class="mpi-progress__handle" style="${handleOffset}"></div>` : '';
+
+        return `<div class="mpi-progress mpi-progress--${variant} ${stateClass}${axisClass}" ${infoAttr}>
             <div class="mpi-progress__track-container">
                 <input
                     type="range"
@@ -54,7 +64,7 @@ export const MpiProgressBar = ComponentFactory.create({
                     value="${value}"
                     ${isDisabledAttr}
                 >
-                <div class="mpi-progress__track-fill" style="width: ${fillPercent}%"></div>
+                <div class="mpi-progress__track-fill" style="${vertical ? 'height' : 'width'}: ${fillPercent}%"></div>
                 ${handleHtml}
             </div>
         </div>`;
@@ -70,12 +80,14 @@ export const MpiProgressBar = ComponentFactory.create({
         const infoOptOut = props.info === '';
         const infoTpl = props.info || `${props.prefix || ''}{value}${props.suffix || ''}`;
 
+        const vertical = props.orientation === 'vertical';
+
         const updateVisuals = (val) => {
             const min = props.min !== undefined ? props.min : 0;
             const max = props.max !== undefined ? props.max : 100;
             const percent = ((val - min) / (max - min)) * 100;
-            if (trackFill) trackFill.style.width = `${percent}%`;
-            if (handleEl) handleEl.style.left = `${percent}%`;
+            if (trackFill) trackFill.style[vertical ? 'height' : 'width'] = `${percent}%`;
+            if (handleEl) handleEl.style[vertical ? 'bottom' : 'left'] = `${percent}%`;
 
             if (!infoOptOut && infoTpl.includes('{value}')) {
                 el.dataset.info = infoTpl.replace('{value}', val);
