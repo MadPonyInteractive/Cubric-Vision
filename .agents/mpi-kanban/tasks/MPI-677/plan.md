@@ -35,9 +35,11 @@ names but never lettered. **Order is by priority, not by letter.**
 
 ## Current State
 
-**2026-09-12 (later) — STEP 1c IS CLOSED, and so is step 2. Steps 1 and 2 are both
-done; step 3 (archive Cubric-Prompt) is the only thing between here and the goal,
-and it is on Fabio's explicit go.**
+**2026-09-12 (later) — THE GOAL IS MET. Steps 1, 2 and 3 are done: Vision enhances on
+its own, the cord is cut, and Cubric-Prompt is archived.** One action outstanding and
+it is Fabio's: `gh repo archive MadPonyInteractive/Cubric-Prompt --yes` (the local
+banner is pushed; the classifier refused the flag). Step 4's corpus path is built;
+steps 4's remaining bullets and step 5 are what is left of the card.
 
 Round 3 found the defect the whole `user-ux` gate existed to catch: `sourcePrompt`
 never reached the sidecar, because two run-payload mappers destructure an explicit
@@ -444,10 +446,24 @@ and invisible in the plan is this card's signature failure.
 
 ## Step 3 — release the repos
 
-- [ ] Archive Cubric-Prompt. **Only on Fabio's explicit go**, and only once
+- [x] Archive Cubric-Prompt. **Only on Fabio's explicit go**, and only once
       steps 1–2 are live: the export is already verified here, but the repo is
       the fallback until Vision enhances on its own. **Verify:** Fabio says so;
       nothing else counts.
+      **GO GIVEN 2026-09-12, immediately after 1c closed and step 2 was confirmed
+      live.** Cubric-Prompt `35dee06` puts an archive banner at the top of its
+      `CLAUDE.md` and is pushed. **The GitHub flag itself is Fabio's one command** —
+      `gh repo archive MadPonyInteractive/Cubric-Prompt --yes` was refused by this
+      session's permission classifier, so it is the single outstanding action and it
+      is his to run.
+      **The banner does the work the flag does not.** His complaint was that sessions
+      keep OPENING in that repo, which is a launcher cwd, not a GitHub state — a
+      read-only remote would not have told a local session anything. So the banner
+      says a session here is in the wrong repo, and it says the board is frozen AS IT
+      STOOD: the cards left in `doing` are the honest record of where an unshipped app
+      stopped, **not a queue, and not to be tidied into `done`** — falsifying eleven
+      card states to quiet a session-start listing would destroy the only account of
+      what was unfinished.
 - [ ] `@cubric/ui` — **already deprecated on npm, closed.** Never unpublish.
       **Verify:** nothing to do; recorded so it is not re-opened.
 
