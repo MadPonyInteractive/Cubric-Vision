@@ -15,8 +15,54 @@ possible and informed.
 
 ## Current State
 
-**SHIPPED AS `fef67f9d`, pushed to master, 21 files.** The write claim
-(`3a1c1b42`) is released as `complete` — nothing of this card is uncommitted.
+**2026-09-12, ROUND 3 — SHIPPED AS `da3b23bc`, pushed. MASTER WAS RED ON THIS CARD
+AND THAT COMMIT IS THE FIX.** `fef67f9d`'s retargeted desktop spec had never been
+run; run here it failed at `:89`, and so had every master CI run since `fef67f9d`.
+It closed panels with `querySelector('.mpi-slide-over')`, which hands back the
+Remote panel still sliding out (it stays in the DOM up to 400ms), and close() on
+that node is a no-op. Now `[aria-expanded="true"]`. `MpiSlideOver` was correct.
+
+Fabio's round-3 review, all in `da3b23bc`:
+- **No "Automatic".** DeepInfra / Ollama / ComfyUI, and **ComfyUI is the default**
+  (`chooseBackend` / `backendPreference`; `serverStatus()` deleted with the route
+  it fed). DeepInfra is listed but DISABLED until a key is saved; ComfyUI likewise
+  until its plugin is installed. A pinned backend that becomes unavailable stays
+  selected with a "Needs…" note — never swapped.
+- **"New to DeepInfra?" promo** → `https://deepinfra.com/dash`. RunPod's promo CSS
+  is lifted into `MpiSettings.css` as `.mpi-settings__signup` and shared.
+- **One picker open at a time, app-wide.** Every picker trigger stopPropagation()s,
+  hiding the click from the other open picker's document listener, so lists
+  stacked. New bus event `ui:picker-open` in MpiDropdown / MpiTreePicker /
+  MpiStylePicker. NOT `ui:close-all-popups`: MpiModal and MpiPopup close on that
+  whatever its reason, and a picker can sit inside either.
+- **`.claude/rules/` updated with his permission.** A peer's uncommitted
+  MPI-589/678 lines in `component-events-primitives.md` stayed out of the commit
+  via a hand-built index blob; they are still in the working copy, theirs.
+
+Verified: `npm test` 949/949, both lints clean, both touched desktop specs pass. CI
+on `da3b23bc` is recorded in `validation.md`. NOT proven RED on HEAD: the new
+exclusivity asserts (stash is banned; the red master came first).
+
+**ROUND 3 IS VERIFIED BY FABIO (2026-09-12), in the desktop app.** Clear, the
+greyed DeepInfra entry with no key, the ComfyUI default, the dashboard button, and
+one dropdown open at a time: all four check out, and he had already seen Save work.
+"There's no cost in the dropdown" meant exactly "it does not read as a ranking",
+confirmed. **Phases 1+2 have nothing outstanding.**
+
+**NEW OPEN QUESTION, FABIO'S: SHOW A PRICE.** He never asked for one before, but
+now wants it: "maybe price per token would suffice". Nothing is decided or built,
+and it folds into this card because it is the same panel. Proposed shape, NOT
+verified: each DeepInfra model option's stacked meta shows `$/1M in · $/1M out`,
+maybe with an "≈ $ per enhance" estimate (recipe size × price), and local backends
+say they cost no money. Open: where the prices come from (a dated static field on
+`MODEL_REGISTRY` in `services/llmEngines.mjs`, or DeepInfra's API, which nobody
+has checked for pricing), and whether this overlaps MPI-741 (credits research, a
+peer's card).
+
+**THE SINGLE NEXT ACTION:** settle the price display with Fabio (build it or park
+it), then phase 3, the Ollama lifecycle.
+
+### Round 2 state, for reference
 
 **2026-09-12, round 2 — RESTRUCTURED ON FABIO'S SCREENSHOT REVIEW, still awaiting
 his eyes.** He compared the section against the RunPod one and was right three

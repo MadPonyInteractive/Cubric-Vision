@@ -175,17 +175,53 @@ correct. Plus two scope calls.
   it is an Electron desktop spec, and this session has no evidence it passes.
 - Zero console errors across the whole pass.
 
-## Still owed — Fabio's eyes (`Verify mode: user-ux`)
+## Round 3 — 2026-09-12 (`da3b23bc`)
 
-Nothing above can judge the surface, and two things cannot be reached from a
-browser at all:
+### The owed spec ran, and it was the red on master
 
-1. **The DeepInfra key field in the DESKTOP app** — Save, the status line flipping
-   to "A DeefInfra key is saved.", Clear, and `hasKey: true` on `/llm/status`.
-   Playwright drives a browser, where `secretsClient.isAvailable()` is false by
-   design, so only the disabled branch was exercised.
-2. **Whether the copy reads as a PLACEMENT choice and never as a quality ranking.**
-   That is the whole point of the card and it is a judgement, not an assertion.
+- `npx playwright test --config=playwright.desktop.config.js tests/desktop/runpod-settings-extract.spec.js`
+  → **FAILED at `:89`**: `.mpi-slide-over` "resolved to 2 elements", then 1, never 0.
+- Master CI was red on `fef67f9d`, `d0787f13`, `865b8a7a`, `b079624f` and
+  `d04a11d4`. Run `34710215955`'s only failure is this spec at `:89`.
+- Cause is the SPEC. `MpiSlideOver._doClose` removes the node on `transitionend`
+  with a 400ms backstop, and `_openSlideOver` guards `_active === instance`, so
+  the manager is correct. `document.querySelector('.mpi-slide-over')` returned
+  the Remote node still sliding out, already `_closed`, so `close()` no-oped.
+- Fix: `.mpi-slide-over[aria-expanded="true"]` → PASS.
+
+### Round-3 changes, verified
+
+- `npm test` → **949 pass / 0 fail**. `node tests/llm-service.test.cjs` → 10/10,
+  including the new `testComfyIsTheDefault`. On HEAD `chooseBackend()` returned
+  `'ollama'` (the old `serverDefault = 'ollama'` fallback), so that assertion is
+  red on HEAD by construction.
+- `npm run lint` + `npm run lint:components` → clean.
+- `runpod-settings-extract.spec.js` + `popup-contract.spec.js` → **2 passed**. The
+  first now also asserts the ComfyUI default label, exactly three backend options,
+  and DeepInfra `is-disabled` on a keyless profile. The second asserts
+  dropdown→dropdown and dropdown→tree-picker exclusivity.
+- **NOT proven RED on HEAD:** the exclusivity asserts. Stash is guard-git-banned
+  and the red master came first. The defect itself is Fabio's screenshot plus the
+  `stopPropagation()` reading of all three picker triggers.
+- CI on `da3b23bc`: run `34711900706` → **`success`** (`tests: success`). Master
+  is green again; the five red runs before it all failed on this spec alone.
+
+## Fabio's desktop check (`Verify mode: user-ux`) — PASSED, 2026-09-12
+
+In the desktop app, by Fabio. Earlier in the round he had already seen the Remote
+nav entry, the section, and **Save** on the key field ("API key is saved." in his
+screenshot). Then, on his own words "I cleared the key and did all four steps.
+Everything checks out":
+
+1. **Clear** → the status line changes and DeepInfra greys out in the backend list. ✔
+2. With no key: DeepInfra listed but unpickable; ComfyUI selected by default. ✔
+3. **Open DeepInfra dashboard** opens `https://deepinfra.com/dash`. ✔
+4. Opening one dropdown while another is open closes the first. ✔
+5. **Placement, not ranking:** his "there's no cost in the dropdown" meant exactly
+   that. Confirmed ("yes, that's what I meant"). ✔
+
+**Phases 1+2 have no open verification.** A new, unbuilt ask came with it: show a
+price ("maybe price per token would suffice"). See `plan.md` § Current State.
 
 ## Phase 3 — NOT STARTED
 
