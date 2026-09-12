@@ -32,12 +32,29 @@ What is there today:
 
 Design was settled with Fabio in brainstorm. Do not re-litigate it — build it.
 
-**Where it stands (2026-09-12):** item 1 is built and machine-verified — every audio sidecar
-written from now on carries a baked waveform mask at `<id>.thumb.webp`, and an existing
-project backfills one per audio item on its next load. Nothing paints it yet: the card still
-renders the blank grey icon tile, so there is no visible change until item 2. Next action is
-item 2, and it now has to produce a reusable `MpiWaveform` component because the custom
-player Fabio is planning needs the same waveform.
+**Where it stands (2026-09-12, after item 2):** items 1 and 2 are built and machine-verified.
+An audio card is now a 21:9 tile painting its baked mask, filling toward `--accent-heat` as it
+plays, with a playhead rule and a cursor rule. The paint lives in `MpiWaveform`
+(`js/components/Compounds/MpiWaveform/`), which owns no `<audio>`: the card drives
+`setProgress` from its own `timeupdate` and the component reports a `seek` back, which is what
+lets MPI-731's player mount the same component against a wide box.
+
+**Fabio looked at it (2026-09-12) and the behaviour passes: "it works as we wanted it to
+work."** The 21:9 card, the wave, the fill and the rules are accepted. He raised exactly two
+things, and NEITHER is a defect in what shipped:
+
+1. **Clicking pauses instead of seeking.** That is item 3, which was deliberately not wired —
+   `MpiWaveform` already emits `seek { fraction, time }` and nothing consumes it. He expected
+   it to be done already. This is now the next action.
+2. **The colour is wrong for the product.** The card paints `--accent-heat` (rose), which is
+   *Cubric Vision's* accent. Audio has its own: the next release renames the product to Cubric
+   Studio and each media type gets its own mascot and its own accent. **Cubric Audio is
+   `oklch(0.84 0.11 170)` — the greenish-cyan** (see Plan Drift for where that lives and what
+   may NOT be done with it).
+
+Still owed regardless: the gallery demo page (`js/pages/components.js`) has not been asked
+about, and the derivative path and the paint path have still only met in a spec, never in a
+live app.
 
 ## Implementation
 
@@ -110,10 +127,33 @@ player Fabio is planning needs the same waveform.
       `.webp` name, a transparent pixel AND an opaque one, the 21:9 baked size, and that the
       envelope both fills the card and varies. Green; 930/930 node suite green; eslint clean.
 
+- [x] **Geometry and paint, as a reusable component** (2026-09-12). `MpiWaveform`
+      (`js/components/Compounds/MpiWaveform/`, Compound, ~110 lines) — two full-bleed layers
+      split by one `clip-path`, each painting a background fill plus the mask on a `::after`;
+      the mask URL rides one custom property on the root so a swap is a single write. Props
+      `{ mask, progress, duration }`, API `setMask/setProgress/setDuration/getProgress`, emits
+      `seek { fraction, time }`, owns no `<audio>`. Registered in `preloadStyles.js` and
+      `types.js`. Card side: `_getAspectRatio()` branches to `21/9` for audio,
+      `_swapThumbToAudio(selected)` mounts the component AS the thumb (keeping
+      `mpi-group-card__thumb--audio` and `draggable`, so drag-out still binds) and reuses the
+      instance across re-renders so an in-flight playhead survives; the centred play/stop icon
+      and its CSS are gone; `timeupdate` drives the fill and every stop path empties it.
+      `tests/desktop/gallery-audio-waveform.spec.js` reads PIXELS off the rendered card, with
+      both the audio and the mask real — and each pixel assertion was proven able to fail
+      against a deliberately broken build (see `validation.md`). **Machine-verified only —
+      the user-ux sign-off on this item is still owed.**
+
 ## Remaining Work
 
-- Item 2 (geometry and paint, now as a reusable `MpiWaveform` component) and item 3
-  (click to seek + suppress open-group).
+- **Item 3 — click to seek + suppress open-group.** The blocker Fabio actually hit.
+  `MpiWaveform` already emits `seek { fraction, time }`; nothing consumes it. So this is
+  card-side wiring only, not new paint: the card's own click handler currently toggles
+  play/stop and wins, which is why a click reads as "it pauses".
+- **Repaint in the Cubric Audio accent** (`oklch(0.84 0.11 170)`), not Vision's rose. Needs a
+  token decision first — see the Plan Drift entry; do not hardcode it and do not reach for
+  `--accent-ok`.
+- Ask about the gallery demo page for `MpiWaveform` (`js/pages/components.js`).
+- Run it once in a live app — the bake and the paint have only met in a spec.
 
 ## Plan Drift
 
@@ -131,6 +171,34 @@ player Fabio is planning needs the same waveform.
   is being replaced and will need this same waveform, so item 2's paint must be a reusable
   component rather than DOM built inside `_swapThumbToAudio()`. Folded into item 2 above.
   The derivative itself needed no change — a player reads the same sidecar `thumbPath`.
+- **2026-09-12 — the audio card is painted in the WRONG PRODUCT'S accent, and the right one
+  already exists.** The plan said `--accent-heat` for the played wave and that is what shipped,
+  but `--accent-heat` is *Cubric Vision's* app accent. The rename to Cubric Studio (MPI-708)
+  gives each media type its own mascot and its own accent, and Fabio wants the audio card on
+  Audio's. **Cubric Audio = `oklch(0.84 0.11 170)`**, a greenish-cyan. Found and confirmed at
+  the SOURCE OF TRUTH, not a mirror:
+  `c:\AI\Mpi\Cubric Studio (Website)\styles\landing.css:33` (`--audio-accent`), with the full
+  family beside it — `--hub-accent oklch(0.78 0.028 80)`, `--vision-accent oklch(0.76 0.17
+  355)`, `--prompt-accent oklch(0.88 0.13 102)`, `--video-accent oklch(0.78 0.15 48)`.
+  `c:\AI\Mpi\MadPony-Identity\DESIGN.md:360-372` mirrors them and states the rule in as many
+  words: *the website repo is the source of truth, mirror values here, never invent them.*
+  **Two traps for whoever implements this.** (a) Vision has NO audio-accent token today —
+  `styles/01_base.css` carries only `--accent-heat/-frost/-ok/-warn`, so this needs a new token
+  and that is a product-wide decision, not a component-local one; do not hardcode the oklch
+  into `MpiWaveform.css`, which would be the exact "no baked colour" violation the rules ban.
+  (b) `--accent-ok` is `oklch(0.78 0.13 150)` — close enough to be tempting and WRONG; it is
+  the success/ready semantic, and reusing it would tie the audio brand colour to status. Ask
+  Fabio how the family lands in Vision's tokens before painting anything.
+- **2026-09-12 — a boot modal dims every pixel a desktop spec reads.** `gallery-audio-waveform`
+  measured the waveform at r≈11 against a real r≈140 and read as "the mask never painted". The
+  mask was fine: a fresh `CUBRIC_E2E_USER_DATA` profile has not acknowledged the 18+ gate, so
+  `_maybeShowMaturityWarning` fires every run and Continue CHAINS the changelog (MPI-333) —
+  two `.mpi-modal-backdrop` layers over the whole window. Any desktop spec reading PIXELS must
+  clear them first; the DOM-only specs never noticed because `evaluate` sees through a
+  backdrop. Kept as `clearBootModals()` in that spec.
+- **2026-09-12 — the CSS `clip-path` on the played layer is only a resting state.** Removing it
+  does not fail the spec, because `_applyProgress()` writes it inline on every mount. Left in
+  as the pre-JS default: a blank card is a better failure than a full-accent one.
 - **2026-09-12 — test-fixture trap worth keeping.** ffmpeg's `sine` lavfi source peaks at
   about -18 dBFS, so a bare sine fixture draws a thin band and every envelope assertion reads
   as a broken filter when the filter is fine. The test drives it with `volume=` for that

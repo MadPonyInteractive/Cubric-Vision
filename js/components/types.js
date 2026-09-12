@@ -1906,6 +1906,40 @@
  */
 
 /**
+ * @typedef {Object} MpiWaveformProps (Compound — js/components/Compounds/MpiWaveform)
+ * @property {string} [mask]       - URL of the baked waveform mask (an audio item's
+ *                                   sidecar `thumbPath`). Omitted → fills, no wave.
+ * @property {number} [progress=0] - Initial playhead as a fraction 0..1
+ * @property {number} [duration=0] - Clip length in seconds; turns a click into a time
+ *
+ * Paints the `showwavespic` derivative `extractAudioWaveform()` bakes. That file
+ * is an alpha MASK (white-on-transparent), never a picture — the component
+ * colours it with tokens, which is what buys themes and the fill. Two full-bleed
+ * layers split by ONE `clip-path`: unplayed is `--surface-3` + `--ink-2`, played
+ * is an `--accent-heat` tint + `--accent-heat`. The BACKGROUND fills as well as
+ * the wave, so it reads as a progress bar with the wave inside it.
+ *
+ * The mask is one 21:9 rendition, stretched to whatever box mounts it — a
+ * gallery card and a wide transport strip are both the right wave. Do not bake
+ * a second rendition.
+ *
+ * Owns no <audio>. The consumer drives `setProgress` from its own `timeupdate`
+ * and decides what a `seek` means, which is what lets the gallery card and the
+ * audio player (MPI-731) mount the same component.
+ *
+ * Instance methods (on instance.el):
+ *   setMask(url)       — swap the mask (re-selected history entry)
+ *   setProgress(f)     — move the playhead; clamped to 0..1
+ *   setDuration(s)     — clip length in seconds
+ *   getProgress()      — current fraction
+ *   destroy()          — drop listeners
+ *
+ * Emits (component-local):
+ *   'seek' { fraction, time }  — clicked at `fraction` across the box; `time` is
+ *                                seconds, or null when no duration is known.
+ */
+
+/**
  * @typedef {Object} MpiVideoSurfaceProps (Compound — js/components/Compounds/MpiVideoSurface)
  * @property {string}  [src]           - Video source URL
  * @property {string}  [poster]        - Poster image URL

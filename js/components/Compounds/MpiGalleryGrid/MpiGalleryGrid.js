@@ -3,6 +3,7 @@ import { MpiProgressBar } from '../../Primitives/MpiProgressBar/MpiProgressBar.j
 import { MpiButton } from '../../Primitives/MpiButton/MpiButton.js';
 import { MpiInput } from '../../Primitives/MpiInput/MpiInput.js';
 import { MpiContextMenu } from '../MpiContextMenu/MpiContextMenu.js';
+import { MpiWaveform } from '../MpiWaveform/MpiWaveform.js';
 import { ce, qs, qsa, on } from '/js/utils/dom.js';
 import { renderIcon } from '/js/utils/icons.js';
 import { removeHistoryEntry } from '../../../data/projectModel.js';
@@ -805,15 +806,37 @@ export const MpiGalleryGrid = ComponentFactory.create({
                 imageThumb.src = src;
             }
 
-            function _swapThumbToAudio() {
-                // Audio has no frame — render a centered play/pause icon thumb
-                // (white, turns pink when the card is selected via CSS). The icon
-                // doubles as the play/pause feedback button.
-                const audioThumb = document.createElement('div');
-                audioThumb.className = 'mpi-group-card__thumb mpi-group-card__thumb--audio';
-                audioThumb.draggable = true; // enable drag-into-prompt (like img/video thumbs)
-                audioThumb.innerHTML = `<span class="mpi-group-card__audio-icon">${renderIcon('play', 'lg')}</span>`;
-                _replaceThumb(audioThumb);
+            // The card's waveform, mounted as the thumb itself. Kept on the card so
+            // `_ensureAudioCardControls` can drive its playhead from `timeupdate`.
+            let _waveform = null;
+
+            function _swapThumbToAudio(selected) {
+                // Audio has no frame — it paints the mask baked at `thumbPath`
+                // (MPI-730). There is no play icon any more: the fill IS the
+                // feedback, and the icon only ever existed because the tile was
+                // empty.
+                const mask = selected?.thumbPath || '';
+                const duration = Number(selected?.duration) || 0;
+
+                // Re-render on the same card: keep the instance so an in-flight
+                // playhead survives, and just re-point it at the current entry.
+                if (_waveform && thumb === _waveform.el) {
+                    _waveform.el.setMask(mask);
+                    _waveform.el.setDuration(duration);
+                    cardEl.classList.remove('mpi-group-card--missing');
+                    return;
+                }
+
+                // Drop the outgoing instance's listeners before `_replaceThumb`
+                // detaches its element — destroy() would remove the node itself,
+                // which replaceWith still needs.
+                if (_waveform) { _waveform.el.destroy?.(); _waveform = null; }
+
+                const wf = MpiWaveform.mount(document.createElement('div'), { mask, duration });
+                wf.el.classList.add('mpi-group-card__thumb', 'mpi-group-card__thumb--audio');
+                wf.el.draggable = true; // enable drag-into-prompt (like img/video thumbs)
+                _replaceThumb(wf.el);
+                _waveform = wf;
                 _removeHoverVideo();
                 _videoThumb = null;
                 cardEl.classList.remove('mpi-group-card--missing');
@@ -825,25 +848,32 @@ export const MpiGalleryGrid = ComponentFactory.create({
             // No dwell: a real hover (not scrolling) plays instantly.
             cardEl._hoverPlay = () => {};
 
-            // Click the audio card → toggle play/pause (no loop). The center icon
-            // swaps play↔pause as feedback. A hidden <audio> element drives it.
+            // Click the audio card → toggle play/stop (no loop). The waveform fill
+            // is the feedback. A hidden <audio> element drives it.
             let _audioEl = null;
             function _ensureAudioCardControls(src, selected) {
-                const iconWrap = qs('.mpi-group-card__audio-icon', cardEl);
                 if (_audioEl && _audioEl.dataset.src === src) return;
                 if (_audioEl) { _audioEl.pause(); _audioEl.remove(); _audioEl = null; }
 
                 const audio = document.createElement('audio');
                 audio.preload = 'metadata';
                 audio.dataset.src = src;
-                const _setIcon = (name) => { if (iconWrap) iconWrap.innerHTML = renderIcon(name, 'lg'); };
+                const _syncWave = (t) => {
+                    const d = Number(audio.duration);
+                    _waveform?.el.setProgress(d > 0 ? t / d : 0);
+                };
                 on(audio, 'loadedmetadata', () => {
-                    if (Number.isFinite(audio.duration)) _setAudioLength(audio.duration);
+                    if (Number.isFinite(audio.duration)) {
+                        _setAudioLength(audio.duration);
+                        _waveform?.el.setDuration(audio.duration);
+                    }
                 });
-                // Play/Stop (short clips): playing shows Stop; stop/end resets to 0.
-                on(audio, 'play',  () => _setIcon('stop'));
-                on(audio, 'pause', () => _setIcon('play'));
-                on(audio, 'ended', () => { _setIcon('play'); try { audio.currentTime = 0; } catch (_) {} });
+                // The fill tracks playback; stop/end empties it back to 0.
+                on(audio, 'timeupdate', () => _syncWave(audio.currentTime));
+                on(audio, 'ended', () => {
+                    try { audio.currentTime = 0; } catch (_) {}
+                    _waveform?.el.setProgress(0);
+                });
                 audio.addEventListener('error', () => {
                     cardEl.classList.add('mpi-group-card--missing');
                     emit('media-missing', { group, itemId: selected?.id });
@@ -866,13 +896,14 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         // Stop (not pause): reset to the beginning.
                         audio.pause();
                         try { audio.currentTime = 0; } catch (_) {}
+                        _waveform?.el.setProgress(0);
                     }
                 });
 
-                // Hovering an audio card plays it (stop button shows via the
-                // 'play' listener); leaving stops + resets. Click-to-stop still
-                // works. Volume 0 is the mute — silent playback would only show
-                // a misleading stop icon, so skip the hover play entirely.
+                // Hovering an audio card plays it (the fill is the feedback);
+                // leaving stops + resets. Click-to-stop still works. Volume 0 is
+                // the mute — silent playback would only draw a fill nobody asked
+                // for, so skip the hover play entirely.
                 cardEl._hoverPlay = () => {
                     if (_volume === 0) return;
                     if (!audio.paused) return;
@@ -888,6 +919,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     if (audio.paused) return;
                     audio.pause();
                     try { audio.currentTime = 0; } catch (_) {}
+                    _waveform?.el.setProgress(0);
                 });
 
                 if (selected?.duration > 0) _setAudioLength(selected.duration);
@@ -1198,7 +1230,7 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         _videoSrc = null;
                     }
                     if (isAudio) {
-                        _swapThumbToAudio();
+                        _swapThumbToAudio(selected);
                         _ensureAudioCardControls(src, selected);
                     } else if (selected?.inputPreview) {
                         _swapThumbToBackgroundImage(src);
@@ -1732,6 +1764,12 @@ export const MpiGalleryGrid = ComponentFactory.create({
         }
 
         function _getAspectRatio(group) {
+            // Audio has no pixelDimensions, so it used to fall through to the 1.0
+            // default and draw a square. A waveform wants to be WIDE — 21:9 is what
+            // the derivative is baked at. The justified packer handles a mixed
+            // aspect natively, so nothing else in the layout moves.
+            const selected = group?.history?.[group.selectedIndex];
+            if (selected?.type === 'audio' || group?.type === 'audio') return 21 / 9;
             const dataRatio = _getDataAspectRatio(group);
             if (dataRatio) {
                 _setAspectRatioCache(group, dataRatio);

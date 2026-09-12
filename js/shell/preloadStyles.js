@@ -79,6 +79,7 @@ export const PRELOAD_COMPONENT_STYLES = [
   'js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.css',
   'js/components/Compounds/MpiViewerCorners/MpiViewerCorners.css',
   'js/components/Compounds/MpiTrimBar/MpiTrimBar.css',
+  'js/components/Compounds/MpiWaveform/MpiWaveform.css',
   'js/components/Compounds/MpiVideoSurface/MpiVideoSurface.css',
   'js/components/Compounds/MpiVideoControlBar/MpiVideoControlBar.css',
   'js/components/Compounds/MpiVoicePicker/MpiVoicePicker.css',

@@ -3,8 +3,12 @@
   "files": [
     "services/ffmpegThumb.js",
     "routes/projects.js",
+    "js/components/Compounds/MpiWaveform/MpiWaveform.js",
+    "js/components/Compounds/MpiWaveform/MpiWaveform.css",
     "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
     "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.css",
+    "js/shell/preloadStyles.js",
+    "js/components/types.js",
     "tests/audio-waveform-alpha.test.cjs",
     "tests/desktop/gallery-audio-waveform.spec.js",
     "docs/gallery.md"

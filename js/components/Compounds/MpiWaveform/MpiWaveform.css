@@ -1,0 +1,61 @@
+/* MpiWaveform — baked waveform mask, played/unplayed split by one clip-path.
+   The mask URL arrives on the root as `--mpi-waveform-mask`, so both layers
+   pick it up from one write. */
+
+.mpi-waveform {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--surface-2);
+    cursor: pointer;
+}
+
+.mpi-waveform__layer {
+    position: absolute;
+    inset: 0;
+}
+
+/* The wave itself. `currentColor` lets each layer set one `color` and have both
+   its fill and its wave follow. `mask-size: 100% 100%` is the single-rendition
+   decision: the 21:9 bake stretches to whatever box mounts this. */
+.mpi-waveform__layer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: currentColor;
+    mask-image: var(--mpi-waveform-mask, none);
+    mask-size: 100% 100%;
+    mask-position: center;
+    mask-repeat: no-repeat;
+}
+
+.mpi-waveform__layer--rest {
+    background: var(--surface-3);
+    color: var(--ink-2);
+}
+
+/* Revealed left-to-right by `clip-path` from JS. The BACKGROUND fills too, not
+   just the wave — the surface has to read as a progress bar. */
+.mpi-waveform__layer--played {
+    background: color-mix(in oklch, var(--accent-heat) 22%, var(--surface-3));
+    color: var(--accent-heat);
+    clip-path: inset(0 100% 0 0);
+}
+
+.mpi-waveform__rule {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    pointer-events: none;
+    opacity: 0;
+}
+
+.mpi-waveform__rule--playhead {
+    background: var(--ink-1);
+}
+
+.mpi-waveform__rule--cursor {
+    background: var(--ink-3);
+}
