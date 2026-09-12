@@ -631,10 +631,14 @@
 }
 
 /* ── The `@` mention picker (MPI-664) ────────────────────────────────────────
-   Typing `@` in the Lyrics box lists the voice roster so a marker can be inserted
-   rather than spelled from memory. ABOVE the box, the same anchor the prompt box's
-   reference picker has used since MPI-475: below it would fall off the slide on a
-   16-row box that already reaches the bottom of its column. */
+   Typing `@` in the Lyrics box lists MiniMax's nine section tags so one can be
+   inserted rather than spelled from memory.
+
+   🔴 `bottom`/`left` HERE ARE THE RESTING PLACE, NOT THE ANCHOR. `mentionPicker.js`
+   overwrites both inline on every keystroke to sit at the CARET, flipping above the
+   line when the popup would run off the bottom of the viewport (Fabio, 2026-09-12 —
+   pinned to the corner of a 16-row box it opened metres from the `@` being typed, and
+   covered the step title). Restyling the anchor from here will not move it. */
 .mpi-base-flow__mention-picker {
     position: absolute;
     bottom: 100%;

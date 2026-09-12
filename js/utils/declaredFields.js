@@ -44,6 +44,7 @@ import { MpiProgressBar } from '../components/Primitives/MpiProgressBar/MpiProgr
 import { MpiInput } from '../components/Primitives/MpiInput/MpiInput.js';
 import { MpiDropdown } from '../components/Primitives/MpiDropdown/MpiDropdown.js';
 import { renderIcon } from './icons.js';
+import { attachMentionPicker } from './mentionPicker.js';
 import { clientLogger } from '../services/clientLogger.js';
 
 /**
@@ -720,18 +721,47 @@ export function buildField(f, cur, onChange, unsubs, opts = {}) {
         inst.on('input', ({ value }) => onChange(value));
         unsubs.push(() => inst?.el?.destroy?.());
 
-        // THE `@` PICKER IS GONE FROM HERE, and its removal is the same finding that
-        // took the name box off the roster (MPI-664, 2026-09-12). It existed to insert
-        // `<Singer A>` into the Lyrics box, and `Strip_Voice_Markers` deletes every
-        // `<…>` run before the encoder — while the lyrics are not in the enhancer's
-        // `from` list either, so the marker reached NO model at all. The picker, the
-        // roster names it listed and the hint advertising it were one closed loop with
-        // no effect on a single generated note.
+        // THE `@` PICKER, and it is OPT-IN PER FIELD (Fabio, 2026-09-10: *"only the
+        // lyrics box gets it. Why would it leak into sound and music?"*). This branch
+        // builds every declared text field in every flow, so attaching it
+        // unconditionally would put it on Sound & Music's "Describe it", the song brief
+        // and Voice notes as well. A field ASKS for it and the default is nothing.
         //
-        // `attachMentionPicker` itself is untouched and still serves MpiPromptBox. The
-        // `@` list Fabio does want here is MiniMax's nine section tags, which is a
-        // different source and its own card — not a `mentions` pointer at a sibling
-        // field, so the pointer plumbing goes rather than sitting dead waiting for it.
+        // 🔴 `tags` IS A CLOSED LIST ON THE FIELD, NOT A POINTER AT A SIBLING ONE, and
+        // that is the whole correction (MPI-664, 2026-09-12). The first version of this
+        // took a `mentions: 'Input_Voices'` pointer and listed the roster so a user
+        // could insert `<Singer A>` — but `Strip_Voice_Markers` cuts every `<…>` run
+        // before the encoder and the lyrics are not in the enhancer's `from` list, so
+        // the marker reached NO model at all, and Fabio followed the hint on two live
+        // runs for nothing. What executes is MiniMax's nine SECTION tags: a fixed list,
+        // in SQUARE brackets, which `normalize_lyrics` splits on and honours. So the
+        // list is declared where it is known and there is no cross-field plumbing to
+        // go stale — `getTags` returns the same array every call, which the picker
+        // allows.
+        if (Array.isArray(f.tags) && f.tags.length) {
+            const field = qs('textarea, input', inst.el);
+            if (field) {
+                unsubs.push(attachMentionPicker(field, {
+                    host,
+                    block,
+                    getTags: () => f.tags,
+                    // SQUARE, and it is load-bearing rather than cosmetic: angle is the
+                    // bracket the graph strips.
+                    wrap: ['[', ']'],
+                    onInsert: (next, caret) => {
+                        // Through the Primitive's setter, not the raw node: it syncs the
+                        // cached prop and re-runs the auto-grow. It also drops the
+                        // selection, so the caret is restored after.
+                        inst?.el?.setValue?.(next);
+                        field.setSelectionRange?.(caret, caret);
+                        field.focus?.();
+                        onChange(next);
+                    },
+                }));
+            } else {
+                clientLogger.warn('declaredFields', `field ${f.id} declares tags but mounted no text node`);
+            }
+        }
         wrap.appendChild(host);
     } else if (f.type === 'voices') {
         // The voice ROSTER (MPI-664) — a cast list of any length, each row ONE dropdown.

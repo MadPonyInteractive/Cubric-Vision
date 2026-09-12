@@ -1,11 +1,17 @@
 /**
  * mentionPicker.js — the `@` popup that turns a half-typed name into a bracketed tag.
  *
- * MPI-664 checklist L30. `MpiPromptBox` has shipped this interaction since MPI-475 for
- * staged references (`@pic` -> `<Picture 1>`); the Lyrics box of the Song flow needs the
- * same one for its VOICE ROSTER (`@sin` -> `<Singer A>`), because MiniMax hands a line to
- * a voice by name in angle brackets and remembering the exact spelling is the user's
- * problem otherwise.
+ * MPI-664. `MpiPromptBox` has shipped this interaction since MPI-475 for staged
+ * references (`@pic` -> `<Picture 1>`); the Lyrics box of the Song flow uses it for
+ * MiniMax's nine SECTION TAGS (`@pre` -> `[Pre-Chorus]`), which are a closed list the
+ * user would otherwise have to spell from the hint.
+ *
+ * 🔴 THE BRACKETS ARE A PARAMETER, AND THE DIFFERENCE IS THE WHOLE POINT. Angle
+ * brackets are what the first Lyrics picker inserted, and `Strip_Voice_Markers` cuts
+ * every `<…>` run before the encoder — so that picker wrote a no-op on two live runs
+ * (2026-09-12). A section tag is SQUARE, and square is the only bracket MiniMax's
+ * `normalize_lyrics` splits on. `wrap` defaults to angle so `MpiPromptBox`'s references
+ * are unchanged; a caller inserting anything the model reads must say so.
  *
  * WHAT IS SHARED AND WHAT IS NOT. The matching is already shared and already pure —
  * `matchRefTagQuery` in js/data/commandRegistry.js owns every edge case (an email address
@@ -31,10 +37,10 @@ import { matchRefTagQuery } from '../data/commandRegistry.js';
 /**
  * What a pick writes into the textarea.
  *
- * A voice marker has to sit ON ITS OWN LINE — every line outside a `[section]` tag is
- * sung, so a marker sharing a line with words changes what the model is handed. Hence
- * the two splices below rather than a plain concatenation:
- *   - trailing spaces/tabs before the `@` are dropped, so a marker typed mid-line does
+ * A tag has to sit ON ITS OWN LINE — every line outside a `[section]` tag is sung, so a
+ * tag sharing a line with words changes what the model is handed. Hence the two splices
+ * below rather than a plain concatenation:
+ *   - trailing spaces/tabs before the `@` are dropped, so a tag typed mid-line does
  *     not leave a stranded space at the end of the line above;
  *   - a newline is added after the tag unless the text already continues on one.
  *
@@ -42,15 +48,68 @@ import { matchRefTagQuery } from '../data/commandRegistry.js';
  * @param {number} at       index of the `@` that opened the picker
  * @param {number} caret    selectionStart (end of the typed query)
  * @param {string} tag      the chosen tag, without brackets
+ * @param {[string, string]} [wrap]  the brackets to write it in; angle by default
  * @returns {{value:string, caret:number}}
  */
-export function spliceMentionTag(value, at, caret, tag) {
+export function spliceMentionTag(value, at, caret, tag, wrap = ['<', '>']) {
     const before = value.slice(0, at).replace(/[ \t]+$/, '');
     const after = value.slice(caret);
     const lead = before === '' || before.endsWith('\n') ? '' : '\n';
     const trail = after.startsWith('\n') ? '' : '\n';
-    const insert = `${lead}<${tag}>${trail}`;
+    const insert = `${lead}${wrap[0]}${tag}${wrap[1]}${trail}`;
     return { value: before + insert + after, caret: before.length + insert.length };
+}
+
+/**
+ * Where the caret sits INSIDE a textarea, in pixels from its border box.
+ *
+ * There is no native API for this: `Selection`/`Range` only reach a contenteditable, and a
+ * textarea's caret is not in the DOM. The standard answer is a MIRROR — a hidden div wearing
+ * the textarea's own metrics, holding the text up to the caret, with a span after it whose
+ * offset IS the answer. Every property below changes where a line wraps, so a missing one
+ * puts the popup on the wrong line and only for long text.
+ *
+ * ponytail: measured per keystroke, no cache. A lyrics box is a few hundred characters and
+ * the mirror is layout on a detached-then-appended div — if a flow ever declares a text field
+ * big enough for this to show, cache the mirror per element rather than the result, because
+ * the result changes on every keystroke anyway.
+ *
+ * @param {HTMLTextAreaElement} el
+ * @param {number} index  character offset to measure to
+ * @returns {{top:number, left:number, lineHeight:number}}
+ */
+function caretOffset(el, index) {
+    const cs = getComputedStyle(el);
+    const mirror = ce('div');
+    [
+        'boxSizing', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+        'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
+        'fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'fontVariant',
+        'letterSpacing', 'lineHeight', 'textIndent', 'textTransform', 'wordSpacing', 'tabSize',
+    ].forEach((p) => { mirror.style[p] = cs[p]; });
+    mirror.style.position = 'absolute';
+    mirror.style.top = '0';
+    mirror.style.left = '-9999px';
+    mirror.style.visibility = 'hidden';
+    mirror.style.whiteSpace = 'pre-wrap';
+    mirror.style.overflowWrap = 'break-word';
+    mirror.style.width = `${el.offsetWidth}px`;
+
+    mirror.textContent = el.value.slice(0, index);
+    const marker = ce('span');
+    // A zero-width span measures nothing and collapses; the character after the caret is what
+    // the browser would lay out there anyway, and a full stop stands in at the very end.
+    marker.textContent = el.value.slice(index) || '.';
+    mirror.appendChild(marker);
+
+    document.body.appendChild(mirror);
+    const top = marker.offsetTop;
+    const left = marker.offsetLeft;
+    // `line-height: normal` parses as NaN, and a NaN would place the popup at `NaNpx` — which
+    // the browser drops silently, leaving it wherever it last was.
+    const lineHeight = parseFloat(cs.lineHeight) || Math.round(parseFloat(cs.fontSize) * 1.4);
+    mirror.remove();
+    return { top, left, lineHeight };
 }
 
 /**
@@ -62,13 +121,15 @@ export function spliceMentionTag(value, at, caret, tag) {
  * @param {HTMLElement} opts.host        element the popup is appended to (must be positioned)
  * @param {string} opts.block            BEM block for the popup's classes
  * @param {() => Array<{tag:string, label?:string}>} opts.getTags
- *        read LIVE on every keystroke — the roster it comes from is editable while the
- *        box is open, so a captured array would go stale the first time a name changes
+ *        read LIVE on every keystroke — a list sourced from another field is editable
+ *        while the box is open, so a captured array would go stale the first time it
+ *        changes. A closed list may simply return the same array every call.
+ * @param {[string, string]} [opts.wrap]  brackets a pick is written in; angle by default
  * @param {(next:string, caret:number) => void} [opts.onInsert]
  *        called with the new value and the caret it belongs at, after a pick
  * @returns {() => void} destroy
  */
-export function attachMentionPicker(textareaEl, { host, block, getTags, onInsert } = {}) {
+export function attachMentionPicker(textareaEl, { host, block, getTags, wrap, onInsert } = {}) {
     if (!textareaEl || !host || typeof getTags !== 'function') return () => {};
 
     const cls = (el) => `${block}__mention-picker${el}`;
@@ -132,7 +193,9 @@ export function attachMentionPicker(textareaEl, { host, block, getTags, onInsert
 
     const insert = (entry) => {
         if (!entry) return;
-        const next = spliceMentionTag(textareaEl.value, at, textareaEl.selectionStart, entry.tag);
+        const next = spliceMentionTag(
+            textareaEl.value, at, textareaEl.selectionStart, entry.tag, wrap,
+        );
         close();
         textareaEl.value = next.value;
         textareaEl.setSelectionRange(next.caret, next.caret);
@@ -143,16 +206,53 @@ export function attachMentionPicker(textareaEl, { host, block, getTags, onInsert
         onInsert?.(next.value, next.caret);
     };
 
+    /**
+     * Put the popup AT THE CARET, which is where every editor puts one (Fabio, 2026-09-12:
+     * *"I would much rather prefer that the picker would show up where the cursor is"*). It
+     * used to be pinned to the bottom-left of the whole box, which on a 16-row Lyrics field
+     * meant a popup metres away from the `@` being typed — and covering the step title.
+     *
+     * Written as INLINE styles rather than a class per direction: the stylesheet's
+     * `bottom: 100%; left: 0` is the no-JS resting place, and these override it. Both
+     * `top`/`bottom` are always set, one of them to `auto`, or a flip leaves the old one
+     * fighting the new.
+     *
+     * Anchored on the `@` itself, not on the caret's live position, so the popup stays put
+     * while the query is typed instead of crawling right one character at a time.
+     */
+    const position = () => {
+        const { top, left, lineHeight } = caretOffset(textareaEl, at);
+        const x = textareaEl.offsetLeft + left - textareaEl.scrollLeft;
+        const lineTop = textareaEl.offsetTop + top - textareaEl.scrollTop;
+
+        // Flip against the VIEWPORT, not the host: the host is as tall as the field, so a
+        // field near the bottom of the slide has room by its own reckoning and none on screen.
+        const below = host.getBoundingClientRect().top + lineTop + lineHeight + 4;
+        if (below + picker.offsetHeight > window.innerHeight - 8) {
+            picker.style.top = 'auto';
+            picker.style.bottom = `${host.clientHeight - lineTop + 4}px`;
+        } else {
+            picker.style.top = `${lineTop + lineHeight + 4}px`;
+            picker.style.bottom = 'auto';
+        }
+        // Keep it inside the field rather than letting a caret near the right edge push it
+        // out over the neighbouring column.
+        picker.style.left = `${Math.max(0, Math.min(x, host.clientWidth - picker.offsetWidth))}px`;
+    };
+
     const sync = () => {
-        // Null on an empty roster, and that is correct rather than broken: a flow whose
-        // cast list is empty has no name to offer.
+        // Null on an empty list, and that is correct rather than broken: a caller with
+        // nothing to offer opens no popup.
         const query = matchRefTagQuery(textareaEl.value, textareaEl.selectionStart, getTags());
         if (!query) return close();
         at = query.at;
         matches = query.matches;
         active = Math.min(active, matches.length - 1);
         picker.classList.remove('hide');
+        // paint BEFORE position: the flip test needs `picker.offsetHeight`, and an unpainted
+        // popup measures zero, so it would never flip.
         paint();
+        position();
     };
 
     // mousedown, not click: the textarea blurs on click and blur closes us first.

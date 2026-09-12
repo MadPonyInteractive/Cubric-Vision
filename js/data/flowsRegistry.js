@@ -208,6 +208,17 @@
  *                               forever. Honoured on `select` today; see `declaredFields.js`.
  * @property {number}  [rows]  - For `text`. `> 1` renders a textarea (the prompt case).
  * @property {string}  [placeholder] - For `text`.
+ * @property {Array<{tag:string, label?:string}>} [tags] - For `text`: gives the box an `@` picker
+ *                               offering this CLOSED list, inserting the pick in SQUARE brackets
+ *                               on its own line (MPI-664). Opt-in per field — `declaredFields.js`
+ *                               builds every text box in every flow, so an unconditional picker
+ *                               would land on Sound & Music's "Describe it" and Voice notes too
+ *                               (Fabio, 2026-09-10: *"only the lyrics box gets it"*).
+ *                               🔴 THE LIST IS DECLARED HERE, NOT POINTED AT. A `mentions` key
+ *                               naming a sibling field shipped first and was removed the same
+ *                               week: it offered the voice roster and inserted `<Singer A>`, which
+ *                               `Strip_Voice_Markers` cuts before the encoder, so it reached no
+ *                               model at all. Only put a list here that the graph actually reads.
  * @property {*}       [default]
  * @property {'enhance'} [action] - Makes a `button` an ACTION rather than a value
  *                               (MPI-504). An action's own id never reaches the op, and it stores
@@ -2366,7 +2377,7 @@ export const FLOWS = [
                 // `[Instrumental]` with nothing under it buys a section with no vocals.
                 // Said out loud here because it is the answer to "how do I get a guitar
                 // break", and the tag channel is MiniMax's closed nine words or nothing.
-                hint: 'Mark sections with [Intro] [Verse] [Pre-Chorus] [Chorus] [Post-Chorus] [Bridge] [Instrumental] [Solo] [Outro] — they steer the arrangement rather than guarantee it, and a tag with nothing under it buys a section with no vocals. Every line outside a tag is sung, and so is anything in round brackets: (like this) is a backing vocal, not a note to the model, so instruments and production belong in Your song or Style. The lyrics cannot hand a line to a particular voice — say who sings where in Voice notes instead.',
+                hint: 'Mark sections with [Intro] [Verse] [Pre-Chorus] [Chorus] [Post-Chorus] [Bridge] [Instrumental] [Solo] [Outro] — type @ in the lyrics to pick one. They steer the arrangement rather than guarantee it, and a tag with nothing under it buys a section with no vocals. Every line outside a tag is sung, and so is anything in round brackets: (like this) is a backing vocal, not a note to the model, so instruments and production belong in Your song or Style. The lyrics cannot hand a line to a particular voice — say who sings where in Voice notes instead.',
                 fields: [
                     {
                         // The roster (MPI-664 tier 2). Its `v` values are the CAPTION
@@ -2428,16 +2439,31 @@ export const FLOWS = [
                         // lyrics empty hears that song's words.
                         id: 'Input_Lyrics', type: 'text', rows: 16, label: 'Lyrics',
                         col: 'right',
-                        // NO `@` PICKER, and it was removed rather than repointed
-                        // (MPI-664, 2026-09-12). It listed the cast so a user could
-                        // insert `<Singer A>` exactly — but `Strip_Voice_Markers` cuts
-                        // every `<…>` run before the encoder, and the lyrics are not in
-                        // the enhancer's `from` list, so the marker reached no model at
-                        // all. Fabio followed the hint twice on live runs for nothing.
+                        // `@` LISTS THE NINE SECTION TAGS (MPI-664, 2026-09-12). The
+                        // hint names them, but reading nine words off a paragraph and
+                        // retyping one with the right bracket and the right hyphen is
+                        // the user's problem otherwise — and it is the only channel in
+                        // this box that steers the arrangement instead of being sung.
                         //
-                        // The `@` list worth having here is MiniMax's nine section tags
-                        // — a closed list that DOES execute. That is a different source
-                        // from a sibling field's rows and gets its own card.
+                        // 🔴 THIS IS THE SECOND `@` PICKER THE BOX HAS HAD, and the
+                        // difference is the source. The first pointed at the voice
+                        // roster (`mentions: 'Input_Voices'`) and inserted `<Singer A>`;
+                        // `Strip_Voice_Markers` cuts every `<…>` run before the encoder
+                        // and the lyrics never reach the enhancer either, so it wrote a
+                        // no-op — Fabio followed the hint on two live runs for nothing.
+                        // These nine DO execute: `normalize_lyrics` splits on square
+                        // brackets and the graph's own `regex_pattern` in
+                        // `comfy_workflows/flow_minimax_music.json` names exactly this
+                        // list. Keep the two in step — a tenth word here is not a tag,
+                        // it is a lyric line, and the model will sing it.
+                        //
+                        // Title Case is free: the graph lowercases before matching. It
+                        // is spelled this way to match the hint the user just read.
+                        tags: [
+                            { tag: 'Intro' }, { tag: 'Verse' }, { tag: 'Pre-Chorus' },
+                            { tag: 'Chorus' }, { tag: 'Post-Chorus' }, { tag: 'Bridge' },
+                            { tag: 'Instrumental' }, { tag: 'Solo' }, { tag: 'Outro' },
+                        ],
                         placeholder: '[Verse]\nMidnight and the canvas glows…',
                         default: '',
                     },
