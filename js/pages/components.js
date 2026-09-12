@@ -32,15 +32,12 @@ import { StatusBar } from '../shell/statusBar.js';
 import { triggerGenerationCompleteNotification } from '../shell/notificationService.js';
 
 // Compounds
-import { MpiPromptBox } from '../components/Organisms/MpiPromptBox/MpiPromptBox.js';
 import { MpiOptionSelector } from '../components/Compounds/MpiOptionSelector/MpiOptionSelector.js';
 import { MpiContextMenu } from '../components/Compounds/MpiContextMenu/MpiContextMenu.js';
 import { MpiModal } from '../components/Primitives/MpiModal/MpiModal.js';
 import { MpiOkCancel } from '../components/Compounds/MpiOkCancel/MpiOkCancel.js';
 import { MpiInstalledDisplay } from '../components/Compounds/MpiInstalledDisplay/MpiInstalledDisplay.js';
 import { MpiMemoryMonitor } from '../components/Compounds/MpiMemoryMonitor/MpiMemoryMonitor.js';
-import { MpiProjectName } from '../components/Compounds/MpiProjectName/MpiProjectName.js';
-import { MpiProjectCard } from '../components/Compounds/MpiProjectCard/MpiProjectCard.js';
 import { MpiNewProject } from '../components/Compounds/MpiNewProject/MpiNewProject.js';
 import { MpiStartingComfy } from '../components/Compounds/MpiStartingComfy/MpiStartingComfy.js';
 import { MpiEngineInstall } from '../components/Compounds/MpiEngineInstall/MpiEngineInstall.js';
@@ -51,7 +48,6 @@ import { MpiViewerCorners } from '../components/Compounds/MpiViewerCorners/MpiVi
 import { MpiTrimBar } from '../components/Compounds/MpiTrimBar/MpiTrimBar.js';
 import { MpiVideoSurface } from '../components/Compounds/MpiVideoSurface/MpiVideoSurface.js';
 import { MpiVideoControlBar } from '../components/Compounds/MpiVideoControlBar/MpiVideoControlBar.js';
-import { MpiVoicePicker } from '../components/Compounds/MpiVoicePicker/MpiVoicePicker.js';
 
 // Organisms
 
@@ -261,15 +257,6 @@ function mountAll() {
             if (infoBar) infoBar.textContent = deep ? 'Deep clean triggered (gallery demo)' : 'VRAM release triggered (gallery demo)';
             console.log('[gallery] memory monitor release:', { deep });
         });
-    });
-
-    // ── MpiProjectName (Compound) ────────────────────────────────────────────
-    mount('preview-project-name', () => {
-        const pn = MpiProjectName.mount(slot('preview-project-name'), {
-            projectName: 'My Cool Project',
-            pageName: 'Image',
-        });
-        pn.on('back', () => console.log('[gallery] project name back clicked'));
     });
 
     // ── MpiOverlay (Primitive) ────────────────────────────────────────────────
@@ -551,6 +538,22 @@ function mountAll() {
         });
     });
 
+    // The same Primitive Settings mounts for every toggle plate — `variant: 'switch'`
+    // is the only difference from the checkbox above, so both states sit on one card.
+    mount('preview-checkbox-switch', () => {
+        const slotEl = slot('preview-checkbox-switch');
+        // Own child per switch: ComponentFactory.mount() sets container.innerHTML,
+        // so two mounts into the same slot leave only the second.
+        [false, true].forEach((checked) => {
+            const host = slotEl.appendChild(document.createElement('div'));
+            const sw = MpiCheckbox.mount(host, { checked, variant: 'switch' });
+            sw.on('change', ({ checked: v }) => {
+                const infoBar = gid('shell-info-text');
+                if (infoBar) infoBar.textContent = `MpiCheckbox (switch): ${v}`;
+            });
+        });
+    });
+
     // ── MpiBadge ──────────────────────────────────────────────────────────────
     mount('preview-badge-variants', () => {
         const slotEl = slot('preview-badge-variants');
@@ -743,35 +746,6 @@ function mountAll() {
         });
     });
 
-    // ── MpiPromptBox (Compound) ────────────────────────────────────────────────
-    mount('preview-promptbox-standard', () => {
-        const pb = MpiPromptBox.mount(slot('preview-promptbox-standard'), {
-            value: 'A futuristic city at sunset, neon lights, cinematic lighting'
-        });
-        pb.on('input', (data) => console.log('[gallery] prompt input:', data));
-    });
-
-    mount('preview-promptbox-expanded', () => {
-        // Create some sub-components for the slots
-        const badgeL1 = MpiBadge.mount(document.createElement('div'), { label: '4:3', variant: 'secondary' });
-        const badgeL2 = MpiBadge.mount(document.createElement('div'), { label: 'Flux.1', variant: 'secondary' });
-        const iconR1 = MpiButton.mount(document.createElement('div'), { icon: 'settings', size: 'sm', variant: 'ghost' });
-        const iconR2 = MpiButton.mount(document.createElement('div'), { icon: 'bolt', size: 'sm', variant: 'ghost' });
-
-        MpiPromptBox.mount(slot('preview-promptbox-expanded'), {
-            value: 'A girl reading a book in a library, soft sunlight through windows',
-        });
-    });
-
-    mount('preview-promptbox-negative', () => {
-        const pb = MpiPromptBox.mount(slot('preview-promptbox-negative'), {
-            value: 'Portrait of a warrior, detailed armor, fire background',
-            negativeValue: 'text, watermark, blurry, low resolution',
-            includeNegative: true
-        });
-        pb.on('toggle-negative', ({ active }) => console.log('[gallery] negative toggle:', active));
-    });
-
     // ── MpiOkCancel (Compound) ────────────────────────────────────────────────
     mount('preview-okcancal-standard', () => {
         const slotEl = slot('preview-okcancal-standard');
@@ -946,32 +920,6 @@ function mountAll() {
             deleteLabel: 'Uninstall'
         });
         inst.on('delete', () => console.log('[gallery] MpiInstalledDisplay simple delete clicked'));
-    });
-
-    // ── MpiProjectCard (Compound) ───────────────────────────────────────────
-    mount('preview-project-card-none', () => {
-        const pc = MpiProjectCard.mount(slot('preview-project-card-none'), {
-            title: 'Empty Project',
-            date: '4 Apr 2026'
-        });
-        pc.on('click', () => console.log('[gallery] project card clicked'));
-        pc.on('delete', () => console.log('[gallery] project card delete clicked'));
-    });
-
-    mount('preview-project-card-image', () => {
-        MpiProjectCard.mount(slot('preview-project-card-image'), {
-            title: 'Landscape Design',
-            date: '3 Apr 2026',
-            media: { type: 'image', src: '/comfy_workflows/display/flow-head-swap.webp' }
-        });
-    });
-
-    mount('preview-project-card-video', () => {
-        MpiProjectCard.mount(slot('preview-project-card-video'), {
-            title: 'Motion Graphics',
-            date: '2 Apr 2026',
-            media: { type: 'video', src: '/comfy_workflows/display/flow-head-swap.mp4' }
-        });
     });
 
     // ── MpiModelManager (Compound — the Model Library overlay, MPI-215) ─────
@@ -1189,76 +1137,6 @@ function mountAll() {
         thumbs.on('change', ({ picks }) =>
             console.log('[gallery] MpiAutoMaskThumbs picks:', [...picks])
         );
-    });
-
-    // ── MpiVoicePicker (Compound, MPI-622) ──────────────────────────────────────
-    // Fixture manifest — three SECTIONS across three demographic GROUPS, because the
-    // picker's list is groups-of-sections-of-variations, not a flat voice list. `rex` sits
-    // at 100 Hz so the second gallery card (userPitchHz=250) shows its warning, and carries
-    // null gender AND null age so the Character fallback renders here too.
-    // Auditions are null: the gallery serves no /voices/ assets, so play is a deliberate
-    // no-op here — audition PLAYBACK is covered by the unit test over assetUrl, not here.
-    // AGES MUST BE REAL: `createVoiceLibrary` now throws on an age no group can place, so
-    // an invented value like "young adult" takes the whole gallery page down.
-    const _voiceFixtureManifest = {
-        voices: [
-            {
-                id: 'aria-r3', display_name: 'Standard Female · Variation 1', kind: 'narration',
-                section: 'standard_female', variation: 1,
-                register: 'R3', median_f0: 220, gender: 'female', age: 'adult',
-                accent: 'US English', language: 'en',
-                sample: 'aria-r3.opus', audition_narration: null,
-            },
-            {
-                id: 'yuki-r3', display_name: 'Standard Female · Variation 2', kind: 'narration',
-                section: 'standard_female', variation: 2,
-                register: 'R3', median_f0: 240, gender: 'female', age: 'adult',
-                accent: null, language: 'ja',
-                sample: 'yuki-r3.opus', audition_narration: null,
-            },
-            {
-                id: 'blake-r2', display_name: 'Standard Male', kind: 'both',
-                section: 'standard_male', variation: 1,
-                register: 'R2', median_f0: 160, gender: 'male', age: 'adult',
-                accent: null, language: 'en',
-                sample: 'blake-r2.opus', audition_narration: null,
-            },
-            {
-                id: 'rex-r1', display_name: 'Villain Monster', kind: 'character',
-                section: 'villain_monster', variation: 1,
-                // Null gender AND null age, exactly as the shipped manifest has it — this is
-                // what puts a section in the Character group, and it is a deliberate value.
-                register: 'R1', median_f0: 100, gender: null, age: null,
-                accent: null, language: 'en',
-                sample: 'rex-r1.opus', audition_narration: null,
-            },
-        ],
-        performanceClips: [],
-    };
-
-    mount('preview-voice-picker-default', () => {
-        const slotEl = slot('preview-voice-picker-default');
-        const picker = MpiVoicePicker.mount(slotEl, {
-            manifest: _voiceFixtureManifest,
-        });
-        picker.on('select', ({ voice, emotion }) =>
-            console.log('[gallery] MpiVoicePicker select:', voice.id, emotion || '(no emotion)'));
-        picker.on('audition-start', ({ voice }) =>
-            console.log('[gallery] MpiVoicePicker audition-start:', voice.id));
-        console.log('[gallery] MpiVoicePicker mounted. Three group headings — Mature female, Mature male, Character — with Standard Female showing as 2 variations of one voice and the other two lone voices. NO filter row and no kind badge (both removed in Phase 4). Play auditions is a no-op: audition URLs are null in this fixture. No pitch warning — userPitchHz not set.');
-    });
-
-    mount('preview-voice-picker-warn', () => {
-        const slotEl = slot('preview-voice-picker-warn');
-        // userPitchHz=250 Hz (R3 high female). Villain Monster (R1, 100 Hz) is ~15.8 st away → warning shown.
-        const picker = MpiVoicePicker.mount(slotEl, {
-            manifest: _voiceFixtureManifest,
-            userPitchHz: 250,
-            warnSemitones: 6,
-        });
-        picker.on('select', ({ voice, emotion }) =>
-            console.log('[gallery] MpiVoicePicker (warn) select:', voice.id, emotion || ''));
-        console.log('[gallery] MpiVoicePicker (pitch-warn) mounted. userPitchHz=250 Hz. Villain Monster (R1, 100 Hz) is ~15.8 semitones away — warning badge shown on that card. Voice stays selectable.');
     });
 
 }

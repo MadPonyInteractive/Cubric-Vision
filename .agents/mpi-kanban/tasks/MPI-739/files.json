@@ -1,0 +1,14 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "templates/tpl-components.html",
+    "js/pages/components.js",
+    "js/components/Compounds/MpiProjectCard/",
+    "js/components/types.js",
+    "js/shell/preloadStyles.js",
+    "js/shell/projectUI.js",
+    ".claude/rules/component-mounts.md",
+    ".claude/rules/component-events-primitives.md",
+    ".agents/mpi-kanban/tasks/MPI-739/"
+  ]
+}
