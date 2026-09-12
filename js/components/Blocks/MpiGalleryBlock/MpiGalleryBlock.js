@@ -35,7 +35,7 @@ import { resolveActiveModel, setSelectedModelId, getSelectedModelId, getSelected
 import { truncateCardName } from '../../../utils/displayHelpers.js';
 import { MODELS, getModelsByType, getModelById, isModelUsable, isOperationInstalled, firstInstalledOp } from '../../../data/modelRegistry.js';
 import { canonicalModelId } from '../../../data/modelConstants/resolveModelDeps.js';
-import { getAvailableCommands } from '../../../data/commandRegistry.js';
+import { getAvailableCommands, buildCueAllJobItems } from '../../../data/commandRegistry.js';
 import { startGeneration, enqueueGeneration, clearPendingQueue, refreshQueueDepth, removeCueJob, peekCueQueue, cancelRunningCueJob } from '../../../services/generationService.js';
 import { StatusBar } from '../../../shell/statusBar.js';
 import { activeGenerations } from '../../../services/activeGenerations.js';
@@ -136,7 +136,23 @@ export const MpiGalleryBlock = ComponentFactory.create({
               ].filter(Boolean)
             : [];
 
-        const grid   = MpiGalleryGrid.mount(el, { groups: [..._placeholderGroups, ...groups] });
+        // `getCueContext` feeds the grid's `Cue all (N)` label the op/model the
+        // PromptBox is CURRENTLY on. A callback, not a value: this grid mounts
+        // before the PromptBox exists, and `activeOperation` is reassigned live by
+        // the operation-change handler below — including for PROGRAMMATIC picks,
+        // which is exactly the case a remembered-op read got wrong (MPI-733).
+        const grid   = MpiGalleryGrid.mount(el, {
+            groups: [..._placeholderGroups, ...groups],
+            getCueContext: () => ({ operation: activeOperation, model: activeModel }),
+        });
+
+        /**
+         * Cue-all's dispatch loop, assigned by `_wirePromptBox` because it closes
+         * over `_galleryGenerationFromPayload`. Null until a PromptBox exists —
+         * which is also the honest answer when no model is installed (MPI-733).
+         * @type {((eligible: Object[], skipped: Object[]) => void)|null}
+         */
+        let _cueAllDispatch = null;
 
         // ── Record (MPI-573) ──────────────────────────────────────────────────
         // The button itself lives in the grid's toolbar beside the volume — that
@@ -1433,6 +1449,63 @@ export const MpiGalleryBlock = ComponentFactory.create({
                 enqueueGeneration(next.config, callbacks, next.opts);
             });
 
+            // ── Cue all: N jobs off ONE recipe (MPI-733) ─────────────────────
+            // The recipe is read ONCE, so all N jobs carry the same prompt, style,
+            // LoRAs and controls; `mediaItems` is the single field that varies.
+            // Reassigning on a re-wire is intended — the newest PromptBox owns the
+            // recipe, and the grid subscription that calls this is registered once.
+            _cueAllDispatch = (eligible, skipped) => {
+                // `_onLaneDrain` re-fires the last job while Loop is armed, so a
+                // draining batch would never end. Refusing is honest; silently
+                // disarming the user's Loop is not.
+                if (state.loopArmed) {
+                    StatusBar.notify('Disarm Loop before cueing a batch.', 'warning');
+                    return;
+                }
+                const payload = _pb?.el?.getRunPayload?.();
+                if (!payload || !eligible.length) return;
+
+                // The slot the batch varies is the user's choice, read off the staged
+                // chips — `buildCueAllJobItems` owns that rule and is unit-tested,
+                // because its ordinal-slot handling breaks silently when wrong.
+                const staged = payload.mediaItems || [];
+
+                let queued = 0;
+                for (const group of eligible) {
+                    const sel = group?.history?.[group.selectedIndex];
+                    if (!sel?.filePath) continue;
+                    // Same shape a dragged card produces (`_tryAddMedia`), so the
+                    // job is indistinguishable downstream from a hand-staged one.
+                    const item = {
+                        id: crypto.randomUUID(),
+                        url: sel.filePath,
+                        file: null,
+                        mediaType: group.type,
+                        source: 'app',
+                        name: group.customName || group.name || sel.name || '',
+                    };
+
+                    const mediaItems = buildCueAllJobItems(
+                        payload.operation, activeModel, staged, item,
+                    );
+                    const next = _galleryGenerationFromPayload({ ...payload, mediaItems });
+                    if (!next) continue;
+                    // NO getNextGeneration: a batch job must never re-fire itself,
+                    // or one Cue all would become an endless queue.
+                    enqueueGeneration(next.config, { onCancel: () => {} }, next.opts);
+                    queued++;
+                }
+
+                if (!queued) {
+                    StatusBar.notify('Nothing could be cued from that selection.', 'warning');
+                    return;
+                }
+                const also = skipped.length
+                    ? ` ${skipped.length} card${skipped.length === 1 ? '' : 's'} skipped — wrong media type for this operation.`
+                    : '';
+                StatusBar.notify(`Cued ${queued} job${queued === 1 ? '' : 's'}.${also}`, 'info');
+            };
+
             pb.on('cancel', () => {
                 // Stop cancels EVERY running gallery gen, not just the first
                 // (MPI-157): the old `active[0]`-only logic missed a second
@@ -1713,6 +1786,20 @@ export const MpiGalleryBlock = ComponentFactory.create({
         // ── Selection mode: show/hide PromptBox ────────────────────────────────
         grid.on('selection-start', () => _pb?.el?.hide());
         grid.on('selection-end',   () => _pb?.el?.show());
+
+        // ── Cue all (MPI-733) ────────────────────────────────────────────────
+        // Subscribed ONCE here, not inside `_wirePromptBox` — that runs at two
+        // mount sites, and a second wire would stack a duplicate `cue-all`
+        // listener on the same grid, cueing every job twice. The real work needs
+        // `_galleryGenerationFromPayload`, which is scoped to that function, so it
+        // hands the closure back through `_cueAllDispatch`.
+        grid.on('cue-all', ({ groups: eligible = [], skipped = [] }) => {
+            if (!_cueAllDispatch) {
+                StatusBar.notify('The prompt box is not ready yet.', 'warning');
+                return;
+            }
+            _cueAllDispatch(eligible, skipped);
+        });
 
         // ── Radial → operation sync ─────────────────────────────────────────────
         _unsubs.push(Events.on('workspace:set-operation', ({ operation }) => {

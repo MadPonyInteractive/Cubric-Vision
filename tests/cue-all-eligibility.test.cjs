@@ -152,3 +152,112 @@ test('CONTRACT: every op the plan promised is eligible, and each is single-requi
     const { eligible: videoEligible } = selectCueAllTargets('extend', null, [vid('a'), vid('b')]);
     assert.strictEqual(videoEligible.length, 2, 'extend must batch a video selection');
 });
+
+// ── Which slot the batch varies (Phase 3) ───────────────────────────────────
+//
+// Raised by Fabio in the app: on `i2v_ms` the role pill (MPI-466) toggles a lone
+// staged image between `startFrame` and `endFrame`, so "try five different END
+// frames" is a real request. Batching the op's REQUIRED slot would silently run
+// all five as start frames instead — a wrong result that looks like a working one.
+
+// Staged chips as `getRunPayload()` hands them over: roles already assigned.
+const chip = (role, mediaType = 'image') => ({ id: `staged:${role}`, url: `/s-${role}.png`, mediaType, role });
+const card = (mediaType = 'image') => ({ id: 'card', url: '/card.png', mediaType, source: 'app' });
+
+const LTX_MS = { id: 'ltx-23', mediaType: 'video', capabilities: { audio: true } };
+
+test('the batch varies the slot the staged chip expresses, not the required one', async () => {
+    const { buildCueAllJobItems } = await import(REG);
+
+    // Untagged lone image reads as startFrame -> unchanged default.
+    const asStart = buildCueAllJobItems('i2v_ms', LTX_MS, [chip('startFrame')], card());
+    assert.deepStrictEqual(asStart.map(m => [m.id, m.role]), [['card', 'startFrame']]);
+
+    // Pill toggled to endFrame -> the batch sweeps END frames.
+    const asEnd = buildCueAllJobItems('i2v_ms', LTX_MS, [chip('endFrame')], card());
+    assert.deepStrictEqual(asEnd.map(m => [m.id, m.role]), [['card', 'endFrame']],
+        'a pill-tagged endFrame chip must make the batch an endFrame sweep');
+});
+
+test('every OTHER staged chip survives — hold the start frame, sweep the end', async () => {
+    const { buildCueAllJobItems } = await import(REG);
+
+    const items = buildCueAllJobItems(
+        'i2v_ms', LTX_MS, [chip('startFrame'), chip('endFrame')], card());
+    assert.deepStrictEqual(items.map(m => [m.id, m.role]), [
+        ['staged:startFrame', 'startFrame'],
+        ['card', 'endFrame'],
+    ], 'the fixed start frame must ride along; only the swept slot is displaced');
+
+    // A staged AUDIO chip is not the batch axis and must not be dropped either.
+    const withAudio = buildCueAllJobItems(
+        'i2v_ms', LTX_MS, [chip('startFrame'), chip('inputAudio', 'audio')], card());
+    assert.deepStrictEqual(withAudio.map(m => m.id), ['card', 'staged:inputAudio']);
+});
+
+test('ORDINAL slots keep their order — the batch card never displaces the base image', async () => {
+    const { buildCueAllJobItems } = await import(REG);
+    const { MODELS } = await import('../js/data/modelConstants/models.js');
+    const krea = MODELS.find(m => (m.supportedOps || []).includes('krea2Edit'));
+    assert.ok(krea, 'a krea2Edit model must exist for this to mean anything');
+
+    // krea2Edit's slots are ORDINAL: stripOrdinalMediaRoles drops the roles so chip
+    // ORDER decides the slot. Appending would put the base image second.
+    const items = buildCueAllJobItems(
+        'krea2Edit', krea, [chip('inputImage'), chip('inputImage2')], card());
+    assert.deepStrictEqual(items.map(m => m.id), ['staged:inputImage', 'card'],
+        'the base image must stay at index 0, or the edit runs on the wrong asset');
+});
+
+test('nothing staged falls back to the required slot, and junk does not throw', async () => {
+    const { buildCueAllJobItems } = await import(REG);
+
+    assert.deepStrictEqual(
+        buildCueAllJobItems('i2i', null, [], card()).map(m => [m.id, m.role]),
+        [['card', 'inputImage']]);
+    assert.deepStrictEqual(buildCueAllJobItems('i2i', null, [], null), []);
+    assert.deepStrictEqual(buildCueAllJobItems('i2i', null, [null], card()).length, 1);
+});
+
+// ── Phase 3's contract with the dispatcher ──────────────────────────────────
+//
+// Phase 3 builds ONE media item per job and hands it to `enqueueGeneration`,
+// which rejects any job with an unfilled required slot BEFORE it queues —
+// `findMissingMediaSlot`, js/services/generationService.js:114. A rejection there
+// is a toast and a silent no-op, i.e. exactly the "Cue all does nothing" symptom.
+//
+// The trap is that the two rules read DIFFERENT slot lists: eligibility filters
+// by model (`filterMediaInputsForModel`), the enqueue guard does not. So an op
+// whose unfiltered list carries a second required slot of another mediaType would
+// pass eligibility and then be refused at enqueue, for every job, forever.
+//
+// This asserts the invariant that makes that impossible, rather than restating
+// the guard: for every (model, op) the helper accepts, EVERY required slot in the
+// UNFILTERED list is of the batched mediaType — so a single item satisfies them.
+test('CONTRACT: nothing the helper accepts can be refused by the enqueue guard', async () => {
+    const { selectCueAllTargets, getCommandMediaInputs } = await import(REG);
+    const { MODELS } = await import('../js/data/modelConstants/models.js');
+
+    const byType = { image: img, video: vid, audio: aud };
+    let accepted = 0;
+
+    for (const model of MODELS) {
+        for (const op of (model.supportedOps || [])) {
+            for (const [type, make] of Object.entries(byType)) {
+                if (!selectCueAllTargets(op, model, [make('a')]).eligible.length) continue;
+                accepted++;
+                for (const slot of getCommandMediaInputs(op).filter(s => s.required !== false)) {
+                    assert.strictEqual(
+                        slot.mediaType, type,
+                        `${model.id}/${op} batches ${type} but also requires a ${slot.mediaType} `
+                        + `slot (${slot.key}) — every one of its jobs would be refused at enqueue`,
+                    );
+                }
+            }
+        }
+    }
+
+    // Guards the guard: if the registry ever stops offering a batchable op, this
+    // test would pass by testing nothing at all.
+    assert.ok(accepted > 0, 'no (model, op) combination was batchable — the sweep tested nothing');
+});

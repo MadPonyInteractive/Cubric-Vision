@@ -6,18 +6,32 @@ UMBRELLA: MPI-732. Read `tasks/MPI-732/plan.md` for the member list and phase or
 
 Project mode: **scalable-foundation** — full guardrails, no prototype shortcuts.
 
-**Where this stands, 2026-09-12.** Card in `doing`. **Phase 1 is DONE and auto-verified** —
-`selectCueAllTargets()` lives in `js/data/commandRegistry.js` with 9 passing tests, and it
-hands Phase 2 a finished contract: `{ eligible, skipped, reason }`, with `reason` one of
-`'no-operation'` / `'not-batchable'` / `'wrong-media-type'` so the disabled tooltip can
-tell the cases apart.
+**Where this stands, 2026-09-12.** Card in `doing`. **Phases 1 and 2 are DONE.** Phase 1's
+`selectCueAllTargets()` lives in `js/data/commandRegistry.js` with 9 passing tests, returning
+`{ eligible, skipped, reason }` with `reason` one of `'no-operation'` / `'not-batchable'` /
+`'wrong-media-type'`. Phase 2's `cue-all` entry is wired in `MpiGalleryGrid.js` and **proven
+in a real Electron window**, all three label/disabled/tooltip states observed — see
+`validation.md` for the captured output. The MPI-730 block that stopped the previous session
+had cleared (its claims are terminal).
 
-**The single next action is Phase 2, and it is BLOCKED** — `MpiGalleryGrid.js` is held by a
-live peer (MPI-730 item 3). Re-check `state/index.json` first; if the claim has cleared,
-claim the file and go straight in, nothing else is owed beforehand. Two things a fresh
-session would otherwise have to rediscover: the eligibility rule shipped narrower than this
-plan's prose (see Plan Drift — required slots, not any slot), and Phase 3's
-"exit selection mode" step is already done by the grid.
+**Phase 3 is BUILT too, and committed with Phases 1-2** — `_cueAllDispatch` in
+`MpiGalleryBlock.js` reads `getRunPayload()` once and calls `enqueueGeneration` per eligible
+group; `buildCueAllJobItems()` in `commandRegistry.js` decides which staged slot each card
+sweeps (Fabio's follow-up: a pill-tagged `endFrame` sweeps end frames). Refuses under Loop,
+reports the skipped count, passes no `getNextGeneration`. Machine-checked as far as a sandbox
+can reach (949 unit, 12/12 gallery desktop specs, plus a sweep proving no batchable job can be
+refused at enqueue). The commit EXCLUDED MPI-678's hunks in the two shared files via a
+hand-built index blob, so those hunks are still uncommitted in the worktree — but
+**the queue-depth and sidecar legs need Fabio's own app**: they want a project, installed
+models and a real GPU, which is why this card is `user-ux`.
+
+**The single next action is Phase 4** (desktop spec + `docs/gallery.md`). Four things a
+fresh session would otherwise rediscover: the eligibility rule is narrower than this plan's
+prose (Plan Drift — exactly one REQUIRED slot); Phase 3's "exit selection mode" is already
+done by the grid; **Phase 4's spec must mount through the BLOCK, not the grid alone** — a
+standalone mount is what let the op-source bug ship green; and **committing
+`MpiGalleryGrid.js` will sweep in MPI-678's uncommitted archive work** unless staged by hunk
+(see Plan Drift).
 
 **The ask.** Fabio's photographer friend wants one operation run over many photos or
 clips without a watch folder. Agreed shape (2026-09-12): import them into a Vision
@@ -88,14 +102,24 @@ Fabio corrected it.
 absent from the gallery strip. A mask painted on image A would be meaningless on image
 B, and the existing gate is what makes that unreachable rather than merely discouraged.
 
-### The op to run is the REMEMBERED one
+### The op to run is the CURRENT one — reversed 2026-09-12, see Plan Drift
 
-With an empty prompt box the strip force-drops to a text-only op (MPI-388,
-`dropToTextOpIfEmpty`), so the *displayed* op is not what the user picked.
-`s_selectedOpByModel` records **only user picks** — `setSelectedOp` is guarded against
-programmatic ones (`js/components/Organisms/MpiPromptBox/MpiPromptBox.js:1740`) — so
-`getSelectedOp(modelId)` (`js/utils/modelHelpers.js:60`) still holds the real choice.
-Read the op from there, never from the strip.
+**This section's original claim was wrong and is kept only as the record of it.** It said
+to read the REMEMBERED op (`getSelectedOp(modelId)` → `s_selectedOpByModel`) rather than
+the displayed one, reasoning that with an empty prompt box the strip force-drops to a
+text-only op (MPI-388, `dropToTextOpIfEmpty`) so the display cannot be trusted.
+
+The reasoning skipped the case that dominates real use. `setSelectedOp` is guarded against
+**programmatic** picks — and dragging an image into the prompt box auto-selects `i2i`
+programmatically. So the memory stays *empty* through the exact gesture that makes the op
+valid, and Fabio hit it immediately: `Cue all` greyed while the strip plainly showed `i2i`,
+then still enabled after the chip was removed and the strip had dropped to `t2i`.
+
+**Read the op the user can SEE:** the block's `activeOperation`, which its
+`operation-change` handler assigns unconditionally (`MpiGalleryBlock.js:1344`), handed to
+the grid as a `getCueContext()` callback. The consequence to keep in mind for Phase 3 is
+that the staged chip must STAY staged — it is what makes the op available at all — and each
+job simply overrides `mediaItems` with its own card, so the chip is harmless.
 
 ## Decisions (front-loaded — no open questions remain)
 
@@ -142,6 +166,21 @@ Raise it with Fabio as its own card if the friction proves real in use.
       clean. Two deviations from what this plan said, both forced by the tree and both
       recorded in Plan Drift: where the helper lives, and how the rule is stated.
       Evidence: `validation.md`.
+- [x] **Phase 2 — the menu entry, 2026-09-12.** `cue-all` in `MpiGalleryGrid.js` beside
+      `add-to-project`: `layers` icon, label `Cue all (N)` off the eligible count (bare
+      `Cue all` at zero), `disabled` at zero, `data-info` (the STATUS BAR, not a tooltip)
+      mapped from `reason`. Emits `{ groups, skipped, reason }`; no generation-layer import.
+      **Shipped twice** — the first attempt read the remembered op and Fabio found it broken
+      in the app both ways; it now reads the live op through a `getCueContext()` callback
+      from `MpiGalleryBlock.js`. See Plan Drift. Evidence: `validation.md`.
+
+- [x] **Phase 3 — the dispatch loop, 2026-09-12.** `_cueAllDispatch` in
+      `MpiGalleryBlock.js`: one `getRunPayload()` read, then one `enqueueGeneration` per
+      eligible group with `mediaItems` replaced by that card's own item (built in the same
+      shape `_tryAddMedia` produces, tagged with the op's single required slot's role).
+      Refuses under `state.loopArmed`; reports queued and skipped counts through
+      `StatusBar.notify`; passes no `getNextGeneration`. Subscribed ONCE outside
+      `_wirePromptBox` so a PromptBox remount cannot double-cue. Evidence: `validation.md`.
 
 ## Remaining Work
 
@@ -166,9 +205,9 @@ more in briefing than it saves.
       `js/utils/galleryRenditions.js` was split out for exactly this reason
       (`docs/gallery.md` § the rendition ladder).
 
-## Phase 2: The menu entry
+## Phase 2: The menu entry — DONE
 
-- [ ] Add `cue-all` to the gallery card context menu in
+- [x] Add `cue-all` to the gallery card context menu in
       `js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js`, beside
       `add-to-project`, labelled `Cue all (N)` off the eligible count and disabled at
       zero. It emits `cue-all` with the eligible groups, the skipped ones, and the
@@ -177,9 +216,9 @@ more in briefing than it saves.
       right-click on a 3-image selection with `edit` remembered shows `Cue all (3)`;
       with nothing remembered it is disabled and tooltipped. Nothing dispatches yet.
 
-## Phase 3: The dispatch loop
+## Phase 3: The dispatch loop — BUILT, needs Fabio's queue test
 
-- [ ] Handle `cue-all` in `js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js`:
+- [x] Handle `cue-all` in `js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js`:
       read `_pb.el.getRunPayload()` once, then for each eligible group call
       `enqueueGeneration` through the existing `_galleryGenerationFromPayload` mapper
       with `mediaItems` replaced by that group's selected item alone. Refuse with a
@@ -225,15 +264,94 @@ more in briefing than it saves.
   jobs with no image. The tighter rule still lands on exactly the ops the plan's table
   promised — asserted in the test, not assumed — and still picks up future single-input ops
   for free. **The spirit is unchanged: no whitelist.**
-- **2026-09-12 — Phase 2 is BLOCKED on a live peer.**
-  `js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js` is under an active write claim
-  from MPI-730 item 3 (session `44919499-034d-4a40-be05-24a7409a81a1`, heartbeat 12:27Z,
-  card in `doing`). Not edited, not negotiated. Re-read `state/index.json` before assuming
-  the block still stands — if it has cleared, Phase 2 can start immediately, since Phase 1
-  handed it a finished contract.
+- **2026-09-12 — Phase 2 was BLOCKED on a live peer, and the block CLEARED.**
+  `MpiGalleryGrid.js` was under an active write claim from MPI-730 item 3 (session
+  `44919499-034d-4a40-be05-24a7409a81a1`). By the time Phase 2 started, all three MPI-730
+  claims on the file were terminal (`complete`/`verified`) and absent from
+  `active_file_claims`, and the card was `done`. Claimed as `523c5ece` and built. No
+  negotiation was needed.
+- **2026-09-12 — REVERSED BY FABIO IN THE APP: the op source is the CURRENT op, not the
+  remembered one.** Phase 2 first shipped reading `getSelectedOp(modelId)`, per the plan
+  section above. Fabio found it broken in two directions within minutes: dragging an image in
+  auto-selects `i2i` **programmatically**, and `setSelectedOp` is guarded against exactly
+  that, so `Cue all` was greyed while the strip showed `i2i`; and after removing the chip the
+  stale memory left it *enabled* while the strip had dropped to `t2i`. His read — "it's not
+  getting information from the currently selected operation… it's probably triggering when
+  the user selects an operation, which is the wrong approach" — was exactly right.
+  **Fix:** the block passes `getCueContext: () => ({ operation: activeOperation, model:
+  activeModel })` into the grid's mount; the grid calls it at right-click time.
+  `activeOperation` is assigned unconditionally by the `operation-change` handler
+  (`MpiGalleryBlock.js:1344`), so it tracks programmatic picks too. This **removed** the
+  `js/utils/modelHelpers.js` import the first attempt added — the grid now resolves nothing
+  and decision 5 is cleaner than before, not merely intact. Verified by a probe that mutates
+  the callback between right-clicks *while poisoning `s_selectedOpByModel` to the opposite
+  value*, so a regression to the memory read inverts the assertions.
+- **2026-09-12 — "tooltip" was the wrong word throughout; this app has no tooltips.**
+  Fabio: "We don't use tooltips in this app. The info shows up in the status bar." No tooltip
+  code was ever written — `MpiContextMenu` passes `info` to `MpiButton`, which renders it as
+  `data-info`, and that is the status-bar feed the screenshots show. Nothing to remove; the
+  plan/checklist/validation wording is corrected, and the probe now asserts `data-info` is
+  set **and** that no `title` attribute exists, so a future tooltip cannot creep in silently.
+- **2026-09-12 — the three info strings, reworded on Fabio's instruction.** Decision 1 asked
+  for one string, `Pick an operation first`; the helper returns three distinct reasons, and
+  `not-batchable` also covers genuinely multi-input ops like `flowHeadSwap`, where that
+  wording is false. Shipped: `no-operation` → `No operation selected`, `not-batchable` →
+  `Cue all does not support the current operation` (Fabio's suggested sense), and
+  `wrong-media-type` → `No selected card matches the current operation`. With the op now read
+  live, `no-operation` is nearly unreachable — there is almost always a displayed op — so
+  `not-batchable` is the string users will actually meet.
+- **2026-09-12 — `MpiGalleryGrid.js` carries ~83 lines of MPI-678's UNCOMMITTED work.**
+  The archive scope toggle, the Record-button removal and the `archive` menu entry are all
+  in the working tree under claim `ba2ba065` (`needs_verification`, heartbeat 2026-09-01 —
+  no live writer), along with an untracked `tests/desktop/gallery-archive.spec.js`. Phase 2's
+  edit is additive on top and did not clobber it — but **a whole-file
+  `git add js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js` would commit MPI-678's
+  feature under an MPI-733 message.** Stage this file by HUNK
+  (`~/.claude/memory/tools/git-shared-tree.md`), or leave it to whoever closes MPI-678.
 - **2026-09-12 — Phase 3 gets one step for free.** `MpiGalleryGrid.js:1528` already runs
   `if (useSelection) _exitSelectionMode();` after every context-menu action, so the Block
   handler must NOT add a second exit.
+
+- **2026-09-12 — the video row of the "Which ops qualify" table is unreachable, and that is
+  correct.** The table promises `extend` for video. `extend` does declare exactly one
+  required video slot, so the rule accepts it — but a sweep of every model found **no model
+  declares `extend` in `supportedOps`**, so selecting VIDEO cards is not batchable today.
+  That is by design elsewhere: Video Extend ships as a **Flow**, and Flows are not ops on the
+  gallery strip. It will start working for free the day a model declares a
+  single-required-video-slot op. No code changed; nothing to fix.
+  **Read this precisely: the batch AXIS is an image selection, but the OUTPUT can be video.**
+  `i2v` (wan22-5b) and `i2v_ms` (wan-22, ltx-23, ltx-23-balanced, minimax-h3) are batchable —
+  each selected image becomes that clip's `startFrame`, so 5 photos → 5 clips, which the
+  card named as one of its two biggest wins. Their `endFrame` and `inputAudio` slots are
+  OPTIONAL and correctly not batch axes; counting them would queue clips built from a stray
+  decoration with no real input. An earlier note here said "Cue all is image-only in
+  practice", which reads as though image-to-video were excluded. It is not.
+- **2026-09-12 — the two rules read DIFFERENT slot lists, and it is safe by a hair.**
+  Eligibility filters slots by model (`filterMediaInputsForModel`); `enqueueGeneration`'s
+  `findMissingMediaSlot` does **not**. An op whose unfiltered list carried a second required
+  slot of another type would pass the menu and then be refused at enqueue on every job —
+  the exact "Cue all does nothing" symptom. Swept all 67 accepted (model, op, mediaType)
+  combinations: **0 would be refused.** Pinned by a new test in
+  `tests/cue-all-eligibility.test.cjs` that asserts the invariant rather than restating the
+  guard, and proved live (67 assertions execute; all 67 fail under a wrong expectation).
+
+- **2026-09-12 — RAISED BY FABIO: the batch varies the slot the USER chose, not the op's
+  required slot.** On `i2v_ms`, MPI-466's role pill toggles a lone staged image between
+  `startFrame` and `endFrame`, so "try five different END frames" is a real request. Phase 3
+  first hardcoded the op's single required slot — which would have run all five as START
+  frames: a wrong result that looks like a working one. Now
+  `buildCueAllJobItems(operation, model, staged, card)` in `js/data/commandRegistry.js` (pure,
+  beside `selectCueAllTargets`) takes the role of the **last staged chip of the batched media
+  type**, falling back to the required slot when nothing is staged. Roles arrive pre-assigned
+  by the PromptBox's `_withAssignedRoles`, so an untagged image still reads `startFrame` and
+  the old default is unchanged. **Every other staged chip rides along untouched**, which is
+  what makes "hold this start frame, sweep the end frame" work — and a staged audio chip
+  survives too. The card **substitutes in place, never appends**, because `control`,
+  `krea2Edit`, `kleinEdit` and `qwenEdit` declare ORDINAL slots whose roles
+  `stripOrdinalMediaRoles` drops so chip ORDER decides (MPI-330); appending would shuffle a
+  two-chip edit's base image into the slot being swept. Four new tests cover it.
+  **Consequence for Phase 4's spec:** the sidecar assertion should check the SWEPT slot, not
+  `mediaItems[0]` — on a two-chip sweep index 0 is the fixed chip and identical across jobs.
 
 ## Verification
 

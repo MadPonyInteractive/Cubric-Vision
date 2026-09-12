@@ -8,7 +8,7 @@ import { ce, qs, qsa, on } from '/js/utils/dom.js';
 import { renderIcon } from '/js/utils/icons.js';
 import { removeHistoryEntry } from '../../../data/projectModel.js';
 import { getModelById, tierLetterFor } from '../../../data/modelRegistry.js';
-import { getCommand, commandAllowsBranchingContinue } from '../../../data/commandRegistry.js';
+import { getCommand, commandAllowsBranchingContinue, selectCueAllTargets } from '../../../data/commandRegistry.js';
 import { flowModelChoices } from '../../../data/flowsRegistry.js';
 import { state } from '../../../state.js';
 import { Storage } from '../../../core/storage.js';
@@ -119,6 +119,9 @@ function _addDownloadUrl(e, item) {
  *
  * Props:
  * @param {import('../../../data/projectModel.js').ItemGroup[]} [groups=[]] - Initial groups
+ * @param {() => {operation: string|null, model: Object|null}} [getCueContext] - Reads the
+ *        prompt box's CURRENT op/model at right-click time, for the `Cue all (N)` label.
+ *        A callback because the block owns the PromptBox and this grid mounts before it.
  *
  * Instance methods (on instance.el):
  *   setGroups(groups)                    — replace all groups and re-render
@@ -141,6 +144,8 @@ function _addDownloadUrl(e, item) {
  *   'preview:finish'      { group, item } — preview-stage card Finish clicked (replaces preview with final)
  *   'preview:pop-continue'{ group, item } — Pop clicked while card is queued for Finish
  *   'record'      {}                     — Record button clicked (block owns the recorder)
+ *   'cue-all'     { groups, skipped, reason } — queue one job per eligible group on the
+ *                                          prompt box's current recipe (block dispatches)
  */
 export const MpiGalleryGrid = ComponentFactory.create({
     name: 'MpiGalleryGrid',
@@ -1486,6 +1491,35 @@ export const MpiGalleryGrid = ComponentFactory.create({
                     .map(id => _groups.find(g => g.id === id))
                     .filter(g => g && g.type === 'video').length;
                 const combineDisabled = targetIds.length < 2 || _selectedVideoCount !== targetIds.length;
+
+                // ── Cue all (MPI-733) ─────────────────────────────────────────
+                // The op to batch is the one the prompt box is CURRENTLY on, read
+                // live through `getCueContext` because the block owns it.
+                // Deliberately NOT the remembered pick: `s_selectedOpByModel` is
+                // written only for USER-driven picks, so dragging an image in —
+                // which auto-selects i2i programmatically — left this greyed while
+                // the strip plainly showed i2i, and clearing the chip (dropping to
+                // t2i, MPI-388 `dropToTextOpIfEmpty`) left it enabled under a
+                // text-only op. The op the user can SEE is the only one that can
+                // honestly be batched.
+                // Resolved here rather than in the block because the LABEL carries
+                // the eligible count; `commandRegistry` is a data read, so the grid
+                // still imports nothing from the generation layer, which owns the
+                // dispatch.
+                const { operation: _cueOp, model: _cueModel } = props.getCueContext?.() ?? {};
+                const _cue = selectCueAllTargets(
+                    _cueOp,
+                    _cueModel,
+                    targetIds.map(id => _groups.find(g => g.id === id)).filter(Boolean),
+                );
+                // Reaches the STATUS BAR through MpiButton's `data-info`. This app
+                // has no tooltips.
+                const _cueInfo = {
+                    'no-operation':     'No operation selected',
+                    'not-batchable':    'Cue all does not support the current operation',
+                    'wrong-media-type': 'No selected card matches the current operation',
+                }[_cue.reason] ?? 'Queue one job per selected card on the current settings';
+
                 MpiContextMenu.show({
                     x: e.clientX,
                     y: e.clientY,
@@ -1493,6 +1527,13 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         { key: 'compare',    icon: 'compare',  label: 'Compare',    disabled: compareDisabled },
                         { key: 'combine',    icon: 'merge',     label: 'Combine',    disabled: combineDisabled },
                         { key: 'add-to-project', icon: 'folder', label: 'Add to project' },
+                        // Count comes off the ELIGIBLE set, not the selection: a
+                        // mixed image+video pick filters to the op's type rather
+                        // than refusing, so `Cue all (3)` on a 3-image/2-video
+                        // selection is the honest label (MPI-733).
+                        { key: 'cue-all',    icon: 'layers',    info: _cueInfo,
+                            label: _cue.eligible.length ? `Cue all (${_cue.eligible.length})` : 'Cue all',
+                            disabled: !_cue.eligible.length },
                         { key: 'reveal',     icon: 'folder',    label: 'Open in file system' },
                         { key: 'rename',     icon: 'edit',      label: 'Rename',     disabled: targetIds.length !== 1 },
                         { key: 'card-notes', icon: 'text',      label: 'Card notes', disabled: targetIds.length !== 1 },
@@ -1510,6 +1551,9 @@ export const MpiGalleryGrid = ComponentFactory.create({
                         if (key === 'compare')    emit('compare',  { groups: selected });
                         if (key === 'combine')    emit('combine',  { groups: selected });
                         if (key === 'add-to-project') emit('add-to-project', { groups: selected });
+                        if (key === 'cue-all')    emit('cue-all', {
+                            groups: _cue.eligible, skipped: _cue.skipped, reason: _cue.reason,
+                        });
                         if (key === 'reveal')     emit('reveal', { groups: selected });
                         if (key === 'rename')     _startRename();
                         if (key === 'card-notes') emit('card-notes', { group });

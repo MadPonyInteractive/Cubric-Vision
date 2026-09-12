@@ -1881,6 +1881,45 @@ export function selectCueAllTargets(operation, model = null, groups = []) {
 }
 
 /**
+ * Builds one Cue-all job's `mediaItems`: the staged chips with the batch card
+ * substituted into the slot the user is varying.
+ *
+ * WHICH slot that is comes from the prompt box, not from the op's declaration.
+ * On `i2v_ms`, MPI-466's role pill toggles a lone image between `startFrame` and
+ * `endFrame`, so "try five different END frames" is a real request — batching the
+ * op's required slot instead would silently run all five as start frames. With two
+ * chips staged, order decides start/end and the LAST chip of the batched type is
+ * the one worth sweeping. Staged items arrive with roles already assigned by the
+ * PromptBox's `_withAssignedRoles`, so an untagged image still reads `startFrame`
+ * and the default is unchanged. Nothing staged falls back to the required slot.
+ *
+ * The card SUBSTITUTES IN PLACE rather than being appended, because `control`,
+ * `krea2Edit`, `kleinEdit` and `qwenEdit` declare ORDINAL slots whose roles
+ * `stripOrdinalMediaRoles` drops so that chip ORDER alone decides the slot
+ * (MPI-330) — appending would shuffle a two-chip edit's base image into the slot
+ * being varied. Every other staged chip rides along untouched, which is what makes
+ * "hold this start frame, sweep the end frame" work.
+ *
+ * @param {string} operation
+ * @param {Object|null} model
+ * @param {Array<{mediaType:string, role?:string}>} staged  `getRunPayload().mediaItems`
+ * @param {{mediaType:string}} card  the one batched item, role assigned here
+ * @returns {Array<Object>} mediaItems for this job
+ */
+export function buildCueAllJobItems(operation, model, staged = [], card = null) {
+    const list = Array.isArray(staged) ? staged.filter(Boolean) : [];
+    if (!card) return list;
+
+    const role = [...list].reverse().find(m => m.mediaType === card.mediaType)?.role
+        ?? filterMediaInputsForModel(getCommandMediaInputs(operation), model)
+            .find(slot => slot.required)?.key;
+
+    const item = role ? { ...card, role } : { ...card };
+    const at = list.findIndex(m => m.role === role);
+    return at >= 0 ? list.map((m, i) => (i === at ? item : m)) : [...list, item];
+}
+
+/**
  * Drops explicit role tags that point at ORDINAL slots (slots marked
  * `ordinal: true` — positional aliases like "image 1/2/3" where the chip's
  * strip order IS the meaning). Sticky ordinal roles go stale: removing chip 1

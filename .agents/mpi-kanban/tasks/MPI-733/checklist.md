@@ -1,6 +1,6 @@
 # MPI-733 Checklist
 
-Derived from `plan.md`, four phases. **Phases 2–3 are blocked on a live peer claim** —
+Derived from `plan.md`, four phases. The MPI-730 claim that blocked Phase 2 has CLEARED —
 see this card's Plan Drift and `tasks/MPI-732/plan.md`.
 
 - [x] Phase 1 — eligibility, as a pure function **(auto-verified, see `validation.md`)**
@@ -14,16 +14,34 @@ see this card's Plan Drift and `tasks/MPI-732/plan.md`.
         plus four the enumeration turned up. **Proven non-vacuous by falsification**: a
         broken helper turns 3 of the 9 red
 
-- [ ] Phase 2 — the menu entry *(BLOCKED: `MpiGalleryGrid.js` under a live peer claim)*
-  - [ ] `cue-all` entry beside `add-to-project`, labelled `Cue all (N)` off the eligible
-        count, disabled at zero with a tooltip. Grid imports nothing new from the
-        generation layer; it emits the eligible groups, the skipped ones, and the reason
+- [x] Phase 2 — the menu entry **(verified in a real Electron window, see `validation.md`)**
+  - [x] `cue-all` entry beside `add-to-project`, `layers` icon, labelled `Cue all (N)` off
+        the eligible count (bare `Cue all` at zero), disabled at zero, `data-info` carrying
+        the reason. Emits `{ groups, skipped, reason }`. No new import at all in the grid
+  - [x] **Op source corrected after Fabio's app test:** reads the LIVE op via a
+        `getCueContext()` callback from `MpiGalleryBlock.js`, not `s_selectedOpByModel`.
+        The memory is only written on user-driven picks, so a drag-in (which auto-selects
+        i2i programmatically) greyed it, and a cleared chip left it wrongly enabled
+  - [x] Info strings reworded per Fabio: `No operation selected` /
+        `Cue all does not support the current operation` /
+        `No selected card matches the current operation`. **These are status-bar text —
+        this app has no tooltips, and none was written**
 
-- [ ] Phase 3 — the dispatch loop
-  - [ ] Handle `cue-all` in `MpiGalleryBlock.js`: read `_pb.el.getRunPayload()` once, then
-        one `enqueueGeneration` per eligible group with `mediaItems` replaced by that
-        group's item alone. Refuse with a toast when `state.loopArmed`. Toast the skipped
-        ones. Pass no `getNextGeneration` callback — a batch job must not re-fire itself
+- [x] Phase 3 — the dispatch loop **(built; queue/sidecar legs need Fabio's app)**
+  - [x] `_cueAllDispatch` in `MpiGalleryBlock.js`: one `getRunPayload()` read, then one
+        `enqueueGeneration` per eligible group with `mediaItems` replaced by that group's
+        item alone. Refuses under `state.loopArmed`. Reports queued + skipped counts. No
+        `getNextGeneration` — a batch job must not re-fire itself
+  - [x] Subscribed ONCE outside `_wirePromptBox` (which runs at two mount sites), so a
+        PromptBox remount cannot stack a second listener and cue every job twice
+  - [x] Item built in the same shape a dragged card produces. New sweep test proves none of
+        the 67 batchable combinations can be refused by `enqueueGeneration`'s required-slot
+        guard
+  - [x] **Fabio's follow-up:** the batch varies the slot the ROLE PILL expressed, not the
+        op's required slot — so a pill-tagged `endFrame` sweeps end frames while a staged
+        start frame rides along. `buildCueAllJobItems()` in `commandRegistry.js`, pure and
+        unit-tested; substitutes in place so ORDINAL-slot ops keep their base image at
+        index 0
 
 - [ ] Phase 4 — regression spec + docs
   - [ ] Desktop spec under `tests/desktop/`, stubbed at the dispatch boundary (no GPU)
