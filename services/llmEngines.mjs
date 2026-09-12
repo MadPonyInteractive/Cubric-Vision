@@ -43,7 +43,9 @@
  * descriptions stay: they carry measured findings, not marketing.
  *
  * Coverage is asymmetric on purpose — abliterated builds exist only locally (no
- * serverless catalogue carries them), frontier models only in the cloud.
+ * serverless catalogue carries them). DeepSeek V3.2 and Qwen 3.6 35B, the two
+ * cloud-only research candidates, were removed as overkill for enhancement
+ * (Fabio, MPI-728); the agent picks its own models when it is built.
  */
 export const MODEL_REGISTRY = [
     {
@@ -75,19 +77,6 @@ export const MODEL_REGISTRY = [
         ollamaName: 'huihui_ai/gemma-4-abliterated:12b',
         description:
             'The ENHANCER of record: every v1 recipe is Stage 1 green on this model. Word-budget adherence is a capability threshold between 8B and 12B, so recipes hold their length here and drift on smaller models. Local only.',
-    },
-    {
-        id: 'deepseek-v3.2',
-        name: 'DeepSeek V3.2 (Cloud only)',
-        deepInfraId: 'deepseek-ai/DeepSeek-V3.2',
-        description: 'Cloud candidate for prompts Gemma refuses or waters down. Too large to run locally.',
-    },
-    {
-        id: 'qwen3.6-35b-a3b',
-        name: 'Qwen 3.6 35B A3B (Cloud only)',
-        deepInfraId: 'Qwen/Qwen3.6-35B-A3B',
-        description:
-            'Cloud candidate — MoE, so cheap per token. Second opinion on whether sanitising is Gemma-specific or catalogue-wide.',
     },
 ];
 
@@ -219,6 +208,37 @@ const DEEPINFRA_BASE_URL = 'https://api.deepinfra.com/v1/openai';
  * elsewhere is enough to A/B how much each one sanitises.
  */
 const BASE_URL_ENV = 'CUBRIC_OPENAI_BASE_URL';
+
+/**
+ * DeepInfra's own price list, USD per 1M tokens keyed by model id, read from the
+ * `GET /models` catalogue (`metadata.pricing`). MPI-728: the picker shows prices
+ * LIVE because DeepInfra reprices and runs discounts, and a hardcoded number rots
+ * silently. A model without numeric token prices is left out, never guessed.
+ */
+export function parseDeepInfraPrices(body) {
+    const prices = {};
+    for (const m of body?.data ?? []) {
+        const p = m?.metadata?.pricing;
+        if (typeof p?.input_tokens === 'number' && typeof p?.output_tokens === 'number') {
+            prices[m.id] = { in: p.input_tokens, out: p.output_tokens };
+        }
+    }
+    return prices;
+}
+
+/**
+ * The catalogue is public, so NO key is sent. `null` on any failure, a slow
+ * network included: the settings panel waits on this, so it gets 3s and no more.
+ */
+export async function fetchDeepInfraPrices() {
+    try {
+        const base = process.env[BASE_URL_ENV] ?? DEEPINFRA_BASE_URL;
+        const res = await fetch(`${base}/models`, { signal: AbortSignal.timeout(3000) });
+        return res.ok ? parseDeepInfraPrices(await res.json()) : null;
+    } catch {
+        return null;
+    }
+}
 
 export class DeepInfraEngine {
     backend = 'deepinfra';

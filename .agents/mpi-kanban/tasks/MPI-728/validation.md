@@ -223,6 +223,46 @@ Everything checks out":
 **Phases 1+2 have no open verification.** A new, unbuilt ask came with it: show a
 price ("maybe price per token would suffice"). See `plan.md` § Current State.
 
+## Price in the picker (Fabio chose A) — built 2026-09-12, desktop check PENDING
+
+Self-verification, all run this session:
+- `node tests/llm-service.test.cjs` → 12/12, including the new
+  `testDeepInfraPricesParse` (token-priced entries kept, others dropped, a null body
+  gives `{}`) and `testPriceLabel` (`0.33999999999999997` → `$0.34`, `0.0015` stays
+  `$0.0015`, `2.5` → `$2.50`).
+- `npm test` → 949/949. `npm run lint` and `npm run lint:components` → clean.
+- Live `fetchDeepInfraPrices()` against DeepInfra: 766ms, 106 priced entries, all
+  four registry cloud ids priced (Gemma 4 26B $0.07/$0.34, Gemma 3 12B $0.05/$0.15,
+  DeepSeek V3.2 $0.26/$0.38, Qwen 3.6 35B $0.10/$0.95 per 1M in/out).
+- Route smoke, `routes/llm.js` on an ephemeral port (never `:3000`): no key → every
+  `price` null and no fetch; a key present (dummy env value, never sent) → the four
+  cloud entries priced, the local-only ones null, 796ms; second call 1ms (cached).
+- NOT proven red on HEAD (stash is banned). NOT run: the panel in the desktop app.
+
+Fabio's check, pending:
+1. Restart the app, open Remote → Language Models.
+2. Pick DeepInfra, open the Enhancement model list → each cloud model shows a price line.
+3. Look under the model dropdown → "Billed to your DeepInfra account…" is there.
+4. Pick Ollama → the billing note is gone.
+
+**Fabio's screenshot, same day:** the DeepInfra model list renders a price line on
+every cloud option (`$0.07 in, $0.34 out per 1M tokens` and the rest). Step 2 seen.
+The billing note was hidden under the open list, so step 3 is not yet seen.
+
+**Round 4 follow-up, DeepSeek V3.2 and Qwen 3.6 35B deleted from `MODEL_REGISTRY`**
+on his review ("way too overkill for just enhancement"):
+- `grep` over `docs/`, `scripts/`, `tests/` for either model → no hits before deletion.
+- `npm test` → 949/949. `npm run lint` and `npm run lint:components` → clean.
+- Route smoke on an ephemeral port with a key present → 4 models, default
+  `gemma-4-e4b`; `gemma-4-e4b` and `gemma-3-12b` priced, the two abliterated
+  local-only entries `price: null`.
+
+Fabio's remaining check: restart → DeepInfra → Enhancement model → the list shows
+Default, Gemma 4, Gemma 3 12B only, each priced → the billing note sits under it.
+
+**PASSED — Fabio, 2026-09-12**, answering "1" (looks good) to that check. Round 4
+has no open verification; phase 3 is next.
+
 ## Phase 3 — NOT STARTED
 
 The Ollama lifecycle (MPI-8 / MPI-17 ported from Cubric-Prompt) is untouched. A

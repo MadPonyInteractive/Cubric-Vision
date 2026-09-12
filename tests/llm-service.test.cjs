@@ -208,6 +208,27 @@ function testForkBridgeAnswersDeepInfraRequests() {
     }
 }
 
+// ── DeepInfra prices (MPI-728) ───────────────────────────────────────────────
+
+function testDeepInfraPricesParse() {
+    // The `GET /v1/openai/models` shape as returned on 2026-09-12, trimmed. An
+    // entry without numeric token prices is left out rather than priced at zero.
+    const { parseDeepInfraPrices } = require('../services/llmEngines.mjs');
+    const prices = parseDeepInfraPrices({ data: [
+        { id: 'google/gemma-4-26B-A4B-it', metadata: { pricing: { input_tokens: 0.07, output_tokens: 0.33999999999999997 } } },
+        { id: 'priced-per-character', metadata: { pricing: { per_character: 0.00001 } } },
+        { id: 'no-metadata' },
+    ] });
+    assert.deepStrictEqual(prices, { 'google/gemma-4-26B-A4B-it': { in: 0.07, out: 0.33999999999999997 } });
+    assert.deepStrictEqual(parseDeepInfraPrices(null), {});
+}
+
+function testPriceLabel() {
+    const { priceLabel } = require('../js/services/llmService.js');
+    assert.strictEqual(priceLabel({ in: 0.07, out: 0.33999999999999997 }), '$0.07 in, $0.34 out per 1M tokens');
+    assert.strictEqual(priceLabel({ in: 0.0015, out: 2.5 }), '$0.0015 in, $2.50 out per 1M tokens');
+}
+
 // ── Runner ───────────────────────────────────────────────────────────────────
 
 const tests = [
@@ -221,6 +242,8 @@ const tests = [
     testModeResolution,
     testSecretsStoreDeepInfraSlot,
     testForkBridgeAnswersDeepInfraRequests,
+    testDeepInfraPricesParse,
+    testPriceLabel,
 ];
 
 let failed = 0;

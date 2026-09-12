@@ -11,7 +11,7 @@
  *
  * Three routes:
  *   GET  /llm/status   -> { deepinfra: { hasKey }, ollama: { running }, defaultBackend }
- *   GET  /llm/models   -> { models: [{ id, name, description, ollama, deepinfra }] }
+ *   GET  /llm/models   -> { models: [{ id, name, description, ollama, deepinfra, price }] }
  *   POST /llm/enhance  -> { ok, text, backend, model } | { ok:false, error }
  *
  * HONEST STATE IS PART OF THE CONTRACT: every completion echoes the backend and
@@ -91,20 +91,36 @@ router.get('/llm/status', async (_req, res) => {
 });
 
 /**
+ * DeepInfra's prices, kept for the life of the process once a fetch succeeds. A
+ * failure is not kept, so the next panel open tries again.
+ * ponytail: a mid-session reprice shows after a restart; add a TTL if that matters.
+ */
+let _prices = null;
+async function deepInfraPrices() {
+    if (!_prices) _prices = engines().then((e) => e.fetchDeepInfraPrices());
+    const prices = await _prices;
+    if (!prices) _prices = null;
+    return prices;
+}
+
+/**
  * GET /llm/models — the enhancer LLM catalogue, for the settings picker.
  *
  * MPI-728. The registry lives in `services/llmEngines.mjs`, which is server-side
  * ESM the renderer cannot import, so the picker asks for it here. Coverage is
  * reported per backend rather than as one list, because it is ASYMMETRIC on
- * purpose — abliterated builds exist only locally, frontier models only in the
- * cloud — and the dropdown has to filter to the backend the user picked instead
+ * purpose — abliterated builds exist only locally — and the dropdown has to
+ * filter to the backend the user picked instead
  * of offering a model that backend cannot serve.
  *
- * No key, no secret, no request to either provider: this is the static catalogue.
+ * `price` is DeepInfra's live `{ in, out }` in USD per 1M tokens, or null. It is
+ * fetched ONLY once a key is saved, so a user who never chose the cloud makes no
+ * call to it, and even then no key is sent: the catalogue is public.
  */
 router.get('/llm/models', async (_req, res) => {
     try {
         const { MODEL_REGISTRY, DEFAULT_MODEL_ID } = await engines();
+        const prices = (await hasDeepInfraKey()) ? await deepInfraPrices() : null;
         res.json({
             defaultModelId: DEFAULT_MODEL_ID,
             models: MODEL_REGISTRY.map((m) => ({
@@ -113,6 +129,7 @@ router.get('/llm/models', async (_req, res) => {
                 description: m.description,
                 ollama: !!m.ollamaName,
                 deepinfra: !!m.deepInfraId,
+                price: (m.deepInfraId && prices?.[m.deepInfraId]) || null,
             })),
         });
     } catch (err) {
@@ -147,7 +164,7 @@ router.post('/llm/enhance', async (req, res) => {
         const entry = getModel(modelId || DEFAULT_MODEL_ID);
         if (!entry) return res.json({ ok: false, error: `Unknown model id: ${modelId}` });
         // Backend coverage is asymmetric ON PURPOSE — abliterated builds exist
-        // only locally, frontier models only in the cloud — so a valid id can
+        // only locally — so a valid id can
         // still be unreachable on the chosen backend. Say which, rather than
         // letting `model: undefined` reach the wire.
         const model = backend === 'deepinfra' ? entry.deepInfraId : entry.ollamaName;

@@ -160,8 +160,8 @@ export function setBackendPreference(backend) {
  *
  * THIS IS WHAT REPLACED `chooseEngineModelId()` — an inference became a
  * preference. It is NOT validated against the chosen backend here: coverage is
- * asymmetric on purpose (abliterated builds are local-only, frontier models
- * cloud-only), and `routes/llm.js` already answers a mismatch by NAME
+ * asymmetric on purpose (abliterated builds are local-only), and `routes/llm.js`
+ * already answers a mismatch by NAME
  * (`"<model>" has no <backend> variant.`). Swallowing it here would turn the
  * user's explicit pick into a silent fall-back to something else — the exact
  * defect this card deleted.
@@ -266,7 +266,8 @@ export function splitLabelledPrompt(text) {
  * because coverage is asymmetric on purpose and the picker filters by the backend
  * the user chose. An unreachable server answers `[]`, which the picker renders as
  * "the default" rather than as an error — nothing is broken, there is simply
- * nothing to choose between yet.
+ * nothing to choose between yet. A DeepInfra entry also carries `price`, live
+ * from DeepInfra once a key is saved and null otherwise.
  */
 export async function enhancerModels() {
     try {
@@ -277,6 +278,19 @@ export async function enhancerModels() {
     } catch {
         return [];
     }
+}
+
+/**
+ * A DeepInfra `{ in, out }` price (USD per 1M tokens) as the picker's meta line,
+ * `$0.07 in, $0.34 out per 1M tokens`. Three significant figures, so the API's
+ * `0.33999999999999997` reads $0.34 and a sub-cent price never rounds to $0.00.
+ */
+export function priceLabel(price) {
+    const usd = (n) => {
+        const v = Number(n.toPrecision(3));
+        return `$${v < 0.1 ? v : v.toFixed(2)}`;
+    };
+    return `${usd(price.in)} in, ${usd(price.out)} out per 1M tokens`;
 }
 
 /** One completion through the server (DeepInfra or Ollama). */

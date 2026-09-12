@@ -3,7 +3,9 @@
   "files": [
     "js/services/llmService.js",
     "tests/llm-service.test.cjs",
-    "js/components/Compounds/LandingPages/MpiEnhancementSettings/",
+    "js/components/Compounds/LandingPages/MpiLlmSettings/",
+    "routes/llm.js",
+    "services/llmEngines.mjs",
     "js/components/Compounds/LandingPages/MpiSettings/MpiSettings.js",
     "js/components/types.js",
     "js/shell/preloadStyles.js",

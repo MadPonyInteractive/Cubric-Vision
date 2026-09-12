@@ -11,6 +11,7 @@ import {
     enhancerModelPreference,
     setEnhancerModelPreference,
     enhancerModels,
+    priceLabel,
 } from '../../../../services/llmService.js';
 import { qs } from '../../../../utils/dom.js';
 
@@ -32,7 +33,7 @@ import { qs } from '../../../../utils/dom.js';
  * THE JOBS, and what each can honestly offer today:
  *   - **Enhancement** — all three backends. Live.
  *   - **Descriptions** — ComfyUI only, and that is a MEASURED limit rather than a
- *     missing feature: `MODEL_REGISTRY` (`services/llmEngines.mjs`) is six models
+ *     missing feature: `MODEL_REGISTRY` (`services/llmEngines.mjs`) is four models
  *     and every one is TEXT-ONLY, so neither DeepInfra nor Ollama has anything
  *     that can look at an image. The row says so instead of offering a choice
  *     that would break "Describe image". **MPI-737 owns growing it**, by putting
@@ -191,6 +192,8 @@ export const MpiLlmSettings = ComponentFactory.create({
                     _setKeyStatus(root, 'Failed to save the DeepInfra key.');
                     return;
                 }
+                // Prices come back only once a key is saved, so the list is re-read.
+                _models = await enhancerModels();
                 await _refreshKeyStatus(root);
                 _renderBackend(root);
             });
@@ -309,10 +312,22 @@ export const MpiLlmSettings = ComponentFactory.create({
             }
 
             group.hidden = false;
-            if (note) { note.textContent = ''; note.hidden = true; }
+            // The cloud bills per token, so its note says how many an enhance takes:
+            // the recipe system prompts measure ~450 to ~3,400 tokens (MPI-728).
+            const billed = backend === 'deepinfra';
+            if (note) {
+                note.textContent = billed ? 'Billed to your DeepInfra account. One enhance uses about 500 to 4,000 tokens.' : '';
+                note.hidden = !billed;
+            }
             const options = [
                 { value: '', label: 'Default', meta: 'What the app ships with' },
-                ...servable.map(m => ({ value: m.id, label: m.name, info: m.description })),
+                ...servable.map(m => ({
+                    value: m.id,
+                    label: m.name,
+                    info: m.description,
+                    // No price when the fetch failed: none beats a stale one.
+                    ...(billed && m.price && { meta: priceLabel(m.price) }),
+                })),
             ];
             // A model pinned under the OTHER backend is not servable here. Show the
             // default rather than a value this dropdown cannot honour; the pin itself

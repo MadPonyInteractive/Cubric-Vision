@@ -49,18 +49,37 @@ one dropdown open at a time: all four check out, and he had already seen Save wo
 "There's no cost in the dropdown" meant exactly "it does not read as a ranking",
 confirmed. **Phases 1+2 have nothing outstanding.**
 
-**NEW OPEN QUESTION, FABIO'S: SHOW A PRICE.** He never asked for one before, but
-now wants it: "maybe price per token would suffice". Nothing is decided or built,
-and it folds into this card because it is the same panel. Proposed shape, NOT
-verified: each DeepInfra model option's stacked meta shows `$/1M in · $/1M out`,
-maybe with an "≈ $ per enhance" estimate (recipe size × price), and local backends
-say they cost no money. Open: where the prices come from (a dated static field on
-`MODEL_REGISTRY` in `services/llmEngines.mjs`, or DeepInfra's API, which nobody
-has checked for pricing), and whether this overlaps MPI-741 (credits research, a
-peer's card).
+**PRICE IN THE PICKER: BUILT 2026-09-12 (Fabio chose option A), awaiting his
+desktop look.** DeepInfra model options show `$0.07 in, $0.34 out per 1M tokens` as
+their stacked meta, and the note under the model dropdown reads "Billed to your
+DeepInfra account. One enhance uses about 500 to 4,000 tokens." (recipe system
+prompts measure ~450 to ~3,400). Prices are LIVE from DeepInfra's public
+`GET /v1/openai/models` (`metadata.pricing`, USD per 1M) through
+`fetchDeepInfraPrices()` in `services/llmEngines.mjs`. `/llm/models` attaches
+`price` only when a key is saved (no third-party call otherwise, and the key is
+never sent), caches a success per process, times out at 3s, and answers null on
+failure: no price beats a stale one. No "≈ $ per enhance": prompts span 7x, and
+Gemma 4 26B / Qwen 3.6 are reasoning-tagged on DeepInfra with nothing turning
+reasoning off, so any fixed figure would be wrong. MPI-741 does not overlap
+(Cubric-hosted credits, not the user's own bill). Evidence in `validation.md`.
 
-**THE SINGLE NEXT ACTION:** settle the price display with Fabio (build it or park
-it), then phase 3, the Ollama lifecycle.
+**Noticed, not actioned (told Fabio):** DeepInfra requests never disable reasoning
+(hidden output tokens, cost and latency unmeasured); DeepInfra tags Gemma 3 12B,
+Gemma 4 26B and Qwen 3.6 as VISION models, which undercuts the "nothing hosted can
+see an image" premise the Descriptions row and MPI-737 rest on.
+
+**Fabio's screenshot shows the price lines rendering** on all four cloud options.
+His review of it: DeepSeek V3.2 and Qwen 3.6 35B are "way too overkill for just
+enhancement", so both are DELETED from `MODEL_REGISTRY` (see Plan Drift). The cloud
+list is now Gemma 4 (Default) and Gemma 3 12B. Descriptions via a DeepInfra vision
+model is MPI-737's existing scope; a premise correction is noted on that card.
+
+**ROUND 4 IS VERIFIED BY FABIO (2026-09-12)** in the app: prices, the two-Gemma
+cloud list, the billing note. Nothing outstanding before phase 3.
+
+**THE SINGLE NEXT ACTION:** phase 3, the Ollama lifecycle, in a FRESH session.
+Read Cubric-Prompt's MPI-8 and MPI-17 (`c:\AI\Mpi\Cubric-Prompt`) before writing
+anything, and claim files under the new session id first.
 
 ### Round 2 state, for reference
 
@@ -426,6 +445,21 @@ Evidence in `validation.md`.
   turn an explicit pick into a quiet substitution, which is the exact defect this
   card deleted. The DROPDOWN shows `Default` in that state and leaves the stored
   pin alone, so switching back restores it.
+- **2026-09-12 round 4 — a PRICE joined the picker, which no phase named.** Fabio's
+  ask after round 3; folded in because it is the same panel and the same route.
+  `GET /llm/models` now makes an outbound call (to DeepInfra's public catalogue),
+  gated on a saved key; its "no request to either provider" comment was rewritten
+  to say so. `fetchDeepInfraPrices()` is new in `services/llmEngines.mjs` and
+  `priceLabel()` in `js/services/llmService.js`.
+- **2026-09-12 round 4 — DeepSeek V3.2 and Qwen 3.6 35B A3B DELETED from
+  `MODEL_REGISTRY`** (Fabio: "way too overkill for just enhancement"). They came
+  over from Cubric-Prompt as sanitising-research candidates; nothing in `docs/`,
+  `scripts/` or `tests/` named them, and the picker was unreleased. DELETED, NOT
+  HIDDEN: the agent (MPI-677 step 5) will pick tool-calling models for its own job,
+  and the two entries are in git. A dev pin to either id now answers
+  `Unknown model id` until another model is picked. The "frontier models only in
+  the cloud" asymmetry comments went with them. Descriptions via a DeepInfra vision
+  model stay MPI-737's (scope items 1-2); a premise correction is noted there.
 
 ## Verification
 
