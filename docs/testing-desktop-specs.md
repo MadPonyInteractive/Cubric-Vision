@@ -69,6 +69,39 @@ developer machine and failed only on CI, the other passed against a visibly brok
    measure, delete the assertion and pin the property that DECIDES the outcome instead (there,
    `line-height`), rather than keeping one that cannot fail.
 
+## Driving Electron OUTSIDE the runner (a screenshot, a one-off probe)
+
+**`globalSetup.js` is what keeps the suite off the dev app, and a script you run with bare
+`node` never executes it.** `npx playwright test --config=playwright.desktop.config.js` hands the
+run a free `CUBRIC_PORT`; your own script does not, so `shellWindow` falls back to
+`127.0.0.1:3000` — **the user's live session** — and times out watching a window that was never
+yours:
+
+```
+Error: shellWindow: no 127.0.0.1:3000 window within 30000ms
+```
+
+That reads as "the app failed to boot" and is not. Your Electron came up on some other port while
+`shellWindow` watched his. Set the port yourself, **before** requiring `shellWindow` (it reads the
+env at module load, not per call), and pass it to the child:
+
+```js
+process.env.CUBRIC_PORT = process.env.CUBRIC_PORT || '54727';   // any free port
+// ...
+env.CUBRIC_PORT = process.env.CUBRIC_PORT;
+env.CUBRIC_E2E = '1';
+env.CUBRIC_E2E_USER_DATA = <own dir>;   // own profile too, or it dies at ~2.3s on the lock
+```
+
+Two more for a script living in the session scratchpad: `require('@playwright/test')` does not
+resolve from outside the repo (use the absolute `node_modules` path), and run it with the repo as
+cwd so `electron.launch({ args: ['.'] })` finds the app.
+
+Worth the ten lines, because this is how you get a real screenshot of a UI change without taking
+the user's app — MPI-727 used it for the floating result window: mount a fixture flow in-page,
+`window.screenshot`, two shots, ~40s. Contrast `docs/testing.md` § the isolated app, and the cases
+where only his own session will do.
+
 **And mutation-test the guard.** Both MPI-504 specs were run against the bug they cover (the
 old host-div write; the toggle's `onChange` cut) and confirmed RED before being kept. Do the
 mutation from a script that restores in `finally` — a crash mid-run otherwise leaves a real

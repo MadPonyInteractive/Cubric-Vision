@@ -200,6 +200,12 @@ Three rules the entry carries, each with a reason:
 
 Stopping is wrapped **around `modal.el.hide()`**, not repeated at the call sites. Escape, the backdrop and a `ui:close-all-popups` pulse all reach the modal's own `hide()` without running picker code, and detaching a playing `<audio>` does not stop it.
 
+## MpiFlowResultDock — the node is MOVED into it, so nothing here may destroy (MPI-727)
+
+The floating window a Flow's result rides in off the last step. **`setContent(null)` and `destroy()` only DETACH** — `replaceChildren()`, never an `innerHTML` wipe, never a teardown of the child: what leaves the box is the caller's shared `<audio>`, already re-appended to the run slide, and that node IS the run slide's player. Destroying instead of detaching turns a live player into a dead reference.
+
+Why moved rather than rebuilt: a media element removed from the document is paused *"once a stable state is reached"* — after the current task — so the same node re-appended inside one synchronous `_renderSlide` pass keeps playing, while a fresh element with the same `src` restarts from zero. That failure is invisible to a screenshot, a regex and the accessibility tree; only `tests/desktop/flow-result-follows-steps.spec.js` (node identity, real tone playing) can see it. Visibility is the `--open` modifier class, never `hidden` — the component sets its own `display`. Full contract + the gate: `js/components/types.js`, `.claude/rules/component-mounts.md` § MpiBaseFlow.js.
+
 ## MpiQueuePanel — signature-based diff render
 
 `MpiQueuePanel._render()` uses signature-based diff render (identity + status + display fields + `previewUrl ? 1 : 0` flag). If sig matches, only `<img src>` is swapped via `_cardByJobId` map; if different, full rebuild. Why: Latent preview ticks fire `generation-queue:changed` rapidly — rebuilding the whole list each tick loses CSS `:hover` mid-frame → hover background flickered. Include "presence" boolean in signature so first-tick transitions (null → url) still force one rebuild.
