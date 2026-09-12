@@ -4043,3 +4043,4 @@
 {"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-729", "at": "2026-09-12T09:53:27+01:00", "actor": "claude", "from": "doing", "to": "doing", "reason": "shipped and probed; Fabio's eye on the spacing is the one check left"}
 {"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-730", "at": "2026-09-12T10:01:05+01:00", "actor": "claude", "column": "todo", "title": "Audio card waveform scrubbing"}
 {"schema":"mpi-kanban/event/v1","id":"MPI-730","type":"task.updated","at":"2026-09-12T10:04:02+01:00","actor":"claude","summary":"Compact plan attached; maturity idea -> planned."}
+{"schema": "mpi-kanban/event/v1", "type": "task.moved", "id": "MPI-729", "at": "2026-09-12T10:38:59+01:00", "actor": "claude", "from": "doing", "to": "done", "reason": "Fabio verified live: tested it, serves its purpose"}
