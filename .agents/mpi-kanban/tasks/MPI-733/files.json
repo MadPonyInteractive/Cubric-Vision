@@ -1,0 +1,12 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/data/commandRegistry.js",
+    "tests/cue-all-eligibility.test.cjs",
+    "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+    "js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js",
+    "tests/desktop/gallery-cue-all.spec.js",
+    "docs/gallery.md",
+    ".agents/mpi-kanban/tasks/MPI-733/"
+  ]
+}

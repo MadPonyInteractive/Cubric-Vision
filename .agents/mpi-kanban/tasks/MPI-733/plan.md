@@ -6,6 +6,19 @@ UMBRELLA: MPI-732. Read `tasks/MPI-732/plan.md` for the member list and phase or
 
 Project mode: **scalable-foundation** — full guardrails, no prototype shortcuts.
 
+**Where this stands, 2026-09-12.** Card in `doing`. **Phase 1 is DONE and auto-verified** —
+`selectCueAllTargets()` lives in `js/data/commandRegistry.js` with 9 passing tests, and it
+hands Phase 2 a finished contract: `{ eligible, skipped, reason }`, with `reason` one of
+`'no-operation'` / `'not-batchable'` / `'wrong-media-type'` so the disabled tooltip can
+tell the cases apart.
+
+**The single next action is Phase 2, and it is BLOCKED** — `MpiGalleryGrid.js` is held by a
+live peer (MPI-730 item 3). Re-check `state/index.json` first; if the claim has cleared,
+claim the file and go straight in, nothing else is owed beforehand. Two things a fresh
+session would otherwise have to rediscover: the eligibility rule shipped narrower than this
+plan's prose (see Plan Drift — required slots, not any slot), and Phase 3's
+"exit selection mode" step is already done by the grid.
+
 **The ask.** Fabio's photographer friend wants one operation run over many photos or
 clips without a watch folder. Agreed shape (2026-09-12): import them into a Vision
 project, select N gallery cards, right-click → **Cue all (N)**. Each selected card
@@ -123,7 +136,12 @@ Raise it with Fabio as its own card if the friction proves real in use.
 
 ## Completed
 
-- [ ] Nothing yet.
+- [x] **Phase 1 — the eligibility helper, 2026-09-12.** `selectCueAllTargets(operation,
+      model, groups)` in `js/data/commandRegistry.js` + `tests/cue-all-eligibility.test.cjs`
+      (9 tests, all pass, proven non-vacuous by falsification). `npm test` 944/944, lint
+      clean. Two deviations from what this plan said, both forced by the tree and both
+      recorded in Plan Drift: where the helper lives, and how the rule is stated.
+      Evidence: `validation.md`.
 
 ## Remaining Work
 
@@ -133,9 +151,9 @@ before the menu entry that fires it exists. Splitting would create exactly the f
 dependency the plan rules forbid. The work is also small enough that a batch would cost
 more in briefing than it saves.
 
-## Phase 1: Eligibility, as a pure function
+## Phase 1: Eligibility, as a pure function — DONE
 
-- [ ] Add a helper that answers "how many of these groups can this op consume", given
+- [x] Add a helper that answers "how many of these groups can this op consume", given
       the remembered op, the model, and the selected groups. It returns the eligible
       groups in selection order plus the skipped ones with a reason, and it reads slot
       capacity through `getCommandMediaInputs` / `filterMediaInputsForModel` rather
@@ -189,7 +207,33 @@ more in briefing than it saves.
 
 ## Plan Drift
 
-- None yet.
+- **2026-09-12 — the helper lives IN `commandRegistry.js`, not a new module.** This plan
+  said to split it out "the way `js/utils/galleryRenditions.js` was split out" so Node
+  could reach it. That premise is wrong: `commandRegistry.js` has **no imports at all** and
+  is already dynamically imported by ~10 `.cjs` tests (`tests/gallery-entry-text-op.test.cjs:31`
+  is the pattern). `galleryRenditions.js` needed splitting because *it* had browser-absolute
+  imports. A separate file would only have moved one function away from the three registry
+  functions it reads.
+- **2026-09-12 — the eligibility rule is narrower than this plan stated, because the
+  registry forced it.** Planned: "declares >= 1 slot of the selected media type". Shipped:
+  **exactly one REQUIRED slot, whose type matches**. Enumerating every op's slots showed
+  the looser rule queues jobs that cannot run: `flowHeadSwap`/`flowScribObj`/
+  `flowObjectStamp` (REQ image,image) and `flowVoiceChanger` (REQ audio,audio) would each
+  get N graphs missing a required input; `t2v_ms`/`ref2v_ms`/`flowDramaBox` (zero required
+  slots) would become "batchable" over their optional decorations; and `i2v_ms` on LTX
+  would accept an AUDIO selection through its optional audio slot, queueing image-to-video
+  jobs with no image. The tighter rule still lands on exactly the ops the plan's table
+  promised — asserted in the test, not assumed — and still picks up future single-input ops
+  for free. **The spirit is unchanged: no whitelist.**
+- **2026-09-12 — Phase 2 is BLOCKED on a live peer.**
+  `js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js` is under an active write claim
+  from MPI-730 item 3 (session `44919499-034d-4a40-be05-24a7409a81a1`, heartbeat 12:27Z,
+  card in `doing`). Not edited, not negotiated. Re-read `state/index.json` before assuming
+  the block still stands — if it has cleared, Phase 2 can start immediately, since Phase 1
+  handed it a finished contract.
+- **2026-09-12 — Phase 3 gets one step for free.** `MpiGalleryGrid.js:1528` already runs
+  `if (useSelection) _exitSelectionMode();` after every context-menu action, so the Block
+  handler must NOT add a second exit.
 
 ## Verification
 

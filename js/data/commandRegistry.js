@@ -353,8 +353,10 @@ export const commands = {
     // node: each extra reference costs ~14 s (1/2/3 refs = 20/30/44 s), so an unlimited
     // slot list would let a user build a job whose cost they cannot see.
     //
-    // Takes ratio (Klein's editor uses OUR dimensions, like krea2Edit) and the style
-    // rack. No qualityTier — Klein is orientation-mode, one output class.
+    // Takes the style rack. `ratio` is listed in `components` but never shown: Klein
+    // names kleinEdit in its `imageSizedOps`, so modelShowsRatio() suppresses the picker
+    // and the edit follows the SOURCE image size. No qualityTier — Klein is
+    // orientation-mode, one output class.
     kleinEdit: {
         label: 'Edit',
         short: 'edit',
@@ -437,8 +439,10 @@ export const commands = {
         ],
         promptRequired: true,
         // Boogu-Image-Edit's op: a whole-image instruction edit that follows the SOURCE
-        // image dimensions (no size picker) and exposes no controls. Krea2's edit is a
-        // separate op (krea2Edit) — it uses OUR provided dims and needs ratio + style.
+        // image dimensions and exposes no controls at all — hence the empty list. Krea2's
+        // edit is a separate op (krea2Edit) for its style rack and second reference slot;
+        // it too follows the source size, because Krea2 names krea2Edit in its
+        // `imageSizedOps` and modelShowsRatio() suppresses the picker there.
         components: [],
     },
     krea2Edit: {
@@ -1813,6 +1817,67 @@ export function filterMediaInputsForModel(slots, model = null) {
         if (slot.requiresCapability && model.capabilities?.[slot.requiresCapability] !== true) return false;
         return true;
     });
+}
+
+/**
+ * Which of a gallery multi-select can `operation` consume, one item per job? (MPI-733)
+ *
+ * "Cue all" queues ONE job per selected card, each carrying exactly ONE media item and
+ * bypassing the chip rail. So the question is not "does this op accept images" but "can a
+ * single item BE this op's input" — and that makes the rule exactly:
+ *
+ *   the op declares exactly ONE REQUIRED slot, and the group's media type matches it.
+ *
+ * Required-slot count, not a whitelist, and not "declares >= 1 slot of that type":
+ *
+ * - TWO required slots is unbatchable, not merely awkward. `flowHeadSwap`,
+ *   `flowScribObj`, `flowObjectStamp` (image,image) and `flowVoiceChanger` (audio,audio)
+ *   each need two inputs to mean anything; a one-item job leaves the second empty and
+ *   dispatches N broken graphs.
+ * - ZERO required slots means there is nothing to batch OVER — `t2v_ms`, `ref2v_ms` and
+ *   `flowDramaBox` declare only optional slots, and N copies of one text prompt is not
+ *   what the user asked for.
+ * - OPTIONAL slots are ignored on purpose. Counting them would make `i2v_ms` eligible for
+ *   an AUDIO selection through its optional audio slot, queueing image-to-video jobs with
+ *   no image; and it would make `krea2Edit`'s 2nd reference slot look like a batch axis
+ *   when it is a per-job extra.
+ *
+ * The gate lands on the ops the feature was asked for — image: `edit`, `krea2Edit`,
+ * `kleinEdit`, `qwenEdit`, `i2i`, `control`, `upscale`, `pid`, `i2v`; video: `extend` —
+ * and picks up every later single-input op for free, which a whitelist would not.
+ *
+ * `inpaint`/`detail` need no exclusion here: the Gallery mounts its PromptBox with
+ * `canMask: false`, so a mask op is never the remembered op on this surface.
+ *
+ * Pure — no DOM, no dispatch, no generation import. The caller reads the operation from
+ * `getSelectedOp(modelId)` (the user's real pick), never from the displayed op strip,
+ * which force-drops to a text op on an empty box (MPI-388).
+ *
+ * @param {string|null} operation - the REMEMBERED op key, or null when nothing is picked
+ * @param {import('./modelRegistry.js').ModelDef|null} model - gates capability-bound slots
+ * @param {Array<{id:string, type:string}>} groups - selected gallery groups, in selection order
+ * @returns {{eligible: Array<Object>, skipped: Array<Object>, reason: string|null}}
+ *   `eligible` in selection order; `reason` is set ONLY when nothing is eligible, and is
+ *   `'no-operation'` (nothing picked, or a key that no longer exists), `'not-batchable'`
+ *   (the op does not take exactly one required input), or `'wrong-media-type'`.
+ */
+export function selectCueAllTargets(operation, model = null, groups = []) {
+    const list = Array.isArray(groups) ? groups.filter(Boolean) : [];
+
+    if (!operation || !commands[operation]) {
+        return { eligible: [], skipped: list, reason: 'no-operation' };
+    }
+
+    const required = filterMediaInputsForModel(getCommandMediaInputs(operation), model)
+        .filter(slot => slot.required);
+    if (required.length !== 1) {
+        return { eligible: [], skipped: list, reason: 'not-batchable' };
+    }
+
+    const wanted = required[0].mediaType;
+    const eligible = list.filter(g => g.type === wanted);
+    const skipped = list.filter(g => g.type !== wanted);
+    return { eligible, skipped, reason: eligible.length ? null : 'wrong-media-type' };
 }
 
 /**

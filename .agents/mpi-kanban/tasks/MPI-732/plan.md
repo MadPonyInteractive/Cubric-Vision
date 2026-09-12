@@ -20,6 +20,11 @@ the queue and the prompt box, and that reading turned up a stale set of comments
 re-opened a decision about PiD. Hence three members, only the first of which is the
 original ask.
 
+**Where the umbrella stands, 2026-09-12.** Phase 1 is DONE — MPI-735 shipped and is in
+`done`/`complete`. Phase 2 (MPI-733, Cue all) is the next action, and its Phase 1 (the
+pure eligibility helper + Node test) is clear to run; its Phases 2–3 wait on a live peer
+claim, see Plan Drift. Phase 3 (MPI-734) is still at its decision gate awaiting Fabio.
+
 **One thing was checked and needs NO card — do not create one.** The user-facing
 collapse of `edit` / `krea2Edit` / `qwenEdit` / `kleinEdit` onto **Edit**, and `pid`
 onto **Upscale**, already shipped in MPI-660 via each op's `short`
@@ -36,7 +41,7 @@ case), and `operation_registry.json` version-tracks each key.
 |---|---|---|---|
 | 1 | **MPI-733** | Cue all — batch a gallery multi-select through the current prompt-box recipe | `planned` |
 | 2 | **MPI-734** | PiD is not deprecated — it stays as a model that brings its four upscale plugins | `needs-decision` |
-| 3 | **MPI-735** | Stale comments claim the edit ops show a ratio picker | `planned` |
+| 3 | **MPI-735** | Stale comments claim the edit ops show a ratio picker | **`complete`** ✅ |
 
 **The three are independent** — disjoint files, no shared seam, no ordering constraint
 between them. Take them in whatever order suits the session. Recommended order and why:
@@ -59,7 +64,12 @@ and Phase 2 of MPI-734 is what reconciles MPI-553's plan with the new decision. 
 
 ## Completed
 
-- [ ] Nothing yet.
+- [x] **Phase 1 — MPI-735 shipped and closed, 2026-09-12.** Both stale comments in
+      `js/data/commandRegistry.js` (`:356` `kleinEdit`, `:441` `edit`) corrected to name
+      `modelShowsRatio()` and the source-size behaviour. Comments only, lint clean, card in
+      `done`/`complete`. A fourth site (`:341`, the `control` op) turned out to be already
+      correct and became the wording the two fixes were matched to. `docs/op-model-selection.md`
+      was checked and carries no stale claim, so the member owed no doc.
 
 ## Remaining Work
 
@@ -69,11 +79,13 @@ verification is Fabio looking at it — dispatching workers would cost more in b
 than it saves, and MPI-734 cannot start at all until a decision it does not own has
 been made. Work them sequentially through `mpi-continue`.
 
-## Phase 1: MPI-735 — the stale comments
+## Phase 1: MPI-735 — the stale comments — DONE
 
-- [ ] Work `tasks/MPI-735/plan.md` to completion.
-      **Verify:** that card's own Phase 1 verify — the three comment blocks in
-      `commandRegistry.js` agree with each other and with `imageSizedOps`, lint clean.
+- [x] Work `tasks/MPI-735/plan.md` to completion.
+      **Verified 2026-09-12:** four (not three) comment blocks in `commandRegistry.js`
+      agree with each other and with the `imageSizedOps` declarations in `models.js`;
+      every symbol named still exists; `npm run lint` clean. Evidence:
+      `tasks/MPI-735/validation.md`.
 
 ## Phase 2: MPI-733 — Cue all
 
@@ -95,7 +107,17 @@ been made. Work them sequentially through `mpi-continue`.
 
 ## Plan Drift
 
-- None yet.
+- **2026-09-12 — MPI-733 has a live contention that did not exist when this was planned.**
+  `js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js`, the file MPI-733 Phase 2
+  edits, is under an active write claim from **MPI-730 item 3** (session
+  `44919499-034d-4a40-be05-24a7409a81a1`, heartbeat 12:03Z). MPI-733 Phase 1 (the pure
+  eligibility helper + its Node test) touches none of the contended files and can run
+  regardless; Phases 2–3 need that claim released. Re-read
+  `state/index.json` before assuming the block still stands.
+- **2026-09-12 — board validation still FAILS, and it is still not these cards.** The
+  peer's malformed event at `tasks/MPI-736/events.jsonl:2` and its mirror at
+  `events.jsonl:4062`. MPI-732/733/734/735 are clean. Not repaired — it belongs to a live
+  peer's in-flight card and Fabio has not said which way to resolve it.
 
 ## Verification
 

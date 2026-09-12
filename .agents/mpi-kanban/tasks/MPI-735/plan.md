@@ -6,7 +6,14 @@ UMBRELLA: MPI-732. Read `tasks/MPI-732/plan.md` for the member list and phase or
 
 Project mode: **scalable-foundation**.
 
-**There is no functional bug.** `ratio` is correctly hidden on the model-specific edit
+**DONE, 2026-09-12.** Both comments corrected, lint clean, card in `done`/`complete` on
+the evidence in `validation.md`. Nothing remains and there is no next action on this card.
+The one thing a later reader should know: `docs/op-model-selection.md` was checked and
+does not carry the same stale claim, so no doc is owed. Next in umbrella MPI-732 is
+MPI-733 (Cue all) — but its Phase 2 file, `MpiGalleryGrid.js`, was under a live peer write
+claim (MPI-730 item 3) when this card closed.
+
+**There was no functional bug.** `ratio` is correctly hidden on the model-specific edit
 ops by the MPI-354 `imageSizedOps` mechanism:
 
 - `modelShowsRatio(model, operation)` returns false when the op is in the model's
@@ -42,16 +49,19 @@ the entries are removed, that is a deliberate call to be stated in Plan Drift.
 
 ## Completed
 
-- [ ] Nothing yet.
+- [x] **Phase 1 — both comments corrected, 2026-09-12.** `js/data/commandRegistry.js`
+      `:356` (`kleinEdit`) and `:441` (`edit`) now say what is true and name
+      `modelShowsRatio()`. Comments only: 8 insertions / 4 deletions, no code line
+      touched. Lint clean. Evidence and the four-site read-back: `validation.md`.
 
 ## Remaining Work
 
-Single phase — it is a two-line correction in one file, and there is nothing to
+**None — the card is done.** It was a two-line correction in one file with nothing to
 parallelise.
 
-## Phase 1: Correct the comments
+## Phase 1: Correct the comments — DONE
 
-- [ ] Rewrite `js/data/commandRegistry.js:441` and `:356` to say what is true: these
+- [x] Rewrite `js/data/commandRegistry.js:441` and `:356` to say what is true: these
       edit ops follow the SOURCE image size and the ratio picker is suppressed by the
       model's `imageSizedOps`. Point at `modelShowsRatio` so the next reader can check
       rather than trust. Do not restate what `:485` already says — make the three
@@ -63,7 +73,16 @@ parallelise.
 
 ## Plan Drift
 
-- None yet.
+- **2026-09-12 — a FOURTH comment site exists, and it was already correct.**
+  `js/data/commandRegistry.js:341`, on the `control` op: *"`ratio` is suppressed per model
+  by `imageSizedOps`/modelShowsRatio, which is how Klein/Krea2/Qwen hide it here while
+  SDXL and Chroma keep it."* The plan named three sites and this is a fourth. It needed no
+  edit — instead it became the wording the two fixes were matched to, so the file now
+  explains the mechanism once and cross-refers rather than repeating it four ways.
+- **2026-09-12 — `components` arrays left untouched, as the plan's default.** No
+  deliberate removal call was taken, so there is nothing further to state here.
+- **2026-09-12 — line numbers held.** `:356`, `:441` and `:485` were all still exact when
+  the card was picked up; `:485` shifted to `:489` only after this card's own +4 lines.
 
 ## Verification
 

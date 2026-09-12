@@ -1,0 +1,7 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "js/data/commandRegistry.js",
+    ".agents/mpi-kanban/tasks/MPI-735/"
+  ]
+}
