@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-727",
+  "title": "A flow's result follows the user across steps - floating window off the last step",
+  "description": "Leaving a flow's last step tears the result out of the DOM: audio playback stops, and returning shows an empty pane. Frame-wide, every flow. Fabio's spec: while a result exists and the user is NOT on the last step, it rides in a floating window top-right (video looping silently, image as a thumbnail, audio as the player); on the last step the floating window goes away and the result shows in its normal box.",
+  "column": "todo",
+  "maturity": "planned",
+  "status": "active",
+  "created_at": "2026-09-12T08:11:31+01:00",
+  "updated_at": "2026-09-12T08:11:31+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

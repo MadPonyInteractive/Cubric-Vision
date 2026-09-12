@@ -145,3 +145,71 @@ test('no other declared field anywhere carries a picker', async () => {
     // Lyrics-only, by Fabio's decision. A new one is a product call, not a refactor.
     assert.deepStrictEqual(offenders, []);
 });
+
+// ── Tab belongs to an open picker, not to the shell (MPI-664, 2026-09-12) ────
+
+test('an open picker takes Tab off the workspace flip', async () => {
+    const { HOTKEY_REGISTRY, MENTION_PICKER_OPEN_SELECTOR } = await esm('js/managers/hotkeyRegistry.js');
+
+    const flip = HOTKEY_REGISTRY.find(e => e.id === 'workspace.flip');
+    assert.ok(flip, 'the Tab flip entry must exist');
+    assert.strictEqual(flip.key, 'tab');
+
+    // THE BUG: hotkeyManager binds keydown on `window` with { capture: true } and calls
+    // stopPropagation(), so both pickers' own `if (e.key === 'Enter' || e.key === 'Tab')`
+    // branches never ran. Fabio typed `@f`, pressed Tab to accept "female", and landed in
+    // the gallery. The gate has to be HERE, in the shell's own `when`.
+    assert.match(
+        String(flip.when),
+        /MENTION_PICKER_OPEN_SELECTOR/,
+        'workspace.flip must stand down while an @ picker is open',
+    );
+
+    // And `allowWhileTyping: false` must not be mistaken for the fix - it does not cover
+    // Tab. hotkeyManager's typing gate only blocks single letters, bare modifiers and
+    // text-edit keys, so Tab passes it inside a textarea whatever this flag says.
+    assert.strictEqual(flip.allowWhileTyping, false, 'unchanged, and deliberately not the gate');
+});
+
+test('the picker selector matches the popups and NOT their rows', async () => {
+    const { MENTION_PICKER_OPEN_SELECTOR } = await esm('js/managers/hotkeyRegistry.js');
+
+    // Both implementations, because there are two and they are separate on purpose.
+    assert.match(MENTION_PICKER_OPEN_SELECTOR, /\.mpi-mention-picker:not\(\.hide\)/);
+    assert.match(MENTION_PICKER_OPEN_SELECTOR, /\.mpi-prompt-box__ref-picker:not\(\.hide\)/);
+
+    // 🔴 THE EDGE WITH TEETH. A substring selector would also match the `-item` rows, and
+    // those OUTLIVE a close: the popup gets `hide`, its children never do. The gate would
+    // then read "a picker is open" forever after the first use and Tab would be dead for
+    // the rest of the session - a worse bug than the one being fixed, and a silent one.
+    assert.ok(
+        !MENTION_PICKER_OPEN_SELECTOR.includes('*='),
+        'no substring match: it would catch the -item rows, which survive a close',
+    );
+    assert.ok(
+        !/-item/.test(MENTION_PICKER_OPEN_SELECTOR),
+        'the rows are never what "open" means',
+    );
+});
+
+test('both pickers carry the class the selector looks for', () => {
+    const fs = require('node:fs');
+    const read = p => fs.readFileSync(path.join(__dirname, '..', p), 'utf8');
+
+    // mentionPicker's BEM class carries the CALLER's block, so it is a different string
+    // per host - the fixed marker class is what makes it selectable at all.
+    assert.match(
+        read('js/utils/mentionPicker.js'),
+        /className:\s*`\$\{cls\(''\)\}\s+mpi-mention-picker\s+hide`/,
+        'mentionPicker must mark its popup with the stable marker class',
+    );
+
+    // MpiPromptBox keeps its own older copy (MPI-475) and is deliberately NOT repointed
+    // here - it had uncommitted work in it. If that class is ever renamed, this fails
+    // rather than silently ungating Tab on the gallery's prompt box.
+    assert.match(
+        read('js/components/Organisms/MpiPromptBox/MpiPromptBox.js'),
+        /_refPicker\.className\s*=\s*'mpi-prompt-box__ref-picker hide'/,
+        'the PromptBox picker class the selector names must still exist',
+    );
+});

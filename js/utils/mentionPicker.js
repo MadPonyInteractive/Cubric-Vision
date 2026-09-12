@@ -74,7 +74,12 @@ export function attachMentionPicker(textareaEl, { host, block, getTags, onInsert
     const cls = (el) => `${block}__mention-picker${el}`;
     const unsubs = [];
 
-    const picker = ce('div', { className: `${cls('')} hide` });
+    // 🔴 `MENTION_PICKER_OPEN_SELECTOR` (hotkeyRegistry.js) MATCHES THE MARKER CLASS, NOT
+    // THE BEM ONE. The BEM class carries the caller's block, so it is a different string
+    // per host and a substring selector would also match `…__mention-picker-item` rows —
+    // which outlive a close and would gate Tab off permanently. The fixed marker is the
+    // stable handle: the shell's Tab hotkey reads it to know this popup owns the key.
+    const picker = ce('div', { className: `${cls('')} mpi-mention-picker hide` });
     host.appendChild(picker);
 
     let at = -1;

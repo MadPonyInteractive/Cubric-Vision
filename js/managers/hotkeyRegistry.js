@@ -10,6 +10,24 @@ export const KEY_TYPE = {
 };
 
 /**
+ * An `@` picker that is currently showing — either one (MPI-664).
+ *
+ * Two exist and they are deliberately separate implementations: `js/utils/mentionPicker.js`
+ * (the Song flow's Lyrics box, and any field declaring `mentions`) and `MpiPromptBox`'s own
+ * older copy for staged references. Both open a popup and both toggle `hide`, so one
+ * selector covers them.
+ *
+ * 🔴 BOTH HALVES ARE EXACT CLASSES ON PURPOSE. A substring match such as
+ * `[class*="__ref-picker"]` also matches the `-item` rows inside, and those rows SURVIVE a
+ * close — the popup gets `hide`, its children do not — so the gate would read as "a picker
+ * is open" forever after the first use, and Tab would never flip the workspace again.
+ * `mentionPicker`'s own BEM class carries the caller's block and so is not a fixed string;
+ * that is what its `mpi-mention-picker` marker class is for.
+ */
+export const MENTION_PICKER_OPEN_SELECTOR =
+    '.mpi-mention-picker:not(.hide), .mpi-prompt-box__ref-picker:not(.hide)';
+
+/**
  * Declarative hotkey registry.
  * Each entry shape:
  *   { id, key, type, category, scopeLabel, description, when, allowWhileTyping }
@@ -279,6 +297,21 @@ export const HOTKEY_REGISTRY = [
     // with no way back out. Every OTHER body overlay (Model Library above all) still
     // blocks. MPI-611 re-ordered the ring to gallery → last card → the OPEN flow; an
     // open flow needs no exception here because it mounts `main-area`, not `body`.
+    // 🔴 AN OPEN `@` PICKER OWNS TAB (MPI-664, 2026-09-12). Fabio typed `@f` in the Song
+    // flow's Lyrics box to pick his singer "female", pressed Tab to accept it the way any
+    // completion works — and landed in the gallery, losing the step.
+    //
+    // Both pickers already handle Tab themselves (`mentionPicker.js`, and MpiPromptBox's
+    // own copy for `@pic` references). That code was UNREACHABLE: hotkeyManager binds
+    // keydown on `window` with `{ capture: true }`, so it sees the key first and calls
+    // `stopPropagation()` before the event ever reaches the textarea.
+    //
+    // 🔴 AND `allowWhileTyping: false` DOES NOT COVER THIS — that gate only blocks single
+    // letters, bare modifiers and text-edit keys (hotkeyManager.js § isTyping gate), and
+    // Tab is none of the three, so it passes the gate in a textarea whatever this flag
+    // says. Do not "fix" a future case of this by tightening that gate: Escape and the
+    // F-keys rely on passing it, and a text field genuinely has no use for a bare Tab —
+    // only a picker does, and only while it is open. The gate belongs here, per-key.
     {
         id:               'workspace.flip',
         key:              'tab',
@@ -289,7 +322,8 @@ export const HOTKEY_REGISTRY = [
         allowWhileTyping: false,
         when: ({ state }) =>
             (state.currentPage === 'gallery' || state.currentPage === 'group-history') &&
-            (!qs('.mpi-overlay--body') || !!qs('.mpi-overlay--body .mpi-flow-library')),
+            (!qs('.mpi-overlay--body') || !!qs('.mpi-overlay--body .mpi-flow-library')) &&
+            !qs(MENTION_PICKER_OPEN_SELECTOR),
     },
 
     // ── Radial Menu ───────────────────────────────────────────────────────────

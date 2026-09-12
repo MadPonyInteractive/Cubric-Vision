@@ -210,3 +210,24 @@ Design settled 2026-08-30 (hybrid). See `plan.md` for the full field surface and
       because teaching by negation is what degenerates the 4B. 923/923 unit (2 new, both proven
       to fail on the pre-fix file), 13/13 desktop flow specs, eslint + lint:components clean.
       **NOT ear-verified: no GPU run has happened. That is the owed song run.**
+
+- [x] 🟢 **TAB BELONGS TO AN OPEN `@` PICKER — FIXED 2026-09-12.** The shell's capture-phase
+      `workspace.flip` ate the key before either picker saw it; `allowWhileTyping: false` never
+      covered Tab. Gated on `MENTION_PICKER_OPEN_SELECTOR` (exact classes, never a substring —
+      the `-item` rows outlive a close). 12/12 in `tests/mention-picker.test.cjs`.
+
+- [x] 🟢 **THE CAST SURVIVES NAVIGATION AND REUSE — FIXED 2026-09-12.** `deserialiseVoices` is
+      the missing inverse of `serialiseVoices`; every restore path hands the widget the
+      serialised roster and it fell to the declared default, then wrote that default back over
+      the user's cast. Reproduced first in `tests/desktop/flow-roster-survives-navigation.spec.js`
+      (red before, green after), 15/15 unit in `flow-field-constraints`, 927/927 overall,
+      14/14 desktop flow specs.
+
+- [ ] 🔵 **THE LYRICS RIDE ALONG ON THE GALLERY CARD** (Fabio, 2026-09-12, folded into this
+      card at his word). *"For the song flow, we could add card notes to the card with the
+      lyrics."* NOT started, shape not agreed. Partly a workaround for MPI-727; stands on its
+      own for finding a song again in the gallery later.
+
+- [ ] 🔴 **THE SONG RUN, STILL OWED.** The 2026-09-11 attempt ran on a one-voice roster that
+      bug 2 had already reset, so it proved nothing either way. Needs a fresh Song, two voices,
+      a falsifiable voice note, and Fabio's ears. **ASK BEFORE ANY GPU WORK.**

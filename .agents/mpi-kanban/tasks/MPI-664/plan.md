@@ -3,6 +3,73 @@
 Design settled with Fabio 2026-08-30. Capability facts live in `research/minimax-music-3.md` —
 read it first, and do not re-search it.
 
+## Current State — 2026-09-12, TWO BUGS FROM FABIO'S RUN ARE FIXED. THE SONG RUN IS STILL OWED.
+
+His 2026-09-11 run produced four findings. Two are fixed here, one is now MPI-727, one is
+new scope on this card.
+
+🔴 **THE RUN PROVED NOTHING ABOUT THE CAST FIX, and that matters more than it looks.** He
+generated with a roster that had already been reset to one `Singer A (Any)` by bug 2 below —
+his screenshot shows it. One male singer is the CORRECT output for that roster:
+`Strip_Voice_Markers` deletes `<male>`/`<Singer A>` before the encoder, so the lyrics could
+not carry the cast either, and nothing in the caption said male or female. **Do not read
+that run as evidence against the enhancer fix.** The song run is still owed and must be
+made with a cast that survives to Generate.
+
+🟢 **BUG 1 — TAB IN THE `@` PICKER. FIXED.** He typed `@f` to pick his singer "female",
+pressed Tab, and landed in the gallery. Both pickers ALREADY handled Tab
+(`mentionPicker.js:169`, and MpiPromptBox's own copy) — that code was UNREACHABLE.
+`hotkeyManager.js:69` binds keydown on `window` with `{ capture: true }` and calls
+`stopPropagation()` once a `when` gate passes, so the shell consumed the key before the
+textarea ever saw it. 🔴 And `allowWhileTyping: false` does NOT cover this: that gate only
+blocks single letters, bare modifiers and text-edit keys, so Tab passes it inside a textarea
+whatever the flag says. Fixed by gating `workspace.flip` on a new
+`MENTION_PICKER_OPEN_SELECTOR`. The selector uses EXACT classes — a substring match would
+also catch the `-item` rows, which outlive a close, and Tab would be dead for the session.
+`mentionPicker` gained a fixed `mpi-mention-picker` marker class for it (its BEM class
+carries the caller's block, so it is not a fixed string). MpiPromptBox was deliberately NOT
+repointed: it had uncommitted peer work in it.
+
+🟢 **BUG 2 — THE CAST DID NOT SURVIVE NAVIGATION. FIXED, AND REUSE WAS BROKEN THE SAME WAY.**
+Reproduced first, in `tests/desktop/flow-roster-survives-navigation.spec.js`, because the
+first hypothesis was wrong and the snapshot settled it:
+
+```
+stepValues:      Input_Voices: [{name:"Singer A",type:"Any"}]   Input_Lyrics: ""
+injectionParams: Input_Voices: "Singer A\nfemale"               Input_Lyrics: "[Intro]…"
+```
+
+`stepKinds.js:84` — `FRAME_KINDS = new Set(['fields'])`, and the Song flow's "Write the song"
+step is `kind: 'fields'`. So `_stepRolesById` skips those ids and they live in the FLOW store;
+`_writeDeclaredField` then never updates `_stepValues`, while the seeding loop populates it
+regardless. **`stepValues` is a write-once shadow of the seeded defaults.** The value that
+actually comes back is the `injectionParams` one — SERIALISED. `Array.isArray(cur)` was false,
+so the branch fell to `f.default`, and `declaredFields.js:923` wrote that default BACK over
+the cast.
+
+The fix is the missing inverse: `deserialiseVoices(text, options)`. The roster is the only
+field type whose UI value (rows) differs from its graph value (one string), so every restore
+path hands the widget the flattened form — `s_flowInputs` after navigation **and a gallery
+card's sidecar on Reuse**. Reuse could never rebuild a cast either; nobody had noticed. The
+type is resolved against the field's DECLARED options rather than trusted from the text,
+which is what keeps a name like `Ana (live)` a name.
+
+🟡 **THE STALE `stepValues` SHADOW IS LEFT ALONE, DELIBERATELY.** It is inert today —
+`_collectInputs` applies the flow store LAST, so the shadow is overwritten in the payload,
+and no widget reads it back. Fixing the seeder/writer disagreement is frame surgery that
+touches every flow, and this card is not the place. Worth a card if it ever bites again.
+
+🔵 **NEW SCOPE, FABIO 2026-09-12: the lyrics ride along on the gallery card.** *"For the song
+flow, we could add card notes to the card with the lyrics."* Folded into this card at his
+word. NOT started. It is partly a workaround for the result-pane bug — if MPI-727 lands
+properly he can read the lyrics without leaving the step — but it stands on its own for
+finding a song again in the gallery later. Decide the shape with him before building.
+
+🟣 **MPI-727 CUT** — a flow's result follows the user across steps (floating window top-right
+off the last step; video loops silently, image is a thumbnail, audio is the player). Frame-wide,
+every flow. He is putting a separate session on it. Its brief carries the root cause and the
+🔴 trap: the media element must be MOVED, not re-created, or playback still breaks.
+
 ## Current State — 2026-09-11, THE CAST FIX IS BUILT. THE SONG RUN IS STILL OWED.
 
 🟢 **FABIO SAID BUILD IT (2026-09-11) AND IT IS BUILT.** The fix proposed under *"THE ENHANCER

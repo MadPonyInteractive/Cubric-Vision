@@ -153,6 +153,46 @@ export function serialiseVoices(rows) {
 }
 
 /**
+ * The caption string → rows again. The INVERSE of `serialiseVoices` (MPI-664, 2026-09-12).
+ *
+ * 🔴 NOT HAVING ONE WAS A REAL BUG, AND IT COST FABIO A CAST AND A GPU RUN. He created two
+ * singers, left the flow, came back and found one — then generated on it and heard the one
+ * voice the roster had been reduced to. The roster is the only field type whose UI value
+ * (rows, so the control can be rebuilt) differs from its graph value (this string), so
+ * EVERY restore path hands the widget the flattened form: `s_flowInputs` after navigation,
+ * and a gallery card's sidecar on Reuse. With no inverse, `Array.isArray(cur)` was false,
+ * the branch fell to the declared default, and the default was then written BACK over the
+ * user's cast. Reuse was broken by the same gap and nobody had noticed.
+ *
+ * The type is resolved against the field's own DECLARED OPTIONS rather than trusted from
+ * the text. That is what makes a name containing brackets safe: "Ana (live)" round-trips
+ * as a NAME, because `live` is not a declared voice type, while "Ana (Female)" splits.
+ * A bare name takes the catch-all, mirroring the way `serialiseVoices` drops it.
+ *
+ * @param {string|Array} text   the serialised roster, or rows already (passed through)
+ * @param {Array<{v: string}>} [options]  the field's declared voice types
+ * @returns {Array<{name: string, type: string}>}
+ */
+export function deserialiseVoices(text, options = []) {
+    if (Array.isArray(text)) return text;
+    if (typeof text !== 'string' || !text.trim()) return [];
+
+    const declared = options.map(o => String(o?.v ?? '')).filter(Boolean);
+    const catchAll = declared.find(v => v.toLowerCase() === 'any') ?? declared[0] ?? '';
+
+    return text.split('\n')
+        .map(line => line.trim())
+        .filter(Boolean)
+        .map((line) => {
+            // The LAST bracketed group only, and only when it names a declared type.
+            const m = line.match(/^(.*?)\s*\(([^()]*)\)$/);
+            const type = m && declared.find(v => v.toLowerCase() === m[2].trim().toLowerCase());
+            return type ? { name: m[1].trim(), type } : { name: line, type: catchAll };
+        })
+        .filter(r => r.name);
+}
+
+/**
  * A roster's rows → the `@` picker's list (MPI-664 checklist L30).
  *
  * The TAG is the bare name, because that is what goes in the angle brackets and what
@@ -777,7 +817,16 @@ export function buildField(f, cur, onChange, unsubs, opts = {}) {
         const opts_ = f.options || [];
         // The rows are COPIED, never aliased: `cur` is the persisted value off a card,
         // and mutating it in place would edit the payload behind the flow's back.
-        const rows = (Array.isArray(cur) && cur.length ? cur : (f.default || []))
+        //
+        // 🔴 `cur` ARRIVES AS A STRING ON EVERY RESTORE PATH, and falling straight to
+        // `f.default` here is what silently ate Fabio's second singer (MPI-664). A step
+        // in a FRAME-kind step (`stepKinds.js` § FRAME_KINDS — `fields` is one) holds its
+        // ids in the FLOW store, which seeds `Input_*` from `injectionParams`, and that
+        // copy is the SERIALISED one. Same for a card's sidecar on Reuse. So parse it
+        // back rather than discarding it; `deserialiseVoices` passes rows through
+        // untouched, so the live path is unaffected.
+        const restored = Array.isArray(cur) ? cur : deserialiseVoices(cur, opts_);
+        const rows = (restored.length ? restored : (f.default || []))
             .map(r => ({ ...r }));
         const list = ce('div', { className: cls('field-voices') });
 

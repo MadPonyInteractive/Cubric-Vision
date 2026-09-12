@@ -1,0 +1,1 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-727", "at": "2026-09-12T08:11:31+01:00", "actor": "claude-opus-5/584fe52b", "column": "todo", "title": "A flow's result follows the user across steps - floating window off the last step"}

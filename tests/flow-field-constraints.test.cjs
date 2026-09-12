@@ -307,6 +307,53 @@ test('a voice roster serialises to the caption lines the graph reads', async () 
     assert.equal(mapDeclaredValue({ type: 'text' }, 'hello'), 'hello');
 });
 
+test('a serialised roster parses back into rows — the inverse the restore paths need', async () => {
+    const { serialiseVoices, deserialiseVoices } = await esm('js/utils/declaredFields.js');
+
+    const OPTS = [
+        { v: 'Any' }, { v: 'Female' }, { v: 'Male' }, { v: 'Child' },
+        { v: 'Duet' }, { v: 'Choir' },
+    ];
+
+    // 🔴 THE BUG THIS CLOSES (MPI-664, 2026-09-12): every restore path hands the widget
+    // the SERIALISED roster — `s_flowInputs` after navigation, a card's sidecar on Reuse —
+    // and with no inverse the branch fell to the declared default AND wrote that default
+    // back over the user's cast. Fabio lost a singer and generated on what was left.
+    const cast = [{ name: 'Singer A', type: 'Male' }, { name: 'female', type: 'Any' }];
+    assert.deepStrictEqual(
+        deserialiseVoices(serialiseVoices(cast), OPTS),
+        cast,
+        'a cast must survive a round trip through the caption string',
+    );
+
+    // A bare name takes the catch-all, mirroring the way serialiseVoices drops it.
+    assert.deepStrictEqual(deserialiseVoices('Ana', OPTS), [{ name: 'Ana', type: 'Any' }]);
+
+    // 🔴 A NAME MAY CONTAIN BRACKETS. The type is resolved against the DECLARED options,
+    // never trusted from the text, so an undeclared parenthetical stays part of the name.
+    assert.deepStrictEqual(
+        deserialiseVoices('Ana (live)', OPTS),
+        [{ name: 'Ana (live)', type: 'Any' }],
+        'an undeclared bracket is part of the name, not a type',
+    );
+    assert.deepStrictEqual(
+        deserialiseVoices('Ana (live) (Female)', OPTS),
+        [{ name: 'Ana (live)', type: 'Female' }],
+        'only the LAST bracket is a candidate, and only if declared',
+    );
+
+    // Case-insensitive on the way back, because serialiseVoices is on the way out.
+    assert.deepStrictEqual(deserialiseVoices('Joe (male)', OPTS), [{ name: 'Joe', type: 'Male' }]);
+
+    // Rows pass straight through: the live path must not be touched by any of this.
+    assert.deepStrictEqual(deserialiseVoices(cast, OPTS), cast);
+
+    // Nothing in, nothing out — never a row named "undefined".
+    [undefined, null, '', '   ', 42].forEach((v) => {
+        assert.deepStrictEqual(deserialiseVoices(v, OPTS), [], `${String(v)} must yield no rows`);
+    });
+});
+
 test('a new roster row is named uniquely, so a lyric reference stays unambiguous', async () => {
     const { nextVoiceName } = await esm('js/utils/declaredFields.js');
 
