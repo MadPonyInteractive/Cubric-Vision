@@ -67,8 +67,9 @@ test('pickers built inside a body-mounted overlay open on top of it, not into it
       const wrapper = document.createElement('div');
       wrapper.style.cssText = 'padding:40px;display:flex;flex-direction:column;gap:24px';
       const ddHost = document.createElement('div');
+      const dd2Host = document.createElement('div');
       const tpHost = document.createElement('div');
-      wrapper.append(ddHost, tpHost);
+      wrapper.append(ddHost, dd2Host, tpHost);
       overlay.el.appendToContainer(wrapper);
 
       // extraClasses is forwarded onto the portalled popup by both primitives, so
@@ -76,6 +77,10 @@ test('pickers built inside a body-mounted overlay open on top of it, not into it
       const dd = MpiDropdown.mount(ddHost, {
         options: [{ label: 'Alpha', value: 'a' }, { label: 'Beta', value: 'b' }],
         value: '', placeholder: 'Pick one', extraClasses: 'e2e-probe-dd',
+      });
+      const dd2 = MpiDropdown.mount(dd2Host, {
+        options: [{ label: 'Gamma', value: 'g' }, { label: 'Delta', value: 'd' }],
+        value: '', placeholder: 'Pick another', extraClasses: 'e2e-probe-dd2',
       });
       const tp = MpiTreePicker.mount(tpHost, {
         options: [
@@ -93,23 +98,40 @@ test('pickers built inside a body-mounted overlay open on top of it, not into it
       await sleep(100);
       const dropdown = measure(document.querySelector('.mpi-dropdown__list.e2e-probe-dd'), dd.el);
 
-      ddTrigger.click();            // close before opening the next one
+      // MPI-728 — ONE PICKER OPEN AT A TIME. Every trigger stops propagation, which
+      // hid the click from any other open picker's document listener, so opening a
+      // second picker left the first open and the two lists stacked (Fabio's
+      // screenshot). Each step opens the next picker WITHOUT closing the last one,
+      // then checks the last one closed by itself.
+      const isOpen = (sel, rootEl) => rootEl.classList.contains('is-open')
+        || !!document.querySelector(sel)?.classList.contains('is-open');
+      dd2.el.querySelector('.mpi-dropdown__trigger').click();
       await sleep(50);
+      const exclusive = {
+        dd2Opened: isOpen('.mpi-dropdown__list.e2e-probe-dd2', dd2.el),
+        ddClosedByDropdown: !isOpen('.mpi-dropdown__list.e2e-probe-dd', dd.el),
+      };
 
       const tpTrigger = tp.el.querySelector('.mpi-tree-picker__trigger');
       tpTrigger.click();
       await sleep(100);
       const treePicker = measure(document.querySelector('.mpi-tree-picker__box.e2e-probe-tp'), tp.el);
+      exclusive.dd2ClosedByTreePicker = !isOpen('.mpi-dropdown__list.e2e-probe-dd2', dd2.el);
 
       overlay.el.hide();
       dd.el.destroy?.();
+      dd2.el.destroy?.();
       tp.el.destroy?.();
       overlay.el.destroy?.();
 
-      return { dropdown, treePicker };
+      return { measured: { dropdown, treePicker }, exclusive };
     });
 
-    for (const [name, m] of Object.entries(result)) {
+    expect(result.exclusive.dd2Opened, 'the second dropdown did not open').toBe(true);
+    expect(result.exclusive.ddClosedByDropdown, 'opening a dropdown left another dropdown open (MPI-728)').toBe(true);
+    expect(result.exclusive.dd2ClosedByTreePicker, 'opening the tree picker left a dropdown open (MPI-728)').toBe(true);
+
+    for (const [name, m] of Object.entries(result.measured)) {
       // Precondition: if the trigger never toggled, the click did not land and
       // everything below would fail for a reason that has nothing to do with the
       // portal. Assert it first so that failure reads correctly.

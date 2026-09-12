@@ -10,7 +10,8 @@
 //     card no longer reaches it at all: the `-nsfw` route fired on two of the
 //     many models that are actually uncensored, and the `comfy -> ollama`
 //     downgrade turned an explicit pick into a different backend silently.
-//     Both are asserted gone, not left to a default.
+//     Both are asserted gone, not left to a default — and with no pick the
+//     answer is ComfyUI, because the Automatic entry went too (2026-09-12).
 //  2. **The ComfyUI graph overrides.** They are string keys matched against
 //     node titles at dispatch time; a typo fails nothing and changes nothing.
 //  3. **The DeepInfra key never reaches the renderer.** Asserted by recording
@@ -36,20 +37,21 @@ const PLAIN = { id: 'chroma', capabilities: {} };
 
 // ── Backend choice ───────────────────────────────────────────────────────────
 
-function testCloudIsTheDefaultWhenAKeyExists() {
-    assert.strictEqual(chooseBackend({ model: PLAIN, serverDefault: 'deepinfra' }), 'deepinfra');
-    assert.strictEqual(chooseBackend({ model: ELIGIBLE, serverDefault: 'deepinfra' }), 'deepinfra',
-        'an eligible model still defaults to cloud — with a key there is no GPU tax on any model');
-}
-
-function testLocalFallbackWithoutAKey() {
-    assert.strictEqual(chooseBackend({ model: PLAIN, serverDefault: 'ollama' }), 'ollama');
-    assert.strictEqual(chooseBackend({ model: PLAIN }), 'ollama', 'no serverDefault → local');
+function testComfyIsTheDefault() {
+    // Fabio, 2026-09-12: no "Automatic" entry — the RunPod section has none — and
+    // with no pick the answer is the engine the app already runs. It used to be
+    // the cloud when a key was stored and Ollama otherwise; neither a key nor the
+    // model card moves it now, and anything that is not a backend is no pick.
+    assert.strictEqual(chooseBackend(), 'comfy');
+    assert.strictEqual(chooseBackend({ model: ELIGIBLE }), 'comfy');
+    for (const junk of [undefined, null, '', 'auto', 'automatic', 'cloud']) {
+        assert.strictEqual(chooseBackend({ override: junk }), 'comfy', `"${junk}" is not a backend`);
+    }
 }
 
 function testExplicitOverrideWins() {
-    assert.strictEqual(chooseBackend({ model: PLAIN, override: 'deepinfra', serverDefault: 'ollama' }), 'deepinfra');
-    assert.strictEqual(chooseBackend({ model: PLAIN, override: 'ollama', serverDefault: 'deepinfra' }), 'ollama');
+    assert.strictEqual(chooseBackend({ model: PLAIN, override: 'deepinfra' }), 'deepinfra');
+    assert.strictEqual(chooseBackend({ model: PLAIN, override: 'ollama' }), 'ollama');
     assert.strictEqual(chooseBackend({ model: ELIGIBLE, override: 'comfy' }), 'comfy');
     // An override is honoured on any model, including one the user knows wants
     // shaping a hosted provider would sanitise — they asked for it in as many words.
@@ -71,16 +73,12 @@ function testTheModelCardNoLongerSteersTheBackend() {
     // The deleted `-nsfw` rule, asserted GONE rather than absent by accident.
     // A LoRA makes any model uncensored, so an id suffix never was the fact it
     // was read as — and only two of Vision's uncensored models carry one.
-    for (const serverDefault of ['deepinfra', 'ollama']) {
-        const plain = chooseBackend({ model: PLAIN, serverDefault });
-        for (const id of ['sdxl-nsfw', 'krea2-nsfw', 'klein-lora-nsfw', 'chroma', 'wan-2-2']) {
-            assert.strictEqual(chooseBackend({ model: { id }, serverDefault }), plain,
+    for (const id of ['sdxl-nsfw', 'krea2-nsfw', 'klein-lora-nsfw', 'chroma', 'wan-2-2']) {
+        for (const override of [undefined, 'deepinfra', 'ollama']) {
+            assert.strictEqual(chooseBackend({ model: { id }, override }), chooseBackend({ override }),
                 `the id "${id}" changed the backend — the model card must not steer it`);
         }
     }
-    // And the card is not even needed to answer.
-    assert.strictEqual(chooseBackend({ serverDefault: 'deepinfra' }), 'deepinfra');
-    assert.strictEqual(chooseBackend(), 'ollama');
 }
 
 // ── The ComfyUI graph overrides ──────────────────────────────────────────────
@@ -213,8 +211,7 @@ function testForkBridgeAnswersDeepInfraRequests() {
 // ── Runner ───────────────────────────────────────────────────────────────────
 
 const tests = [
-    testCloudIsTheDefaultWhenAKeyExists,
-    testLocalFallbackWithoutAKey,
+    testComfyIsTheDefault,
     testExplicitOverrideWins,
     testComfyIsOfferedOnEveryModel,
     testTheModelCardNoLongerSteersTheBackend,

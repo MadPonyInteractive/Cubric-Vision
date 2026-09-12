@@ -9,7 +9,7 @@
 /* `[hidden]` is a UA rule of `display: none`, and ANY display declaration on the
    element beats it — a `display: flex` row with `hidden` set stays on screen. The
    first draft shipped exactly that: an "Enhancer model" label with no control
-   under it whenever the backend was Automatic. `.mpi-settings__form-group` sets
+   under it whenever there was nothing to pick. `.mpi-settings__form-group` sets
    `display: flex`, so every group this section hides needs the rule restated. */
 .mpi-settings__form-group[hidden],
 .mpi-settings__hint[hidden] {

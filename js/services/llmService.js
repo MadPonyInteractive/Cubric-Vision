@@ -14,11 +14,10 @@
  * the dropdown is about WHERE THE WORK RUNS, not which model is smartest — a
  * user generating on a RunPod pod enhances locally because the card is idle, and
  * a user generating locally pushes enhancement to the cloud to keep VRAM free.
- * `chooseBackend` honours that pick and otherwise takes the server's default.
+ * `chooseBackend` honours that pick, and with no pick the answer is `comfy`.
  *
- *   - `deepinfra` — the default when a key is stored. Off-GPU, no queue wait, no
- *     VRAM at all.
- *   - `comfy` — local, through the engine that is already running. It runs the
+ *   - `deepinfra` — needs a stored key. Off-GPU, no queue wait, no VRAM at all.
+ *   - `comfy` — THE DEFAULT. Local, through the engine that is already running. It runs the
  *     shipped `qwen3vl_4b_prompt_enhancer.json` through the existing
  *     `promptEnhance` operation. OFFERED ON EVERY MODEL: the graph carries its
  *     own `CLIPLoader` (node 9, `qwen3vl_4b_abliterated_fp8_scaled`), so it
@@ -30,7 +29,7 @@
  *     that carries an abliterated build.
  *
  * The cloud key lives in the main process and is resolved by `routes/llm.js`.
- * Nothing here ever sees it; `serverStatus()` asks only whether one EXISTS.
+ * Nothing here ever sees it.
  */
 
 import { resolveRecipe, FALLBACK_RECIPE_ID, getRecipe } from '../data/recipes/registry.js';
@@ -107,10 +106,13 @@ export function buildComfyInjectionParams(systemPrompt) {
     };
 }
 
+/** With no pick, the engine the app already runs (Fabio, 2026-09-12). */
+const DEFAULT_BACKEND = 'comfy';
+
 /**
- * Which backend runs this enhance — the user's pick, or the server's default.
+ * Which backend runs this enhance — the user's pick, or `comfy`.
  *
- * IT NO LONGER READS THE MODEL CARD AT ALL (MPI-728). Two rules that did have
+ * IT NO LONGER READS THE MODEL CARD AT ALL (MPI-728). Three rules that did have
  * gone, deliberately:
  *
  * 1. **The `-nsfw` route.** It derived "uncensored" from an id suffix, and Fabio
@@ -124,27 +126,28 @@ export function buildComfyInjectionParams(systemPrompt) {
  *    to mean the generation model's own encoder. The standalone graph loads its
  *    own CLIP and runs anywhere (proven 2026-09-12), so an explicit pick is now
  *    honoured — and Ollama may not even be installed to downgrade to.
+ * 3. **Automatic.** With no pick it chose the cloud when a key was stored and
+ *    Ollama otherwise. Fabio removed that entry (2026-09-12) to match the RunPod
+ *    section, which has none, and made ComfyUI the default — so neither a stored
+ *    key nor a running Ollama moves the answer any more.
  *
  * @param {object}  a
- * @param {string} [a.override]      an explicit user choice ('deepinfra'|'ollama'|'comfy')
- * @param {string} [a.serverDefault] what `/llm/status` says the cloud key allows
+ * @param {string} [a.override]  the user's choice ('deepinfra'|'ollama'|'comfy'); anything else is no choice
  */
-export function chooseBackend({ override, serverDefault = 'ollama' } = {}) {
-    if (override === 'comfy' || override === 'deepinfra' || override === 'ollama') return override;
-    return serverDefault === 'deepinfra' ? 'deepinfra' : 'ollama';
+export function chooseBackend({ override } = {}) {
+    return override === 'comfy' || override === 'deepinfra' || override === 'ollama' ? override : DEFAULT_BACKEND;
 }
 
-/** The user's pinned backend, or undefined. */
+/** The user's backend: ComfyUI until they pick another. */
 export function backendPreference() {
     try {
-        const v = localStorage.getItem(BACKEND_PREF_KEY);
-        return v === 'deepinfra' || v === 'ollama' || v === 'comfy' ? v : undefined;
+        return chooseBackend({ override: localStorage.getItem(BACKEND_PREF_KEY) });
     } catch {
-        return undefined;   // private window / storage disabled
+        return DEFAULT_BACKEND;   // private window / storage disabled
     }
 }
 
-/** Pin a backend, or pass a falsy value to go back to automatic. */
+/** Pin a backend, or pass a falsy value to go back to the default. */
 export function setBackendPreference(backend) {
     try {
         if (backend) localStorage.setItem(BACKEND_PREF_KEY, backend);
@@ -252,17 +255,6 @@ export function splitLabelledPrompt(text) {
     if (!m) return null;
     const positive = m[1].replace(/^[\s]*POSITIVE[ \t]+PROMPT[ \t]*:[ \t]*/i, '').trim();
     return positive ? { positive, negative: m[2].trim() } : null;
-}
-
-/** `/llm/status` — what the server can actually reach. Never throws. */
-export async function serverStatus() {
-    try {
-        const res = await fetch('/llm/status');
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return await res.json();
-    } catch {
-        return { deepinfra: { hasKey: false }, ollama: { running: false }, defaultBackend: 'ollama' };
-    }
 }
 
 /**
@@ -379,7 +371,7 @@ export async function runComfyEnhance({ prompt, system, injectionParams, modelId
  * @param {object}  a.model         the model card being generated with
  * @param {string} [a.recipeKey]    defaults to `model.enhanceRecipe ?? model.type`
  * @param {string} [a.mode]         recipe mode; defaults to `t2v`
- * @param {string} [a.backend]      explicit override; defaults to the preference, then automatic
+ * @param {string} [a.backend]      explicit override; defaults to the preference, then ComfyUI
  * @returns {Promise<{ok:boolean, text?:string, negativeText?:string, backend?:string,
  *                    model?:string, recipeId?:string, fellBack?:boolean, note?:string,
  *                    error?:string}>}
@@ -405,9 +397,7 @@ export async function enhance({ prompt, model, recipeKey, mode, backend } = {}) 
     // `styleVocabulary` is byte-identical whatever style is asked for.
     const system = composeSystemPrompt(modeRecipe);
 
-    const override = backend ?? backendPreference();
-    const status = override ? null : await serverStatus();
-    const chosen = chooseBackend({ override, serverDefault: status?.defaultBackend });
+    const chosen = chooseBackend({ override: backend ?? backendPreference() });
 
     const result = chosen === 'comfy'
         ? await runComfyEnhance({ prompt: idea, injectionParams: buildComfyInjectionParams(system) })

@@ -25,7 +25,7 @@ Handles project selection and creation. Entry point when no project is open.
   defeating the queue; rows now show a static first frame via `preload='auto'` + `loadeddata`.
   The goal was **felt**-faster, not actually-faster.
 - New Project dialog: `MpiNewProject` compound.
-- Header actions: `MpiSettings`, `MpiHotkeys`, `MpiAbout` (in `js/components/Compounds/LandingPages/`).
+- Header actions: `MpiSettings`, `MpiRemote`, `MpiHotkeys`, `MpiAbout` (in `js/components/Compounds/LandingPages/`).
 - Background: animated shader via `js/components/shaderBackground.js`.
 
 ## Gallery (`js/components/Blocks/MpiGalleryBlock/MpiGalleryBlock.js`)

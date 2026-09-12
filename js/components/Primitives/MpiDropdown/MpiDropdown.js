@@ -177,6 +177,12 @@ export const MpiDropdown = ComponentFactory.create({
             const opening = !list.classList.contains('is-open');
 
             if (opening) {
+                // One picker open at a time. This handler's stopPropagation() hides the
+                // click from every OTHER open picker's document listener, so their lists
+                // stayed open and stacked under this one (Fabio, MPI-728). Deliberately
+                // NOT `ui:close-all-popups`: MpiModal and MpiPopup close on that whatever
+                // its reason, and a dropdown can sit inside either.
+                Events.emit('ui:picker-open', { owner: list });
                 positionList();
                 root.classList.add('is-open');
                 list.classList.add('is-open');
@@ -237,6 +243,7 @@ export const MpiDropdown = ComponentFactory.create({
         };
         _unsubs.push(on(document, 'click', onOutside));
         _unsubs.push(Events.on('ui:close-all-popups', closeList));
+        _unsubs.push(Events.on('ui:picker-open', ({ owner }) => { if (owner !== list) closeList(); }));
 
         // Watch for el being removed from the DOM and clean up the portal node.
         // Observes document.body so it catches removal at any ancestor level.

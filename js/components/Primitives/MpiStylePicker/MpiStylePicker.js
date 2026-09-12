@@ -151,6 +151,8 @@ export const MpiStylePicker = ComponentFactory.create({
         };
 
         const openPanel = () => {
+            // One picker open at a time — MpiDropdown's trigger says why (MPI-728).
+            Events.emit('ui:picker-open', { owner: panel });
             // Reflect the live selection before showing (reopen highlights current).
             qsa('.mpi-style-picker__card', panel).forEach((c) =>
                 c.classList.toggle('is-selected', Number(c.dataset.index) === value));
@@ -206,6 +208,7 @@ export const MpiStylePicker = ComponentFactory.create({
             if (!el.contains(e.target) && !panel.contains(e.target)) closePanel();
         }));
         _unsubs.push(Events.on('ui:close-all-popups', closePanel));
+        _unsubs.push(Events.on('ui:picker-open', ({ owner }) => { if (owner !== panel) closePanel(); }));
 
         // Watch for the trigger leaving the DOM → clean up the portal node.
         observer = new MutationObserver(() => {

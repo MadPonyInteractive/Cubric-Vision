@@ -160,6 +160,65 @@
     color: var(--ink-3);
 }
 
+/* ── Sign-up promo: copy over a link-styled-as-button to the provider ──
+   Shared by RunPod ("New to RunPod?") and DeepInfra ("New to DeepInfra?"),
+   so it lives in this base sheet and is named for the shape, not for one
+   provider. Always stacks (copy over button): the panel is only ~42vw, so a
+   side-by-side row cramps the copy into a sliver at every real panel width. */
+.mpi-settings__signup {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--s-3);
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-2);
+    padding: var(--s-3);
+}
+
+.mpi-settings__signup-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-1);
+    min-width: 0;
+}
+
+.mpi-settings__signup-kicker {
+    font-size: var(--t-2xs);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent-frost);
+}
+
+.mpi-settings__signup-text {
+    font-size: var(--t-xs);
+    line-height: 1.5;
+    color: var(--ink-2);
+}
+
+.mpi-settings__signup-link {
+    flex-shrink: 0;
+    border: 1px solid var(--line);
+    background: var(--surface-3);
+    border-radius: var(--r-2);
+    color: var(--ink-1);
+    font-size: var(--t-xs);
+    font-weight: 700;
+    line-height: 1;
+    padding: var(--s-2) var(--s-3);
+    text-decoration: none;
+    transition: border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+    white-space: nowrap;
+}
+
+.mpi-settings__signup-link:hover,
+.mpi-settings__signup-link:focus-visible {
+    border-color: var(--accent-frost);
+    color: var(--accent-frost);
+    outline: none;
+}
+
 /* ── Form group (folder inputs — External Connections) ──────────── */
 .mpi-settings__form-group {
     display: flex;

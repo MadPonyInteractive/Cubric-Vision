@@ -51,9 +51,6 @@ import { qs } from '../../../../utils/dom.js';
 /** The plugin whose deps ARE the local enhancer/describer weight. */
 const ENHANCER_PLUGIN_ID = 'image-describer';
 
-/** `''` is the automatic entry — the absence of a preference, not a fourth backend. */
-const AUTOMATIC = '';
-
 /**
  * `mpi-dropdown--stacked` puts each option's meta on its OWN line with no
  * ellipsis cap. Without it the cost labels — the entire reason these entries read
@@ -62,8 +59,14 @@ const AUTOMATIC = '';
  */
 const STACKED = 'mpi-dropdown--stacked';
 
+/**
+ * THREE ENTRIES AND NO "AUTOMATIC" (Fabio, 2026-09-12): the RunPod section has no
+ * automatic entry, so neither does this, and with nothing picked it is ComfyUI
+ * (`backendPreference()`). An entry that cannot run yet stays LISTED but greyed
+ * rather than vanishing — DeepInfra until a key is saved, ComfyUI until its plugin
+ * is installed — because the list is also how a user learns what exists.
+ */
 const BACKENDS = [
-    { value: AUTOMATIC,  label: 'Automatic',        meta: 'Cloud when a key is saved, otherwise Ollama' },
     { value: 'deepinfra', label: 'DeepInfra (cloud)', meta: 'No VRAM, needs a key' },
     { value: 'ollama',    label: 'Ollama (local)',    meta: 'A second runtime, its own VRAM' },
     { value: 'comfy',     label: 'ComfyUI (local)',   meta: 'Reuses the engine already running' },
@@ -81,6 +84,13 @@ export const MpiLlmSettings = ComponentFactory.create({
                     <div class="mpi-settings__subgroup">
                         <span class="mpi-settings__subgroup-title">Account</span>
                         <span class="mpi-settings__hint">Only needed for the cloud backend. The key is stored by the desktop app and is never readable back — clear it and save a new one to change it.</span>
+                        <div class="mpi-settings__signup">
+                            <div class="mpi-settings__signup-copy">
+                                <span class="mpi-settings__signup-kicker">New to DeepInfra?</span>
+                                <span class="mpi-settings__signup-text">Create an account, then make an API key in your DeepInfra dashboard and paste it below. What you run is billed to your DeepInfra account.</span>
+                            </div>
+                            <a class="mpi-settings__signup-link" href="https://deepinfra.com/dash" target="_blank" rel="noopener noreferrer">Open DeepInfra dashboard</a>
+                        </div>
                         <div class="mpi-settings__form-group">
                             <label class="mpi-settings__field-label">DeepInfra API key</label>
                             <div class="mpi-settings__folder-row">
@@ -124,6 +134,7 @@ export const MpiLlmSettings = ComponentFactory.create({
 
     setup: (el) => {
         let _models = [];
+        let _hasKey = false;
         const _insts = [];
 
         el.onOpen = () => { _init(el); };
@@ -135,8 +146,9 @@ export const MpiLlmSettings = ComponentFactory.create({
             _renderKeyField(root);
             _renderDescribe(root);
             _models = await enhancerModels();
-            _renderBackend(root);
+            // Key status FIRST: the backend dropdown greys DeepInfra on it.
             await _refreshKeyStatus(root);
+            _renderBackend(root);
         }
 
         function _destroyControls() {
@@ -198,21 +210,21 @@ export const MpiLlmSettings = ComponentFactory.create({
             if (node) node.textContent = text;
         }
 
+        /** Paints the status line and records `_hasKey`, which gates the DeepInfra entry. */
         async function _refreshKeyStatus(root) {
+            _hasKey = false;
             if (!secretsClient.isAvailable()) {
                 _setKeyStatus(root, 'Saving a key requires the desktop app.');
-                return false;
+                return;
             }
             try {
-                const has = await secretsClient.hasDeepInfraKey();
-                _setKeyStatus(root, has
+                _hasKey = !!(await secretsClient.hasDeepInfraKey());
+                _setKeyStatus(root, _hasKey
                     ? 'API key is saved.'
                     : 'No API key saved — the cloud backend is unavailable until one is.');
-                return has;
             } catch (err) {
                 clientLogger.warn('settings', '[MpiLlmSettings] key presence check failed', err);
                 _setKeyStatus(root, 'Could not read the key status.');
-                return false;
             }
         }
 
@@ -231,20 +243,20 @@ export const MpiLlmSettings = ComponentFactory.create({
             if (!slot) return;
             slot.innerHTML = '';
 
-            const installed = _comfyInstalled();
-            const options = BACKENDS.map(b => (b.value === 'comfy' && !installed
-                ? { ...b, disabled: true, meta: 'Install the Image Describer plugin' }
-                : b));
+            const options = BACKENDS.map((b) => {
+                if (b.value === 'deepinfra' && !_hasKey) return { ...b, disabled: true, meta: 'Save an API key above first' };
+                if (b.value === 'comfy' && !_comfyInstalled()) return { ...b, disabled: true, meta: 'Install the Image Describer plugin' };
+                return b;
+            });
 
-            const current = backendPreference() ?? AUTOMATIC;
+            const current = backendPreference();
             const inst = MpiDropdown.mount(slot, {
                 options,
                 value: current,
-                placeholder: 'Automatic',
                 extraClasses: STACKED,
             });
             inst.on('change', ({ value }) => {
-                setBackendPreference(value || null);
+                setBackendPreference(value);
                 _paintBackendNote(root, value);
                 _renderModel(root, value);
             });
@@ -258,14 +270,18 @@ export const MpiLlmSettings = ComponentFactory.create({
             const node = qs('#mpiSettingsLlmEnhanceBackendNote', root);
             if (!node) return;
             const NOTES = {
-                [AUTOMATIC]: 'The app picks the backend — the cloud when a DeepInfra key is saved, Ollama otherwise — and the model with it.',
-                // Automatic carries the model answer too, so the model note below stays
-                // empty here — two stacked hints under one control read as one blob.
                 deepinfra: 'Runs off your machine entirely. Needs the key above, and your prompt leaves this computer.',
                 ollama: 'Runs on your own card in a second runtime, so it holds VRAM alongside a local generation. Ollama must be installed and running.',
                 comfy: 'Runs in the ComfyUI engine this app already started, and loads one text encoder of its own. Offered on every model.',
             };
-            node.textContent = NOTES[backend] ?? NOTES[AUTOMATIC];
+            // A backend picked while it could run and unavailable since (the key
+            // cleared, the plugin removed) stays selected. Swapping it would turn the
+            // user's pick into a quiet substitution, so the line says what is missing.
+            const MISSING = {
+                deepinfra: !_hasKey && 'Needs an API key, and none is saved. Save one above, or pick another backend.',
+                comfy: !_comfyInstalled() && 'Needs the Image Describer plugin, which is not installed. Install it, or pick another backend.',
+            };
+            node.textContent = MISSING[backend] || NOTES[backend];
         }
 
         // ── The enhancement model, UNDER the chosen backend ──────────────────
@@ -277,26 +293,18 @@ export const MpiLlmSettings = ComponentFactory.create({
             slot.innerHTML = '';
 
             // ComfyUI runs one graph with one baked weight, so there is nothing to
-            // choose. Automatic means the app chooses the backend, and a model chosen
-            // under a backend nobody has picked cannot be honoured — the registry
-            // default is the honest answer for both. The LABEL hides with the control:
-            // a field label with no field under it is what the first draft shipped.
-            const servable = backend
-                ? _models.filter(m => (backend === 'deepinfra' ? m.deepinfra : m.ollama))
-                : [];
-            // `undefined` = hide the group and say nothing, because the note above it
-            // already answered. `''` = show the group.
+            // choose. The LABEL hides with the control: a field label with no field
+            // under it is what the first draft shipped.
+            const servable = _models.filter(m => (backend === 'deepinfra' ? m.deepinfra : m.ollama));
             const reason = backend === 'comfy'
                 ? 'ComfyUI runs one enhancer — the weight its graph loads — so there is nothing to pick.'
-                : !backend
-                    ? undefined
-                    : !servable.length
-                        ? 'The model list is unavailable — enhancement will use the default.'
-                        : '';
+                : !servable.length
+                    ? 'The model list is unavailable — enhancement will use the default.'
+                    : '';
 
-            if (reason !== '') {
+            if (reason) {
                 group.hidden = true;
-                if (note) { note.textContent = reason || ''; note.hidden = !reason; }
+                if (note) { note.textContent = reason; note.hidden = false; }
                 return;
             }
 

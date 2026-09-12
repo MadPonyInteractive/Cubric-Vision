@@ -35,11 +35,13 @@ NOTE:    Primitive HSV visual picker with saturation/value square, hue slider, R
 
 ### MpiDropdown
 EMITS:   `change` `{ value: string, label: string }`
-LISTENS: (none — uses document click + MutationObserver for cleanup)
+         (bus) `ui:picker-open` `{ owner }` — on open, so every OTHER open picker closes (MPI-728; the trigger's `stopPropagation()` hides the click from their document listeners)
+LISTENS: `ui:picker-open` — closes unless `owner` is its own list · `ui:close-all-popups` — closes (also document click + MutationObserver for cleanup)
 
 ### MpiTreePicker
 EMITS:   `change` `{ value: string, label: string }`
-LISTENS: `ui:close-all-popups` — closes the portalled box (also document click + MutationObserver for portal-node cleanup)
+         (bus) `ui:picker-open` `{ owner }` — on open (MPI-728, same contract as MpiDropdown)
+LISTENS: `ui:picker-open` — closes unless `owner` is its own box · `ui:close-all-popups` — closes the portalled box (also document click + MutationObserver for portal-node cleanup)
 NOTE:    Searchable folder-tree picker (MPI-233) for path-shaped option values; drop-in for MpiDropdown (same `change` contract). Value = full path string. First consumer: LoRA slots in MpiModelSettings.
 
 ### MpiInput
@@ -194,14 +196,26 @@ NOTE:    Owns chrome only (header with UPPERCASE title + close button, scrollabl
 ### MpiSettings *(content-only — body of MpiSlideOver)*
 EMITS:   (chrome owned by MpiSlideOver; no `close` event. RunPod events moved to MpiRunpodSettings — MPI-177)
 LISTENS: `state.promptReuseOptions` / `state.promptReuseSource` via `Events.onState` — sync the Reuse Prompt controls.
-API:     `el.onOpen()` — re-runs `_initFields()` with current values from `Storage` / `state`, then forwards to `_runpodInst.el.onOpen()`. Called by `MpiSlideOver.setup()` once per open.
-NOTE:    Trigger via `Events.emit('slide-over:open', { title: 'Settings', component: MpiSettings })`. The legacy `el.show()/el.hide()` instance methods have been removed. The entire RunPod Remote Engine section is `MpiRunpodSettings` (mounted once into `#mpiSettingsRunpodMount` in setup). `el.destroy()` cleans reuse subs + extra-folder controls and destroys the RunPod child.
+API:     `el.onOpen()` — re-runs `_initFields()` with current values from `Storage` / `state`. Called by `MpiSlideOver.setup()` once per open.
+NOTE:    Trigger via `Events.emit('slide-over:open', { title: 'Settings', component: MpiSettings })`. The legacy `el.show()/el.hide()` instance methods have been removed. **Settings is about THIS machine:** the RunPod Remote Engine and Language Models sections are NOT here — both MOVED to `MpiRemote` (MPI-728), not duplicated. `el.destroy()` cleans reuse subs + extra-folder controls.
 
-### MpiRunpodSettings *(content section — mounted by MpiSettings; MPI-177 extraction)*
+### MpiRemote *(content-only — body of MpiSlideOver; MPI-728)*
+EMITS:   (none — chrome owned by MpiSlideOver)
+LISTENS: (none)
+API:     `el.onOpen()` — forwards to `MpiLlmSettings` and `MpiRunpodSettings`. Called by `MpiSlideOver.setup()` once per open.
+NOTE:    Trigger via `Events.emit('slide-over:open', { title: 'Remote', component: MpiRemote })`. The sections about SOMEBODY ELSE'S machine. Owns no controls: mounts `MpiLlmSettings` into `#mpiRemoteLlmMount` and `MpiRunpodSettings` into `#mpiRemoteRunpodMount`, once each in setup; `el.destroy()` destroys both. Section chrome (`.mpi-settings__*`) still comes from `MpiSettings.css`.
+
+### MpiLlmSettings *(content section — mounted by MpiRemote; MPI-728)*
+EMITS:   (none)
+LISTENS: (none)
+API:     `el.onOpen()` — rebuilds every control from scratch (key status, `/llm/models`, plugin install state); forwarded by MpiRemote.
+NOTE:    The Language Models section, one row PER JOB (Prompt enhancement, Image descriptions; the agent arrives as a third). Backend dropdown = DeepInfra / Ollama / ComfyUI with NO automatic entry; the default is ComfyUI (`backendPreference()` in `js/services/llmService.js`, localStorage `cubric.llm.backend`). An entry that cannot run stays LISTED but `disabled` — DeepInfra until a key is saved, ComfyUI until the `image-describer` plugin is installed — and a pinned backend that later becomes unavailable is shown as-is with a note, never swapped. The DeepInfra key is write-only through `secretsClient` (never read back, no state key). The enhancement-model dropdown sits UNDER the backend and hides for ComfyUI. "New to DeepInfra?" promo links `https://deepinfra.com/dash` (`.mpi-settings__signup`, shared with RunPod).
+
+### MpiRunpodSettings *(content section — mounted by MpiRemote since MPI-728; MPI-177 extraction from MpiSettings)*
 EMITS:   `remote:wait-start`  `{ gpuType, datacenter }` — MPI-110: ask the shell to start an auto-retry wait for an out-of-stock GPU (Connect pressed with `autoRetry` on + GPU not in stock, or a mid-connect snipe). The WAIT LOOP lives in shell.js (`_initGpuWaitBridge`), NOT here, so it survives navigating away from Settings.
          `remote:wait-cancel` `{}` — MPI-110: Cancel pressed while waiting → stop the shell wait (no Pod was created, so no teardown).
 LISTENS: `state.remoteWaitGpu` via `Events.onState` — repaints the engine button (waiting…/Cancel) when a shell-owned wait starts/ends. Also drives `_applyEngineStatus`.
-API:     `el.onOpen()` — re-runs `_initRunpodSection()`; forwarded by MpiSettings on every panel open.
+API:     `el.onOpen()` — re-runs `_initRunpodSection()`; forwarded by MpiRemote on every panel open.
 NOTE:    Verbatim extraction of MpiSettings' RunPod section — DOM ids (`mpiSettingsRunpod*`) and `mpi-settings__runpod-*` classes kept. Owns the 5s engine-status poll + volume disk poll; `el.destroy()` clears both and sets `_connectAbort` (breaks in-flight `_pollEngineReady`; the Pod keeps booting — destroy ≠ Cancel). Auto-retry wait loop owner = shell.js (`_startGpuWait`/`_stopGpuWait`/`_initGpuWaitBridge`); on the GPU freeing it calls `_initRemoteBoot` for the full create→ready→WS flow. App-wide connecting state is surfaced by the connection feed reading the backend `connecting` flag — this panel does not own it.
 
 ### MpiHotkeys *(content-only — body of MpiSlideOver)*

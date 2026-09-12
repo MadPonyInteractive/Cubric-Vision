@@ -30,62 +30,8 @@
     color: var(--accent-warn);
 }
 
-/* Promo box — always stacks (copy over button). The panel is only ~42vw, so a
-   side-by-side row cramps the copy into a sliver at every real panel width; a
-   stacked promo reads fine and never squeezes. */
-.mpi-settings__runpod-referral {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--s-3);
-    background: var(--surface-2);
-    border: 1px solid var(--line);
-    border-radius: var(--r-2);
-    padding: var(--s-3);
-}
-
-.mpi-settings__runpod-referral-copy {
-    display: flex;
-    flex-direction: column;
-    gap: var(--s-1);
-    min-width: 0;
-}
-
-.mpi-settings__runpod-referral-kicker {
-    font-size: var(--t-2xs);
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--accent-frost);
-}
-
-.mpi-settings__runpod-referral-text {
-    font-size: var(--t-xs);
-    line-height: 1.5;
-    color: var(--ink-2);
-}
-
-.mpi-settings__runpod-referral-link {
-    flex-shrink: 0;
-    border: 1px solid var(--line);
-    background: var(--surface-3);
-    border-radius: var(--r-2);
-    color: var(--ink-1);
-    font-size: var(--t-xs);
-    font-weight: 700;
-    line-height: 1;
-    padding: var(--s-2) var(--s-3);
-    text-decoration: none;
-    transition: border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
-    white-space: nowrap;
-}
-
-.mpi-settings__runpod-referral-link:hover,
-.mpi-settings__runpod-referral-link:focus-visible {
-    border-color: var(--accent-frost);
-    color: var(--accent-frost);
-    outline: none;
-}
+/* The "New to RunPod?" promo box is `.mpi-settings__signup` in MpiSettings.css now
+   (MPI-728) — DeepInfra's section uses the same shape. */
 
 /* Console link: subtle inline text link under the connect row (jump to the
    live Pod or the Pods list on RunPod). */

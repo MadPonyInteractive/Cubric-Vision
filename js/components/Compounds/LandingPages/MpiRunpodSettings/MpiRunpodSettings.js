@@ -37,12 +37,12 @@ export const MpiRunpodSettings = ComponentFactory.create({
     template: () => `
                 <div class="mpi-settings__section">
                     <h3 class="mpi-settings__section-title">RunPod Remote Engine</h3>
-                    <div class="mpi-settings__runpod-referral">
-                        <div class="mpi-settings__runpod-referral-copy">
-                            <span class="mpi-settings__runpod-referral-kicker">New to RunPod?</span>
-                            <span class="mpi-settings__runpod-referral-text">Create an account with Cubric's referral link. You can get a $5 credit bonus after signing up and adding $10 for the first time, and Cubric receives referral credit too.</span>
+                    <div class="mpi-settings__signup">
+                        <div class="mpi-settings__signup-copy">
+                            <span class="mpi-settings__signup-kicker">New to RunPod?</span>
+                            <span class="mpi-settings__signup-text">Create an account with Cubric's referral link. You can get a $5 credit bonus after signing up and adding $10 for the first time, and Cubric receives referral credit too.</span>
                         </div>
-                        <a class="mpi-settings__runpod-referral-link" href="https://runpod.io?ref=slmzn8qv" target="_blank" rel="noopener noreferrer">Create RunPod account</a>
+                        <a class="mpi-settings__signup-link" href="https://runpod.io?ref=slmzn8qv" target="_blank" rel="noopener noreferrer">Create RunPod account</a>
                     </div>
 
                     <div class="mpi-settings__subgroup">

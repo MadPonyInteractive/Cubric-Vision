@@ -73,6 +73,19 @@ test('remote slide-over renders the extracted RunPod section', async ({}, testIn
     await expect(window.locator('#mpiRemoteLlmMount .mpi-settings__section-title')).toHaveText('Language Models');
     await expect(window.locator('#mpiSettingsLlmKeyStatus')).not.toHaveText('', { timeout: 10000 });
 
+    // Three backends, no "Automatic", ComfyUI by default (Fabio, 2026-09-12: the
+    // RunPod section has no automatic entry either). A fresh E2E profile has no
+    // DeepInfra key, so that entry is LISTED but greyed, not missing. The option
+    // list portals to <body> on first open, so it only exists once opened.
+    const backendSlot = '#mpiSettingsLlmEnhanceBackendSlot';
+    await expect(window.locator(`${backendSlot} .mpi-dropdown__label`)).toHaveText('ComfyUI (local)');
+    const toggleBackend = () => window.evaluate((sel) => document.querySelector(sel).click(), `${backendSlot} .mpi-dropdown__trigger`);
+    await toggleBackend();
+    const backendOptions = window.locator('.mpi-dropdown__list.is-open .mpi-dropdown__option');
+    await expect(backendOptions).toHaveText([/DeepInfra/, /Ollama/, /ComfyUI/]);
+    await expect(window.locator('.mpi-dropdown__list.is-open .mpi-dropdown__option[data-value="deepinfra"]')).toHaveClass(/is-disabled/);
+    await toggleBackend();
+
     // And the move was a MOVE: neither section is left behind in Settings.
     await window.evaluate(async () => {
       const [{ Events }, { MpiSettings }] = await Promise.all([
@@ -85,7 +98,11 @@ test('remote slide-over renders the extracted RunPod section', async ({}, testIn
     await expect(window.locator('#mpiSettingsAutoStartSlot input[type="checkbox"]').first()).toBeAttached();
     await expect(window.locator('#mpiRemoteRunpodMount')).toHaveCount(0);
     await expect(window.locator('#mpiRemoteLlmMount')).toHaveCount(0);
-    await window.evaluate(() => document.querySelector('.mpi-slide-over')?.close());
+    // NOT `.mpi-slide-over` alone: the Remote panel is still in the DOM sliding out
+    // (it leaves up to 400ms after close), querySelector hands back that
+    // already-closed node first, and close() on it is a no-op — Settings stayed
+    // open and this spec failed on its first run. The live panel is aria-expanded.
+    await window.evaluate(() => document.querySelector('.mpi-slide-over[aria-expanded="true"]')?.close());
     await expect(panel).toHaveCount(0, { timeout: 5000 });
     await openRemote();
     await expect(panel).toBeVisible();

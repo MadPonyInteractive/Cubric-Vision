@@ -252,6 +252,8 @@ export const MpiTreePicker = ComponentFactory.create({
         };
 
         const openBox = () => {
+            // One picker open at a time — MpiDropdown's trigger says why (MPI-728).
+            Events.emit('ui:picker-open', { owner: box });
             query = '';
             searchEl.value = '';
             expanded.clear();
@@ -316,6 +318,7 @@ export const MpiTreePicker = ComponentFactory.create({
             if (!el.contains(e.target) && !box.contains(e.target)) closeBox();
         }));
         _unsubs.push(Events.on('ui:close-all-popups', closeBox));
+        _unsubs.push(Events.on('ui:picker-open', ({ owner }) => { if (owner !== box) closeBox(); }));
 
         // Tear down the portal node when el leaves the DOM (re-mount on state:changed).
         observer = new MutationObserver(() => {
