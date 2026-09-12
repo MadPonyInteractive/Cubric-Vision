@@ -125,6 +125,63 @@ async function extractImageThumb(inputPath, outPath, { width = IMAGE_RENDITION_P
 }
 
 /**
+ * The audio card's waveform (MPI-730), baked once at import/generation time.
+ *
+ * 21:9, because that is the aspect an audio card takes in the grid — one flat
+ * graphic, no rendition ladder: a waveform carries no detail that a second tier
+ * would recover, so a `large` twin would be dead bytes. 1260 wide covers the
+ * widest card at slider level 4.
+ *
+ * It is a MASK, not a picture. `showwavespic` draws white strokes on a
+ * transparent background, and the card mounts the result as `mask-image` and
+ * colours it with CSS vars — which is what buys themeable colour, the played /
+ * unplayed split, and one derivative instead of two. Decoding audio in the
+ * renderer instead would re-open the MPI-631/633 gallery memory doctrine.
+ *
+ * Lands at `<id>.thumb.webp` through `imageThumbPath()` like every other thumb,
+ * so it inherits `DERIVATIVE_RE`, the sidecar GC and every delete path with no
+ * new list to keep in lock-step.
+ */
+const AUDIO_WAVEFORM_PX = { w: 1260, h: 540 };
+
+async function extractAudioWaveform(inputPath, outPath, { width = AUDIO_WAVEFORM_PX.w, height = AUDIO_WAVEFORM_PX.h } = {}) {
+    const webpPath = imageThumbPath(outPath);
+    try {
+        const args = [
+            '-y',
+            '-i', inputPath,
+            // Mono first: `showwavespic` draws one band PER CHANNEL, so a stereo
+            // source would paint two half-height waveforms stacked inside the card.
+            // `scale=sqrt`, not the default `lin`: a waveform card has to be legible
+            // whatever the clip's absolute level, and a lot of what this app makes —
+            // a TTS line, a foley hit — is nowhere near a mastered -1 dBFS. Measured
+            // at 1260x540 (MPI-730): a -24 dBFS clip draws 4% of card height on `lin`
+            // (a flat line) against 20% on `sqrt`, while a hot master only moves 65%
+            // -> 80%. `cbrt` lifts the quiet clip further but flattens a song's loud/
+            // quiet contrast from 11x to 4.9x, which is the shape worth keeping.
+            '-filter_complex', `aformat=channel_layouts=mono,showwavespic=s=${width}x${height}:colors=white:scale=sqrt`,
+            '-frames:v', '1',
+            '-c:v', 'libwebp',
+            // Lossless, unlike every other derivative here — and it is the SMALLER
+            // file, not a fidelity tax. A waveform is two flat colours, which is the
+            // case lossless WebP is good at and lossy is bad at. Measured (MPI-730,
+            // 1260x540, 90s amplitude-modulated pink noise, i.e. song-shaped):
+            // 2.9 KB lossless vs 5.4 KB at -quality 82. The alpha plane came back
+            // byte-identical either way (libwebp keeps alpha lossless unless
+            // -alpha_quality says otherwise), so the lossy cost would have been paid
+            // in the RGB the mask does not even use.
+            '-lossless', '1',
+            webpPath,
+        ];
+        await execFileP(ffmpegPath, args, { maxBuffer: 4 * 1024 * 1024, windowsHide: true });
+        return webpPath;
+    } catch (err) {
+        logger.warn('ffmpegThumb', `audio waveform failed for ${inputPath}: ${err.message}`);
+        return null;
+    }
+}
+
+/**
  * Gallery hover playback height (MPI-633). A `<video>` decoder works at the clip's
  * NATIVE resolution however small the card is — measured: the same 3000x1280 clip
  * costs 81.2 MB per promoted card in a 64x80 box and 82.4 MB in a 134x167 one, across
@@ -214,10 +271,12 @@ async function writeVideoDerivatives(inputPath, metaDir, id, { sourceWidth, sour
 module.exports = {
     extractVideoThumb,
     extractImageThumb,
+    extractAudioWaveform,
     extractVideoProxy,
     writeVideoDerivatives,
     imageThumbPath,
     videoProxyPath,
+    AUDIO_WAVEFORM_PX,
     IMAGE_RENDITION_PX,
     VIDEO_PROXY_HEIGHT,
 };

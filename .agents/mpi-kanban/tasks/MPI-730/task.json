@@ -3,11 +3,11 @@
   "id": "MPI-730",
   "title": "Audio card waveform scrubbing",
   "description": "Audio cards go 21:9, always draw a baked showwavespic alpha-mask waveform, fill as they play, and seek on click. Hover plays from 0, leave stops. Click never opens (no audio workspace yet).",
-  "column": "todo",
-  "maturity": "planned",
+  "column": "doing",
+  "maturity": "in-progress",
   "status": "active",
   "created_at": "2026-09-12T10:01:05+01:00",
-  "updated_at": "2026-09-12T10:04:02+01:00",
+  "updated_at": "2026-09-12T09:54:17Z",
   "links": {
     "brief": "brief.md",
     "plan": "plan.md",
@@ -17,5 +17,6 @@
     "events": "events.jsonl",
     "handoffs": "handoffs/",
     "research": "research/"
-  }
+  },
+  "activeSessionTitle": "MPI-730 - audio card waveform scrubbing"
 }

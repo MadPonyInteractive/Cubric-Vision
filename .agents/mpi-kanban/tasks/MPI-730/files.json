@@ -1,0 +1,12 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "services/ffmpegThumb.js",
+    "routes/projects.js",
+    "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.js",
+    "js/components/Compounds/MpiGalleryGrid/MpiGalleryGrid.css",
+    "tests/audio-waveform-alpha.test.cjs",
+    "tests/desktop/gallery-audio-waveform.spec.js",
+    "docs/gallery.md"
+  ]
+}

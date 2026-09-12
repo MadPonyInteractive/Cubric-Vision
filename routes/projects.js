@@ -33,7 +33,7 @@ const { v4: uuidv4 } = require('uuid');
 const { getProjectsRoot, COMFYUI_PORT, streamDownload, stripImageMetadata, readProjectPathsRegistry, addProjectPathToRegistry, removeProjectPathFromRegistry } = require('./shared');
 const { getComfyPath, getEngineRoot } = require('./platformEngine');
 const { probeVideo, probeAudio } = require('../services/ffprobeVideo');
-const { extractImageThumb, extractVideoThumb, extractVideoProxy, writeVideoDerivatives, imageThumbPath, videoProxyPath, IMAGE_RENDITION_PX, VIDEO_PROXY_HEIGHT } = require('../services/ffmpegThumb');
+const { extractImageThumb, extractVideoThumb, extractVideoProxy, extractAudioWaveform, writeVideoDerivatives, imageThumbPath, videoProxyPath, IMAGE_RENDITION_PX, VIDEO_PROXY_HEIGHT } = require('../services/ffmpegThumb');
 const { ffmpegPath, ffprobePath, quote } = require('../services/ffmpegBinary');
 const { muxAudioIntoVideo, mixAudioFiles } = require('../services/ffmpegMux');
 const { SCHEMA_VERSION } = require('../js/migrations/projectMigrations');
@@ -130,6 +130,25 @@ async function writeImageRenditions(inputPath, metaDir, id, metaContent, sourceW
         const large = await extractImageThumb(inputPath, base, { width: IMAGE_RENDITION_PX.large });
         if (large) metaContent.thumbPathLg = `/project-file?path=${encodeURIComponent(large)}`;
     }
+    return metaContent;
+}
+
+/**
+ * Write an audio item's waveform and stamp the sidecar (MPI-730).
+ *
+ * Same shape as `writeImageRenditions` and for the same reason: three sites write an
+ * audio sidecar (upload, save-generation, the backfill pass) and a site that missed
+ * the update would leave its cards blank grey forever.
+ *
+ * ONE rendition, so no `thumbPathLg` — a waveform is a flat graphic with no detail a
+ * second tier could recover. It lands at the same `<id>.thumb.webp` name as every
+ * other thumb, which is what keeps `DERIVATIVE_RE`, the sidecar GC and the delete
+ * paths working with no audio-shaped special case.
+ */
+async function writeAudioWaveform(inputPath, metaDir, id, metaContent) {
+    const base = path.join(metaDir, `${id}.thumb.jpg`);
+    const wave = await extractAudioWaveform(inputPath, base);
+    metaContent.thumbPath = wave ? `/project-file?path=${encodeURIComponent(wave)}` : null;
     return metaContent;
 }
 
@@ -1469,13 +1488,13 @@ router.post('/project-media/:projectId/upload', async (req, res) => {
                 sourceHeight: metaContent.pixelDimensions?.h,
             }));
         } else if (mediaType === 'audio') {
-            // Audio: no frames/dimensions/thumb — render an icon card. Duration is
-            // the one thing the card CAN show, and it comes from probeAudio rather
-            // than probeVideo, which returns null when there is no video stream
-            // (MPI-573).
+            // Audio: no frames or dimensions, but it DOES get a thumb — the baked
+            // waveform mask the card paints (MPI-730). Duration comes from probeAudio
+            // rather than probeVideo, which returns null when there is no video
+            // stream (MPI-573).
             const a = await probeAudio(filePath);
             if (a) metaContent.duration = a.duration;
-            metaContent.thumbPath = null;
+            await writeAudioWaveform(filePath, metaDir, id, metaContent);
         } else {
             // Image: downscale to gallery renditions so scrolling 100+ 4K cards
             // doesn't decode full-res per card (MPI-319, ladder MPI-633).
@@ -1590,6 +1609,9 @@ router.post('/project-media/:projectId/probe-videos', async (req, res) => {
  * MPI-689: it also re-encodes a video POSTER written before the rendition ladder.
  * Those are 256px JPGs, so every existing project's video cards are upscaling 3-5x
  * until this pass replaces them; the stale `.thumb.jpg` is deleted with it.
+ *
+ * MPI-730: and it bakes the waveform for audio items, whose sidecars were written
+ * with `thumbPath: null` for as long as an audio card was a blank grey tile.
  */
 router.post('/backfill-media-derivatives', async (req, res) => {
     try {
@@ -1606,13 +1628,33 @@ router.post('/backfill-media-derivatives', async (req, res) => {
             const p = path.join(metaDir, f);
             let meta;
             try { meta = await fs.readJson(p); } catch { continue; }
-            if (meta.type !== 'image' && meta.type !== 'video') continue;
+            if (meta.type !== 'image' && meta.type !== 'video' && meta.type !== 'audio') continue;
 
             const inputPath = pathFromProjectFileUrl(meta.filePath);
             if (!inputPath || !(await fs.pathExists(inputPath))) continue;
 
             const id = meta.id || f.replace(/\.json$/, '');
             const thumbAbs = path.join(metaDir, `${id}.thumb.jpg`);
+
+            if (meta.type === 'audio') {
+                // Every audio sidecar written before MPI-730 carries `thumbPath: null`
+                // and paints a blank grey card. Bake the waveform once; there is no
+                // second tier and no proxy to owe, so a project converges in one pass.
+                if (meta.thumbPath) continue;
+                await writeAudioWaveform(inputPath, metaDir, id, meta);
+                // ffmpeg failed — leave the sidecar exactly as it was rather than
+                // writing back the null it already held.
+                if (!meta.thumbPath) continue;
+
+                await fs.writeJson(p, meta, { spaces: 2 });
+                thumbs[id] = {
+                    thumbPath: meta.thumbPath,
+                    thumbPathLg: null,
+                    proxyPath: null,
+                };
+                patched++;
+                continue;
+            }
 
             if (meta.type === 'video') {
                 const srcH = meta.pixelDimensions?.h;
@@ -2144,9 +2186,10 @@ router.post('/project/save-generation', async (req, res) => {
                 sourceHeight: videoInfo?.height ?? metaContent.pixelDimensions?.h,
             }));
         } else if (isAudio) {
-            // No thumb — the gallery renders an icon card for audio (MPI-132).
+            // The thumb is the baked waveform mask the audio card paints (MPI-730);
+            // it was null here while audio cards were blank icon tiles (MPI-132).
             if (audioInfo) metaContent.duration = audioInfo.duration;
-            metaContent.thumbPath = null;
+            await writeAudioWaveform(filePath, metaDir, id, metaContent);
         } else {
             // Image gens get gallery renditions too (MPI-319) so the grid renders
             // a small WebP, not the full-res output.

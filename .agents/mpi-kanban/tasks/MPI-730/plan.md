@@ -32,9 +32,16 @@ What is there today:
 
 Design was settled with Fabio in brainstorm. Do not re-litigate it — build it.
 
+**Where it stands (2026-09-12):** item 1 is built and machine-verified — every audio sidecar
+written from now on carries a baked waveform mask at `<id>.thumb.webp`, and an existing
+project backfills one per audio item on its next load. Nothing paints it yet: the card still
+renders the blank grey icon tile, so there is no visible change until item 2. Next action is
+item 2, and it now has to produce a reusable `MpiWaveform` component because the custom
+player Fabio is planning needs the same waveform.
+
 ## Implementation
 
-- [ ] **Bake the waveform derivative.** Add `extractAudioWaveform(inputPath, outPath, …)`
+- [x] **Bake the waveform derivative.** Add `extractAudioWaveform(inputPath, outPath, …)`
       to `services/ffmpegThumb.js` beside its siblings and export it: `ffmpeg -i` →
       `aformat=channel_layouts=mono,showwavespic=s=<W>x<H>:colors=white` → `-frames:v 1`
       → `libwebp`, written through `imageThumbPath()` so it lands as `<id>.thumb.webp`
@@ -52,7 +59,15 @@ Design was settled with Fabio in brainstorm. Do not re-litigate it — build it.
       `-quality 82` does not fringe the mask; fall back to `-lossless 1`, and record the
       measured file size either way.
 
-- [ ] **Geometry and paint.** Branch `_getAspectRatio()` to `21/9` for audio, keyed off the
+- [ ] **Geometry and paint. Build the paint as a REUSABLE component, not grid-private DOM**
+      (Fabio, mid-session 2026-09-12): the default Electron player is being replaced with our
+      own, and that player needs this same waveform. So the two mask layers + playhead +
+      cursor rule land as a `MpiWaveform` compound through `ComponentFactory.create()`, with
+      the card passing `{ mask, progress, duration }` and getting a seek back — the future
+      player mounts the same component against a different box. ONE derivative still serves
+      both: a 21:9 mask stretched into a short wide transport strip is still the right wave,
+      so do NOT bake a second rendition for the player.
+      Branch `_getAspectRatio()` to `21/9` for audio, keyed off the
       same `selected?.type === 'audio' || group.type === 'audio'` test `_render` uses — the
       justified packer handles mixed aspects natively, so nothing else in the layout moves.
       Rebuild `_swapThumbToAudio()`: **remove the centred play/stop icon** (it existed only
@@ -87,15 +102,39 @@ Design was settled with Fabio in brainstorm. Do not re-litigate it — build it.
 
 ## Completed
 
-- [ ] Nothing yet.
+- [x] **Bake the waveform derivative** (2026-09-12). `extractAudioWaveform()` +
+      `AUDIO_WAVEFORM_PX` in `services/ffmpegThumb.js`; route-local `writeAudioWaveform()`
+      in `routes/projects.js` beside `writeImageRenditions` and called from all THREE sites
+      (upload :1478 site, save-generation :2149 site, and a new `audio` branch in
+      `/backfill-media-derivatives`). `tests/audio-waveform-alpha.test.cjs` asserts the
+      `.webp` name, a transparent pixel AND an opaque one, the 21:9 baked size, and that the
+      envelope both fills the card and varies. Green; 930/930 node suite green; eslint clean.
 
 ## Remaining Work
 
-- All three implementation items.
+- Item 2 (geometry and paint, now as a reusable `MpiWaveform` component) and item 3
+  (click to seek + suppress open-group).
 
 ## Plan Drift
 
-- None yet.
+- **2026-09-12 — `scale=lin` would have shipped a flat line.** `showwavespic` defaults to
+  linear amplitude, so a clip well below a mastered level draws as a thin band: measured at
+  1260x540, a -24 dBFS clip fills 4% of card height on `lin` against 20% on `sqrt`, while a
+  hot master only moves 65% -> 80%. `cbrt` lifts quiet content further but crushes a song's
+  loud/quiet ratio from 11x to 4.9x. Shipped `scale=sqrt`. This matters because half of what
+  this app makes — a TTS line, a foley hit — is not mastered.
+- **2026-09-12 — the lossy/lossless question resolved the other way round.** The plan asked
+  whether `-quality 82` fringes the mask. It does not: libwebp keeps the alpha plane lossless
+  either way (byte-identical read-back). Lossless won on SIZE instead — 2.9 KB vs 5.4 KB on a
+  90s song-shaped source — because a waveform is two flat colours.
+- **2026-09-12 — Fabio, mid-session: a custom player is coming.** The default Electron player
+  is being replaced and will need this same waveform, so item 2's paint must be a reusable
+  component rather than DOM built inside `_swapThumbToAudio()`. Folded into item 2 above.
+  The derivative itself needed no change — a player reads the same sidecar `thumbPath`.
+- **2026-09-12 — test-fixture trap worth keeping.** ffmpeg's `sine` lavfi source peaks at
+  about -18 dBFS, so a bare sine fixture draws a thin band and every envelope assertion reads
+  as a broken filter when the filter is fine. The test drives it with `volume=` for that
+  reason; do not "simplify" the gain away.
 
 ## Verification
 

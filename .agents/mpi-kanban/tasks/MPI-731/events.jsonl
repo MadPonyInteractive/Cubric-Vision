@@ -1,0 +1,2 @@
+{"schema": "mpi-kanban/event/v1", "type": "task.created", "id": "MPI-731", "at": "2026-09-12T11:06:59+01:00", "actor": "mpi-continue", "column": "todo", "title": "Audio player: transport, volume and waveform scrubber"}
+{"schema": "mpi-kanban/event/v1", "type": "task.updated", "id": "MPI-731", "at": "2026-09-12T10:07:23Z", "actor": "mpi-continue", "summary": "Brief attached: reuse MpiVideoControlBar transport, swap MpiTrimBar for MpiWaveform (MPI-730). Raised by Fabio mid-MPI-730."}
