@@ -291,11 +291,6 @@ EMITS:   `ok`     `{ inputValue?: string }`
          `input`  `{ value: string }`
 LISTENS: (none — internal MpiModal handles `ui:close-all-popups`)
 
-### MpiProjectCard
-EMITS:   `click`  `{}`
-         `delete` `{}`
-LISTENS: (none)
-
 ### MpiProjectName
 EMITS:   `up`      `{}`
          `gallery` `{}`
