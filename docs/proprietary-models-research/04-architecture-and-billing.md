@@ -435,6 +435,44 @@ Open Questions: OpenAI's own Sora 2 API is reported scheduled to sunset within d
 this doc's date, which would remove it as a viable v1 target regardless of which
 aggregator or hosting vendor is chosen.
 
+### 6.5 The uncensored enhancer LLM (added 2026-09-12, MPI-741)
+
+**Status: possible, not rejected.** It only makes sense if Option B (credits) is chosen.
+Under bring-your-own-key or local-only it is off the table on cost, for the reasons below.
+
+**The model.** Every enhancer recipe was validated on `huihui_ai/gemma-4-abliterated:12b`
+through local Ollama, a 7.6 GB Q4 GGUF (Cubric-Prompt's
+`dev-docs/recipe-research/krea-2/validation.md`, 21 iterations, all tiers 3/3). The source
+weights are `huihui-ai/Huihui-gemma-4-12B-it-abliterated` on Hugging Face, 24 GB in bf16
+[model card](https://huggingface.co/huihui-ai/Huihui-gemma-4-12B-it-abliterated), accessed
+2026-09-12. No serverless catalogue carries abliterated weights, so a user with no GPU gets
+either a safety-tuned cloud model or no enhancer that matches the recipes.
+
+**Three ways to reach it without the user's GPU:**
+
+| Path | Who pays | What was found |
+|---|---|---|
+| **DeepInfra dedicated deployment** ("Custom LLM" tab, "Deploy from Hugging Face") | Us, per GPU-hour, traffic or not | A100-80GB $0.89/hr is enough for 24 GB of weights; H100 $2.20/hr is the dashboard default. Always-on: about $649/month on A100, $1,636.80/month on H100 (the dashboard's own estimate). `min_instances: 0` scales to zero; cold start is not documented. 4-GPU cap per account. Called as `<account>/<name>` on the same OpenAI-compatible endpoint the enhancer already uses [DeepInfra Custom LLMs](https://docs.deepinfra.com/private-models/custom-llms), accessed 2026-09-12 |
+| **The same deployment, user's own DeepInfra key** | Does not work | The docs only show a deployment called with its owner's key, and the documented way to let a third party in is a scoped JWT (allowed models, expiry, spend limit) minted from OUR key, so it bills OUR account [DeepInfra authentication](https://docs.deepinfra.com/account/authentication), accessed 2026-09-12. "Users bring their own key" therefore means every user deploys and rents their own GPU |
+| **Featherless** (existing host of community Hugging Face models) | The user's own subscription (Option A), or ours behind the proxy (Option B) | Chat $25/month, unlimited tokens, 4 concurrent, 32K context; Developer $50/month, per token [Featherless pricing](https://featherless.ai/pricing), accessed 2026-09-12. Carries abliterated Gemma 4 12B builds, e.g. `culturerevolt/gemma-4-12b-heretic-abliterated` (FP8, listed as "Cold") [model page](https://featherless.ai/models/culturerevolt/gemma-4-12b-heretic-abliterated), accessed 2026-09-12, but NOT the huihui build (404 on 2026-09-12). Resale terms **UNVERIFIED** |
+
+**How it would slot into Option B (reasoning).** The thin proxy in §2 and §3 already holds a
+provider key and debits credits, so the enhancer becomes one more metered call through it. A
+prompt rewrite is a few hundred tokens, so per request it is cheap; the problem is the floor.
+A GPU-hour deployment only pays for itself with steady traffic. At low volume the sane shapes
+are a per-token host or a scale-to-zero deployment whose cold start users can tolerate.
+
+**Before anything ships:**
+
+1. **Cold start.** The enhance button opens an overlay and waits on the result. Scale-to-zero
+   GPU typically costs 30 to 60 seconds to first token (industry figure, not measured here); if
+   a 24 GB load lands there, it forces always-on and the $649/month floor.
+2. **Recipes were proven on the Q4 GGUF.** A bf16 or FP8 build is a different artifact, and
+   word-budget adherence is the measured 8B-versus-12B capability threshold. Re-run
+   `npm run recipe:test` against the endpoint before trusting it.
+3. **Acceptable use.** The point of this model is explicit output. DeepInfra's acceptable-use
+   policy sits in its trust center and was not read; Featherless's resale terms were not read.
+
 ---
 
 ## 7. Minimum viable build
@@ -545,6 +583,9 @@ debit; the circuit breaker is the backstop that catches whatever the first two m
   per `docs/runpod-remote-engine.md`) needs its own separate account/billing relationship
   or extends the existing one - worth confirming with RunPod directly before scoping the
   "own models on serverless GPU" work as a follow-on to this proposal.
+- Enhancer LLM (§6.5): the cold start of a DeepInfra scale-to-zero deployment of a 24 GB
+  model, DeepInfra's acceptable-use policy on explicit output from custom weights, and
+  Featherless's resale terms. None of the three was read or measured.
 
 ## Sources
 
@@ -591,3 +632,9 @@ debit; the circuit breaker is the backstop that catches whatever the first two m
 - [Veo 3.1 API pricing 2026](https://www.veo3ai.io/blog/veo-3-1-pricing) - accessed 2026-09-11
 - [Nano Banana / Gemini image API pricing 2026 (AI Free API)](https://www.aifreeapi.com/en/posts/nano-banana-2-api-pricing-guide) - accessed 2026-09-11
 - [Sora 2 API pricing and sunset guide](https://unifically.com/blogs/sora-api) - accessed 2026-09-11
+- [DeepInfra Custom LLMs](https://docs.deepinfra.com/private-models/custom-llms) - accessed 2026-09-12
+- [DeepInfra authentication and scoped JWT](https://docs.deepinfra.com/account/authentication) - accessed 2026-09-12
+- [Spheron: DeepInfra pricing 2026](https://www.spheron.network/blog/deepinfra-pricing-2026-inference-api-cost-vs-gpu-rental/) - accessed 2026-09-12
+- [huihui-ai/Huihui-gemma-4-12B-it-abliterated](https://huggingface.co/huihui-ai/Huihui-gemma-4-12B-it-abliterated) - accessed 2026-09-12
+- [Featherless pricing](https://featherless.ai/pricing) - accessed 2026-09-12
+- [Featherless: gemma-4-12b-heretic-abliterated](https://featherless.ai/models/culturerevolt/gemma-4-12b-heretic-abliterated) - accessed 2026-09-12

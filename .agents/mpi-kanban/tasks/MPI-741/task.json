@@ -1,0 +1,21 @@
+{
+  "schema": "mpi-kanban/task-card/v1",
+  "id": "MPI-741",
+  "title": "Proprietary research: uncensored enhancer LLM as a credit-system option",
+  "description": "Addendum to the proprietary models research, Option B (credits): hosting the recipe-validated abliterated Gemma 4 12B for paying users. DeepInfra dedicated deployments vs Featherless. Possible, not rejected - relevant only if credits are chosen.",
+  "column": "done",
+  "maturity": "complete",
+  "status": "done",
+  "created_at": "2026-09-12T19:18:30+01:00",
+  "updated_at": "2026-09-12T19:21:26+01:00",
+  "links": {
+    "brief": "brief.md",
+    "plan": "plan.md",
+    "checklist": "checklist.md",
+    "validation": "validation.md",
+    "files": "files.json",
+    "events": "events.jsonl",
+    "handoffs": "handoffs/",
+    "research": "research/"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "schema": "mpi-kanban/task-files/v1",
+  "files": [
+    "docs/proprietary-models-research/04-architecture-and-billing.md",
+    "docs/proprietary-models-research/README.md"
+  ]
+}

@@ -22,7 +22,7 @@ confirmed is marked UNVERIFIED rather than guessed.
 | [02-direct-provider-apis.md](02-direct-provider-apis.md) | Google, OpenAI, Runway, Luma, Black Forest Labs, ElevenLabs: prices, terms, watermarks |
 | [02b-chinese-providers.md](02b-chinese-providers.md) | **Kling, MiniMax, ByteDance.** The models actually asked for, and the worst legal picture |
 | [03-legal-and-contracts.md](03-legal-and-contracts.md) | Resale clauses, partner programmes, UK/EU obligations, VAT, content liability |
-| [04-architecture-and-billing.md](04-architecture-and-billing.md) | What to build and run, what it costs per month, effort in developer-days |
+| [04-architecture-and-billing.md](04-architecture-and-billing.md) | What to build and run, what it costs per month, effort in developer-days. §6.5 (2026-09-12): the uncensored enhancer LLM as a credits-only candidate |
 | [05-competitor-economics.md](05-competitor-economics.md) | **How Higgsfield actually does it**, plus margin arithmetic across nine competitors |
 
 ---
